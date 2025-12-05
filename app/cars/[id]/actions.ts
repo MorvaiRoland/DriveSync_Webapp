@@ -91,3 +91,43 @@ export async function updateEvent(formData: FormData) {
   revalidatePath(`/cars/${carId}`)
   redirect(`/cars/${carId}`)
 }
+
+// --- ÚJ EMLÉKEZTETŐ LÉTREHOZÁSA ---
+export async function addReminder(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return redirect('/login')
+
+  const car_id = formData.get('car_id')
+  
+  const reminderData = {
+    car_id: car_id,
+    user_id: user.id,
+    service_type: String(formData.get('service_type')),
+    due_date: String(formData.get('due_date')),
+    notify_email: formData.get('notify_email') === 'on',
+    notify_push: formData.get('notify_push') === 'on',
+    note: String(formData.get('note'))
+  }
+
+  const { error } = await supabase.from('service_reminders').insert(reminderData)
+
+  if (error) {
+    console.error('Reminder Hiba:', error)
+    return redirect(`/cars/${car_id}?error=Emlékeztető mentése sikertelen`)
+  }
+
+  revalidatePath(`/cars/${car_id}`)
+  redirect(`/cars/${car_id}`)
+}
+
+// --- EMLÉKEZTETŐ TÖRLÉSE ---
+export async function deleteReminder(formData: FormData) {
+  const supabase = await createClient()
+  const id = formData.get('id')
+  const carId = formData.get('car_id')
+
+  await supabase.from('service_reminders').delete().eq('id', id)
+  
+  revalidatePath(`/cars/${carId}`)
+}
