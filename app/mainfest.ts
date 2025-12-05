@@ -11,12 +11,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#f59e0b', // Amber-500 (A fejléc színe)
     icons: [
       {
-        src: '/drivesync-icon.png',
+        src: '/icon.png',
         sizes: 'any',
         type: 'image/png',
       },
       {
-        src: '/drivesync-icon.png',
+        src: '/apple-icon.png',
         sizes: 'any',
         type: 'image/png',
       },
