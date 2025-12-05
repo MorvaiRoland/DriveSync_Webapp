@@ -1,44 +1,135 @@
-import { createClient } from 'supabase/server'
+'use client'
+
+import { createBrowserClient } from '@supabase/ssr'
 import { addEvent } from '../../actions'
 import Link from 'next/link'
+import { useParams, useSearchParams } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
 
-export default async function NewEventPage(props: { params: Promise<{ id: string }>, searchParams: Promise<{ type: string }> }) {
-  const params = await props.params
-  const searchParams = await props.searchParams
-  const supabase = await createClient()
+function EventForm() {
+  const params = useParams()
+  const searchParams = useSearchParams()
+  const carId = params.id as string
+  const error = searchParams.get('error')
   
-  const type = searchParams.type === 'service' ? 'service' : 'fuel' // Alapértelmezett a tankolás
+  // Alapértelmezett típus: fuel (tankolás), ha nincs megadva
+  const type = searchParams.get('type') === 'service' ? 'service' : 'fuel'
   const isFuel = type === 'fuel'
 
-  // Autó lekérése a fejléchez
-  const { data: car } = await supabase.from('cars').select('*').eq('id', params.id).single()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const [car, setCar] = useState<any>(null)
+  const [serviceTypes, setServiceTypes] = useState<{id: number, name: string}[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      // 1. Autó adatainak lekérése
+      const { data: carData } = await supabase
+        .from('cars')
+        .select('*')
+        .eq('id', carId)
+        .single()
+      
+      if (carData) setCar(carData)
+
+      // 2. Szerviz típusok lekérése (csak ha szervizt rögzítünk)
+      if (!isFuel) {
+        const { data: services } = await supabase
+          .from('service_types')
+          .select('*')
+          .order('name')
+        
+        if (services) setServiceTypes(services)
+      }
+      
+      setLoading(false)
+    }
+    fetchData()
+  }, [carId, isFuel])
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">Betöltés...</div>
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
-      <div className="bg-slate-900 py-12 px-4 text-center">
+      <div className="bg-slate-900 py-12 px-4 text-center shadow-lg">
         <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider">
           {isFuel ? 'Tankolás' : 'Szerviz'} <span className="text-amber-500">Rögzítése</span>
         </h1>
-        <p className="text-slate-400 mt-2">{car?.make} {car?.model} ({car?.plate})</p>
+        {car && (
+          <p className="text-slate-400 mt-2 font-medium">
+            {car.make} {car.model} ({car.plate})
+          </p>
+        )}
       </div>
 
       <div className="max-w-xl mx-auto px-4 -mt-8">
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+          
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6 text-red-700">
+              {error}
+            </div>
+          )}
+
           <form action={addEvent} className="space-y-6">
-            <input type="hidden" name="car_id" value={params.id} />
+            <input type="hidden" name="car_id" value={carId} />
             <input type="hidden" name="type" value={type} />
 
             <div className="grid grid-cols-2 gap-4">
-               <InputGroup label="Dátum" name="event_date" type="date" defaultValue={new Date().toISOString().split('T')[0]} required />
-               <InputGroup label="Km óra állás" name="mileage" type="number" placeholder={car?.mileage} required />
+               <InputGroup 
+                 label="Dátum" 
+                 name="event_date" 
+                 type="date" 
+                 defaultValue={new Date().toISOString().split('T')[0]} 
+                 required 
+               />
+               <InputGroup 
+                 label="Km óra állás" 
+                 name="mileage" 
+                 type="number" 
+                 defaultValue={car?.mileage} 
+                 required 
+               />
             </div>
 
-            <InputGroup 
-              label={isFuel ? "Töltőállomás" : "Szerviz neve"} 
-              name="title" 
-              placeholder={isFuel ? "pl. Shell, OMV" : "pl. Bosch Car Service"} 
-              required 
-            />
+            {/* DINAMIKUS MEZŐ: Tankolásnál szöveg, Szerviznél lista */}
+            {isFuel ? (
+               <InputGroup 
+                 label="Töltőállomás" 
+                 name="title" 
+                 placeholder="pl. Shell, OMV" 
+                 required 
+               />
+            ) : (
+               <div className="space-y-1">
+                 <label htmlFor="title_select" className="block text-sm font-semibold text-slate-700">
+                   Szerviz Típusa <span className="text-amber-500">*</span>
+                 </label>
+                 <div className="relative">
+                   <select
+                     name="title"
+                     id="title_select"
+                     required
+                     className="block w-full appearance-none rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all text-slate-700 cursor-pointer"
+                   >
+                     <option value="" disabled selected>Válassz a listából...</option>
+                     {serviceTypes.map(s => (
+                       <option key={s.id} value={s.name}>{s.name}</option>
+                     ))}
+                     <option value="Egyéb">Egyéb javítás</option>
+                   </select>
+                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                   </div>
+                 </div>
+               </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
                <InputGroup label="Költség (Ft)" name="cost" type="number" placeholder="0" required />
@@ -49,18 +140,23 @@ export default async function NewEventPage(props: { params: Promise<{ id: string
 
             {!isFuel && (
                <div className="space-y-1">
-                 <label className="block text-sm font-semibold text-slate-700">Elvégzett munkák</label>
-                 <textarea name="description" rows={3} className="block w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 bg-slate-50 border p-3" placeholder="pl. Olajcsere, szűrők..."></textarea>
+                 <label className="block text-sm font-semibold text-slate-700">Megjegyzés / Részletek</label>
+                 <textarea 
+                   name="description" 
+                   rows={3} 
+                   className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 bg-slate-50 border p-3 text-slate-900" 
+                   placeholder="pl. Castrol olaj, MANN szűrő..."
+                 ></textarea>
                </div>
             )}
 
             <InputGroup label="Helyszín (Opcionális)" name="location" placeholder="Budapest" />
 
-            <div className="pt-4 flex gap-4">
-              <Link href={`/cars/${params.id}`} className="w-1/3 py-3 rounded-lg text-slate-600 font-bold text-center border border-slate-200 hover:bg-slate-50">
+            <div className="pt-4 flex gap-4 border-t border-slate-100 mt-6">
+              <Link href={`/cars/${carId}`} className="w-1/3 py-3 rounded-lg text-slate-600 font-bold text-center border border-slate-200 hover:bg-slate-50 flex items-center justify-center">
                 Mégse
               </Link>
-              <button type="submit" className="w-2/3 py-3 rounded-lg bg-amber-500 text-white font-bold shadow-lg hover:bg-amber-400 transition-all">
+              <button type="submit" className="w-2/3 py-3 rounded-lg bg-amber-500 text-white font-bold shadow-lg hover:bg-amber-400 transition-all transform active:scale-[0.98]">
                 Mentés
               </button>
             </div>
@@ -71,11 +167,32 @@ export default async function NewEventPage(props: { params: Promise<{ id: string
   )
 }
 
+// Fő oldal komponens Suspense-szel
+export default function NewEventPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50">Betöltés...</div>}>
+      <EventForm />
+    </Suspense>
+  )
+}
+
+// Segéd komponens
 function InputGroup({ label, name, type = "text", placeholder, required = false, step, defaultValue }: any) {
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-semibold text-slate-700">{label}</label>
-      <input type={type} name={name} step={step} defaultValue={defaultValue} required={required} placeholder={placeholder} className="block w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-3 bg-slate-50 border" />
+      <label htmlFor={name} className="block text-sm font-semibold text-slate-700">
+        {label} {required && <span className="text-amber-500">*</span>}
+      </label>
+      <input 
+        type={type} 
+        name={name} 
+        id={name} 
+        step={step} 
+        defaultValue={defaultValue} 
+        required={required} 
+        placeholder={placeholder} 
+        className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 border text-slate-900 transition-colors" 
+      />
     </div>
   )
 }
