@@ -1,9 +1,65 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { addCar } from '../actions'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
-export default async function NewCarPage(props: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
-  const searchParams = await props.searchParams
-  const error = searchParams.error
+// --- AUTÓ ADATBÁZIS (Márkák és Típusok) ---
+const CAR_DATABASE: Record<string, string[]> = {
+  "Audi": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "Q2", "Q3", "Q5", "Q7", "Q8", "TT", "R8", "e-tron"],
+  "BMW": ["1 Series", "2 Series", "3 Series", "4 Series", "5 Series", "6 Series", "7 Series", "8 Series", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "Z4", "i3", "i4", "iX"],
+  "Mercedes-Benz": ["A-Class", "B-Class", "C-Class", "E-Class", "S-Class", "CLA", "CLS", "GLA", "GLB", "GLC", "GLE", "GLS", "G-Class", "EQA", "EQC", "EQS"],
+  "Volkswagen": ["Golf", "Passat", "Polo", "Tiguan", "Touareg", "Arteon", "T-Roc", "T-Cross", "ID.3", "ID.4", "ID.5", "Touran", "Sharan", "Caddy", "Amarok"],
+  "Ford": ["Fiesta", "Focus", "Mondeo", "Kuga", "Puma", "Mustang", "Mustang Mach-E", "Ranger", "S-MAX", "Galaxy", "EcoSport", "Edge"],
+  "Toyota": ["Yaris", "Corolla", "Camry", "C-HR", "RAV4", "Highlander", "Land Cruiser", "Hilux", "Prius", "Aygo X", "Supra", "bZ4X"],
+  "Honda": ["Civic", "Jazz", "HR-V", "CR-V", "ZR-V", "e", "Accord", "NSX"],
+  "Hyundai": ["i10", "i20", "i30", "IONIQ", "IONIQ 5", "IONIQ 6", "Kona", "Tucson", "Santa Fe", "Bayon"],
+  "Kia": ["Picanto", "Rio", "Ceed", "XCeed", "Niro", "Sportage", "Sorento", "EV6", "EV9", "Stinger"],
+  "Opel": ["Corsa", "Astra", "Insignia", "Mokka", "Crossland", "Grandland", "Zafira", "Vivaro"],
+  "Skoda": ["Fabia", "Scala", "Octavia", "Superb", "Kamiq", "Karoq", "Kodiaq", "Enyaq iV"],
+  "Suzuki": ["Swift", "Ignis", "Vitara", "S-Cross", "Swace", "Across", "Jimny"],
+  "Volvo": ["S60", "S90", "V60", "V90", "XC40", "XC60", "XC90", "C40"],
+  "Renault": ["Clio", "Megane", "Captur", "Arkana", "Austral", "Espace", "Zoe", "Twingo"],
+  "Peugeot": ["208", "308", "408", "508", "2008", "3008", "5008", "Rifter"],
+  "Nissan": ["Micra", "Juke", "Qashqai", "X-Trail", "Ariya", "Leaf", "Navara"],
+  "Mazda": ["Mazda2", "Mazda3", "Mazda6", "CX-30", "CX-5", "CX-60", "MX-5", "MX-30"],
+  "Fiat": ["500", "500X", "Panda", "Tipo"],
+  "Seat": ["Ibiza", "Leon", "Arona", "Ateca", "Tarraco"],
+  "Tesla": ["Model 3", "Model Y", "Model S", "Model X"],
+  "Dacia": ["Sandero", "Duster", "Jogger", "Spring"],
+  "Lexus": ["UX", "NX", "RX", "RZ", "ES", "LS", "LC"],
+  "Alfa Romeo": ["Giulia", "Stelvio", "Tonale"],
+  "Jeep": ["Renegade", "Compass", "Wrangler", "Grand Cherokee", "Avenger"]
+}
+
+export default function NewCarPage() {
+  // URL paraméterek kezelése kliens oldalon
+  const searchParams = useSearchParams()
+  const error = searchParams.get('error')
+
+  // Állapotkezelés a dinamikus listákhoz
+  const [selectedBrand, setSelectedBrand] = useState<string>("")
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+
+  // Amikor a márka változik, frissítjük a modelleket
+  useEffect(() => {
+    if (selectedBrand && CAR_DATABASE[selectedBrand]) {
+      setAvailableModels(CAR_DATABASE[selectedBrand])
+    } else {
+      setAvailableModels([])
+    }
+  }, [selectedBrand])
+
+  // Évszámok generálása (Idei évtől 1990-ig)
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: currentYear - 1990 + 1 }, (_, i) => currentYear - i)
+
+  // Színek
+  const colors = [
+    "Fehér", "Fekete", "Ezüst / Szürke", "Kék", "Piros", 
+    "Zöld", "Barna / Bézs", "Sárga / Arany", "Narancs", "Egyéb"
+  ]
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
@@ -14,7 +70,7 @@ export default async function NewCarPage(props: { searchParams: Promise<{ [key: 
           <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider">
             Új Jármű <span className="text-amber-500">Rögzítése</span>
           </h1>
-          <p className="mt-2 text-slate-400">Add hozzá a garázsodhoz az új családtagot.</p>
+          <p className="mt-2 text-slate-400">Válassz a márkák és típusok adatbázisából.</p>
         </div>
       </div>
 
@@ -38,10 +94,74 @@ export default async function NewCarPage(props: { searchParams: Promise<{ [key: 
                 Jármű Azonosítás
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InputGroup label="Gyártó (Márka)" name="make" placeholder="pl. BMW" required />
-                <InputGroup label="Modell (Típus)" name="model" placeholder="pl. 320d" required />
+                
+                {/* MÁRKA - Interaktív Lista */}
+                <div className="space-y-1">
+                  <label htmlFor="make" className="block text-sm font-semibold text-slate-700">
+                    Gyártó (Márka) <span className="text-amber-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="make"
+                      id="make"
+                      required
+                      value={selectedBrand}
+                      onChange={(e) => setSelectedBrand(e.target.value)}
+                      className="block w-full appearance-none rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all text-slate-700 cursor-pointer"
+                    >
+                      <option value="" disabled>Válassz márkát...</option>
+                      {Object.keys(CAR_DATABASE).sort().map(brand => (
+                        <option key={brand} value={brand}>{brand}</option>
+                      ))}
+                      <option value="Egyéb">Egyéb / Nem listázott</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* MODELL - Dinamikus Lista */}
+                <div className="space-y-1">
+                  <label htmlFor="model" className="block text-sm font-semibold text-slate-700">
+                    Modell (Típus) <span className="text-amber-500">*</span>
+                  </label>
+                  
+                  {selectedBrand === "Egyéb" || selectedBrand === "" && availableModels.length === 0 ? (
+                    // Ha "Egyéb" vagy nincs kiválasztva, akkor szöveges mező (vagy disabled)
+                    <input
+                      type="text"
+                      name="model"
+                      id="model"
+                      required
+                      placeholder={selectedBrand === "" ? "Először válassz márkát!" : "Írd be a típust"}
+                      disabled={selectedBrand === ""}
+                      className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all disabled:bg-slate-100 disabled:text-slate-400"
+                    />
+                  ) : (
+                    // Ha van kiválasztott márka, akkor legördülő lista
+                    <div className="relative">
+                      <select
+                        name="model"
+                        id="model"
+                        required
+                        className="block w-full appearance-none rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all text-slate-700 cursor-pointer"
+                      >
+                        <option value="" disabled selected>Válassz típust...</option>
+                        {availableModels.map(model => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                        <option value="Egyéb">Egyéb / Nincs a listában</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 <InputGroup label="Rendszám" name="plate" placeholder="AA-BB-123" required uppercase />
-                <InputGroup label="Alvázszám (VIN)" name="vin" placeholder="Opcionális" />
+                <InputGroup label="Alvázszám (VIN)" name="vin" placeholder="Opcionális" uppercase />
               </div>
             </div>
 
@@ -52,31 +172,48 @@ export default async function NewCarPage(props: { searchParams: Promise<{ [key: 
                 Műszaki Adatok
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <InputGroup label="Évjárat" name="year" type="number" placeholder="2020" required />
-                <InputGroup label="Km óra állás" name="mileage" type="number" placeholder="150000" required />
                 
-                <div className="space-y-1">
-                  <label className="block text-sm font-semibold text-slate-700">Üzemanyag</label>
-                  <select name="fuel_type" className="block w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-2.5 bg-slate-50 border px-3">
+                {/* ÉVJÁRAT - LISTA */}
+                <SelectGroup label="Évjárat" name="year" required>
+                  <option value="" disabled selected>Válassz...</option>
+                  {years.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </SelectGroup>
+
+                <InputGroup label="Km óra állás" name="mileage" type="number" placeholder="pl. 154000" required />
+                
+                {/* ÜZEMANYAG - LISTA */}
+                <SelectGroup label="Üzemanyag" name="fuel_type" required>
                     <option value="diesel">Dízel</option>
                     <option value="petrol">Benzin</option>
                     <option value="hybrid">Hybrid</option>
                     <option value="electric">Elektromos</option>
-                  </select>
-                </div>
+                    <option value="lpg">LPG / Gáz</option>
+                </SelectGroup>
 
-                <InputGroup label="Szín" name="color" placeholder="pl. Fekete" />
+                {/* SZÍN - LISTA */}
+                <SelectGroup label="Szín" name="color">
+                   <option value="" disabled selected>Válassz színt...</option>
+                   {colors.map(c => <option key={c} value={c}>{c}</option>)}
+                </SelectGroup>
                 
                 <div className="space-y-1 md:col-span-2">
                   <label className="block text-sm font-semibold text-slate-700">Státusz</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="status" value="active" defaultChecked className="text-amber-500 focus:ring-amber-500" />
-                      <span className="text-slate-700">Aktív (Használatban)</span>
+                  <div className="flex gap-4 pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className="relative flex items-center">
+                         <input type="radio" name="status" value="active" defaultChecked className="peer sr-only" />
+                         <div className="w-5 h-5 border-2 border-slate-300 rounded-full peer-checked:border-amber-500 peer-checked:bg-amber-500 transition-all"></div>
+                      </div>
+                      <span className="text-slate-700 group-hover:text-amber-600 transition-colors">Aktív (Használatban)</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="status" value="service" className="text-amber-500 focus:ring-amber-500" />
-                      <span className="text-slate-700">Szerviz alatt</span>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className="relative flex items-center">
+                         <input type="radio" name="status" value="service" className="peer sr-only" />
+                         <div className="w-5 h-5 border-2 border-slate-300 rounded-full peer-checked:border-amber-500 peer-checked:bg-amber-500 transition-all"></div>
+                      </div>
+                      <span className="text-slate-700 group-hover:text-amber-600 transition-colors">Szerviz alatt</span>
                     </label>
                   </div>
                 </div>
@@ -99,7 +236,8 @@ export default async function NewCarPage(props: { searchParams: Promise<{ [key: 
   )
 }
 
-// Segéd komponens az inputokhoz
+// --- Segéd Komponensek ---
+
 function InputGroup({ label, name, type = "text", placeholder, required = false, uppercase = false }: any) {
   return (
     <div className="space-y-1">
@@ -112,8 +250,32 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
         id={name}
         required={required}
         placeholder={placeholder}
-        className={`block w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-2.5 px-3 bg-slate-50 border transition-all ${uppercase ? 'uppercase' : ''}`}
+        className={`block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all ${uppercase ? 'uppercase placeholder:normal-case' : ''}`}
       />
+    </div>
+  )
+}
+
+// Select komponens nyíllal
+function SelectGroup({ label, name, children, required = false }: any) {
+  return (
+    <div className="space-y-1">
+      <label htmlFor={name} className="block text-sm font-semibold text-slate-700">
+        {label} {required && <span className="text-amber-500">*</span>}
+      </label>
+      <div className="relative">
+        <select
+          name={name}
+          id={name}
+          required={required}
+          className="block w-full appearance-none rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all text-slate-700 cursor-pointer"
+        >
+          {children}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </div>
+      </div>
     </div>
   )
 }
