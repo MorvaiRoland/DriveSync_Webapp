@@ -34,7 +34,15 @@ export default async function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
               <div className="flex items-center gap-3">
-                <Logo className="w-8 h-8 text-amber-500" />
+                <div className="relative w-8 h-8">
+                  <Image 
+                    src="/drivesync-logo.png" 
+                    alt="DriveSync Logo" 
+                    fill 
+                    className="object-contain" 
+                    priority
+                  />
+                </div>
                 <span className="text-xl font-bold tracking-tight text-white uppercase">
                   Drive<span className="text-amber-500">Sync</span>
                 </span>
@@ -104,8 +112,14 @@ export default async function Home() {
             </div>
           ) : (
             <div className="bg-white p-16 rounded-3xl border border-slate-200 text-center shadow-sm">
-               <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Logo className="w-12 h-12 text-slate-300" />
+               <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 relative">
+                  <Image 
+                    src="/drivesync-logo.png" 
+                    alt="DriveSync Logo" 
+                    fill 
+                    className="object-contain p-4" 
+                    priority
+                  />
                </div>
                <h3 className="text-2xl font-bold text-slate-900 mb-2">A garázsod üres</h3>
                <p className="text-slate-500 max-w-md mx-auto mb-8">
@@ -158,8 +172,14 @@ export default async function Home() {
            {/* HERO */}
            <div className="space-y-8 animate-in slide-in-from-left-10 duration-700 fade-in">
              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-                   <Logo className="w-6 h-6 text-slate-900" />
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 relative overflow-hidden">
+                   <Image 
+                     src="/drivesync-logo.png" 
+                     alt="DriveSync Logo" 
+                     fill 
+                     className="object-contain p-2" 
+                     priority
+                   />
                 </div>
                 <span className="text-xl font-bold tracking-tight text-white uppercase">DriveSync</span>
              </div>
@@ -238,8 +258,14 @@ export default async function Home() {
         <div className="lg:sticky lg:top-12 w-full max-w-sm mx-auto animate-in slide-in-from-right-10 duration-700 fade-in">
           
           <div className="text-center mb-10">
-            <div className="lg:hidden w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl border border-slate-800">
-               <Logo className="w-8 h-8 text-amber-500" />
+            <div className="lg:hidden w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl border border-slate-800 relative overflow-hidden">
+               <Image 
+                 src="/drivesync-logo.png" 
+                 alt="DriveSync Logo" 
+                 fill 
+                 className="object-contain p-2" 
+                 priority
+               />
             </div>
             <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
               Indítsd be a motorokat!
@@ -334,7 +360,7 @@ function ActionButton({ icon, label }: { icon: string, label: string }) {
     <button className="flex flex-col items-center justify-center bg-white p-4 rounded-2xl border border-slate-200 hover:border-amber-400 hover:shadow-lg hover:-translate-y-0.5 transition-all group h-32">
       <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-3 group-hover:bg-amber-50 transition-colors">
          {icon === 'gas' && <svg className="w-6 h-6 text-slate-400 group-hover:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
-         {icon === 'wrench' && <svg className="w-6 h-6 text-slate-400 group-hover:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+         {icon === 'wrench' && <svg className="w-6 h-6 text-slate-400 group-hover:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
          {icon === 'doc' && <svg className="w-6 h-6 text-slate-400 group-hover:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
          {icon === 'chart' && <svg className="w-6 h-6 text-slate-400 group-hover:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>}
       </div>
@@ -378,15 +404,16 @@ function Badge({ text }: { text: string }) {
   )
 }
 
-function Logo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-      <path d="M12 17v-6" />
-      <path d="M8.5 14.5 12 11l3.5 3.5" />
-      <circle cx="7" cy="17" r="2" />
-      <circle cx="17" cy="17" r="2" />
-      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
-    </svg>
-  )
-}
+// Törölve a Logo komponens, mert már nem használjuk.
+// function Logo({ className }: { className?: string }) {
+//   return (
+//     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+//       <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+//       <path d="M12 17v-6" />
+//       <path d="M8.5 14.5 12 11l3.5 3.5" />
+//       <circle cx="7" cy="17" r="2" />
+//       <circle cx="17" cy="17" r="2" />
+//       <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
+//     </svg>
+//   )
+// }
