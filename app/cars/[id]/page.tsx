@@ -20,14 +20,14 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     return notFound()
   }
 
-  // 2. Események lekérése (Múlt)
+  // 2. Események lekérése
   const { data: events } = await supabase
     .from('events')
     .select('*')
     .eq('car_id', params.id)
     .order('event_date', { ascending: false })
 
-  // 3. Emlékeztetők lekérése (Jövő)
+  // 3. Emlékeztetők lekérése
   const { data: reminders } = await supabase
     .from('service_reminders')
     .select('*')
@@ -37,14 +37,12 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
   const safeEvents = events || []
   const safeReminders = reminders || []
 
-  // --- STATISZTIKAI SZÁMÍTÁSOK ---
+  // --- STATISZTIKA ---
   const totalCost = safeEvents.reduce((sum, event) => sum + (event.cost || 0), 0)
   
-  // Költségek típus szerint
   const serviceCost = safeEvents.filter(e => e.type === 'service').reduce((sum, e) => sum + (e.cost || 0), 0)
   const fuelCost = safeEvents.filter(e => e.type === 'fuel').reduce((sum, e) => sum + (e.cost || 0), 0)
   
-  // Átlagfogyasztás
   const fuelEvents = safeEvents.filter(e => e.type === 'fuel' && e.mileage && e.liters).sort((a, b) => a.mileage - b.mileage)
   let avgConsumption = "Nincs elég adat"
   
@@ -57,34 +55,50 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     }
   }
 
-  // Szerviz Kalkuláció (DINAMIKUS)
+  // --- OKOS SZERVIZ KALKULÁCIÓ ---
   const lastServiceEvent = safeEvents.find(e => e.type === 'service')
-  const kmSinceService = lastServiceEvent ? car.mileage - (lastServiceEvent.mileage || 0) : 0
-  const daysSinceService = lastServiceEvent 
-    ? Math.floor((new Date().getTime() - new Date(lastServiceEvent.event_date).getTime()) / (1000 * 3600 * 24))
-    : 0
-
-  // Intervallumok az adatbázisból (vagy alapértelmezett)
   const serviceIntervalKm = car.service_interval_km || 15000
   const serviceIntervalDays = car.service_interval_days || 365
+  
+  let kmRemaining = 0;
+  let kmSinceService = 0;
+  let daysSinceService = 0;
+  
+  if (lastServiceEvent) {
+     // A: Ha VAN rögzített szerviz, ahhoz viszonyítunk
+     kmSinceService = car.mileage - (lastServiceEvent.mileage || 0);
+     kmRemaining = Math.max(0, serviceIntervalKm - kmSinceService);
+     
+     daysSinceService = Math.floor((new Date().getTime() - new Date(lastServiceEvent.event_date).getTime()) / (1000 * 3600 * 24));
+  } else {
+     // B: Ha NINCS rögzített szerviz, a kilométeróra alapján számolunk ciklust
+     // Pl. 261.000 km, 10.000 ciklus -> Maradék: 9.000
+     const remainder = car.mileage % serviceIntervalKm;
+     kmRemaining = remainder === 0 ? 0 : serviceIntervalKm - remainder;
+     kmSinceService = remainder; // Ebben az esetben ennyit mentünk az "elméleti" ciklus kezdete óta
+     
+     // Napokat nem tudunk becsülni bázis nélkül, így 0
+     daysSinceService = 0; 
+  }
 
-  // Szerviz Állapot (Egészség) logika
+  const daysRemaining = Math.max(0, serviceIntervalDays - daysSinceService)
+
+  // Állapotjelző színek
   let healthStatus = "Kiváló"
   let healthColor = "text-emerald-600 bg-emerald-100 border-emerald-200"
   let serviceDue = false
 
-  if (kmSinceService > serviceIntervalKm || daysSinceService > serviceIntervalDays) {
+  // Ha a hátralévő km 0 vagy lejárt az idő (csak ha van bázis dátumunk)
+  if (kmRemaining <= 0 || (lastServiceEvent && daysRemaining <= 0)) {
     healthStatus = "Szerviz Szükséges!"
     healthColor = "text-red-600 bg-red-100 border-red-200"
     serviceDue = true
-  } else if (kmSinceService > (serviceIntervalKm - 2000) || daysSinceService > (serviceIntervalDays - 30)) {
+  } 
+  // Ha már közel járunk (kevesebb mint 10% vagy 30 nap van hátra)
+  else if (kmRemaining < (serviceIntervalKm * 0.1) || (lastServiceEvent && daysRemaining < 30)) {
     healthStatus = "Hamarosan Esedékes"
     healthColor = "text-amber-600 bg-amber-100 border-amber-200"
   }
-
-  // Következő szerviz becslése
-  const kmRemaining = Math.max(0, serviceIntervalKm - kmSinceService)
-  const daysRemaining = Math.max(0, serviceIntervalDays - daysSinceService)
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-24 md:pb-20">
@@ -97,7 +111,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
         </div>
         <div className="absolute inset-0 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
            
-           {/* FELSŐ SOR */}
            <div className="absolute top-6 left-4 right-4 flex justify-between items-center">
              <Link href="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-amber-400 transition-colors bg-white/5 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:border-amber-500/50">
                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -162,7 +175,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
            <StatCard 
               label="Következő szerviz" 
               value={`${Math.round(kmRemaining).toLocaleString()} km`} 
-              subValue={`${daysRemaining} nap múlva`}
+              subValue={lastServiceEvent ? `${daysRemaining} nap múlva` : 'Becsült érték'} 
               icon="health" 
               alert={serviceDue}
            />
@@ -173,7 +186,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
           {/* --- BAL OSZLOP (Adatok, Emlékeztetők) --- */}
           <div className="lg:col-span-4 space-y-6">
             
-            {/* SZERVIZ MONITOR (DINAMIKUS) */}
+            {/* SZERVIZ MONITOR */}
             <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-white overflow-hidden">
                <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                   <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -185,23 +198,36 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                  {/* Km alapú */}
                  <div>
                    <div className="flex justify-between text-sm mb-2">
-                     <span className="text-slate-500 font-medium">Futásteljesítmény</span>
+                     <span className="text-slate-500 font-medium">Ciklus</span>
                      <span className={`font-bold ${serviceDue ? 'text-red-600' : 'text-slate-900'}`}>{kmSinceService.toLocaleString()} / {serviceIntervalKm.toLocaleString()} km</span>
                    </div>
                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
                       <div className={`h-full rounded-full transition-all duration-1000 ${kmSinceService > serviceIntervalKm ? 'bg-red-500' : 'bg-gradient-to-r from-amber-400 to-amber-600'}`} style={{ width: `${Math.min((kmSinceService / serviceIntervalKm) * 100, 100)}%` }}></div>
                    </div>
+                   <p className="text-right text-xs text-slate-400 mt-1">Még {kmRemaining.toLocaleString()} km van hátra</p>
                  </div>
                  
-                 {/* Idő alapú */}
-                 <div>
-                   <div className="flex justify-between text-sm mb-2">
-                     <span className="text-slate-500 font-medium">Időszak</span>
-                     <span className={`font-bold ${serviceDue ? 'text-red-600' : 'text-slate-900'}`}>{daysSinceService} / {serviceIntervalDays} nap</span>
-                   </div>
-                   <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                      <div className={`h-full rounded-full transition-all duration-1000 ${daysSinceService > serviceIntervalDays ? 'bg-red-500' : 'bg-gradient-to-r from-blue-400 to-blue-600'}`} style={{ width: `${Math.min((daysSinceService / serviceIntervalDays) * 100, 100)}%` }}></div>
-                   </div>
+                 {/* Idő alapú (Csak ha van előzmény) */}
+                 {lastServiceEvent ? (
+                     <div>
+                       <div className="flex justify-between text-sm mb-2">
+                         <span className="text-slate-500 font-medium">Időszak</span>
+                         <span className={`font-bold ${serviceDue ? 'text-red-600' : 'text-slate-900'}`}>{daysSinceService} / {serviceIntervalDays} nap</span>
+                       </div>
+                       <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-1000 ${daysSinceService > serviceIntervalDays ? 'bg-red-500' : 'bg-gradient-to-r from-blue-400 to-blue-600'}`} style={{ width: `${Math.min((daysSinceService / serviceIntervalDays) * 100, 100)}%` }}></div>
+                       </div>
+                     </div>
+                 ) : (
+                    <div className="p-3 bg-slate-50 rounded text-xs text-slate-500 italic text-center border border-slate-100">
+                        Még nem volt rögzített szerviz, így az idő alapú becslés nem elérhető.
+                    </div>
+                 )}
+
+                 <div className="pt-2 border-t border-slate-50">
+                   <p className="text-xs text-center text-slate-400">
+                     Utolsó szerviz: <span className="font-medium text-slate-600">{lastServiceEvent ? lastServiceEvent.event_date : 'Nincs rögzítve'}</span>
+                   </p>
                  </div>
                </div>
             </div>
