@@ -56,7 +56,7 @@ function EventForm() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+    <div className="h-screen w-full overflow-y-auto overscroll-none min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
       <div className="bg-slate-900 py-12 px-4 text-center shadow-lg">
         <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider">
           {isFuel ? 'Tankolás' : 'Szerviz'} <span className="text-amber-500">Rögzítése</span>

@@ -15,7 +15,7 @@ export default async function LoginPage(props: Props) {
 
   return (
     // JAVÍTÁS: Különálló, teljes képernyős elrendezés, ami mobilon is görgethető, ha kell
-    <div className="min-h-screen w-full bg-slate-950 font-sans text-slate-200 flex flex-col items-center justify-center p-4 selection:bg-amber-500/30 overflow-y-auto">
+    <div className="min-h-screen w-full bg-slate-950 font-sans text-slate-200 flex flex-col items-center justify-center p-4 selection:bg-amber-500/30 overflow-y-auto h-screen w-full overflow-y-auto overscroll-none">
       
       {/* Háttér (halványabb, hogy ne zavarja az olvasást) */}
       <div className="fixed inset-0 pointer-events-none z-0">

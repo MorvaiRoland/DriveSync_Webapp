@@ -20,7 +20,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+    <div className=" h-screen w-full overflow-y-auto overscroll-none min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
       
       {/* Fejléc */}
       <div className="bg-slate-900 pt-12 pb-24 px-4 text-center shadow-lg">
