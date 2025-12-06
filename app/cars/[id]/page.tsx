@@ -2,7 +2,7 @@ import { createClient } from 'supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { deleteEvent, deleteReminder } from './actions'
-import PdfDownloadButton from './PdfDownloadButton' // Importáljuk a PDF generátort
+import PdfDownloadButton from './PdfDownloadButton'
 
 export default async function CarDetailsPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params
@@ -31,17 +31,22 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     .from('service_reminders')
     .select('*')
     .eq('car_id', params.id)
-    .order('due_date', { ascending: true }) // Legkorábbi elől
+    .order('due_date', { ascending: true })
 
   const safeEvents = events || []
   const safeReminders = reminders || []
 
-  // --- STATISZTIKAI SZÁMÍTÁSOK ---
+  // --- STATISZTIKAI SZÁMÍTÁSOK (Javítva és Kiegészítve) ---
   const totalCost = safeEvents.reduce((sum, event) => sum + (event.cost || 0), 0)
   
-  // Költségek típus szerint
-  const serviceCost = safeEvents.filter(e => e.type === 'service').reduce((sum, e) => sum + (e.cost || 0), 0)
-  const fuelCost = safeEvents.filter(e => e.type === 'fuel').reduce((sum, e) => sum + (e.cost || 0), 0)
+  // Költségek típus szerint (EZ HIÁNYZOTT VAGY VOLT HIBÁS)
+  const serviceCost = safeEvents
+    .filter(e => e.type === 'service')
+    .reduce((sum, e) => sum + (e.cost || 0), 0)
+
+  const fuelCost = safeEvents
+    .filter(e => e.type === 'fuel')
+    .reduce((sum, e) => sum + (e.cost || 0), 0)
   
   // Átlagfogyasztás
   const fuelEvents = safeEvents.filter(e => e.type === 'fuel' && e.mileage && e.liters).sort((a, b) => a.mileage - b.mileage)
@@ -63,7 +68,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     ? Math.floor((new Date().getTime() - new Date(lastServiceEvent.event_date).getTime()) / (1000 * 3600 * 24))
     : 0
 
-  // Szerviz Állapot (Egészség) logika
+  // Szerviz Állapot
   let healthStatus = "Kiváló"
   let healthColor = "text-emerald-600 bg-emerald-100 border-emerald-200"
   let serviceDue = false
@@ -79,7 +84,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     healthColor = "text-amber-600 bg-amber-100 border-amber-200"
   }
 
-  // Következő szerviz becslése
   const kmRemaining = Math.max(0, serviceIntervalKm - kmSinceService)
   const daysRemaining = Math.max(0, serviceIntervalDays - daysSinceService)
 
@@ -94,7 +98,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
         </div>
         <div className="absolute inset-0 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
            
-           {/* FELSŐ SOR: Vissza gomb + PDF + Beállítások */}
+           {/* FELSŐ SOR */}
            <div className="absolute top-6 left-4 right-4 flex justify-between items-center">
              <Link href="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-amber-400 transition-colors bg-white/5 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:border-amber-500/50">
                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -102,9 +106,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
              </Link>
              
              <div className="flex gap-2">
-                 {/* --- ÚJ PDF GOMB BEILLESZTVE --- */}
                  <PdfDownloadButton car={car} events={safeEvents} />
-
                  <Link href={`/cars/${car.id}/edit`} className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors bg-white/5 backdrop-blur-md px-3 py-2 rounded-full border border-white/10 hover:bg-white/10">
                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                    <span className="text-xs font-bold uppercase hidden sm:inline">Beállítások</span>
@@ -153,7 +155,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
       {/* --- TARTALOM --- */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 md:-mt-20 relative z-20">
         
-        {/* Statisztika Sáv (Kártyák) */}
+        {/* Statisztika Sáv */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
            <StatCard label="Összes Költés" value={`${totalCost.toLocaleString()} Ft`} icon="wallet" />
            <StatCard label="Átlagfogyasztás" value={avgConsumption} icon="drop" highlight />
@@ -169,7 +171,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* --- BAL OSZLOP (Adatok, Emlékeztetők) --- */}
+          {/* --- BAL OSZLOP --- */}
           <div className="lg:col-span-4 space-y-6">
             
             {/* TERVEZETT SZERVIZEK */}
@@ -222,7 +224,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
               </dl>
             </div>
 
-            {/* Költség Megoszlás (Mini Chart) */}
+            {/* Költség Elemzés (ITT JAVÍTVA A VÁLTOZÓK HASZNÁLATA) */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider text-opacity-70">Költség Elemzés</h3>
                <div className="space-y-4">
