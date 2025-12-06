@@ -20,14 +20,14 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     return notFound()
   }
 
-  // 2. Események lekérése
+  // 2. Események lekérése (Múlt)
   const { data: events } = await supabase
     .from('events')
     .select('*')
     .eq('car_id', params.id)
     .order('event_date', { ascending: false })
 
-  // 3. Emlékeztetők lekérése
+  // 3. Emlékeztetők lekérése (Jövő)
   const { data: reminders } = await supabase
     .from('service_reminders')
     .select('*')
@@ -55,8 +55,10 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     }
   }
 
-  // --- OKOS SZERVIZ KALKULÁCIÓ ---
+  // --- SZERVIZ KALKULÁCIÓ ---
   const lastServiceEvent = safeEvents.find(e => e.type === 'service')
+  
+  // Intervallumok (Adatbázisból vagy alapértelmezett)
   const serviceIntervalKm = car.service_interval_km || 15000
   const serviceIntervalDays = car.service_interval_days || 365
   
@@ -65,37 +67,33 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
   let daysSinceService = 0;
   
   if (lastServiceEvent) {
-     // A: Ha VAN rögzített szerviz, ahhoz viszonyítunk
+     // Ha volt szerviz: ahhoz viszonyítunk
      kmSinceService = car.mileage - (lastServiceEvent.mileage || 0);
-     kmRemaining = Math.max(0, serviceIntervalKm - kmSinceService);
-     
+     kmRemaining = serviceIntervalKm - kmSinceService;
      daysSinceService = Math.floor((new Date().getTime() - new Date(lastServiceEvent.event_date).getTime()) / (1000 * 3600 * 24));
   } else {
-     // B: Ha NINCS rögzített szerviz, a kilométeróra alapján számolunk ciklust
-     // Pl. 261.000 km, 10.000 ciklus -> Maradék: 9.000
+     // Ha NEM volt szerviz: a km óra állásból számolunk ciklust (pl. 261.000 / 10.000 maradéka)
      const remainder = car.mileage % serviceIntervalKm;
-     kmRemaining = remainder === 0 ? 0 : serviceIntervalKm - remainder;
-     kmSinceService = remainder; // Ebben az esetben ennyit mentünk az "elméleti" ciklus kezdete óta
-     
-     // Napokat nem tudunk becsülni bázis nélkül, így 0
-     daysSinceService = 0; 
+     kmSinceService = remainder;
+     kmRemaining = serviceIntervalKm - remainder;
+     daysSinceService = 0; // Időt nem tudunk becsülni bázis nélkül
   }
 
   const daysRemaining = Math.max(0, serviceIntervalDays - daysSinceService)
 
-  // Állapotjelző színek
+  // --- ÁLLAPOT LOGIKA (JAVÍTVA) ---
   let healthStatus = "Kiváló"
   let healthColor = "text-emerald-600 bg-emerald-100 border-emerald-200"
   let serviceDue = false
 
-  // Ha a hátralévő km 0 vagy lejárt az idő (csak ha van bázis dátumunk)
+  // 1. Kritikus: Ha túlléptük a limitet vagy lejárt az idő
   if (kmRemaining <= 0 || (lastServiceEvent && daysRemaining <= 0)) {
     healthStatus = "Szerviz Szükséges!"
     healthColor = "text-red-600 bg-red-100 border-red-200"
     serviceDue = true
   } 
-  // Ha már közel járunk (kevesebb mint 10% vagy 30 nap van hátra)
-  else if (kmRemaining < (serviceIntervalKm * 0.1) || (lastServiceEvent && daysRemaining < 30)) {
+  // 2. Figyelmeztetés: Ha kevesebb mint 2000 km vagy 30 nap van hátra
+  else if (kmRemaining <= 2000 || (lastServiceEvent && daysRemaining <= 30)) {
     healthStatus = "Hamarosan Esedékes"
     healthColor = "text-amber-600 bg-amber-100 border-amber-200"
   }
@@ -167,7 +165,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
       {/* --- TARTALOM --- */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 md:-mt-20 relative z-20">
         
-        {/* Statisztika Sáv */}
+        {/* Statisztika Sáv (Kártyák) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
            <StatCard label="Összes Költés" value={`${totalCost.toLocaleString()} Ft`} icon="wallet" />
            <StatCard label="Átlagfogyasztás" value={avgConsumption} icon="drop" highlight />
@@ -198,11 +196,11 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                  {/* Km alapú */}
                  <div>
                    <div className="flex justify-between text-sm mb-2">
-                     <span className="text-slate-500 font-medium">Ciklus</span>
+                     <span className="text-slate-500 font-medium">Futásteljesítmény</span>
                      <span className={`font-bold ${serviceDue ? 'text-red-600' : 'text-slate-900'}`}>{kmSinceService.toLocaleString()} / {serviceIntervalKm.toLocaleString()} km</span>
                    </div>
                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                      <div className={`h-full rounded-full transition-all duration-1000 ${kmSinceService > serviceIntervalKm ? 'bg-red-500' : 'bg-gradient-to-r from-amber-400 to-amber-600'}`} style={{ width: `${Math.min((kmSinceService / serviceIntervalKm) * 100, 100)}%` }}></div>
+                      <div className={`h-full rounded-full transition-all duration-1000 ${kmRemaining <= 0 ? 'bg-red-500' : kmRemaining <= 2000 ? 'bg-amber-500' : 'bg-gradient-to-r from-emerald-400 to-emerald-600'}`} style={{ width: `${Math.min((kmSinceService / serviceIntervalKm) * 100, 100)}%` }}></div>
                    </div>
                    <p className="text-right text-xs text-slate-400 mt-1">Még {kmRemaining.toLocaleString()} km van hátra</p>
                  </div>
@@ -215,7 +213,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                          <span className={`font-bold ${serviceDue ? 'text-red-600' : 'text-slate-900'}`}>{daysSinceService} / {serviceIntervalDays} nap</span>
                        </div>
                        <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                          <div className={`h-full rounded-full transition-all duration-1000 ${daysSinceService > serviceIntervalDays ? 'bg-red-500' : 'bg-gradient-to-r from-blue-400 to-blue-600'}`} style={{ width: `${Math.min((daysSinceService / serviceIntervalDays) * 100, 100)}%` }}></div>
+                          <div className={`h-full rounded-full transition-all duration-1000 ${daysRemaining <= 0 ? 'bg-red-500' : daysRemaining <= 30 ? 'bg-amber-500' : 'bg-gradient-to-r from-blue-400 to-blue-600'}`} style={{ width: `${Math.min((daysSinceService / serviceIntervalDays) * 100, 100)}%` }}></div>
                        </div>
                      </div>
                  ) : (
@@ -282,7 +280,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
               </dl>
             </div>
 
-            {/* Költség Megoszlás (Mini Chart) */}
+            {/* Költség Megoszlás */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider text-opacity-70">Költség Elemzés</h3>
                <div className="space-y-4">
@@ -433,56 +431,61 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
 // --- SEGÉD KOMPONENSEK ---
 
 function StatCard({ label, value, subValue, icon, customColor, alert, highlight }: any) {
-  return (
-    <div className={`bg-white p-4 md:p-5 rounded-2xl border shadow-sm flex flex-col justify-between h-full transition-shadow hover:shadow-md ${alert ? 'border-red-200 bg-red-50' : 'border-slate-100'} ${highlight ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
-      <div className="flex justify-between items-start mb-3">
-         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${alert ? 'bg-red-200 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
-            {icon === 'wallet' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-            {icon === 'drop' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
-            {icon === 'road' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-            {icon === 'health' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-         </div>
-         {alert && <span className="bg-red-500 w-2 h-2 rounded-full animate-pulse"></span>}
-      </div>
-      <div>
-        <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</p>
-        <p className={`text-xl md:text-2xl font-black ${alert ? 'text-red-700' : 'text-slate-900'} tracking-tight`}>{value}</p>
-        {subValue && <p className="text-xs font-bold text-slate-500 mt-1">{subValue}</p>}
-      </div>
-    </div>
-  )
+  // BIZTOSRA MEGYÜNK: Ellenőrizzük, hogy az ikonnév pontosan egyezik-e
+  return (
+    <div className={`bg-white p-4 md:p-5 rounded-2xl border shadow-sm flex flex-col justify-between h-full transition-shadow hover:shadow-md ${alert ? 'border-red-200 bg-red-50' : 'border-slate-100'} ${highlight ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
+      <div className="flex justify-between items-start mb-3">
+         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${alert ? 'bg-red-200 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+            {/* Wallet Icon */}
+            {icon === 'wallet' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
+            {/* Drop Icon */}
+            {icon === 'drop' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
+            {/* Road Icon */}
+            {icon === 'road' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+            {/* Health Icon */}
+            {icon === 'health' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+         </div>
+         {alert && <span className="bg-red-500 w-2 h-2 rounded-full animate-pulse"></span>}
+      </div>
+      <div>
+        <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</p>
+        <p className={`text-xl md:text-2xl font-black ${alert ? 'text-red-700' : 'text-slate-900'} tracking-tight`}>{value}</p>
+        {subValue && <p className="text-xs font-bold text-slate-500 mt-1">{subValue}</p>}
+      </div>
+    </div>
+  )
 }
 
 function Row({ label, value, mono, capitalize, badge }: any) {
-  return (
-    <div className="flex justify-between py-3 items-center">
-      <dt className="text-slate-500 text-xs md:text-sm font-medium">{label}</dt>
-      <dd className={`font-bold text-slate-900 text-sm md:text-base ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''}`}>
-        {badge ? <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">{value}</span> : value}
-      </dd>
-    </div>
-  )
+  return (
+    <div className="flex justify-between py-3 items-center">
+      <dt className="text-slate-500 text-xs md:text-sm font-medium">{label}</dt>
+      <dd className={`font-bold text-slate-900 text-sm md:text-base ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''}`}>
+        {badge ? <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">{value}</span> : value}
+      </dd>
+    </div>
+  )
 }
 
 function DocPlaceholder({ label }: any) {
-  return (
-    <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer h-32 relative overflow-hidden group">
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-slate-200 group-hover:bg-amber-400 transition-colors"></div>
-        <svg className="w-8 h-8 mb-2 text-slate-300 group-hover:text-slate-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-        <span className="text-xs font-semibold text-center">{label}</span>
-    </div>
-  )
+  return (
+    <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer h-32 relative overflow-hidden group">
+        <div className="absolute inset-x-0 bottom-0 h-1 bg-slate-200 group-hover:bg-amber-400 transition-colors"></div>
+        <svg className="w-8 h-8 mb-2 text-slate-300 group-hover:text-slate-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        <span className="text-xs font-semibold text-center">{label}</span>
+    </div>
+  )
 }
 
 function Logo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-      <path d="M12 17v-6" />
-      <path d="M8.5 14.5 12 11l3.5 3.5" />
-      <circle cx="7" cy="17" r="2" />
-      <circle cx="17" cy="17" r="2" />
-      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
-    </svg>
-  )
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+      <path d="M12 17v-6" />
+      <path d="M8.5 14.5 12 11l3.5 3.5" />
+      <circle cx="7" cy="17" r="2" />
+      <circle cx="17" cy="17" r="2" />
+      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
+    </svg>
+  )
 }
