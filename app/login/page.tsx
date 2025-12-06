@@ -14,173 +14,201 @@ export default async function LoginPage(props: Props) {
   const isLogin = mode === 'signin'
 
   return (
-    <div className="flex min-h-screen w-full bg-slate-950 font-sans text-slate-200">
+    // JAVÍTÁS: h-screen, overflow-y-auto és overscroll-none a gumiszalag effekt ellen
+    <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-950 font-sans text-slate-200 flex flex-col lg:flex-row selection:bg-amber-500/30">
       
-      {/* --- BAL OLDAL: BRANDING (Asztali nézetben domináns) --- */}
-      <div className="relative hidden w-0 flex-1 lg:flex lg:flex-col lg:justify-center lg:items-center bg-slate-900 overflow-hidden border-r border-white/5">
+      {/* --- BAL OLDAL: BEMUTATKOZÁS & TARTALOM (SCROLLABLE) --- */}
+      <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950 overflow-hidden shrink-0">
         
-        {/* Háttér effektek */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 z-0"></div>
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-slate-900 via-slate-950 to-black opacity-90 z-0"></div>
-        <div className="absolute -top-[20%] -left-[20%] w-[50vw] h-[50vw] bg-amber-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-        
-        {/* Tartalom */}
-        <div className="relative z-10 flex flex-col items-center text-center px-12">
-           {/* LOGÓ KÉP (Nagy méret) */}
-           <div className="relative w-64 h-64 mb-8 animate-in zoom-in duration-700">
-              <Image 
-                src="/drivesync-logo.png" 
-                alt="DriveSync Logo" 
-                fill
-                className="object-contain drop-shadow-2xl"
-                priority
-              />
-           </div>
-
-           <h1 className="text-5xl font-black text-white tracking-tight mb-4 drop-shadow-lg">
-             Drive<span className="text-amber-500">Sync</span>
-           </h1>
-           <p className="text-xl text-slate-400 max-w-md leading-relaxed font-light">
-             Prémium garázsmenedzsment a zsebedben.
-             <br/>
-             <span className="text-amber-500/90 italic font-serif mt-2 block">"Just drive. We Sync."</span>
-           </p>
+        {/* Háttér dekorációk */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+           <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-amber-600/10 rounded-full blur-[100px] animate-pulse"></div>
+           <div className="absolute bottom-[10%] left-[-10%] w-[30vw] h-[30vw] bg-blue-900/10 rounded-full blur-[80px]"></div>
+           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
         </div>
 
-        {/* Footer info */}
-        <div className="absolute bottom-8 text-xs text-slate-600 z-10">
-           © 2025 DriveSync Technologies
+        {/* Tartalom Konténer */}
+        <div className="relative z-10 p-6 sm:p-12 lg:p-16 xl:p-24 flex flex-col gap-16 lg:gap-24">
+           
+           {/* 1. HERO SZEKCIÓ */}
+           <div className="space-y-8">
+             <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                   <Logo className="w-6 h-6 text-slate-900" />
+                </div>
+                <span className="text-xl font-bold tracking-tight text-white uppercase">DriveSync</span>
+             </div>
+             
+             <div>
+               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.1] mb-6 drop-shadow-xl">
+                 Az autód <br/>
+                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600">
+                   digitális garázsa.
+                 </span>
+               </h1>
+               <p className="text-lg sm:text-xl text-slate-400 max-w-xl leading-relaxed font-light">
+                 Felejtsd el a kesztyűtartóban gyűrődő papírokat. Kezeld a szervizkönyvet, a tankolásokat és a költségeket egyetlen prémium felületen.
+               </p>
+             </div>
+
+             <div className="flex flex-wrap gap-4 text-sm font-medium text-slate-500">
+                <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-slate-800">
+                  <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  Ingyenes kezdés
+                </span>
+                <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-slate-800">
+                  <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  Biztonságos felhő
+                </span>
+             </div>
+           </div>
+
+           {/* 2. STATISZTIKA SÁV */}
+           <div className="grid grid-cols-3 gap-4 border-y border-slate-800/50 py-8 bg-slate-900/20 backdrop-blur-sm rounded-2xl">
+              <StatCard number="100%" label="Papírmentes" />
+              <StatCard number="0 Ft" label="Rejtett költség" />
+              <StatCard number="24/7" label="Elérhetőség" />
+           </div>
+
+           {/* 3. FUNKCIÓK (GRID) */}
+           <div>
+             <h3 className="text-sm font-bold text-amber-500 uppercase tracking-widest mb-10 flex items-center gap-2">
+               <span className="w-8 h-[2px] bg-amber-500"></span>
+               Miért a DriveSync?
+             </h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <FeatureBox 
+                  title="Okos Költségkövetés" 
+                  desc="Lásd át pontosan, mennyibe kerül az autód fenntartása. Tankolás, szerviz, biztosítás - mind egy helyen, látványos grafikonokon."
+                  icon="chart"
+                />
+                <FeatureBox 
+                  title="Szerviz Emlékeztető" 
+                  desc="Soha többé nem felejted el a műszaki vizsgát vagy az olajcserét. A rendszer időben szól, mielőtt baj lenne."
+                  icon="bell"
+                />
+                <FeatureBox 
+                  title="Digitális Szervizkönyv" 
+                  desc="Értéknövelő előny eladáskor. Minden javítás visszakövethető, hiteles és rendezett. Nincs több elveszett munkalap."
+                  icon="book"
+                />
+                <FeatureBox 
+                  title="Több Autó Kezelése" 
+                  desc="Legyen szó a családi flottáról vagy egy céges parkról, korlátlan számú járművet rögzíthetsz és kezelhetsz egyszerre."
+                  icon="car"
+                />
+             </div>
+           </div>
+
+           {/* 4. FOOTER (BAL) */}
+           <div className="pt-10 border-t border-slate-800/50 text-slate-500 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <p className="italic">"Az egyetlen app, amire az autósoknak szükségük van."</p>
+              <div className="text-slate-600 text-xs">
+                 © 2025 DriveSync Technologies
+              </div>
+           </div>
+
         </div>
       </div>
 
-      {/* --- JOBB OLDAL: FORM (Mindig látható) --- */}
-      <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24 bg-slate-950 relative w-full lg:w-[600px]">
+      {/* --- JOBB OLDAL: BEJELENTKEZÉS (STICKY) --- */}
+      <div className="lg:w-[40%] xl:w-[35%] w-full bg-slate-950 lg:border-l lg:border-white/5 relative flex flex-col justify-center p-6 lg:p-12 shadow-2xl lg:min-h-screen z-20 shrink-0">
         
-        {/* Mobil Háttér dekoráció */}
-        <div className="absolute top-0 right-0 w-full h-full overflow-hidden pointer-events-none lg:hidden">
-           <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-600/20 rounded-full blur-[80px]"></div>
-        </div>
-
-        <div className="mx-auto w-full max-w-sm lg:w-96 relative z-10">
+        {/* Sticky Container */}
+        <div className="lg:sticky lg:top-12 w-full max-w-sm mx-auto">
           
-          {/* Mobil Logó (Csak mobilon látszik) */}
-          <div className="lg:hidden text-center mb-10">
-             <div className="relative w-24 h-24 mx-auto mb-4">
-                <Image 
-                  src="/drivesync-logo.png" 
-                  alt="DriveSync Logo" 
-                  fill
-                  className="object-contain"
-                />
-             </div>
-             <h1 className="text-3xl font-black text-white">Drive<span className="text-amber-500">Sync</span></h1>
-          </div>
-
-          <div className="text-center lg:text-left mb-8">
-            <h2 className="text-2xl font-bold tracking-tight text-white">
-              {isLogin ? 'Üdvözlünk újra!' : 'Fiók létrehozása'}
+          <div className="text-center mb-10">
+            <div className="lg:hidden w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl border border-slate-800 relative overflow-hidden">
+               <Image 
+                 src="/drivesync-logo.png" 
+                 alt="DriveSync Logo" 
+                 fill 
+                 className="object-contain p-2" 
+                 priority
+               />
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
+              Indítsd be a motorokat!
             </h2>
-            <p className="mt-2 text-sm text-slate-400">
-              {isLogin ? 'Jelentkezz be a folytatáshoz.' : 'Csatlakozz a közösséghez még ma.'}
+            <p className="text-slate-400 text-sm">
+              Lépj be a fiókodba, vagy regisztrálj egyet ingyenesen a folytatáshoz.
             </p>
           </div>
 
-          {/* Google Login */}
-          <form action={signInWithGoogle} className="mb-6">
-            <button className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white transition-all active:scale-[0.98]">
-               <svg className="h-5 w-5" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-               </svg>
-               <span className="text-sm">Folytatás Google fiókkal</span>
-            </button>
-          </form>
+          <div className="space-y-4">
+            <Link 
+              href="/login" 
+              className="group flex w-full items-center justify-center gap-3 rounded-xl bg-white px-4 py-4 text-sm font-bold text-slate-950 shadow-xl shadow-white/5 hover:bg-slate-200 transition-all transform active:scale-[0.98]"
+            >
+               <span>Bejelentkezés</span>
+               <svg className="w-4 h-4 text-slate-900 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            </Link>
 
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-slate-800" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-slate-950 px-2 text-slate-500 uppercase text-xs font-semibold tracking-wider">vagy email</span>
-            </div>
+            <Link 
+              href="/login?mode=signup" 
+              className="group flex w-full items-center justify-center gap-3 rounded-xl bg-slate-900 border border-slate-800 px-4 py-4 text-sm font-bold text-white shadow-lg hover:bg-slate-800 hover:border-slate-700 transition-all transform active:scale-[0.98]"
+            >
+               <span>Fiók létrehozása</span>
+            </Link>
           </div>
 
-          {/* Email Űrlap */}
-          <form className="space-y-5">
-            <div>
-              <label htmlFor="email" className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Email cím</label>
-              <div className="relative">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  placeholder="pelda@mail.com"
-                  className="block w-full rounded-xl border-0 bg-slate-900/50 py-3 px-4 text-white shadow-sm ring-1 ring-inset ring-slate-800 placeholder:text-slate-600 focus:ring-2 focus:ring-inset focus:ring-amber-500 sm:text-sm sm:leading-6 transition-all"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Jelszó</label>
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete={isLogin ? 'current-password' : 'new-password'}
-                  required
-                  placeholder="••••••••"
-                  className="block w-full rounded-xl border-0 bg-slate-900/50 py-3 px-4 text-white shadow-sm ring-1 ring-inset ring-slate-800 placeholder:text-slate-600 focus:ring-2 focus:ring-inset focus:ring-amber-500 sm:text-sm sm:leading-6 transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Hibaüzenet */}
-            {message && (
-              <div className={`p-4 rounded-lg text-sm flex items-start gap-3 border ${
-                message.toLowerCase().includes('hiba') || message.toLowerCase().includes('error')
-                  ? 'bg-red-500/10 border-red-500/20 text-red-200' 
-                  : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200'
-              }`}>
-                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   {message.toLowerCase().includes('hiba') || message.toLowerCase().includes('error') ? (
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                   ) : (
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                   )}
-                </svg>
-                <span>{message}</span>
-              </div>
-            )}
-
-            <div>
-              <button
-                formAction={isLogin ? login : signup}
-                className="flex w-full justify-center rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 transition-all transform active:scale-[0.98] uppercase tracking-wide"
-              >
-                {isLogin ? 'Belépés' : 'Fiók létrehozása'}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-8 text-center">
-            <p className="text-sm text-slate-400">
-              {isLogin ? 'Nincs még fiókod?' : 'Már van fiókod?'} {' '}
-              <Link 
-                href={isLogin ? '/login?mode=signup' : '/login?mode=signin'} 
-                className="font-bold text-amber-500 hover:text-amber-400 transition-colors"
-              >
-                {isLogin ? 'Regisztrálj ingyen' : 'Jelentkezz be'}
-              </Link>
-            </p>
+          <div className="mt-10 pt-8 border-t border-slate-800/50">
+             <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                   <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                   <h4 className="text-white font-bold text-sm">Azonnali hozzáférés</h4>
+                   <p className="text-slate-500 text-xs mt-1 leading-relaxed">
+                     Regisztráció után azonnal hozzáadhatod autóidat és rögzítheted a tankolásokat. Nincs várakozási idő.
+                   </p>
+                </div>
+             </div>
           </div>
 
         </div>
       </div>
     </div>
+  )
+}
+
+// --- KOMPONENSEK ---
+
+function FeatureBox({ title, desc, icon }: { title: string, desc: string, icon: 'chart' | 'bell' | 'book' | 'car' }) {
+  return (
+    <div className="flex gap-5 group">
+      <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-500 shadow-sm group-hover:border-amber-500/30 group-hover:bg-amber-500/10 transition-all duration-300">
+         {icon === 'chart' && <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>}
+         {icon === 'bell' && <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>}
+         {icon === 'book' && <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>}
+         {icon === 'car' && <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" /><circle cx="7" cy="17" r="2" /><circle cx="17" cy="17" r="2" /></svg>}
+      </div>
+      <div>
+        <h4 className="font-bold text-white text-lg mb-2">{title}</h4>
+        <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
+      </div>
+    </div>
+  )
+}
+
+function StatCard({ number, label }: { number: string, label: string }) {
+  return (
+    <div className={`text-center p-4 rounded-xl hover:bg-white/5 transition-colors cursor-default`}>
+       <div className="text-3xl font-black text-white mb-1">{number}</div>
+       <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</div>
+    </div>
+  )
+}
+
+function Logo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+      <path d="M12 17v-6" />
+      <path d="M8.5 14.5 12 11l3.5 3.5" />
+      <circle cx="7" cy="17" r="2" />
+      <circle cx="17" cy="17" r="2" />
+      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
+    </svg>
   )
 }
