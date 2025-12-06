@@ -1,7 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb', // 1MB helyett 10MB lesz a limit a feltöltésnél
+    },
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**', // Ez engedélyezi a külső képek (pl. Supabase) betöltését
+      },
+    ],
+  },
 };
 
 export default nextConfig;
