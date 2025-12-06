@@ -37,10 +37,12 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
   const safeEvents = events || []
   const safeReminders = reminders || []
 
-  // --- STATISZTIKAI SZÁMÍTÁSOK (JAVÍTVA) ---
+  // --- STATISZTIKAI SZÁMÍTÁSOK (MINDEN VÁLTOZÓ ITT DEFINIÁLVA) ---
+  
+  // 1. Összes költés
   const totalCost = safeEvents.reduce((sum, event) => sum + (event.cost || 0), 0)
   
-  // Különválogatjuk a költségeket a grafikonhoz
+  // 2. Költségek típus szerint (EZT HIÁNYOLTA A KÓD KORÁBBAN)
   const serviceCost = safeEvents
     .filter(e => e.type === 'service')
     .reduce((sum, e) => sum + (e.cost || 0), 0)
@@ -49,7 +51,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     .filter(e => e.type === 'fuel')
     .reduce((sum, e) => sum + (e.cost || 0), 0)
   
-  // Átlagfogyasztás
+  // 3. Átlagfogyasztás
   const fuelEvents = safeEvents.filter(e => e.type === 'fuel' && e.mileage && e.liters).sort((a, b) => a.mileage - b.mileage)
   let avgConsumption = "Nincs adat"
   
@@ -72,7 +74,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
   let daysSinceService = 0;
   
   if (lastServiceEvent) {
-     // A: Ha VAN rögzített szerviz
+     // A: Ha VAN rögzített szerviz, ahhoz viszonyítunk
      kmSinceService = car.mileage - (lastServiceEvent.mileage || 0);
      kmRemaining = serviceIntervalKm - kmSinceService;
      daysSinceService = Math.floor((new Date().getTime() - new Date(lastServiceEvent.event_date).getTime()) / (1000 * 3600 * 24));
@@ -176,7 +178,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
            {/* --- BAL OSZLOP (Adatok & Elemzés) --- */}
            <div className="space-y-6">
               
-              {/* 1. Okos Tippek Kártya (AI Insight) - ÚJ! */}
+              {/* 1. Okos Tippek Kártya (AI Insight) */}
               <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 shadow-lg text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-10"><svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></div>
                   <h3 className="font-bold text-lg mb-2 flex items-center gap-2 relative z-10">
@@ -190,11 +192,11 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                   </div>
               </div>
 
-              {/* 2. Pénzügyi Elemzés Grafikon - ÚJ! */}
+              {/* 2. Pénzügyi Elemzés Grafikon */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                  <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider text-opacity-70">Pénzügyi Elemzés</h3>
                  
-                 {/* Grafikon sávok (vizuális dummy) */}
+                 {/* Grafikon sávok (vizuális dummy - valós adatok alapján lehetne komplexebb) */}
                  <div className="flex items-end gap-2 h-32 mb-4 border-b border-slate-100 pb-2">
                     {[30, 50, 45, 80, 40, 90].map((h, i) => (
                         <div key={i} className="flex-1 bg-slate-50 rounded-t-lg relative group overflow-hidden">
@@ -217,7 +219,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                  </div>
               </div>
 
-              {/* 3. Szerviz Monitor (Meglévő) */}
+              {/* 3. Szerviz Monitor (Okosított) */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                  <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                     <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Szerviz Állapot</h3>
@@ -243,7 +245,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                     <DataPoint label="Évjárat" value={car.year} />
                     <DataPoint label="Üzemanyag" value={car.fuel_type} capitalize />
                     <DataPoint label="Szín" value={car.color || '-'} />
-                    <DataPoint label="Átlagfogy." value={avgConsumption === 'N/A' ? '-' : `${avgConsumption} L`} highlight />
+                    <DataPoint label="Átlagfogy." value={avgConsumption === 'N/A' ? '-' : `${avgConsumption}`} highlight />
                     <DataPoint label="VIN" value={car.vin || 'N/A'} mono />
                  </div>
               </div>
@@ -292,7 +294,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                     </div>
                  </div>
 
-                 {/* Digitális Kesztyűtartó - ÚJ! */}
+                 {/* Digitális Kesztyűtartó */}
                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="font-bold text-slate-800">Kesztyűtartó</h3>
