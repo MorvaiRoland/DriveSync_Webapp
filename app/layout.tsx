@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 // Ez állítja be, hogy hogyan jelenjen meg a böngészőben/mobilon
 export const metadata: Metadata = {
-  title: 'DriveSync - Garázsmester',
+  title: 'DriveSync',
   description: 'Professzionális autókezelő rendszer saját célra.',
   manifest: '/manifest.webmanifest', // Hivatkozás a manifestre
   icons: {

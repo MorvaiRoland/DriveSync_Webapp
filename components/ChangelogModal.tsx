@@ -82,7 +82,7 @@ export default function ChangelogModal() {
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                <h2 className="text-2xl font-black">Üdvözöl a DriveSync 2.0! 🚀</h2>
+                <h2 className="text-2xl font-black">Üdvözöl a © 2025 DriveSync Technologies! 🚀</h2>
                 <p className="text-slate-400 text-sm mt-1">Íme minden, amire az új rendszered képes:</p>
             </div>
         </div>

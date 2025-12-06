@@ -123,11 +123,9 @@ export async function resetServiceCounter(formData: FormData) {
     const supabase = await createClient()
     const carId = String(formData.get('car_id'))
     
-    // Lekérjük az autó aktuális kilométerét
     const { data: car } = await supabase.from('cars').select('mileage').eq('id', carId).single()
     
     if (car) {
-        // Beállítjuk a 'last_service_mileage'-t a jelenlegi 'mileage'-re
         await supabase
             .from('cars')
             .update({ last_service_mileage: car.mileage })
@@ -147,7 +145,6 @@ export async function updateCar(formData: FormData) {
 
   const carId = String(formData.get('car_id'))
   
-  // Dátumok kezelése (üres string esetén null)
   const motExpiry = formData.get('mot_expiry');
   const insuranceExpiry = formData.get('insurance_expiry');
 
@@ -167,7 +164,6 @@ export async function updateCar(formData: FormData) {
     insurance_expiry: insuranceExpiry && insuranceExpiry !== '' ? String(insuranceExpiry) : null,
   }
 
-  // Képfeltöltés
   const imageFile = formData.get('image') as File;
   if (imageFile && imageFile.size > 0) {
     const fileName = `${user.id}/${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
@@ -199,12 +195,12 @@ export async function deleteCar(formData: FormData) {
   const supabase = await createClient()
   const carId = String(formData.get('car_id'))
   
-  // Biztonsági törlés: Először a kapcsolódó adatokat töröljük
+  // Törlés sorrend: Trip -> Gumi -> Esemény -> Emlékeztető -> Autó
+  await supabase.from('trips').delete().eq('car_id', carId)
+  await supabase.from('tires').delete().eq('car_id', carId)
   await supabase.from('events').delete().eq('car_id', carId)
   await supabase.from('service_reminders').delete().eq('car_id', carId)
-  await supabase.from('tires').delete().eq('car_id', carId) // Gumikat is töröljük!
   
-  // Végül magát az autót
   const { error } = await supabase.from('cars').delete().eq('id', carId)
 
   if (error) {
@@ -216,7 +212,7 @@ export async function deleteCar(formData: FormData) {
   redirect('/')
 }
 
-// --- 5. GUMIABRONCS MENEDZSER (TIRE HOTEL) ---
+// --- 5. GUMIABRONCS MENEDZSER ---
 
 export async function addTire(formData: FormData) {
   const supabase = await createClient()
@@ -234,15 +230,10 @@ export async function addTire(formData: FormData) {
     type: String(formData.get('type')),
     dot: String(formData.get('dot')),
     total_distance: parseInt(String(formData.get('total_distance') || '0')),
-    is_mounted: false // Alapból nem szereljük fel, azt külön kell kérni
+    is_mounted: false 
   }
 
-  const { error } = await supabase.from('tires').insert(tireData)
-
-  if (error) {
-    console.error('Gumi mentési hiba:', error)
-  }
-
+  await supabase.from('tires').insert(tireData)
   revalidatePath(`/cars/${carId}`)
 }
 
@@ -252,20 +243,17 @@ export async function deleteTire(formData: FormData) {
   const carId = String(formData.get('car_id'))
   
   await supabase.from('tires').delete().eq('id', tireId)
-  
   revalidatePath(`/cars/${carId}`)
 }
 
 export async function swapTire(formData: FormData) {
   const supabase = await createClient()
   const carId = String(formData.get('car_id'))
-  const newTireId = String(formData.get('tire_id')) // Ezt a gumit akarjuk felrakni
+  const newTireId = String(formData.get('tire_id')) 
   
-  // 1. Lekérjük az autó aktuális kilométerét
   const { data: car } = await supabase.from('cars').select('mileage').eq('id', carId).single()
   if (!car) return;
 
-  // 2. Megkeressük, mi van MOST fent (ha van)
   const { data: currentMounted } = await supabase
     .from('tires')
     .select('*')
@@ -273,10 +261,8 @@ export async function swapTire(formData: FormData) {
     .eq('is_mounted', true)
     .single()
 
-  // 3. Ha van fent gumi, leszereljük és frissítjük a futásteljesítményét
   if (currentMounted) {
      const distanceDriven = car.mileage - (currentMounted.mounted_at_mileage || car.mileage);
-     // Biztonsági ellenőrzés: ne legyen negatív (ha valaki visszatekerte az órát vagy elírta)
      const validDistance = Math.max(0, distanceDriven);
 
      await supabase
@@ -289,8 +275,6 @@ export async function swapTire(formData: FormData) {
        .eq('id', currentMounted.id)
   }
 
-  // 4. Felrakjuk az ÚJ gumit
-  // Ha a "newTireId" nem üres (mert lehet, hogy csak leszerelni akarunk mindent)
   if (newTireId && newTireId !== 'none') {
     await supabase
       .from('tires')
@@ -302,4 +286,43 @@ export async function swapTire(formData: FormData) {
   }
 
   revalidatePath(`/cars/${carId}`)
+}
+
+// --- 6. ÚTNYILVÁNTARTÁS (TRIP LOGGER) - ÚJ! ---
+
+export async function addTrip(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return redirect('/login')
+
+  const car_id = formData.get('car_id')
+  
+  const tripData = {
+    user_id: user.id,
+    car_id: car_id,
+    start_location: String(formData.get('start_location')),
+    end_location: String(formData.get('end_location')),
+    distance: parseInt(String(formData.get('distance'))),
+    purpose: String(formData.get('purpose')),
+    trip_date: String(formData.get('trip_date')),
+    notes: String(formData.get('notes') || '')
+  }
+
+  const { error } = await supabase.from('trips').insert(tripData)
+
+  if (error) {
+    console.error('Út mentési hiba:', error)
+  }
+  
+  revalidatePath(`/cars/${car_id}/trips`)
+}
+
+export async function deleteTrip(formData: FormData) {
+  const supabase = await createClient()
+  const tripId = String(formData.get('trip_id'))
+  const carId = String(formData.get('car_id'))
+  
+  await supabase.from('trips').delete().eq('id', tripId)
+  
+  revalidatePath(`/cars/${carId}/trips`)
 }
