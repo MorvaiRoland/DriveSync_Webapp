@@ -112,7 +112,7 @@ export default async function Home() {
              <div>
                 <h2 className="text-slate-500 font-medium text-sm uppercase tracking-wider mb-1">{greeting},</h2>
                 <h1 className="text-3xl md:text-4xl font-black text-slate-900">
-                   {user.email?.split('@')[0]}
+                    {user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]}
                 </h1>
              </div>
              {cars.length > 0 && (
