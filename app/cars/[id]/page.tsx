@@ -2,103 +2,63 @@ import { createClient } from 'supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { deleteEvent, deleteReminder } from './actions'
-import PdfDownloadButton from './PdfDownloadButton'
+import PdfDownloadButton from './PdfDownloadButton' // Importáljuk az új gombot!
 
 export default async function CarDetailsPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params
   const supabase = await createClient()
 
-  // 1. Autó lekérése
-  const { data: car, error } = await supabase
-    .from('cars')
-    .select('*')
-    .eq('id', params.id)
-    .single()
+  const { data: car, error } = await supabase.from('cars').select('*').eq('id', params.id).single()
 
-  if (error || !car) {
-    return notFound()
-  }
+  if (error || !car) return notFound()
 
-  // 2. Események lekérése (Múlt)
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .eq('car_id', params.id)
-    .order('event_date', { ascending: false })
-
-  // 3. Emlékeztetők lekérése (Jövő)
-  const { data: reminders } = await supabase
-    .from('service_reminders')
-    .select('*')
-    .eq('car_id', params.id)
-    .order('due_date', { ascending: true })
+  const { data: events } = await supabase.from('events').select('*').eq('car_id', params.id).order('event_date', { ascending: false })
+  const { data: reminders } = await supabase.from('service_reminders').select('*').eq('car_id', params.id).order('due_date', { ascending: true })
 
   const safeEvents = events || []
   const safeReminders = reminders || []
 
-  // --- STATISZTIKAI SZÁMÍTÁSOK (Javítva és Kiegészítve) ---
+  // Statisztikák
   const totalCost = safeEvents.reduce((sum, event) => sum + (event.cost || 0), 0)
   
-  // Költségek típus szerint (EZ HIÁNYZOTT VAGY VOLT HIBÁS)
-  const serviceCost = safeEvents
-    .filter(e => e.type === 'service')
-    .reduce((sum, e) => sum + (e.cost || 0), 0)
-
-  const fuelCost = safeEvents
-    .filter(e => e.type === 'fuel')
-    .reduce((sum, e) => sum + (e.cost || 0), 0)
-  
-  // Átlagfogyasztás
   const fuelEvents = safeEvents.filter(e => e.type === 'fuel' && e.mileage && e.liters).sort((a, b) => a.mileage - b.mileage)
-  let avgConsumption = "Nincs elég adat"
-  
+  let avgConsumption = "Nincs adat"
   if (fuelEvents.length >= 2) {
-    const totalLiters = fuelEvents.reduce((sum, e) => sum + (e.liters || 0), 0) - (fuelEvents[0].liters || 0)
+    const totalLiters = fuelEvents.reduce((sum, e) => sum + e.liters, 0) - fuelEvents[0].liters 
     const distanceDelta = fuelEvents[fuelEvents.length - 1].mileage - fuelEvents[0].mileage
     if (distanceDelta > 0) {
-      const consumption = (totalLiters / distanceDelta) * 100
-      avgConsumption = `${consumption.toFixed(1)} L/100km`
+      avgConsumption = `${((totalLiters / distanceDelta) * 100).toFixed(1)} L`
     }
   }
 
-  // Szerviz Kalkuláció
   const lastServiceEvent = safeEvents.find(e => e.type === 'service')
   const kmSinceService = lastServiceEvent ? car.mileage - (lastServiceEvent.mileage || 0) : 0
   const daysSinceService = lastServiceEvent 
     ? Math.floor((new Date().getTime() - new Date(lastServiceEvent.event_date).getTime()) / (1000 * 3600 * 24))
     : 0
 
-  // Szerviz Állapot
   let healthStatus = "Kiváló"
   let healthColor = "text-emerald-600 bg-emerald-100 border-emerald-200"
   let serviceDue = false
-  const serviceIntervalKm = 15000
-  const serviceIntervalDays = 365
-
-  if (kmSinceService > serviceIntervalKm || daysSinceService > serviceIntervalDays) {
-    healthStatus = "Szerviz Szükséges!"
+  if (kmSinceService > 15000 || daysSinceService > 365) {
+    healthStatus = "Szerviz!"
     healthColor = "text-red-600 bg-red-100 border-red-200"
     serviceDue = true
-  } else if (kmSinceService > (serviceIntervalKm - 2000) || daysSinceService > (serviceIntervalDays - 30)) {
-    healthStatus = "Hamarosan Esedékes"
+  } else if (kmSinceService > 13000) {
+    healthStatus = "Hamarosan"
     healthColor = "text-amber-600 bg-amber-100 border-amber-200"
   }
-
-  const kmRemaining = Math.max(0, serviceIntervalKm - kmSinceService)
-  const daysRemaining = Math.max(0, serviceIntervalDays - daysSinceService)
+  const kmRemaining = Math.max(0, 15000 - kmSinceService)
+  const daysRemaining = Math.max(0, 365 - daysSinceService)
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-24 md:pb-20">
       
-      {/* --- HERO HEADER --- */}
+      {/* HEADER */}
       <div className="relative bg-slate-900 h-[22rem] md:h-96 overflow-hidden shadow-2xl">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 opacity-95" />
-        <div className="absolute top-0 right-0 p-10 opacity-[0.03] scale-150 transform rotate-12 pointer-events-none">
-           <Logo className="w-[30rem] h-[30rem] text-white" />
-        </div>
         <div className="absolute inset-0 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
            
-           {/* FELSŐ SOR */}
            <div className="absolute top-6 left-4 right-4 flex justify-between items-center">
              <Link href="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-amber-400 transition-colors bg-white/5 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:border-amber-500/50">
                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -120,18 +80,12 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                   <span className={`px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest border ${healthColor}`}>
                     {healthStatus}
                   </span>
-                  {serviceDue && <span className="flex h-3 w-3 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                  </span>}
                </div>
                <h1 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter leading-none drop-shadow-lg">
                  {car.make} <span className="text-amber-500">{car.model}</span>
                </h1>
                <p className="text-slate-400 mt-3 font-mono text-sm md:text-lg flex flex-wrap items-center gap-x-4 gap-y-2">
                  <span className="flex items-center gap-1"><span className="text-slate-600">rendszám:</span> <span className="text-white font-bold bg-slate-800 px-2 rounded border border-slate-700">{car.plate}</span></span>
-                 <span className="hidden md:inline text-slate-700">|</span>
-                 <span className="flex items-center gap-1"><span className="text-slate-600">évjárat:</span> <span className="text-slate-200">{car.year}</span></span>
                </p>
              </div>
              <div className="hidden md:flex gap-3">
@@ -145,7 +99,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                </Link>
                <Link href={`/cars/${car.id}/events/new?type=service`} className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-700 transition-all shadow-lg border border-slate-600 flex items-center gap-2 transform hover:-translate-y-0.5">
                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                 Szerviz Rögzítés
+                 Szerviz
                </Link>
              </div>
            </div>
@@ -171,7 +125,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* --- BAL OSZLOP --- */}
+          {/* --- BAL OSZLOP (Adatok, Emlékeztetők) --- */}
           <div className="lg:col-span-4 space-y-6">
             
             {/* TERVEZETT SZERVIZEK */}
@@ -196,10 +150,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                          <div className="flex-1">
                             <h4 className="font-bold text-slate-800 text-sm">{rem.service_type}</h4>
                             <p className="text-xs text-slate-500 mt-1">{rem.note}</p>
-                            <div className="flex gap-2 mt-1">
-                               {rem.notify_push && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-1"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg> Push</span>}
-                               {rem.notify_email && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-1"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> Email</span>}
-                            </div>
                          </div>
                          <form action={deleteReminder} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <input type="hidden" name="id" value={rem.id} />
@@ -222,26 +172,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                 <Row label="Szín" value={car.color || '-'} />
                 <Row label="Üzemanyag" value={car.fuel_type} capitalize />
               </dl>
-            </div>
-
-            {/* Költség Elemzés (ITT JAVÍTVA A VÁLTOZÓK HASZNÁLATA) */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-               <h3 className="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wider text-opacity-70">Költség Elemzés</h3>
-               <div className="space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                     <span className="flex items-center gap-2 font-medium text-slate-600"><div className="w-2 h-2 rounded-full bg-amber-500"></div> Üzemanyag</span>
-                     <span className="font-bold text-slate-900">{fuelCost.toLocaleString()} Ft</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                     <span className="flex items-center gap-2 font-medium text-slate-600"><div className="w-2 h-2 rounded-full bg-slate-800"></div> Szerviz</span>
-                     <span className="font-bold text-slate-900">{serviceCost.toLocaleString()} Ft</span>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full flex overflow-hidden">
-                     <div className="bg-amber-500 h-full" style={{ width: `${totalCost > 0 ? (fuelCost / totalCost) * 100 : 0}%` }}></div>
-                     <div className="bg-slate-800 h-full" style={{ width: `${totalCost > 0 ? (serviceCost / totalCost) * 100 : 0}%` }}></div>
-                  </div>
-                  <p className="text-xs text-slate-400 text-center">Teljes életút költség: {totalCost.toLocaleString()} Ft</p>
-               </div>
             </div>
 
           </div>
@@ -359,7 +289,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
          </Link>
          {/* Szerviz Rögzítés gomb visszahelyezve */}
          <Link href={`/cars/${car.id}/events/new?type=service`} className="flex-1 bg-slate-900 text-white py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             Szerviz
          </Link>
          <Link href={`/cars/${car.id}/reminders/new`} className="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
@@ -372,59 +302,57 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
   )
 }
 
-// --- SEGÉD KOMPONENSEK ---
-
 function StatCard({ label, value, subValue, icon, customColor, alert, highlight }: any) {
-  return (
-    <div className={`bg-white p-4 md:p-5 rounded-2xl border shadow-sm flex flex-col justify-between h-full transition-shadow hover:shadow-md ${alert ? 'border-red-200 bg-red-50' : 'border-slate-100'} ${highlight ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
-      <div className="flex justify-between items-start mb-3">
-         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${alert ? 'bg-red-200 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
-            {icon === 'wallet' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-            {icon === 'drop' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
-            {icon === 'road' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-            {icon === 'health' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-         </div>
-         {alert && <span className="bg-red-500 w-2 h-2 rounded-full animate-pulse"></span>}
-      </div>
-      <div>
-        <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</p>
-        <p className={`text-xl md:text-2xl font-black ${alert ? 'text-red-700' : 'text-slate-900'} tracking-tight`}>{value}</p>
-        {subValue && <p className="text-xs font-bold text-slate-500 mt-1">{subValue}</p>}
-      </div>
-    </div>
-  )
+  return (
+    <div className={`bg-white p-4 md:p-5 rounded-2xl border shadow-sm flex flex-col justify-between h-full transition-shadow hover:shadow-md ${alert ? 'border-red-200 bg-red-50' : 'border-slate-100'} ${highlight ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
+      <div className="flex justify-between items-start mb-3">
+         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${alert ? 'bg-red-200 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+            {icon === 'wallet' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+            {icon === 'drop' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
+            {icon === 'road' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+            {icon === 'health' && <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+         </div>
+         {alert && <span className="bg-red-500 w-2 h-2 rounded-full animate-pulse"></span>}
+      </div>
+      <div>
+        <p className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</p>
+        <p className={`text-xl md:text-2xl font-black ${alert ? 'text-red-700' : 'text-slate-900'} tracking-tight`}>{value}</p>
+        {subValue && <p className="text-xs font-bold text-slate-500 mt-1">{subValue}</p>}
+      </div>
+    </div>
+  )
 }
 
 function Row({ label, value, mono, capitalize, badge }: any) {
-  return (
-    <div className="flex justify-between py-3 items-center">
-      <dt className="text-slate-500 text-xs md:text-sm font-medium">{label}</dt>
-      <dd className={`font-bold text-slate-900 text-sm md:text-base ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''}`}>
-        {badge ? <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">{value}</span> : value}
-      </dd>
-    </div>
-  )
+  return (
+    <div className="flex justify-between py-3 items-center">
+      <dt className="text-slate-500 text-xs md:text-sm font-medium">{label}</dt>
+      <dd className={`font-bold text-slate-900 text-sm md:text-base ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''}`}>
+        {badge ? <span className="bg-slate-100 px-2 py-1 rounded border border-slate-200">{value}</span> : value}
+      </dd>
+    </div>
+  )
 }
 
 function DocPlaceholder({ label }: any) {
-  return (
-    <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer h-32 relative overflow-hidden group">
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-slate-200 group-hover:bg-amber-400 transition-colors"></div>
-        <svg className="w-8 h-8 mb-2 text-slate-300 group-hover:text-slate-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-        <span className="text-xs font-semibold text-center">{label}</span>
-    </div>
-  )
+  return (
+    <div className="border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-slate-300 transition-all cursor-pointer h-32 relative overflow-hidden group">
+        <div className="absolute inset-x-0 bottom-0 h-1 bg-slate-200 group-hover:bg-amber-400 transition-colors"></div>
+        <svg className="w-8 h-8 mb-2 text-slate-300 group-hover:text-slate-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        <span className="text-xs font-semibold text-center">{label}</span>
+    </div>
+  )
 }
 
 function Logo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-      <path d="M12 17v-6" />
-      <path d="M8.5 14.5 12 11l3.5 3.5" />
-      <circle cx="7" cy="17" r="2" />
-      <circle cx="17" cy="17" r="2" />
-      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
-    </svg>
-  )
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+      <path d="M12 17v-6" />
+      <path d="M8.5 14.5 12 11l3.5 3.5" />
+      <circle cx="7" cy="17" r="2" />
+      <circle cx="17" cy="17" r="2" />
+      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
+    </svg>
+  )
 }
