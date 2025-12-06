@@ -8,7 +8,6 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
   const params = await props.params
   const supabase = await createClient()
 
-  // Autó lekérése (Most már az intervallumokat is hozza a *)
   const { data: car, error } = await supabase
     .from('cars')
     .select('*')
@@ -22,7 +21,6 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
       
-      {/* Fejléc */}
       <div className="bg-slate-900 pt-12 pb-24 px-4 text-center shadow-lg">
         <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider">
           Jármű <span className="text-amber-500">Beállítások</span>
@@ -32,7 +30,6 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
 
       <div className="max-w-2xl mx-auto px-4 -mt-16 relative z-10">
         
-        {/* --- SZERKESZTŐ FORM --- */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200 mb-8">
           <form action={updateCar} className="space-y-8">
             <input type="hidden" name="car_id" value={car.id} />
@@ -78,33 +75,41 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
                 </div>
             </div>
 
-            {/* Szerviz Intervallum Beállítások (ÚJ SZEKCIÓ) */}
+            {/* Okmányok Érvényessége (ÚJ SZEKCIÓ) */}
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                <h3 className="font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+                   <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                   Okmányok Érvényessége
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputGroup 
+                        label="Műszaki Vizsga Lejárata" 
+                        name="mot_expiry" 
+                        type="date" 
+                        defaultValue={car.mot_expiry} 
+                    />
+                    <InputGroup 
+                        label="Biztosítás Évfordulója" 
+                        name="insurance_expiry" 
+                        type="date" 
+                        defaultValue={car.insurance_expiry} 
+                    />
+                </div>
+            </div>
+
+            {/* Szerviz Intervallum */}
             <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
                 <h3 className="font-bold text-amber-800 border-b border-amber-200 pb-2 mb-4 flex items-center gap-2">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
                     Szerviz Ciklusok
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputGroup 
-                        label="Km Intervallum (pl. 15000)" 
-                        name="service_interval_km" 
-                        type="number" 
-                        defaultValue={car.service_interval_km || 15000} 
-                        placeholder="15000"
-                    />
-                    <InputGroup 
-                        label="Idő Intervallum (Nap)" 
-                        name="service_interval_days" 
-                        type="number" 
-                        defaultValue={car.service_interval_days || 365} 
-                        placeholder="365"
-                    />
+                    <InputGroup label="Km Intervallum" name="service_interval_km" type="number" defaultValue={car.service_interval_km || 15000} />
+                    <InputGroup label="Idő Intervallum (Nap)" name="service_interval_days" type="number" defaultValue={car.service_interval_days || 365} />
                 </div>
-                <p className="text-xs text-amber-700 mt-2">
-                    A rendszer ezeket az értékeket használja a szerviz állapot (zöld/sárga/piros) kiszámításához.
-                </p>
             </div>
 
+            {/* Státusz */}
             <div className="space-y-1">
                 <label className="block text-sm font-semibold text-slate-700">Státusz</label>
                 <div className="flex gap-4">
@@ -134,7 +139,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
           </form>
         </div>
 
-        {/* --- VESZÉLYZÓNA (TÖRLÉS) --- */}
+        {/* --- VESZÉLYZÓNA --- */}
         <div className="bg-red-50 rounded-2xl p-6 border border-red-200">
             <h3 className="text-red-800 font-bold text-lg mb-2">Veszélyzóna</h3>
             <p className="text-red-600/80 text-sm mb-4">
@@ -142,10 +147,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
             </p>
             <form action={deleteCar}>
                 <input type="hidden" name="car_id" value={car.id} />
-                <button 
-                    type="submit" 
-                    className="w-full py-3 rounded-lg border-2 border-red-500 text-red-600 font-bold hover:bg-red-50 hover:text-white transition-all uppercase text-sm tracking-wider"
-                >
+                <button type="submit" className="w-full py-3 rounded-lg border-2 border-red-500 text-red-600 font-bold hover:bg-red-50 hover:text-white transition-all uppercase text-sm tracking-wider">
                     Jármű Végleges Törlése
                 </button>
             </form>
@@ -160,15 +162,7 @@ function InputGroup({ label, name, type = "text", placeholder, defaultValue, req
   return (
     <div className="space-y-1">
       <label htmlFor={name} className="block text-sm font-semibold text-slate-700">{label}</label>
-      <input 
-        type={type} 
-        name={name} 
-        id={name} 
-        defaultValue={defaultValue}
-        required={required} 
-        placeholder={placeholder} 
-        className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 border text-slate-900 transition-colors" 
-      />
+      <input type={type} name={name} id={name} defaultValue={defaultValue} required={required} placeholder={placeholder} className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 border text-slate-900 transition-colors" />
     </div>
   )
 }

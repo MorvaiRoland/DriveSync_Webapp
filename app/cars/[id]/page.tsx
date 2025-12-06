@@ -5,6 +5,20 @@ import { deleteEvent, deleteReminder } from './actions'
 import PdfDownloadButton from './PdfDownloadButton'
 import Image from 'next/image'
 
+// Segédfüggvény a lejárat számításához
+const getExpiryStatus = (dateString: string | null) => {
+    if (!dateString) return { label: 'Nincs adat', status: 'Ismeretlen', alert: false };
+    
+    const today = new Date();
+    const expiry = new Date(dateString);
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return { label: 'Lejárt!', status: `${Math.abs(diffDays)} napja`, alert: true };
+    if (diffDays < 30) return { label: 'Lejáróban', status: `${diffDays} nap`, alert: true };
+    return { label: 'Érvényes', status: expiry.toLocaleDateString('hu-HU'), alert: false };
+}
+
 export default async function CarDetailsPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params
   const supabase = await createClient()
@@ -39,10 +53,10 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
 
   // --- STATISZTIKAI SZÁMÍTÁSOK ---
   const totalCost = safeEvents.reduce((sum, event) => sum + (event.cost || 0), 0)
-  
   const serviceCost = safeEvents.filter(e => e.type === 'service').reduce((sum, e) => sum + (e.cost || 0), 0)
   const fuelCost = safeEvents.filter(e => e.type === 'fuel').reduce((sum, e) => sum + (e.cost || 0), 0)
   
+  // Átlagfogyasztás
   const fuelEvents = safeEvents.filter(e => e.type === 'fuel' && e.mileage && e.liters).sort((a, b) => a.mileage - b.mileage)
   let avgConsumption = "Nincs adat"
   
@@ -57,28 +71,19 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
 
   // --- OKOS SZERVIZ KALKULÁCIÓ ---
   const lastServiceEvent = safeEvents.find(e => e.type === 'service')
-  
-  // Adatbázisból vagy alapértelmezett érték
   const serviceIntervalKm = car.service_interval_km || 15000
   const serviceIntervalDays = car.service_interval_days || 365
   
   let kmRemaining = 0;
   let kmSinceService = 0;
   let daysSinceService = 0;
-  let nextServiceKmTarget = 0;
   
   if (lastServiceEvent) {
-     const lastServiceKm = lastServiceEvent.mileage || 0;
-     nextServiceKmTarget = lastServiceKm + serviceIntervalKm;
-     
-     kmSinceService = car.mileage - lastServiceKm;
-     kmRemaining = nextServiceKmTarget - car.mileage;
-     
+     kmSinceService = car.mileage - (lastServiceEvent.mileage || 0);
+     kmRemaining = serviceIntervalKm - kmSinceService;
      daysSinceService = Math.floor((new Date().getTime() - new Date(lastServiceEvent.event_date).getTime()) / (1000 * 3600 * 24));
   } else {
      const remainder = car.mileage % serviceIntervalKm;
-     nextServiceKmTarget = car.mileage + (serviceIntervalKm - remainder);
-     
      kmSinceService = remainder;
      kmRemaining = serviceIntervalKm - remainder;
      daysSinceService = 0; 
@@ -88,29 +93,30 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
 
   // --- ÁLLAPOT JELZŐK ---
   let healthStatus = "Kiváló"
-  let healthColor = "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+  let healthColor = "text-emerald-600 bg-emerald-100 border-emerald-200"
   let serviceDue = false
 
   if (kmRemaining <= 0 || (lastServiceEvent && daysRemaining <= 0)) {
     healthStatus = "Szerviz Szükséges!"
-    healthColor = "text-red-500 bg-red-500/10 border-red-500/20"
+    healthColor = "text-red-600 bg-red-100 border-red-200"
     serviceDue = true
   } 
   else if (kmRemaining <= 2000 || (lastServiceEvent && daysRemaining <= 30)) {
     healthStatus = "Hamarosan Esedékes"
-    healthColor = "text-amber-500 bg-amber-500/10 border-amber-500/20"
+    healthColor = "text-amber-600 bg-amber-100 border-amber-200"
   }
 
-  // Becsült állapotok
   const oilLife = Math.max(0, Math.min(100, Math.round((kmRemaining / serviceIntervalKm) * 100)));
-  const batteryHealth = car.year > 2020 ? "Jó" : "Ellenőrizendő";
-
-  // --- OKOS TIPPEK (JAVÍTVA) ---
-  const smartTips: string[] = []; // Explicit típusmegadás a hiba javításához
   
+  // LEJÁRATOK SZÁMÍTÁSA
+  const motStatus = getExpiryStatus(car.mot_expiry);
+  const insuranceStatus = getExpiryStatus(car.insurance_expiry);
+
+  // OKOS TIPPEK
+  const smartTips = [];
   if (car.mileage > 200000) smartTips.push("Magas futásteljesítmény: Érdemes sűrűbben ellenőrizni az olajszintet.");
-  if (car.year < new Date().getFullYear() - 10) smartTips.push("10 évnél idősebb autó: Az akkumulátor és a gumicsövek állapota kritikus lehet.");
-  if (avgConsumption !== "Nincs adat" && parseFloat(avgConsumption) > 10 && car.fuel_type === 'diesel') smartTips.push("A fogyasztás magasnak tűnik dízelhez képest. Ellenőriztesd a légtömegmérőt!");
+  if (motStatus.alert) smartTips.push(`FIGYELEM: A Műszaki vizsga ${motStatus.label.toLowerCase()} (${motStatus.status})!`);
+  if (insuranceStatus.alert) smartTips.push(`FIGYELEM: A Biztosítás ${insuranceStatus.label.toLowerCase()} (${insuranceStatus.status})!`);
   if (safeEvents.length === 0) smartTips.push("Kezdd el rögzíteni az adatokat a pontosabb elemzésekhez!");
   if (smartTips.length === 0) smartTips.push("Minden rendben az autóval. Jó utat!");
 
@@ -119,7 +125,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
       
       {/* --- HERO HEADER --- */}
       <div className="relative bg-slate-900 h-[26rem] md:h-[28rem] overflow-hidden shadow-2xl shrink-0 group">
-        {/* Háttérkép */}
         {car.image_url && (
             <div className="absolute inset-0 z-0 opacity-40 blur-xl scale-110">
                 <Image src={car.image_url} alt="Background" fill className="object-cover" />
@@ -127,16 +132,12 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-950 z-0" />
         
-        {/* Tartalom */}
         <div className="absolute inset-0 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
-           
-           {/* Navigációs Sáv */}
            <div className="absolute top-6 left-4 right-4 flex justify-between items-center">
              <Link href="/" className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-white/5 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:bg-white/10">
                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                Garázs
              </Link>
-             
              <div className="flex gap-2">
                  <PdfDownloadButton car={car} events={safeEvents} />
                  <Link href={`/cars/${car.id}/edit`} className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-white/5 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 hover:bg-white/10">
@@ -147,7 +148,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
            </div>
 
            <div className="flex flex-col md:flex-row items-center md:items-end gap-8 pb-4 mt-8">
-             {/* Kép keret */}
              <div className="w-40 h-40 md:w-56 md:h-56 rounded-3xl border-[6px] border-slate-800 shadow-2xl overflow-hidden relative flex-shrink-0 bg-slate-900 group-hover:scale-105 transition-transform duration-500">
                 {car.image_url ? (
                     <Image src={car.image_url} alt="Car" fill className="object-cover" />
@@ -169,19 +169,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                     {car.make} <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">{car.model}</span>
                   </h1>
                   <p className="text-slate-400 font-mono text-xl tracking-wider mt-1">{car.plate}</p>
-               </div>
-
-               <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-2">
-                   <div className="bg-white/5 px-4 py-2 rounded-lg border border-white/10">
-                       <p className="text-[10px] text-slate-400 uppercase font-bold">Futásteljesítmény</p>
-                       <p className="text-white font-mono font-bold">{car.mileage.toLocaleString()} km</p>
-                   </div>
-                   <div className="bg-white/5 px-4 py-2 rounded-lg border border-white/10">
-                       <p className="text-[10px] text-slate-400 uppercase font-bold">Következő Szerviz</p>
-                       <p className={`font-mono font-bold ${kmRemaining <= 1000 ? 'text-red-400' : 'text-amber-400'}`}>
-                           {nextServiceKmTarget.toLocaleString()} km
-                       </p>
-                   </div>
                </div>
              </div>
            </div>
@@ -232,12 +219,12 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                  </div>
 
                  <div className="grid grid-cols-2 gap-4">
-                    <StatusItem label="Akkumulátor" status={batteryHealth} icon="battery" />
-                    <StatusItem label="Műszaki" status={daysRemaining > 30 ? "Érvényes" : "Lejáróban"} icon="doc" alert={daysRemaining <= 30} />
+                    <StatusItem label="Műszaki" status={motStatus.status} icon="doc" alert={motStatus.alert} />
+                    <StatusItem label="Biztosítás" status={insuranceStatus.status} icon="doc" alert={insuranceStatus.alert} />
                  </div>
               </div>
 
-              {/* 2. PÉNZÜGYI ELEMZÉS (Oszlopdiagram) */}
+              {/* 2. PÉNZÜGYI ELEMZÉS */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                  <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-slate-800">Költségek</h3>
@@ -255,7 +242,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                         </div>
                     </div>
 
-                    {/* Mini bontás */}
                     <div className="grid grid-cols-2 gap-2 mt-4">
                         <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                             <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Üzemanyag</p>
