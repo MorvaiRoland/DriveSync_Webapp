@@ -24,6 +24,7 @@ function CarForm() {
   const [selectedBrandId, setSelectedBrandId] = useState<string>("")
   const [loadingBrands, setLoadingBrands] = useState(true)
   const [loadingModels, setLoadingModels] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null) // Előnézeti kép
 
   // 1. Márkák betöltése indításkor
   useEffect(() => {
@@ -60,7 +61,16 @@ function CarForm() {
     fetchModels()
   }, [selectedBrandId])
 
-  // Keresünk egy márkanevet az ID alapján a rejtett inputnak (hogy a szervernek a nevet küldjük)
+  // Kép előnézet kezelése
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const objectUrl = URL.createObjectURL(file);
+      setImagePreview(objectUrl);
+    }
+  };
+
+  // Keresünk egy márkanevet az ID alapján a rejtett inputnak
   const selectedBrandName = brands.find(b => b.id.toString() === selectedBrandId)?.name || ""
 
   const currentYear = new Date().getFullYear()
@@ -80,6 +90,40 @@ function CarForm() {
             <p className="text-red-700 font-medium">{error}</p>
           </div>
         )}
+
+        {/* --- KÉP FELTÖLTÉS (ÚJ SZEKCIÓ) --- */}
+        <div className="flex justify-center mb-6">
+            <div className="w-full">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Autó Fotója (Opcionális)</label>
+            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl hover:bg-slate-50 transition-colors group cursor-pointer relative overflow-hidden bg-slate-50/50">
+                <input 
+                    type="file" 
+                    name="image" 
+                    accept="image/*" 
+                    onChange={handleImageChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" 
+                />
+                
+                {imagePreview ? (
+                    <div className="relative z-10">
+                        <img src={imagePreview} alt="Előnézet" className="h-48 object-cover rounded-lg shadow-md" />
+                        <p className="text-xs text-center text-slate-500 mt-2">Kattints a cseréhez</p>
+                    </div>
+                ) : (
+                    <div className="space-y-1 text-center z-10 py-4">
+                        <svg className="mx-auto h-12 w-12 text-slate-400 group-hover:text-amber-500 transition-colors" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <div className="flex text-sm text-slate-600 justify-center">
+                            <span className="font-medium text-amber-600 hover:text-amber-500">Tölts fel egy képet</span>
+                            <p className="pl-1">vagy húzd ide</p>
+                        </div>
+                        <p className="text-xs text-slate-500">PNG, JPG, GIF (max 5MB)</p>
+                    </div>
+                )}
+            </div>
+            </div>
+        </div>
 
         <div>
           <h3 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
