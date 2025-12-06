@@ -1,5 +1,5 @@
 import { createClient } from 'supabase/server'
-import { updateCar, deleteCar } from '../actions' // Importáljuk az új actionöket
+import { updateCar, deleteCar } from '../actions'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
@@ -8,7 +8,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
   const params = await props.params
   const supabase = await createClient()
 
-  // Autó lekérése
+  // Autó lekérése (Most már az intervallumokat is hozza a *)
   const { data: car, error } = await supabase
     .from('cars')
     .select('*')
@@ -34,7 +34,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
         
         {/* --- SZERKESZTŐ FORM --- */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200 mb-8">
-          <form action={updateCar} className="space-y-6">
+          <form action={updateCar} className="space-y-8">
             <input type="hidden" name="car_id" value={car.id} />
 
             {/* Képcsere */}
@@ -54,25 +54,55 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
                 </label>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputGroup label="Márka" name="make" defaultValue={car.make} required />
-                <InputGroup label="Modell" name="model" defaultValue={car.model} required />
-                <InputGroup label="Rendszám" name="plate" defaultValue={car.plate} required />
-                <InputGroup label="Évjárat" name="year" type="number" defaultValue={car.year} required />
-                <InputGroup label="Km óra állás" name="mileage" type="number" defaultValue={car.mileage} required />
-                <InputGroup label="Szín" name="color" defaultValue={car.color} />
-                <InputGroup label="Alvázszám (VIN)" name="vin" defaultValue={car.vin} />
-                
-                <div className="space-y-1">
-                  <label className="block text-sm font-semibold text-slate-700">Üzemanyag</label>
-                  <select name="fuel_type" defaultValue={car.fuel_type} className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 border">
-                    <option value="diesel">Dízel</option>
-                    <option value="petrol">Benzin</option>
-                    <option value="hybrid">Hybrid</option>
-                    <option value="electric">Elektromos</option>
-                    <option value="lpg">LPG</option>
-                  </select>
+            {/* Alapadatok */}
+            <div>
+                <h3 className="font-bold text-slate-900 border-b border-slate-100 pb-2 mb-4">Alapadatok</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputGroup label="Márka" name="make" defaultValue={car.make} required />
+                    <InputGroup label="Modell" name="model" defaultValue={car.model} required />
+                    <InputGroup label="Rendszám" name="plate" defaultValue={car.plate} required />
+                    <InputGroup label="Évjárat" name="year" type="number" defaultValue={car.year} required />
+                    <InputGroup label="Aktuális Km óra állás" name="mileage" type="number" defaultValue={car.mileage} required />
+                    <div className="space-y-1">
+                      <label className="block text-sm font-semibold text-slate-700">Üzemanyag</label>
+                      <select name="fuel_type" defaultValue={car.fuel_type} className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 border">
+                        <option value="diesel">Dízel</option>
+                        <option value="petrol">Benzin</option>
+                        <option value="hybrid">Hybrid</option>
+                        <option value="electric">Elektromos</option>
+                        <option value="lpg">LPG</option>
+                      </select>
+                    </div>
+                    <InputGroup label="Szín" name="color" defaultValue={car.color} />
+                    <InputGroup label="Alvázszám (VIN)" name="vin" defaultValue={car.vin} />
                 </div>
+            </div>
+
+            {/* Szerviz Intervallum Beállítások (ÚJ SZEKCIÓ) */}
+            <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                <h3 className="font-bold text-amber-800 border-b border-amber-200 pb-2 mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /></svg>
+                    Szerviz Ciklusok
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputGroup 
+                        label="Km Intervallum (pl. 15000)" 
+                        name="service_interval_km" 
+                        type="number" 
+                        defaultValue={car.service_interval_km || 15000} 
+                        placeholder="15000"
+                    />
+                    <InputGroup 
+                        label="Idő Intervallum (Nap)" 
+                        name="service_interval_days" 
+                        type="number" 
+                        defaultValue={car.service_interval_days || 365} 
+                        placeholder="365"
+                    />
+                </div>
+                <p className="text-xs text-amber-700 mt-2">
+                    A rendszer ezeket az értékeket használja a szerviz állapot (zöld/sárga/piros) kiszámításához.
+                </p>
             </div>
 
             <div className="space-y-1">
@@ -114,8 +144,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
                 <input type="hidden" name="car_id" value={car.id} />
                 <button 
                     type="submit" 
-                    className="w-full py-3 rounded-lg border-2 border-red-500 text-red-600 font-bold hover:bg-red-500 hover:text-white transition-all uppercase text-sm tracking-wider"
-                    // onClick={(e) => !confirm('Biztosan törölni akarod ezt az autót?') && e.preventDefault()} // Opcionális kliens oldali megerősítés
+                    className="w-full py-3 rounded-lg border-2 border-red-500 text-red-600 font-bold hover:bg-red-50 hover:text-white transition-all uppercase text-sm tracking-wider"
                 >
                     Jármű Végleges Törlése
                 </button>

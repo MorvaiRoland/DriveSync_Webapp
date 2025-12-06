@@ -141,7 +141,7 @@ export async function updateCar(formData: FormData) {
 
   const carId = String(formData.get('car_id'))
   
-  // Adatok összegyűjtése
+  // Adatok összegyűjtése (Bővítve az intervallumokkal)
   const updates: any = {
     make: String(formData.get('make')),
     model: String(formData.get('model')),
@@ -152,27 +152,19 @@ export async function updateCar(formData: FormData) {
     color: String(formData.get('color')),
     vin: String(formData.get('vin')),
     status: String(formData.get('status')),
+    // ÚJ MEZŐK:
+    service_interval_km: parseInt(String(formData.get('service_interval_km'))) || 15000,
+    service_interval_days: parseInt(String(formData.get('service_interval_days'))) || 365,
   }
 
-  // Kép kezelése (csak ha töltöttek fel újat)
+  // Kép kezelése (Változatlan)
   const imageFile = formData.get('image') as File;
-  
   if (imageFile && imageFile.size > 0) {
-    // Egyedi fájlnév
     const fileName = `${user.id}/${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
-    
-    // Feltöltés a 'car-images' bucket-be (Ezt létre kell hozni a Supabase Storage-ban!)
-    const { error: uploadError } = await supabase.storage
-      .from('car-images')
-      .upload(fileName, imageFile);
-
+    const { error: uploadError } = await supabase.storage.from('car-images').upload(fileName, imageFile);
     if (!uploadError) {
-      // Ha sikerült, lekérjük az URL-t
-      const { data: { publicUrl } } = supabase.storage
-        .from('car-images')
-        .getPublicUrl(fileName);
-      
-      updates.image_url = publicUrl; // Hozzáadjuk a frissítendő adatokhoz
+      const { data: { publicUrl } } = supabase.storage.from('car-images').getPublicUrl(fileName);
+      updates.image_url = publicUrl;
     }
   }
 
@@ -189,7 +181,7 @@ export async function updateCar(formData: FormData) {
   }
 
   revalidatePath(`/cars/${carId}`)
-  revalidatePath('/') // Főoldal frissítése is
+  revalidatePath('/')
   redirect(`/cars/${carId}`)
 }
 
