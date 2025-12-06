@@ -5,18 +5,18 @@ import { deleteEvent, deleteReminder, resetServiceCounter } from './actions'
 import PdfDownloadButton from './PdfDownloadButton'
 import Image from 'next/image'
 
-// Segédfüggvény a lejárat számításához
+// Segédfüggvény: Lejárat számítása
 const getExpiryStatus = (dateString: string | null) => {
-    if (!dateString) return { label: 'Nincs adat', status: '-', alert: false };
+    if (!dateString) return { label: 'Nincs adat', status: '-', alert: false, color: 'text-slate-500' };
     
     const today = new Date();
     const expiry = new Date(dateString);
     const diffTime = expiry.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays < 0) return { label: 'Lejárt!', status: `${Math.abs(diffDays)} napja`, alert: true };
-    if (diffDays < 30) return { label: 'Lejáróban', status: `${diffDays} nap`, alert: true };
-    return { label: 'Érvényes', status: expiry.toLocaleDateString('hu-HU'), alert: false };
+    if (diffDays < 0) return { label: 'Lejárt!', status: `${Math.abs(diffDays)} napja`, alert: true, color: 'text-red-600' };
+    if (diffDays < 30) return { label: 'Lejáróban', status: `${diffDays} nap`, alert: true, color: 'text-amber-600' };
+    return { label: 'Érvényes', status: expiry.toLocaleDateString('hu-HU'), alert: false, color: 'text-emerald-600' };
 }
 
 export default async function CarDetailsPage(props: { params: Promise<{ id: string }> }) {
@@ -34,46 +34,39 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     return notFound()
   }
 
-  // 2. Események lekérése (Múlt)
+  // 2. Események lekérése
   const { data: events } = await supabase
     .from('events')
     .select('*')
     .eq('car_id', params.id)
     .order('event_date', { ascending: false })
 
-  // 3. Emlékeztetők lekérése (Jövő)
+  // 3. Emlékeztetők lekérése
   const { data: reminders } = await supabase
     .from('service_reminders')
     .select('*')
     .eq('car_id', params.id)
     .order('due_date', { ascending: true })
-
-  // 4. Gumiabroncsok lekérése (ÚJ)
+    
+  // 4. Gumik lekérése
   const { data: tires } = await supabase
     .from('tires')
     .select('*')
     .eq('car_id', params.id)
-    .order('is_mounted', { ascending: false }) // Felszerelt legfelül
+    .order('is_mounted', { ascending: false })
 
   const safeEvents = events || []
   const safeReminders = reminders || []
   const safeTires = tires || []
 
-  // --- STATISZTIKAI SZÁMÍTÁSOK ---
+  // --- KÖLTSÉGEK ---
   const totalCost = safeEvents.reduce((sum, event) => sum + (event.cost || 0), 0)
+  const serviceCost = safeEvents.filter(e => e.type === 'service').reduce((sum, e) => sum + (e.cost || 0), 0)
+  const fuelCost = safeEvents.filter(e => e.type === 'fuel').reduce((sum, e) => sum + (e.cost || 0), 0)
   
-  const serviceCost = safeEvents
-    .filter(e => e.type === 'service')
-    .reduce((sum, e) => sum + (e.cost || 0), 0)
-
-  const fuelCost = safeEvents
-    .filter(e => e.type === 'fuel')
-    .reduce((sum, e) => sum + (e.cost || 0), 0)
-  
-  // Átlagfogyasztás
+  // --- FOGYASZTÁS ---
   const fuelEvents = safeEvents.filter(e => e.type === 'fuel' && e.mileage && e.liters).sort((a, b) => a.mileage - b.mileage)
   let avgConsumption = "Nincs adat"
-  
   if (fuelEvents.length >= 2) {
     const totalLiters = fuelEvents.reduce((sum, e) => sum + (e.liters || 0), 0) - (fuelEvents[0].liters || 0)
     const distanceDelta = fuelEvents[fuelEvents.length - 1].mileage - fuelEvents[0].mileage
@@ -83,65 +76,68 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
     }
   }
 
-  // --- OKOS SZERVIZ KALKULÁCIÓ ---
-  const lastServiceEvent = safeEvents.find(e => e.type === 'service')
-  const serviceIntervalKm = car.service_interval_km || 15000
-  const serviceIntervalDays = car.service_interval_days || 365
+  // --- SZERVIZ LOGIKA (JAVÍTVA) ---
+  const serviceIntervalKm = car.service_interval_km || 15000;
   
-  let kmRemaining = 0;
-  let kmSinceService = 0;
-  let daysSinceService = 0;
-  let nextServiceKmTarget = 0;
+  // Meghatározzuk a bázist: 
+  // 1. Ha van manuális nullázás (last_service_mileage > 0), azt használjuk.
+  // 2. Ha van szerviz esemény (ami frissebb), azt használjuk.
+  // 3. Ha egyik sincs, akkor a jelenlegi km az alap (új autó).
   
-  if (lastServiceEvent) {
-     const lastServiceKm = lastServiceEvent.mileage || 0;
-     kmSinceService = car.mileage - lastServiceKm;
-     kmRemaining = serviceIntervalKm - kmSinceService;
-     nextServiceKmTarget = lastServiceKm + serviceIntervalKm;
-     daysSinceService = Math.floor((new Date().getTime() - new Date(lastServiceEvent.event_date).getTime()) / (1000 * 3600 * 24));
-  } else {
-     const remainder = car.mileage % serviceIntervalKm;
-     kmSinceService = remainder;
-     kmRemaining = serviceIntervalKm - remainder;
-     nextServiceKmTarget = car.mileage + kmRemaining;
-     daysSinceService = 0;
+  let baseKm = car.last_service_mileage || 0;
+  
+  const lastServiceEvent = safeEvents.find(e => e.type === 'service');
+  
+  // Ha volt szerviz esemény, és az nagyobb mint a manuális nullázás, akkor az a mérvadó
+  if (lastServiceEvent && lastServiceEvent.mileage > baseKm) {
+      baseKm = lastServiceEvent.mileage;
+  }
+  
+  // Ha még sosem volt nullázva és nincs szerviz (új autó), akkor a jelenlegi km a bázis (hogy innen induljon a visszaszámlálás)
+  // VAGY ha a bázis irreálisan kicsi (hiba), korrigálunk
+  if (baseKm === 0) {
+      baseKm = car.mileage;
   }
 
-  const daysRemaining = Math.max(0, serviceIntervalDays - daysSinceService)
+  const nextServiceKm = baseKm + serviceIntervalKm;
+  const kmRemaining = nextServiceKm - car.mileage;
+  const kmSinceService = car.mileage - baseKm;
 
-  // --- ÁLLAPOT LOGIKA ---
-  let healthStatus = "Kiváló"
-  let healthColor = "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
-  let serviceDue = false
+  // Állapot meghatározása
+  let healthStatus = "Kiváló";
+  let healthColor = "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+  let serviceDue = false;
 
-  if (kmRemaining <= 0 || (lastServiceEvent && daysRemaining <= 0)) {
-    healthStatus = "Szerviz Szükséges!"
-    healthColor = "text-red-500 bg-red-500/10 border-red-500/20"
-    serviceDue = true
-  } 
-  else if (kmRemaining <= 2000 || (lastServiceEvent && daysRemaining <= 30)) {
-    healthStatus = "Hamarosan Esedékes"
-    healthColor = "text-amber-500 bg-amber-500/10 border-amber-500/20"
+  if (kmRemaining <= 0) {
+      healthStatus = "Szerviz Szükséges!";
+      healthColor = "text-red-500 bg-red-500/10 border-red-500/20";
+      serviceDue = true;
+  } else if (kmRemaining < 2000) {
+      healthStatus = "Hamarosan";
+      healthColor = "text-amber-500 bg-amber-500/10 border-amber-500/20";
   }
 
-  const oilLife = Math.max(0, Math.min(100, Math.round((kmRemaining / serviceIntervalKm) * 100)));
+  // Olaj élettartam (százalékos becslés)
+  const percentageUsed = Math.min(100, Math.max(0, (kmSinceService / serviceIntervalKm) * 100));
+  const oilLife = 100 - percentageUsed;
+
+  // Okmányok
   const motStatus = getExpiryStatus(car.mot_expiry);
   const insuranceStatus = getExpiryStatus(car.insurance_expiry);
-  const batteryHealth = car.year > 2020 ? "Jó" : "Ellenőrizendő";
 
-  // --- OKOS TIPPEK ---
+  // --- AI TIPPEK ---
   const smartTips = [];
-  if (car.mileage > 200000) smartTips.push("Magas futásteljesítmény: Érdemes sűrűbben ellenőrizni az olajszintet.");
-  if (car.year < new Date().getFullYear() - 10) smartTips.push("10 évnél idősebb autó: Az akkumulátor és a gumicsövek állapota kritikus lehet.");
-  if (avgConsumption !== "Nincs adat" && parseFloat(avgConsumption) > 10 && car.fuel_type === 'diesel') smartTips.push("A fogyasztás magasnak tűnik dízelhez képest. Ellenőriztesd a légtömegmérőt!");
-  if (motStatus.alert) smartTips.push(`FIGYELEM: A Műszaki vizsga ${motStatus.label.toLowerCase()}!`);
-  if (safeEvents.length === 0) smartTips.push("Kezdd el rögzíteni az adatokat a pontosabb elemzésekhez!");
-  if (smartTips.length === 0) smartTips.push("Minden rendben az autóval. Jó utat!");
+  if (oilLife < 20) smartTips.push("Az olajcsere hamarosan esedékes. Foglalj időpontot!");
+  if (car.mileage > 200000) smartTips.push("Magas futásteljesítmény: Ellenőrizd a vezérlést.");
+  if (motStatus.alert) smartTips.push(`A műszaki vizsga állapota kritikus: ${motStatus.status}`);
+  if (safeTires.length === 0) smartTips.push("Még nem rögzítettél gumiabroncsokat.");
+  if (smartTips.length === 0) smartTips.push("Minden rendszer rendben. Biztonságos utat!");
+
 
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 font-sans text-slate-900 pb-24 md:pb-20">
       
-      {/* --- HERO HEADER --- */}
+      {/* --- HEADER (KÉP & NAVIGÁCIÓ) --- */}
       <div className="relative bg-slate-900 h-[26rem] md:h-[28rem] overflow-hidden shadow-2xl shrink-0 group">
         {car.image_url && (
             <div className="absolute inset-0 z-0 opacity-40 blur-xl scale-110">
@@ -151,11 +147,14 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-950 z-0" />
         
         <div className="absolute inset-0 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
+           
+           {/* Nav */}
            <div className="absolute top-6 left-4 right-4 flex justify-between items-center">
              <Link href="/" className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-white/5 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:bg-white/10">
                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                Garázs
              </Link>
+             
              <div className="flex gap-2">
                  <PdfDownloadButton car={car} events={safeEvents} />
                  <Link href={`/cars/${car.id}/edit`} className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-white/5 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 hover:bg-white/10">
@@ -166,7 +165,8 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
            </div>
 
            <div className="flex flex-col md:flex-row items-center md:items-end gap-8 pb-4 mt-8">
-             <div className="w-40 h-40 md:w-56 md:h-56 rounded-3xl border-[6px] border-slate-800 shadow-2xl overflow-hidden relative flex-shrink-0 bg-slate-900 group-hover:scale-105 transition-transform duration-500">
+             {/* Kép keret */}
+             <div className="w-40 h-40 md:w-56 md:h-56 rounded-3xl border-[6px] border-slate-800 shadow-2xl overflow-hidden relative flex-shrink-0 bg-slate-900">
                 {car.image_url ? (
                     <Image src={car.image_url} alt="Car" fill className="object-cover" />
                 ) : (
@@ -197,7 +197,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                    <div className="bg-white/5 px-4 py-2 rounded-lg border border-white/10">
                        <p className="text-[10px] text-slate-400 uppercase font-bold">Következő Szerviz</p>
                        <p className={`font-mono font-bold ${kmRemaining <= 1000 ? 'text-red-400' : 'text-amber-400'}`}>
-                           {nextServiceKmTarget.toLocaleString()} km
+                           {nextServiceKm.toLocaleString()} km
                        </p>
                    </div>
                </div>
@@ -206,7 +206,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {/* --- GYORS AKCIÓK --- */}
+      {/* --- GYORS AKCIÓ GOMBOK --- */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-3 gap-4">
           <Link href={`/cars/${car.id}/events/new?type=fuel`} className="bg-amber-500 hover:bg-amber-400 text-slate-900 p-4 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-transform hover:-translate-y-1 font-bold">
              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -217,19 +217,20 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
              Szerviz Rögzítése
           </Link>
           <Link href={`/cars/${car.id}/reminders/new`} className="bg-white hover:bg-slate-50 text-slate-700 p-4 rounded-2xl shadow-lg border border-slate-200 flex items-center justify-center gap-3 transition-transform hover:-translate-y-1 font-bold">
-             <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
              Emlékeztető Beállítása
           </Link>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
         
+        {/* FŐ RÁCS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-           {/* --- BAL OSZLOP --- */}
+           {/* --- BAL OSZLOP (Status & Insights) --- */}
            <div className="space-y-8">
               
-              {/* 1. MŰSZAKI ÁLLAPOT */}
+              {/* 1. MŰSZAKI ÁLLAPOT KÁRTYA */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                  <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -255,18 +256,18 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                         <div className={`h-full rounded-full transition-all duration-1000 ${oilLife < 20 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${Math.max(0, oilLife)}%` }}></div>
                     </div>
                     <div className="flex justify-between mt-1">
-                        <p className="text-[10px] text-slate-400">Megtett: {kmSinceService.toLocaleString()} km</p>
+                        <p className="text-[10px] text-slate-400">Ciklus: {kmSinceService.toLocaleString()} / {serviceIntervalKm.toLocaleString()}</p>
                         <p className={`text-[10px] font-bold ${kmRemaining <= 0 ? 'text-red-500' : 'text-slate-500'}`}>Hátra: {Math.max(0, kmRemaining).toLocaleString()} km</p>
                     </div>
                  </div>
 
                  <div className="grid grid-cols-2 gap-4">
-                    <StatusItem label="Műszaki" status={motStatus.status} icon="doc" alert={motStatus.alert} />
-                    <StatusItem label="Biztosítás" status={insuranceStatus.status} icon="doc" alert={insuranceStatus.alert} />
+                    <StatusItem label="Műszaki" status={motStatus.status} icon="doc" alert={motStatus.alert} color={motStatus.color} />
+                    <StatusItem label="Biztosítás" status={insuranceStatus.status} icon="doc" alert={insuranceStatus.alert} color={insuranceStatus.color} />
                  </div>
               </div>
 
-              {/* 2. GUMIABRONCS HOTEL (KÁRTYÁS MEGJELENÍTÉS) - ÚJ! */}
+              {/* 2. GUMIABRONCS HOTEL */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                  <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -279,12 +280,10 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                  <div className="space-y-3">
                     {safeTires.length > 0 ? (
                         safeTires.slice(0,2).map((tire: any) => {
-                            // Aktuális km számítása a guminak
                             let currentTireDistance = tire.total_distance;
                             if (tire.is_mounted) {
                                 currentTireDistance += (car.mileage - (tire.mounted_at_mileage || car.mileage));
                             }
-
                             return (
                                 <div key={tire.id} className={`flex items-center justify-between p-3 rounded-xl border ${tire.is_mounted ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
                                     <div className="flex items-center gap-3">
@@ -335,9 +334,9 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                  </div>
               </div>
 
-              {/* 4. OKOS TIPPEK (AI) */}
-              <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 shadow-lg text-white relative">
-                   <div className="absolute top-0 right-0 p-4 opacity-10"><svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></div>
+              {/* 4. AI INSIGHTS */}
+              <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 shadow-lg text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10"><svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></div>
                   <h3 className="font-bold text-lg mb-3 flex items-center gap-2 relative z-10">
                       <svg className="w-5 h-5 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       Smart Tips
@@ -508,67 +507,54 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
 
 // --- KISEBB ALKOTÓELEMEK ---
 
-function CostRow({ label, amount, color }: any) {
-    return (
-        <div className="flex justify-between items-center text-sm">
-            <span className="flex items-center gap-2 font-medium text-slate-600">
-                <div className={`w-2 h-2 rounded-full ${color}`}></div>
-                {label}
-            </span>
-            <span className="font-bold text-slate-900">{amount.toLocaleString()} Ft</span>
-        </div>
-    )
-}
-
-function StatusItem({ label, status, icon, alert }: any) {
-    return (
-        <div className={`flex items-center gap-3 p-3 rounded-xl border ${alert ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${alert ? 'bg-white text-red-500' : 'bg-white text-slate-500'}`}>
-                {icon === 'battery' && <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-                {icon === 'doc' && <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
-            </div>
-            <div>
-                <p className="text-[10px] uppercase font-bold text-slate-400">{label}</p>
-                <p className={`text-sm font-bold ${alert ? 'text-red-600' : 'text-slate-800'}`}>{status}</p>
-            </div>
-        </div>
-    )
+function StatusItem({ label, status, icon, alert, color }: any) {
+    return (
+        <div className={`flex items-center gap-3 p-3 rounded-xl border ${alert ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${alert ? 'bg-white text-red-500' : 'bg-white text-slate-500'}`}>
+                {icon === 'doc' && <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+            </div>
+            <div>
+                <p className="text-[10px] uppercase font-bold text-slate-400">{label}</p>
+                <p className={`text-sm font-bold ${color ? color : (alert ? 'text-red-600' : 'text-slate-800')}`}>{status}</p>
+            </div>
+        </div>
+    )
 }
 
 function DataPoint({ label, value, mono, capitalize, highlight }: any) {
-    return (
-        <div>
-            <p className="text-xs text-slate-400 font-bold uppercase">{label}</p>
-            <p className={`text-sm font-bold ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''} ${highlight ? 'text-amber-600' : 'text-slate-900'}`}>
-                {value}
-            </p>
-        </div>
-    )
+    return (
+        <div>
+            <p className="text-xs text-slate-400 font-bold uppercase">{label}</p>
+            <p className={`text-sm font-bold ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''} ${highlight ? 'text-amber-600' : 'text-slate-900'}`}>
+                {value}
+            </p>
+        </div>
+    )
 }
 
 function DocCard({ label }: any) {
-    return (
-        <div className="border border-slate-200 rounded-xl p-3 flex flex-col justify-between h-24 bg-slate-50 cursor-pointer hover:border-amber-400 hover:shadow-sm transition-all relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2a2 2 0 00-2 2v1h10V4a2 2 0 00-2-2H7zm12 4h-2V4a4 4 0 00-4-4H7a4 4 0 00-4 4v1H1a1 1 0 00-1 1v12a1 1 0 001 1h18a1 1 0 001-1V7a1 1 0 00-1-1zM3 8h14v10H3V8zm2 2v2h10v-2H5zm0 4v2h8v-2H5z"/></svg>
-            </div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
-            <span className="text-xs font-bold text-amber-600 flex items-center gap-1 group-hover:gap-2 transition-all">
-                Megnyitás <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-            </span>
-        </div>
-    )
+    return (
+        <div className="border border-slate-200 rounded-xl p-3 flex flex-col justify-between h-24 bg-slate-50 cursor-pointer hover:border-amber-400 hover:shadow-sm transition-all relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2a2 2 0 00-2 2v1h10V4a2 2 0 00-2-2H7zm12 4h-2V4a4 4 0 00-4-4H7a4 4 0 00-4 4v1H1a1 1 0 00-1 1v12a1 1 0 001 1h18a1 1 0 001-1V7a1 1 0 00-1-1zM3 8h14v10H3V8zm2 2v2h10v-2H5zm0 4v2h8v-2H5z"/></svg>
+            </div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+            <span className="text-xs font-bold text-amber-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+                Megnyitás <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+            </span>
+        </div>
+    )
 }
 
 function Logo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-      <path d="M12 17v-6" />
-      <path d="M8.5 14.5 12 11l3.5 3.5" />
-      <circle cx="7" cy="17" r="2" />
-      <circle cx="17" cy="17" r="2" />
-      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
-    </svg>
-  )
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+      <path d="M12 17v-6" />
+      <path d="M8.5 14.5 12 11l3.5 3.5" />
+      <circle cx="7" cy="17" r="2" />
+      <circle cx="17" cy="17" r="2" />
+      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
+    </svg>
+  )
 }
