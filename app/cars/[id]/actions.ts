@@ -47,6 +47,38 @@ export async function addEvent(formData: FormData) {
   redirect(`/cars/${car_id}`)
 }
 
+// --- EZ A FÜGGVÉNY HIÁNYZOTT: ---
+export async function updateEvent(formData: FormData) {
+  const supabase = await createClient()
+  
+  const eventId = String(formData.get('event_id'))
+  const carId = String(formData.get('car_id'))
+  const type = String(formData.get('type'))
+  
+  const updateData = {
+    title: String(formData.get('title')),
+    event_date: String(formData.get('event_date')),
+    mileage: parseInt(String(formData.get('mileage'))),
+    cost: parseInt(String(formData.get('cost'))),
+    location: String(formData.get('location')),
+    description: String(formData.get('description')),
+    liters: type === 'fuel' ? parseFloat(String(formData.get('liters'))) : null
+  }
+
+  const { error } = await supabase
+    .from('events')
+    .update(updateData)
+    .eq('id', eventId)
+
+  if (error) {
+    console.error('Frissítési hiba:', error)
+    return redirect(`/cars/${carId}/events/${eventId}/edit?error=Hiba történt`)
+  }
+
+  revalidatePath(`/cars/${carId}`)
+  redirect(`/cars/${carId}`)
+}
+
 export async function deleteEvent(formData: FormData) {
   const supabase = await createClient()
   const eventId = formData.get('event_id')
