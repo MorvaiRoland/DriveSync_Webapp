@@ -47,7 +47,6 @@ export async function addEvent(formData: FormData) {
   redirect(`/cars/${car_id}`)
 }
 
-// --- EZ A FÜGGVÉNY HIÁNYZOTT: ---
 export async function updateEvent(formData: FormData) {
   const supabase = await createClient()
   
@@ -203,6 +202,7 @@ export async function deleteCar(formData: FormData) {
   // Biztonsági törlés: Először a kapcsolódó adatokat töröljük
   await supabase.from('events').delete().eq('car_id', carId)
   await supabase.from('service_reminders').delete().eq('car_id', carId)
+  await supabase.from('tires').delete().eq('car_id', carId) // Gumikat is töröljük!
   
   // Végül magát az autót
   const { error } = await supabase.from('cars').delete().eq('id', carId)
@@ -214,4 +214,92 @@ export async function deleteCar(formData: FormData) {
 
   revalidatePath('/')
   redirect('/')
+}
+
+// --- 5. GUMIABRONCS MENEDZSER (TIRE HOTEL) ---
+
+export async function addTire(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return redirect('/login')
+
+  const carId = String(formData.get('car_id'))
+  
+  const tireData = {
+    user_id: user.id,
+    car_id: carId,
+    brand: String(formData.get('brand')),
+    model: String(formData.get('model')),
+    size: String(formData.get('size')),
+    type: String(formData.get('type')),
+    dot: String(formData.get('dot')),
+    total_distance: parseInt(String(formData.get('total_distance') || '0')),
+    is_mounted: false // Alapból nem szereljük fel, azt külön kell kérni
+  }
+
+  const { error } = await supabase.from('tires').insert(tireData)
+
+  if (error) {
+    console.error('Gumi mentési hiba:', error)
+  }
+
+  revalidatePath(`/cars/${carId}`)
+}
+
+export async function deleteTire(formData: FormData) {
+  const supabase = await createClient()
+  const tireId = String(formData.get('tire_id'))
+  const carId = String(formData.get('car_id'))
+  
+  await supabase.from('tires').delete().eq('id', tireId)
+  
+  revalidatePath(`/cars/${carId}`)
+}
+
+export async function swapTire(formData: FormData) {
+  const supabase = await createClient()
+  const carId = String(formData.get('car_id'))
+  const newTireId = String(formData.get('tire_id')) // Ezt a gumit akarjuk felrakni
+  
+  // 1. Lekérjük az autó aktuális kilométerét
+  const { data: car } = await supabase.from('cars').select('mileage').eq('id', carId).single()
+  if (!car) return;
+
+  // 2. Megkeressük, mi van MOST fent (ha van)
+  const { data: currentMounted } = await supabase
+    .from('tires')
+    .select('*')
+    .eq('car_id', carId)
+    .eq('is_mounted', true)
+    .single()
+
+  // 3. Ha van fent gumi, leszereljük és frissítjük a futásteljesítményét
+  if (currentMounted) {
+     const distanceDriven = car.mileage - (currentMounted.mounted_at_mileage || car.mileage);
+     // Biztonsági ellenőrzés: ne legyen negatív (ha valaki visszatekerte az órát vagy elírta)
+     const validDistance = Math.max(0, distanceDriven);
+
+     await supabase
+       .from('tires')
+       .update({ 
+          is_mounted: false, 
+          mounted_at_mileage: null,
+          total_distance: (currentMounted.total_distance || 0) + validDistance
+       })
+       .eq('id', currentMounted.id)
+  }
+
+  // 4. Felrakjuk az ÚJ gumit
+  // Ha a "newTireId" nem üres (mert lehet, hogy csak leszerelni akarunk mindent)
+  if (newTireId && newTireId !== 'none') {
+    await supabase
+      .from('tires')
+      .update({ 
+         is_mounted: true, 
+         mounted_at_mileage: car.mileage 
+      })
+      .eq('id', newTireId)
+  }
+
+  revalidatePath(`/cars/${carId}`)
 }
