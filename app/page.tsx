@@ -4,7 +4,7 @@ import { deleteCar } from './cars/actions'
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
-import PdfDownloadButton from './cars/[id]/PdfDownloadButton' // Ha a főoldalon is kellene, de itt most nem használjuk közvetlenül
+import PdfDownloadButton from './cars/[id]/PdfDownloadButton' 
 
 // --- SERVER ACTION: Km Naplózása ---
 async function logCurrentMileage(formData: FormData) {
@@ -34,7 +34,7 @@ export default async function Home() {
   
   let totalSpentAllTime = 0
   let totalSpentThisMonth = 0
-  let fleetHealth = 100 // Százalék
+  let fleetHealth = 100 
   let latestCarId = null
 
   if (user) {
@@ -46,7 +46,7 @@ export default async function Home() {
     }
 
     if (cars.length > 0) {
-        // 2. Összes Emlékeztető lekérése (Globális)
+        // 2. Összes Emlékeztető
         const { data: reminders } = await supabase
             .from('service_reminders')
             .select('*, cars(make, model)')
@@ -54,7 +54,7 @@ export default async function Home() {
             .limit(3)
         if (reminders) upcomingReminders = reminders
 
-        // 3. Legutóbbi aktivitások (Globális)
+        // 3. Legutóbbi aktivitások
         const { data: activities } = await supabase
             .from('events')
             .select('*, cars(make, model)')
@@ -62,7 +62,7 @@ export default async function Home() {
             .limit(5)
         if (activities) recentActivity = activities
 
-        // 4. Pénzügyi összesítés
+        // 4. Pénzügyek
         const { data: allCosts } = await supabase.from('events').select('cost, event_date')
         if (allCosts) {
             const now = new Date()
@@ -72,20 +72,18 @@ export default async function Home() {
                 .reduce((sum, e) => sum + (e.cost || 0), 0)
         }
 
-        // 5. Flotta egészség számítás (Egyszerűsített)
+        // 5. Flotta egészség
         const sickCars = cars.filter(c => c.status === 'service').length
         fleetHealth = Math.round(((cars.length - sickCars) / cars.length) * 100)
     }
   }
 
-  // Időszaknak megfelelő üdvözlés
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét'
 
   // --- DASHBOARD NÉZET (BEJELENTKEZVE) ---
   if (user) {
     return (
-      // JAVÍTÁS: h-screen, overflow-y-auto és overscroll-none a gumiszalag effekt ellen
       <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 text-slate-900 font-sans pb-24">
         {/* Navigáció */}
         <nav className="bg-slate-900 sticky top-0 z-50 shadow-lg border-b border-white/5 backdrop-blur-md bg-opacity-95">
@@ -190,9 +188,15 @@ export default async function Home() {
 
              </div>
 
-             {/* --- JOBB OSZLOP: Értesítési Központ (Sidebar) --- */}
+             {/* --- JOBB OSZLOP: Értesítési Központ & Widgetek --- */}
              <div className="lg:col-span-1 space-y-6">
                 
+                {/* ÚJ: INFO HUB (Weather & Fuel) */}
+                <div className="grid grid-cols-2 gap-4">
+                    <WeatherWidget />
+                    <FuelWidget />
+                </div>
+
                 {/* 1. Értesítések Doboz */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -254,7 +258,8 @@ export default async function Home() {
 
                 {/* Gyorsműveletek Gombcsoport (Jobb oldalon) */}
                 <div className="grid grid-cols-2 gap-3">
-                    {/* (Itt voltak a gombok, de azokat a fő oszlopba raktam vagy törölhetőek, ha van alul sticky bar) */}
+                    <ActionButton icon="gas" label="Gyors Tankolás" />
+                    <ActionButton icon="doc" label="Új Dokumentum" />
                 </div>
 
              </div>
@@ -263,25 +268,41 @@ export default async function Home() {
 
         </div>
 
+        {/* --- STICKY MOBILE BOTTOM BAR --- */}
+        <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] px-4 py-3 z-50 flex gap-3 pb-safe">
+           {cars.length > 0 ? (
+               <>
+                 <Link href={`/cars/${cars[0].id}/events/new?type=fuel`} className="flex-1 bg-amber-500 text-slate-900 py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    Tankolás
+                 </Link>
+                 <Link href={`/cars/${cars[0].id}/events/new?type=service`} className="flex-1 bg-slate-900 text-white py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Szerviz
+                 </Link>
+                 <Link href={`/cars/${cars[0].id}/reminders/new`} className="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    Tervező
+                 </Link>
+               </>
+           ) : (
+                <Link href="/cars/new" className="flex-1 bg-amber-500 text-slate-900 py-3 rounded-xl font-bold text-center">Első autó felvétele</Link>
+           )}
+        </div>
       </div>
     )
   }
 
   // --- LOGGED OUT LANDING PAGE ---
   return (
-    // JAVÍTÁS: Itt is alkalmazzuk az overscroll-none osztályt
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-950 font-sans text-slate-200 flex flex-col lg:flex-row selection:bg-amber-500/30">
-      
-      {/* BAL OLDAL (Landing Page tartalom) */}
-      <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950">
-        
-        {/* Dekorációk és tartalom... (Ez a rész nem változik, a legutóbbi fullos Landing Page) */}
+       {/* (A Landing Page kódja változatlan...) */}
+       <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950">
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
            <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse-slow"></div>
            <div className="absolute bottom-[10%] left-[-10%] w-[30vw] h-[30vw] bg-blue-900/10 rounded-full blur-[100px]"></div>
            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
         </div>
-
         <div className="relative z-10 p-6 sm:p-12 lg:p-16 xl:p-24 flex flex-col gap-16 lg:gap-24">
            <div className="space-y-8 animate-in slide-in-from-left-10 duration-700 fade-in">
              <div className="flex items-center gap-3">
@@ -305,21 +326,17 @@ export default async function Home() {
                 <Badge text="Minden eszközön" />
              </div>
            </div>
-           
-           {/* Statisztika Sáv */}
             <div className="grid grid-cols-3 gap-4 border-y border-slate-800/50 py-8 bg-slate-900/20 backdrop-blur-sm rounded-2xl animate-in fade-in duration-1000 delay-200">
                 <StatCard number="100%" label="Papírmentes" />
                 <StatCard number="0 Ft" label="Rejtett költség" />
                 <StatCard number="24/7" label="Elérhetőség" />
             </div>
-
            <div className="pt-10 border-t border-slate-800/50 text-slate-500 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <p className="italic">"Az egyetlen app, amire az autósoknak szükségük van."</p>
               <div className="text-slate-600 text-xs">© 2025 DriveSync Technologies</div>
            </div>
         </div>
       </div>
-
       <div className="lg:w-[40%] xl:w-[35%] w-full bg-slate-950 lg:border-l lg:border-white/5 relative flex flex-col justify-center p-6 lg:p-12 shadow-2xl lg:min-h-screen z-20">
         <div className="lg:sticky lg:top-12 w-full max-w-sm mx-auto animate-in slide-in-from-right-10 duration-700 fade-in">
           <div className="text-center mb-10">
@@ -338,6 +355,54 @@ export default async function Home() {
       </div>
     </div>
   )
+}
+
+// --- ÚJ WIDGETEK ---
+
+function WeatherWidget() {
+    // Mock data - valós appban API hívás menne itt
+    const isDay = new Date().getHours() > 6 && new Date().getHours() < 20;
+    
+    return (
+        <div className={`rounded-2xl p-4 text-white flex flex-col justify-between h-32 relative overflow-hidden ${isDay ? 'bg-gradient-to-br from-sky-400 to-blue-500' : 'bg-gradient-to-br from-slate-800 to-slate-900'}`}>
+            <div className="relative z-10">
+                <p className="text-xs font-bold opacity-80 uppercase tracking-wider">Budapest</p>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="text-3xl font-black">14°</span>
+                    <svg className="w-6 h-6 text-yellow-300" fill="currentColor" viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 9c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.41 1.41c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.41 1.41c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41l-1.41-1.41zm1.41-10.96a.996.996 0 000-1.41.996.996 0 00-1.41 0l-1.41 1.41c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.41-1.41zM7.4 18.36a.996.996 0 000 1.41.996.996 0 001.41 0l1.41-1.41c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0l-1.41 1.41z"/></svg>
+                </div>
+            </div>
+            <div className="relative z-10">
+                <p className="text-xs font-medium opacity-90">Részben felhős</p>
+            </div>
+            {/* Díszítő elemek */}
+            <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/20 rounded-full blur-xl"></div>
+        </div>
+    )
+}
+
+function FuelWidget() {
+    return (
+        <div className="bg-slate-900 rounded-2xl p-4 text-white flex flex-col justify-between h-32 relative overflow-hidden border border-slate-800">
+            <div className="flex justify-between items-start relative z-10">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Üzemanyag</p>
+                <div className="p-1 bg-slate-800 rounded">
+                    <svg className="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+            </div>
+            <div className="space-y-2 relative z-10">
+                <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-300">95 Benzin</span>
+                    <span className="text-sm font-mono font-bold text-amber-400">615 Ft</span>
+                </div>
+                <div className="w-full h-[1px] bg-slate-800"></div>
+                <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-300">Diesel</span>
+                    <span className="text-sm font-mono font-bold text-white">622 Ft</span>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 // --- SEGÉD KOMPONENSEK ---
@@ -372,10 +437,6 @@ function CarCard({ car }: { car: any }) {
           </div>
         </div>
       </Link>
-      <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-30">
-        <Link href={`/cars/${car.id}/edit`} className="bg-white/90 backdrop-blur-sm p-2 rounded-full text-slate-600 hover:text-amber-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></Link>
-        <form action={deleteCar}><input type="hidden" name="id" value={car.id} /><button className="bg-white/90 backdrop-blur-sm p-2 rounded-full text-slate-600 hover:text-red-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></form>
-      </div>
     </div>
   )
 }
@@ -413,11 +474,11 @@ function StatCard({ label, value, subValue, icon, customColor, alert, highlight,
             {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
             {icon === 'fuel' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
          </div>
-      </div>
-      <div>
-        <p className="text-xs font-bold text-slate-400 uppercase">{label}</p>
-        <p className="text-xl font-black text-slate-900">{value}</p>
-      </div>
+       </div>
+       <div>
+         <p className="text-xs font-bold text-slate-400 uppercase">{label}</p>
+         <p className="text-xl font-black text-slate-900">{value}</p>
+       </div>
     </div>
   )
 }
