@@ -12,11 +12,11 @@ function EventForm() {
   const params = useParams()
   const searchParams = useSearchParams()
   const carId = params.id as string
-  const error = searchParams.get('error')
   const router = useRouter()
   
   const defaultType = searchParams.get('type') === 'service' ? 'service' : 'fuel'
   const [type, setType] = useState(defaultType)
+  // Segéd state, hogy tudjuk, tankolás-e (az UI rendereléshez)
   const isFuel = type === 'fuel'
 
   const supabase = createBrowserClient(
@@ -29,14 +29,16 @@ function EventForm() {
   const [loading, setLoading] = useState(true)
   
   // --- STATE-EK ---
-  const [scanning, setScanning] = useState(false) // AI töltés
-  const [saving, setSaving] = useState(false)     // Mentés töltés
+  const [scanning, setScanning] = useState(false) 
+  const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // Toast értesítés
+  // AI Highlight és Figyelmeztetés
+  const [aiFilled, setAiFilled] = useState<string[]>([])
+  const [showAiDisclaimer, setShowAiDisclaimer] = useState(false) // ÚJ!
+
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
-  // Űrlap adatok
   const [formData, setFormData] = useState({
       date: new Date().toISOString().split('T')[0],
       mileage: '',
@@ -63,7 +65,6 @@ function EventForm() {
     fetchData()
   }, [carId])
 
-  // --- TOAST KEZELŐ ---
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 4000)
@@ -75,7 +76,9 @@ function EventForm() {
       if (!file) return
 
       setScanning(true)
-      showToast('Számla elemzése folyamatban...', 'success') // Jelzünk, hogy elindult
+      setAiFilled([]) 
+      setShowAiDisclaimer(false) // Elrejtjük, ha újra szkennel
+      showToast('🤖 AI elemzés folyamatban...', 'success')
       
       try {
           const compressedFile = await imageCompression(file, {
@@ -91,21 +94,42 @@ function EventForm() {
           if (result.success && result.data) {
               const aiData = result.data
               
+              // 1. Típus beállítása (FONTOS: Ezt az elején csináljuk)
+              if (aiData.type && (aiData.type === 'fuel' || aiData.type === 'service')) {
+                  setType(aiData.type)
+              }
+
+              // 2. Szerviz típus (Title) okos kezelése
+              // Ha szerviz, és az AI "Olajcsere" szót találta, próbáljuk beállítani.
+              // Ha tankolás, akkor a kút neve megy a title-be.
+              let newTitle = aiData.title || formData.title;
+
+              // 3. Adatok beállítása
               setFormData(prev => ({
                   ...prev,
-                  title: aiData.title || prev.title,
+                  title: newTitle, 
                   date: aiData.date || prev.date,
                   cost: aiData.cost || prev.cost,
                   location: aiData.location || prev.location,
                   liters: aiData.liters || prev.liters,
                   description: aiData.description || prev.description,
+                  // Ha van km óra állás a számlán, felülírjuk, ha nincs, marad a régi
+                  mileage: aiData.mileage || prev.mileage 
               }))
 
-              if (aiData.type && (aiData.type === 'fuel' || aiData.type === 'service')) {
-                  setType(aiData.type)
-              }
+              // 4. Highlight lista összeállítása
+              const filledFields = []
+              if (aiData.title) filledFields.push('title')
+              if (aiData.cost) filledFields.push('cost')
+              if (aiData.liters) filledFields.push('liters')
+              if (aiData.location) filledFields.push('location')
+              if (aiData.mileage) filledFields.push('mileage') // Km is highlightos lesz
+              setAiFilled(filledFields)
 
-              showToast('Számla sikeresen beolvasva!', 'success')
+              // 5. Figyelmeztetés megjelenítése
+              setShowAiDisclaimer(true)
+
+              showToast('✨ Adatok sikeresen kinyerve!', 'success')
           } else {
               showToast('Nem sikerült minden adatot kinyerni.', 'error')
           }
@@ -119,24 +143,23 @@ function EventForm() {
       }
   }
 
-  // --- MENTÉS KEZELÉSE ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-
     const submitData = new FormData(e.target as HTMLFormElement)
+
+    // Biztosítjuk, hogy a helyes típus menjen el (mert a state vezérli a UI-t)
+    submitData.set('type', type) 
 
     try {
         await addEvent(submitData)
         showToast('Esemény rögzítve!', 'success')
         router.refresh()
     } catch (error: any) {
-        // Next.js redirect "hiba" kezelése (ez valójában siker)
         if (error.message === 'NEXT_REDIRECT') {
             showToast('Sikeres mentés! Visszatérés...', 'success')
             return 
         }
-        console.error(error)
         showToast('Hiba történt a mentéskor.', 'error')
         setSaving(false)
     }
@@ -154,20 +177,21 @@ function EventForm() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
       
-      {/* --- TOAST --- */}
       {toast && (
           <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
-              {toast.type === 'success' ? (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              )}
               <span className="font-bold text-sm">{toast.message}</span>
           </div>
       )}
 
-      {/* Fejléc */}
-      <div className="bg-slate-900 py-12 px-4 text-center shadow-lg relative overflow-hidden">
+      {scanning && (
+          <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
+              <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-lg font-bold animate-pulse">Az AI elemzi a számlát...</p>
+              <p className="text-sm text-slate-400">Kérlek várj egy pillanatot</p>
+          </div>
+      )}
+
+      <div className="bg-slate-900 py-10 px-4 text-center shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
         <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider relative z-10">
           {isFuel ? 'Tankolás' : 'Szerviz'} <span className="text-amber-500">Rögzítése</span>
@@ -179,22 +203,12 @@ function EventForm() {
         )}
       </div>
 
-      <div className="max-w-xl mx-auto px-4 -mt-8 relative z-20">
+      <div className="max-w-xl mx-auto px-4 -mt-6 relative z-20">
         
-        {/* --- AI SCANNER GOMB --- */}
         <div className="mb-6 flex justify-center">
-            <label className={`cursor-pointer group relative flex items-center gap-3 px-6 py-4 rounded-2xl shadow-xl transition-all transform hover:-translate-y-1 active:scale-95 ${scanning ? 'bg-slate-800 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:shadow-amber-500/30'}`}>
-                {scanning ? (
-                    <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        <span>Számla elemzése...</span>
-                    </>
-                ) : (
-                    <>
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                        <span className="font-bold">Számla Beolvasása (AI)</span>
-                    </>
-                )}
+            <label className={`cursor-pointer group relative w-full sm:w-auto flex justify-center items-center gap-3 px-6 py-4 rounded-2xl shadow-xl transition-all transform hover:-translate-y-1 active:scale-95 bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:shadow-amber-500/30`}>
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <span className="font-bold">Számla Beolvasása (AI)</span>
                 <input 
                     type="file" 
                     accept="image/*" 
@@ -207,19 +221,23 @@ function EventForm() {
             </label>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 transition-colors">
-          
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-4 rounded mb-6 text-red-700 dark:text-red-400">
-              {error}
+        {/* --- AI DISCLAIMER (ÚJ) --- */}
+        {showAiDisclaimer && (
+            <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                <svg className="w-6 h-6 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div>
+                    <h4 className="font-bold text-amber-800 dark:text-amber-400 text-sm">Ellenőrizd az adatokat!</h4>
+                    <p className="text-xs text-amber-700 dark:text-amber-300/80 mt-1">Az AI nagy pontossággal dolgozik, de előfordulhatnak tévedések. Kérlek, nézd át a sárgával jelölt mezőket mentés előtt.</p>
+                </div>
+                <button onClick={() => setShowAiDisclaimer(false)} className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-300"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
             </div>
-          )}
+        )}
 
-          {/* onSubmit handlert használunk a jobb UX érdekében */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 transition-colors">
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <input type="hidden" name="car_id" value={carId} />
-            <input type="hidden" name="type" value={type} />
-
+            
             <div className="grid grid-cols-2 gap-4">
                <InputGroup 
                  label="Dátum" 
@@ -235,6 +253,7 @@ function EventForm() {
                  type="number" 
                  value={formData.mileage}
                  onChange={handleChange}
+                 highlight={aiFilled.includes('mileage')} // Highlight KM
                  required 
                />
             </div>
@@ -246,6 +265,7 @@ function EventForm() {
                  placeholder="pl. Shell, OMV" 
                  value={formData.title}
                  onChange={handleChange}
+                 highlight={aiFilled.includes('title')}
                  required 
                />
             ) : (
@@ -260,9 +280,13 @@ function EventForm() {
                      required
                      value={formData.title} 
                      onChange={handleChange}
-                     className="block w-full appearance-none rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-900 dark:text-white cursor-pointer"
+                     className={`block w-full appearance-none rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-900 dark:text-white cursor-pointer ${aiFilled.includes('title') ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20' : ''}`}
                    >
-                     <option value="" disabled>Válassz a listából...</option>
+                     <option value="" disabled>Válassz...</option>
+                     {/* Ha az AI olyan szervizt talál, ami nincs a listában, betesszük opcióként */}
+                     {formData.title && !serviceTypes.some(s => s.name === formData.title) && formData.title !== 'Egyéb' && (
+                         <option value={formData.title}>{formData.title}</option>
+                     )}
                      {serviceTypes.map(s => (
                        <option key={s.id} value={s.name}>{s.name}</option>
                      ))}
@@ -283,6 +307,7 @@ function EventForm() {
                   placeholder="0" 
                   value={formData.cost}
                   onChange={handleChange}
+                  highlight={aiFilled.includes('cost')}
                   required 
                />
                {isFuel && (
@@ -294,6 +319,7 @@ function EventForm() {
                     placeholder="0.00" 
                     value={formData.liters}
                     onChange={handleChange}
+                    highlight={aiFilled.includes('liters')}
                     required 
                  />
                )}
@@ -319,6 +345,7 @@ function EventForm() {
                 placeholder="Budapest" 
                 value={formData.location}
                 onChange={handleChange}
+                highlight={aiFilled.includes('location')}
             />
 
             <div className="pt-4 flex gap-4 border-t border-slate-100 dark:border-slate-700 mt-6">
@@ -348,7 +375,7 @@ export default function NewEventPage() {
   )
 }
 
-function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange }: any) {
+function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight }: any) {
   return (
     <div className="space-y-1">
       <label htmlFor={name} className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -363,7 +390,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
         onChange={onChange} 
         required={required} 
         placeholder={placeholder} 
-        className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white dark:placeholder-slate-400 transition-colors" 
+        className={`block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white dark:placeholder-slate-400 transition-all duration-500 ${highlight ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-300' : ''}`} 
       />
     </div>
   )

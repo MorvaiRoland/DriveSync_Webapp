@@ -1,77 +1,72 @@
 'use server'
 
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function scanReceipt(formData: FormData) {
-  // 1. JAVÍTÁS: Itt, a függvényen BELÜL hozzuk létre a klienst!
-  // Így biztosan látja már a környezeti változókat.
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  })
+  const API_KEY = process.env.GOOGLE_API_KEY;
+
+  if (!API_KEY) {
+    console.error("❌ HIBA: Hiányzik a GOOGLE_API_KEY a .env.local fájlból!");
+    return { error: 'Szerver konfigurációs hiba: Hiányzó API kulcs.' }
+  }
 
   const file = formData.get('receipt') as File
-
-  if (!file) {
-    return { error: 'Nincs kép feltöltve.' }
-  }
-
-  // Ellenőrizzük, hogy van-e kulcs, mielőtt pénzt költenénk a hívásra
-  if (!process.env.OPENAI_API_KEY) {
-      console.error("HIBA: Hiányzik az OPENAI_API_KEY a .env.local fájlból!")
-      return { error: 'Szerver konfigurációs hiba (Hiányzó API kulcs).' }
-  }
-
-  const arrayBuffer = await file.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
-  const base64Image = buffer.toString('base64')
-  const dataUrl = `data:${file.type};base64,${base64Image}`
+  if (!file) return { error: 'Nincs kép feltöltve.' }
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are a helpful assistant that extracts data from Hungarian receipts (fuel or service). 
-          Extract the following fields and return ONLY a raw JSON object (no markdown formatting, no backticks):
-          
-          - title: Name of the station or service provider (e.g. Shell, OMV, Bosch Szerviz).
-          - date: Date of transaction in YYYY-MM-DD format.
-          - cost: Total amount in numbers only (e.g. 15000).
-          - liters: If it's a fuel receipt, amount of liters (number). If service, return null.
-          - location: City or address if visible.
-          - type: Detect if it is 'fuel' (tankolás) or 'service' (szerviz/alkatrész).
-          
-          - description: 
-            * If 'fuel': Write the fuel type if visible (e.g. "95 Benzin", "Diesel").
-            * If 'service': Summarize the items/services listed (e.g. "Olajcsere, Féktárcsa, Munkadíj"). Keep it under 100 characters.`
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Extract data from this receipt." },
-            {
-              type: "image_url",
-              image_url: {
-                url: dataUrl,
-              },
-            },
-          ],
-        },
-      ],
-      max_tokens: 300,
-    })
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const base64Image = buffer.toString('base64')
 
-    const content = response.choices[0].message.content
-    const jsonString = content?.replace(/```json/g, '').replace(/```/g, '').trim()
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const prompt = `
+      You are a data extraction assistant. Analyze this receipt/invoice image.
+      Extract fields into a JSON object.
+      
+      Fields needed:
+      - title: 
+          * If Fuel: Company name (Shell, OMV). 
+          * If Service: Try to categorize the MAIN service type (e.g. "Olajcsere", "Műszaki Vizsga", "Gumiszerelés"). If unsure, use "Egyéb".
+      - date: YYYY-MM-DD.
+      - cost: Total amount (number).
+      - liters: Number (if fuel), null (if service).
+      - mileage: Odometer reading/Km count if visible on the invoice (number). Look for "Km", "Kilométer", "Odometer". If not found, return null.
+      - location: City/Address.
+      - type: 'fuel' or 'service'.
+      - description: 
+         * If fuel: fuel type (e.g. "95 Benzin").
+         * If service: list main items.
+      
+      RETURN ONLY RAW JSON.
+    `;
+
+    const imagePart = {
+      inlineData: {
+        data: base64Image,
+        mimeType: file.type,
+      },
+    };
     
-    if (!jsonString) throw new Error('Üres válasz az AI-tól')
+    const result = await model.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    const text = response.text();
 
-    const data = JSON.parse(jsonString)
+    let jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const firstBrace = jsonString.indexOf('{');
+    const lastBrace = jsonString.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+    }
+
+    const data = JSON.parse(jsonString);
+    console.log("✅ AI Adatok:", data);
+
     return { success: true, data }
 
-  } catch (error) {
-    console.error("AI Error:", error)
-    return { error: 'Nem sikerült beolvasni a számlát. Próbáld újra vagy töltsd ki kézzel.' }
+  } catch (error: any) {
+    console.error("❌ AI Hiba:", error.message);
+    return { error: 'Nem sikerült beolvasni a számlát.' }
   }
 }

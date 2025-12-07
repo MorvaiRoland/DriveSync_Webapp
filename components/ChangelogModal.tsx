@@ -2,34 +2,35 @@
 
 import { useState, useEffect } from 'react'
 
-const CURRENT_VERSION = '1.4.1'; // Verzió emelése, hogy újra felugorjon
+const CURRENT_VERSION = '1.5.0'; // Verzió emelése az AI miatt
 const RELEASE_DATE = '2025. December 07.';
 
 // 1. Jelenlegi funkciók listája
 const features = [
   {
+    emoji: '🤖', // KIEMELT AI FUNKCIÓ
+    title: 'AI Számla Szkenner (BÉTA)',
+    desc: 'ÚJ! Megérkezett a mesterséges intelligencia! Csak fotózd le a tankolási blokkot vagy szervizszámlát, és az AI automatikusan kinyeri az adatokat, sőt, még a szerviz típusát is felismeri!',
+  },
+  {
     emoji: '👥', 
-    title: 'Közös Garázs (Családi Csomag)',
-    desc: 'ÚJ! Oszd meg az autódat a pároddal vagy a családdal! A "Beállítások" menüben hívd meg őket email cím alapján, így közösen vezethetitek a szervizkönyvet és a tankolásokat.',
+    title: 'Közös Garázs',
+    desc: 'Oszd meg az autódat a családdal! A "Beállítások" menüben hívd meg őket email cím alapján, így mindenki látja, mikor kell tankolni vagy szervizbe menni.',
   },
   {
     emoji: '🌗', 
     title: 'Sötét & Világos Téma',
-    desc: 'Megérkezett a Dark Mode! Kíméld a szemed éjszakai vezetésnél. Válts manuálisan, vagy állítsd be, hogy kövesse a telefonod rendszerbeállításait.',
-  },
-  {
-    emoji: '🌤️', 
-    title: 'Időjárás & Üzemanyag',
-    desc: 'Kövesd a benzin árát és az aktuális időjárást közvetlenül a műszerfalról, hogy mindig felkészülten indulj útnak.',
+    desc: 'Kíméld a szemed éjszakai vezetésnél. Az app mostantól automatikusan alkalmazkodik a telefonod beállításaihoz, vagy válts manuálisan a beállításokban.',
   },
 ];
 
-// 2. Jövőbeli fejlesztések
+// 2. Jövőbeli fejlesztések (Most üres, mert mindent megcsináltunk!)
+
 const upcoming = [
   { 
-    emoji: '📸', 
-    title: 'AI Számla Szkenner', 
-    desc: 'Hamarosan! Felejtsd el a pötyögést. Csak fotózd le a tankolási blokkot vagy szervizszámlát, és a mesterséges intelligencia automatikusan kitölti az adatokat helyetted.' 
+    emoji: '🗺️', 
+    title: 'Interaktív Térkép', 
+    desc: 'Hamarosan visszanézheted az útjaidat térképen is! Lásd vizuálisan, merre jártál, hol tankoltál a legolcsóbban, és tervezd meg az útvonalat.' 
   }
 ];
 
@@ -67,7 +68,7 @@ export default function ChangelogModal() {
             <div className="relative z-10">
                 <div className="flex justify-between items-start">
                     <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 border border-white/10 text-amber-400">
-                        v{CURRENT_VERSION} • Nagy Frissítés
+                        v{CURRENT_VERSION} • AI Frissítés
                     </div>
                     <button onClick={handleClose} className="text-slate-400 hover:text-white transition-colors">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -97,7 +98,7 @@ export default function ChangelogModal() {
                 ))}
             </div>
 
-            {/* Következő Fejlesztés Doboz */}
+            {/* Következő Fejlesztés Doboz (Csak ha van tartalom) */}
             {upcoming.length > 0 && (
                 <div className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 border border-amber-100 dark:border-amber-800/50 relative overflow-hidden">
                      <div className="absolute -right-4 -top-4 w-20 h-20 bg-amber-200/30 rounded-full blur-xl"></div>
@@ -130,7 +131,7 @@ export default function ChangelogModal() {
                 onClick={handleClose}
                 className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-900 font-bold shadow-lg hover:bg-slate-800 dark:hover:bg-amber-400 hover:scale-[1.02] transition-all active:scale-[0.98]"
             >
-                Király, használom!
+                Király, kipróbálom!
             </button>
         </div>
 
