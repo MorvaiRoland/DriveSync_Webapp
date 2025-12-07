@@ -2,24 +2,29 @@
 
 import { useState, useEffect } from 'react'
 
-const CURRENT_VERSION = '1.3.3'; 
+const CURRENT_VERSION = '1.3.4'; 
 const RELEASE_DATE = '2025. December 07.';
 
 // 1. Jelenlegi funkciók listája (Bővített leírásokkal)
 const features = [
-   {
-    emoji: '🛒', // ÚJ FUNKCIÓ KIEMELVE
-    title: 'Alkatrész Nyilvántartó',
-    desc: 'ÚJ! Soha többé nem felejted el, milyen olaj vagy szűrő kell az autódba. Mentsd el a cikkszámokat, márkákat és webshop linkeket egy helyre.',
+  {
+    emoji: '🌤️', 
+    title: 'Időjárás Előrejelzés',
+    desc: 'ÚJ! Megérkezett! Valós idejű időjárás adatok közvetlenül a műszerfalon, hogy sose érjen váratlanul az eső.',
+  },
+  {
+    emoji: '⛽', 
+    title: 'Üzemanyag Árak',
+    desc: 'ÚJ! Kövesd a benzin és gázolaj árváltozásait naprakészen az appban. Spórolj a tankoláson az aktuális adatokkal!',
   },
 ];
 
 // 2. Jövőbeli fejlesztések
 const upcoming = [
   {
-    emoji: '⛽',
-    title: 'Valós Adatok & Időjárás',
-    desc: 'Hamarosan érkeznek a valós idejű üzemanyagárak és a helyi időjárás előrejelzés közvetlenül a műszerfalra.',
+    emoji: '-',
+    title: '',
+    desc: '',
   }
 ];
 

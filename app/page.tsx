@@ -6,40 +6,7 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import PdfDownloadButton from './cars/[id]/PdfDownloadButton' 
 import ChangelogModal from '@/components/ChangelogModal'
-import { WeatherWidget, FuelWidget } from '@/components/DashboardWidgets'
-
-// --- WEB SCRAPING: Üzemanyag Árak ---
-async function getFuelPrices() {
-  try {
-    // Letöltjük az oldal HTML tartalmát (1 órás gyorsítótárazással a szerveren)
-    const res = await fetch('https://holtankoljak.hu/', { next: { revalidate: 3600 } });
-    
-    if (!res.ok) throw new Error('Nem sikerült elérni a holtankoljak.hu-t');
-    
-    const html = await res.text();
-    
-    // Regex keresés a <span class="ar">...</span> elemekre
-    // Feltételezzük, hogy az oldalon a 95-ös benzin van előbb, aztán a gázolaj az árlistában.
-    // Ez a regex megkeresi az összes árat.
-    const priceRegex = /<span class="ar">\s*([\d,.]+)\s*<\/span>/g;
-    
-    const matches = [...html.matchAll(priceRegex)];
-    
-    if (matches.length >= 2) {
-        // Az első találat általában a 95-ös benzin átlagára, a második a gázolajé a főoldalon
-        // A magyar tizedesvesszőt (,) pontra (.) cseréljük a parseoláshoz
-        const petrol = parseFloat(matches[0][1].replace(',', '.'));
-        const diesel = parseFloat(matches[1][1].replace(',', '.'));
-        
-        return { petrol, diesel };
-    }
-    
-    return { petrol: null, diesel: null };
-  } catch (error) {
-    console.error('Hiba az üzemanyagárak lekérésekor:', error);
-    return { petrol: null, diesel: null };
-  }
-}
+import { WeatherWidget, FuelWidget } from '@/components/DashboardWidgets' // ÚJ IMPORT
 
 // --- SERVER ACTION: Km Naplózása ---
 async function logCurrentMileage(formData: FormData) {
@@ -61,9 +28,6 @@ async function logCurrentMileage(formData: FormData) {
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
-  // Üzemanyagárak lekérése a szerveren
-  const fuelPrices = await getFuelPrices();
 
   // Adatok inicializálása
   let cars: any[] = []
@@ -225,14 +189,13 @@ export default async function Home() {
                 )}
              </div>
 
-             {/* --- JOBB OSZLOP: Értesítési Központ & Widgetek --- */}
+             {/* --- JOBB OSZLOP: Widgetek és Értesítések --- */}
              <div className="lg:col-span-1 space-y-6">
                 
                 {/* WIDGETEK: IDŐJÁRÁS & BENZIN (ÚJ) */}
                 <div className="grid grid-cols-2 gap-4">
                     <WeatherWidget />
-                    {/* Átadjuk a szerverről lekért adatokat */}
-                    <FuelWidget petrolPrice={fuelPrices.petrol} dieselPrice={fuelPrices.diesel} />
+                    <FuelWidget />
                 </div>
 
                 {/* Értesítések */}
@@ -296,7 +259,7 @@ export default async function Home() {
 
                 {/* Gyorsműveletek Gombcsoport */}
                 <div className="grid grid-cols-2 gap-3">
-                    {/* Helytartók */}
+                    {/* Helytartók további funkciókhoz */}
                 </div>
 
              </div>
@@ -312,9 +275,9 @@ export default async function Home() {
       
       {/* BAL OLDAL (Landing Page tartalom) */}
       <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950">
-        {/* ... (Landing Page kódja változatlan) ... */}
-        {/* Csak az elrendezést másolom ide, a tartalom megegyezik a korábbival, de a teljes kódot a fentiből másold ki, ez csak a végleges lezárás miatt van itt */}
-         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        
+        {/* Dekorációk */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
            <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse-slow"></div>
            <div className="absolute bottom-[10%] left-[-10%] w-[30vw] h-[30vw] bg-blue-900/10 rounded-full blur-[100px]"></div>
            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
@@ -344,6 +307,7 @@ export default async function Home() {
              </div>
            </div>
            
+           {/* Statisztika Sáv */}
             <div className="grid grid-cols-3 gap-4 border-y border-slate-800/50 py-8 bg-slate-900/20 backdrop-blur-sm rounded-2xl animate-in fade-in duration-1000 delay-200">
                 <StatCard number="100%" label="Papírmentes" />
                 <StatCard number="0 Ft" label="Rejtett költség" />
@@ -356,7 +320,7 @@ export default async function Home() {
            </div>
         </div>
       </div>
-      
+
       <div className="lg:w-[40%] xl:w-[35%] w-full bg-slate-950 lg:border-l lg:border-white/5 relative flex flex-col justify-center p-6 lg:p-12 shadow-2xl lg:min-h-screen z-20">
         <div className="lg:sticky lg:top-12 w-full max-w-sm mx-auto animate-in slide-in-from-right-10 duration-700 fade-in">
           <div className="text-center mb-10">
@@ -446,4 +410,17 @@ function StatCard({ label, value, subValue, icon, customColor, alert, highlight,
 
 function Badge({ text }: { text: string }) {
   return <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-slate-800 text-slate-400 text-xs font-bold">{text}</span>
+}
+
+function Logo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+      <path d="M12 17v-6" />
+      <path d="M8.5 14.5 12 11l3.5 3.5" />
+      <circle cx="7" cy="17" r="2" />
+      <circle cx="17" cy="17" r="2" />
+      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
+    </svg>
+  )
 }
