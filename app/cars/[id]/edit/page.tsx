@@ -5,7 +5,7 @@ import { updateCar, deleteCar, addTire, deleteTire, swapTire } from '../actions'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import Image from 'next/image'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ShareManager from '@/components/ShareManager'
 
 export default function EditCarPage() {
@@ -18,13 +18,19 @@ export default function EditCarPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  // Referencia a fájl inputhoz (hogy biztosan megtaláljuk a képet)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  // Referencia a formhoz
+  const formRef = useRef<HTMLFormElement>(null)
+
   // Állapotok
   const [car, setCar] = useState<any>(null)
   const [tires, setTires] = useState<any[]>([])
   const [shares, setShares] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false) // Mentés folyamatjelző
   
-  // Státusz állapot (hogy ne ugráljon el mentéskor)
+  // Státusz állapot
   const [status, setStatus] = useState<string>('active')
   
   // Kép előnézet
@@ -40,7 +46,7 @@ export default function EditCarPage() {
       const { data: carData } = await supabase.from('cars').select('*').eq('id', carId).single()
       if (carData) {
           setCar(carData)
-          setStatus(carData.status) // Beállítjuk a helyes státuszt
+          setStatus(carData.status) // Beállítjuk a helyes státuszt az adatbázisból
       }
 
       // 2. Gumik
@@ -59,7 +65,7 @@ export default function EditCarPage() {
   // Értesítés kezelő
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type })
-    setTimeout(() => setToast(null), 4000) // 4 mp után eltűnik
+    setTimeout(() => setToast(null), 4000)
   }
 
   // Kép előnézet kezelése
@@ -68,18 +74,44 @@ export default function EditCarPage() {
     if (file) {
       const objectUrl = URL.createObjectURL(file);
       setImagePreview(objectUrl);
-      showToast('Kép kiválasztva! Ne felejts el menteni.', 'success')
+      showToast('Kép kiválasztva! A véglegesítéshez nyomj a Mentésre.', 'success')
     }
   };
 
-  // Mentés kezelése (hogy lássuk az eredményt)
-  const handleSave = async (formData: FormData) => {
+  // MENTÉS KEZELÉSE (JAVÍTOTT VERZIÓ)
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault() // Megakadályozzuk az alap HTML beküldést
+    setSaving(true)
+
     try {
+        // Kézzel rakjuk össze az adatokat, hogy biztosan a jó státusz menjen át
+        const formData = new FormData(formRef.current!)
+        
+        // Felülírjuk a státuszt a React State-ben lévő biztos értékkel
+        formData.set('status', status)
+        
+        // Ellenőrizzük a képet
+        if (fileInputRef.current?.files?.[0]) {
+            formData.set('image', fileInputRef.current.files[0])
+        }
+
+        // Küldés a szervernek
         await updateCar(formData)
+        
+        // Ha idáig eljutunk redirect nélkül (bár az updateCar valószínűleg redirectel)
         showToast('Sikeres mentés!', 'success')
-        router.refresh() // Frissítjük az adatokat
-    } catch (e) {
-        showToast('Hiba történt a mentéskor.', 'error')
+        router.refresh()
+
+    } catch (error: any) {
+        // FONTOS: A Next.js redirect "hibát" dob. Ezt el kell kapni!
+        if (error.message === 'NEXT_REDIRECT') {
+            showToast('Sikeres mentés! Visszatérés...', 'success')
+            return; // Hagyjuk, hogy a redirect megtörténjen
+        }
+        
+        console.error(error)
+        showToast('Hiba történt a mentéskor. Próbáld újra.', 'error')
+        setSaving(false)
     }
   }
 
@@ -89,9 +121,9 @@ export default function EditCarPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
       
-      {/* --- TOAST ÉRTESÍTÉS (FIXED TOP) --- */}
+      {/* --- TOAST ÉRTESÍTÉS --- */}
       {toast && (
-          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
               {toast.type === 'success' ? (
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
               ) : (
@@ -112,7 +144,9 @@ export default function EditCarPage() {
         
         {/* --- 1. JÁRMŰ ADATOK SZERKESZTÉSE --- */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 mb-8 transition-colors">
-          <form action={handleSave} className="space-y-8">
+          
+          {/* A FORM REFERENCIA (onSubmit a gomb helyett itt van kezelve) */}
+          <form ref={formRef} onSubmit={handleSave} className="space-y-8">
             <input type="hidden" name="car_id" value={car.id} />
 
             {/* Képcsere */}
@@ -128,7 +162,15 @@ export default function EditCarPage() {
                 </div>
                 <label className="cursor-pointer bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm">
                     Fénykép módosítása
-                    <input type="file" name="image" accept="image/*" className="hidden" onChange={handleImageChange} />
+                    {/* INPUT REF HOZZÁADVA */}
+                    <input 
+                        type="file" 
+                        name="image" 
+                        accept="image/*" 
+                        className="hidden" 
+                        ref={fileInputRef}
+                        onChange={handleImageChange} 
+                    />
                 </label>
             </div>
 
@@ -156,16 +198,16 @@ export default function EditCarPage() {
                 </div>
             </div>
 
-            {/* STÁTUSZ JAVÍTÁS: Controlled Input */}
+            {/* STÁTUSZ JAVÍTÁS: Kézzel vezéreljük a State-et */}
             <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Jármű Állapota</label>
                 <div className="flex gap-6">
                     <label className="flex items-center gap-2 cursor-pointer group">
                         <input 
                             type="radio" 
-                            name="status" 
+                            name="status_radio" // Ne 'status' legyen a neve, hogy ne kavarjon be a formData-ba közvetlenül
                             value="active" 
-                            checked={status === 'active'} // ITT A JAVÍTÁS
+                            checked={status === 'active'} 
                             onChange={() => setStatus('active')}
                             className="w-5 h-5 text-amber-500 focus:ring-amber-500 border-gray-300" 
                         />
@@ -176,9 +218,9 @@ export default function EditCarPage() {
                     <label className="flex items-center gap-2 cursor-pointer group">
                         <input 
                             type="radio" 
-                            name="status" 
+                            name="status_radio" 
                             value="service" 
-                            checked={status === 'service'} // ITT A JAVÍTÁS
+                            checked={status === 'service'} 
                             onChange={() => setStatus('service')}
                             className="w-5 h-5 text-amber-500 focus:ring-amber-500 border-gray-300" 
                         />
@@ -214,8 +256,16 @@ export default function EditCarPage() {
             </div>
 
             <div className="pt-4 flex gap-4 border-t border-slate-100 dark:border-slate-700">
-               <Link href={`/cars/${car.id}`} className="w-1/3 py-3 rounded-lg text-slate-600 dark:text-slate-300 font-bold text-center border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">Mégse</Link>
-               <button type="submit" className="w-2/3 py-3 rounded-lg bg-amber-500 text-white font-bold shadow-lg hover:bg-amber-400 transition-all">Mentés</button>
+               <Link href={`/cars/${car.id}`} className="w-1/3 py-3 rounded-lg text-slate-600 dark:text-slate-300 font-bold text-center border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                  Mégse
+               </Link>
+               <button 
+                  type="submit" 
+                  disabled={saving}
+                  className="w-2/3 py-3 rounded-lg bg-amber-500 text-white font-bold shadow-lg hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+               >
+                  {saving ? 'Mentés folyamatban...' : 'Mentés'}
+               </button>
             </div>
           </form>
         </div>
