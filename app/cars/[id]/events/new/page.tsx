@@ -27,12 +27,10 @@ function EventForm() {
   const [serviceTypes, setServiceTypes] = useState<{id: number, name: string}[]>([])
   const [loading, setLoading] = useState(true)
   
-  // --- STATE-EK ---
   const [scanning, setScanning] = useState(false) 
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // AI Highlight és Figyelmeztetés
   const [aiFilled, setAiFilled] = useState<string[]>([])
   const [showAiDisclaimer, setShowAiDisclaimer] = useState(false)
 
@@ -69,7 +67,6 @@ function EventForm() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  // --- AI SZÁMLA SZKENNER ---
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (!file) return
@@ -93,14 +90,12 @@ function EventForm() {
           if (result.success && result.data) {
               const aiData = result.data
               
-              // Típus váltás
               if (aiData.type && (aiData.type === 'fuel' || aiData.type === 'service')) {
                   setType(aiData.type)
               }
 
               let newTitle = aiData.title || formData.title;
 
-              // Adatok betöltése
               setFormData(prev => ({
                   ...prev,
                   title: newTitle, 
@@ -112,7 +107,6 @@ function EventForm() {
                   mileage: aiData.mileage || prev.mileage 
               }))
 
-              // Highlight beállítása
               const filledFields = []
               if (aiData.title) filledFields.push('title')
               if (aiData.cost) filledFields.push('cost')
@@ -168,14 +162,12 @@ function EventForm() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
       
-      {/* Toast értesítés */}
       {toast && (
           <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
               <span className="font-bold text-sm">{toast.message}</span>
           </div>
       )}
 
-      {/* AI Loading Overlay */}
       {scanning && (
           <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
               <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -184,7 +176,6 @@ function EventForm() {
           </div>
       )}
 
-      {/* Fejléc */}
       <div className="bg-slate-900 py-10 px-4 text-center shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
         <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider relative z-10">
@@ -199,7 +190,6 @@ function EventForm() {
 
       <div className="max-w-xl mx-auto px-4 -mt-6 relative z-20">
         
-        {/* --- AI SCANNER GOMB --- */}
         <div className="mb-6 flex justify-center">
             <label className={`cursor-pointer group relative w-full sm:w-auto flex justify-center items-center gap-3 px-6 py-4 rounded-2xl shadow-xl transition-all transform hover:-translate-y-1 active:scale-95 bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:shadow-amber-500/30`}>
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -216,7 +206,6 @@ function EventForm() {
             </label>
         </div>
 
-        {/* AI Disclaimer */}
         {showAiDisclaimer && (
             <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
                 <svg className="w-6 h-6 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -233,25 +222,31 @@ function EventForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <input type="hidden" name="car_id" value={carId} />
             
-            {/* MOBIL JAVÍTÁS: grid-cols-1 mobilon, sm:grid-cols-2 tablettől */}
+            {/* JAVÍTÁS: min-w-0 a túlcsordulás ellen, 
+                és fix magasság (h-11) a mezőknek az egyformaságért 
+            */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               <InputGroup 
-                 label="Dátum" 
-                 name="event_date" 
-                 type="date" 
-                 value={formData.date}
-                 onChange={handleChange}
-                 required 
-               />
-               <InputGroup 
-                 label="Km óra állás" 
-                 name="mileage" 
-                 type="number" 
-                 value={formData.mileage}
-                 onChange={handleChange}
-                 highlight={aiFilled.includes('mileage')} 
-                 required 
-               />
+               <div className="min-w-0">
+                   <InputGroup 
+                     label="Dátum" 
+                     name="event_date" 
+                     type="date" 
+                     value={formData.date}
+                     onChange={handleChange}
+                     required 
+                   />
+               </div>
+               <div className="min-w-0">
+                   <InputGroup 
+                     label="Km óra állás" 
+                     name="mileage" 
+                     type="number" 
+                     value={formData.mileage}
+                     onChange={handleChange}
+                     highlight={aiFilled.includes('mileage')} 
+                     required 
+                   />
+               </div>
             </div>
 
             {isFuel ? (
@@ -276,10 +271,10 @@ function EventForm() {
                      required
                      value={formData.title} 
                      onChange={handleChange}
-                     className={`block w-full appearance-none rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-900 dark:text-white cursor-pointer ${aiFilled.includes('title') ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20' : ''}`}
+                     /* JAVÍTÁS: h-11 fix magasság és appearance-none */
+                     className={`block w-full appearance-none h-11 rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-base sm:text-sm px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-900 dark:text-white cursor-pointer ${aiFilled.includes('title') ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20' : ''}`}
                    >
                      <option value="" disabled>Válassz...</option>
-                     {/* Ha az AI olyan szervizt talál, ami nincs a listában, betesszük opcióként */}
                      {formData.title && !serviceTypes.some(s => s.name === formData.title) && formData.title !== 'Egyéb' && (
                          <option value={formData.title}>{formData.title}</option>
                      )}
@@ -295,30 +290,33 @@ function EventForm() {
                </div>
             )}
 
-            {/* MOBIL JAVÍTÁS ITT IS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               <InputGroup 
-                  label="Költség (Ft)" 
-                  name="cost" 
-                  type="number" 
-                  placeholder="0" 
-                  value={formData.cost}
-                  onChange={handleChange}
-                  highlight={aiFilled.includes('cost')}
-                  required 
-               />
+               <div className="min-w-0">
+                   <InputGroup 
+                      label="Költség (Ft)" 
+                      name="cost" 
+                      type="number" 
+                      placeholder="0" 
+                      value={formData.cost}
+                      onChange={handleChange}
+                      highlight={aiFilled.includes('cost')}
+                      required 
+                   />
+               </div>
                {isFuel && (
-                 <InputGroup 
-                    label="Mennyiség (Liter)" 
-                    name="liters" 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="0.00" 
-                    value={formData.liters}
-                    onChange={handleChange}
-                    highlight={aiFilled.includes('liters')}
-                    required 
-                 />
+                 <div className="min-w-0">
+                     <InputGroup 
+                        label="Mennyiség (Liter)" 
+                        name="liters" 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="0.00" 
+                        value={formData.liters}
+                        onChange={handleChange}
+                        highlight={aiFilled.includes('liters')}
+                        required 
+                     />
+                 </div>
                )}
             </div>
 
@@ -330,7 +328,7 @@ function EventForm() {
                    rows={3} 
                    value={formData.description}
                    onChange={handleChange}
-                   className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 bg-slate-50 dark:bg-slate-700 border p-3 text-slate-900 dark:text-white dark:placeholder-slate-400" 
+                   className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 bg-slate-50 dark:bg-slate-700 border p-3 text-slate-900 dark:text-white dark:placeholder-slate-400 text-base sm:text-sm transition-colors" 
                    placeholder="pl. Castrol olaj, MANN szűrő..."
                  ></textarea>
                </div>
@@ -372,6 +370,7 @@ export default function NewEventPage() {
   )
 }
 
+// JAVÍTOTT InputGroup: Fix magasság (h-11) és appearance-none a mobilos hibák ellen
 function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight }: any) {
   return (
     <div className="space-y-1">
@@ -387,7 +386,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
         onChange={onChange} 
         required={required} 
         placeholder={placeholder} 
-        className={`block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white dark:placeholder-slate-400 transition-all duration-500 ${highlight ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-300' : ''}`} 
+        className={`block w-full appearance-none h-11 rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white dark:placeholder-slate-400 text-base sm:text-sm transition-all duration-500 ${highlight ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-300' : ''}`} 
       />
     </div>
   )
