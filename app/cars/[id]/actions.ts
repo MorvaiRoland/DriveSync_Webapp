@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { Resend } from 'resend'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { render } from '@react-email/render'
 // FONTOS: Ez kell a szép emailhez! 
 // Ha a components mappád máshol van, módosítsd az útvonalat!
 import ServiceReminderEmail from '@/components/emails/ServiceReminderEmail'
@@ -469,10 +470,10 @@ export async function checkAndSendReminders() {
   
   console.log("--- 🔍 EMLÉKEZTETŐ ELLENŐRZÉS INDUL ---");
 
-  // 1. Normál kliens (az adatbázis íráshoz/olvasáshoz)
+  // 1. Normál kliens
   const supabase = await createClient()
   
-  // 2. ÚJ: Admin kliens (csak a user email címének lekéréséhez kell!)
+  // 2. Admin kliens (user lekéréshez)
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
       console.error("❌ HIBA: Nincs SUPABASE_SERVICE_ROLE_KEY az .env fájlban!");
       return { count: 0, alerts: [] };
@@ -523,21 +524,16 @@ export async function checkAndSendReminders() {
 
     // A. EMAIL KÜLDÉS
     if (reminder.notify_email) {
-      // ITT A VÁLTOZÁS: supabaseAdmin-t használunk a user lekéréshez!
       const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(reminder.user_id)
       
-      if (userError) {
-          console.error("❌ Nem sikerült lekérni a usert:", userError);
-      }
+      if (userError) console.error("❌ Nem sikerült lekérni a usert:", userError);
 
       if (user?.email) {
         console.log(`📧 Email küldése ide: ${user.email}`);
         try {
-            const { data, error } = await resend.emails.send({
-              from: 'DriveSync <onboarding@resend.dev>',
-              to: [user.email], 
-              subject: `🔔 Szerviz: ${reminder.cars.make} ${reminder.cars.model}`,
-              react: ServiceReminderEmail({
+            // --- ITT A JAVÍTÁS: Előre rendereljük HTML-be ---
+            const emailHtml = await render(
+              ServiceReminderEmail({
                 userName: user.user_metadata?.full_name || 'Felhasználó',
                 carMake: reminder.cars.make,
                 carModel: reminder.cars.model,
@@ -546,7 +542,15 @@ export async function checkAndSendReminders() {
                 dueDate: reminder.due_date,
                 note: reminder.note
               })
+            );
+
+            const { data, error } = await resend.emails.send({
+              from: 'DriveSync <onboarding@resend.dev>',
+              to: [user.email], 
+              subject: `🔔 Szerviz: ${reminder.cars.make} ${reminder.cars.model}`,
+              html: emailHtml // 'react' helyett 'html'-t küldünk!
             })
+            // ----------------------------------------------
 
             if (error) {
                 console.error("❌ RESEND HIBA:", error);
@@ -559,10 +563,8 @@ export async function checkAndSendReminders() {
             console.error("❌ VÉGZETES HIBA EMAILNÉL:", err);
         }
       } else {
-          console.log("⚠️ Még mindig nincs user email cím (vagy hiba volt a lekérésnél)!");
+          console.log("⚠️ Nincs user email cím!");
       }
-    } else {
-        console.log("ℹ️ Ennél az elemnél nincs email kérve.");
     }
 
     // B. PUSH ÉRTESÍTÉS
