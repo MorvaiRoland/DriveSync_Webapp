@@ -72,8 +72,8 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
                     <InputGroup label="Évjárat" name="year" type="number" defaultValue={car.year} required />
                     <InputGroup label="Aktuális Km óra állás" name="mileage" type="number" defaultValue={car.mileage} required />
                     <div className="space-y-1">
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Üzemanyag</label>
-                      <select name="fuel_type" defaultValue={car.fuel_type} className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white">
+                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Üzemanyag</label>
+                      <select name="fuel_type" defaultValue={car.fuel_type} className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2 px-3 bg-white dark:bg-slate-800 border text-slate-900 dark:text-white text-sm transition-colors">
                         <option value="diesel">Dízel</option>
                         <option value="petrol">Benzin</option>
                         <option value="hybrid">Hybrid</option>
@@ -172,7 +172,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
                      <input type="hidden" name="car_id" value={car.id} />
                      
                      <div className="space-y-1">
-                         <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Típus</label>
+                         <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Típus</label>
                          <select name="type" className="block w-full rounded-lg border-slate-300 dark:border-slate-600 py-2 px-3 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                              <option value="summer">Nyári ☀️</option>
                              <option value="winter">Téli ❄️</option>
