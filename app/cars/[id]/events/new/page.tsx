@@ -16,7 +16,6 @@ function EventForm() {
   
   const defaultType = searchParams.get('type') === 'service' ? 'service' : 'fuel'
   const [type, setType] = useState(defaultType)
-  // Segéd state, hogy tudjuk, tankolás-e (az UI rendereléshez)
   const isFuel = type === 'fuel'
 
   const supabase = createBrowserClient(
@@ -35,7 +34,7 @@ function EventForm() {
   
   // AI Highlight és Figyelmeztetés
   const [aiFilled, setAiFilled] = useState<string[]>([])
-  const [showAiDisclaimer, setShowAiDisclaimer] = useState(false) // ÚJ!
+  const [showAiDisclaimer, setShowAiDisclaimer] = useState(false)
 
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
@@ -77,7 +76,7 @@ function EventForm() {
 
       setScanning(true)
       setAiFilled([]) 
-      setShowAiDisclaimer(false) // Elrejtjük, ha újra szkennel
+      setShowAiDisclaimer(false)
       showToast('🤖 AI elemzés folyamatban...', 'success')
       
       try {
@@ -94,17 +93,14 @@ function EventForm() {
           if (result.success && result.data) {
               const aiData = result.data
               
-              // 1. Típus beállítása (FONTOS: Ezt az elején csináljuk)
+              // Típus váltás
               if (aiData.type && (aiData.type === 'fuel' || aiData.type === 'service')) {
                   setType(aiData.type)
               }
 
-              // 2. Szerviz típus (Title) okos kezelése
-              // Ha szerviz, és az AI "Olajcsere" szót találta, próbáljuk beállítani.
-              // Ha tankolás, akkor a kút neve megy a title-be.
               let newTitle = aiData.title || formData.title;
 
-              // 3. Adatok beállítása
+              // Adatok betöltése
               setFormData(prev => ({
                   ...prev,
                   title: newTitle, 
@@ -113,22 +109,19 @@ function EventForm() {
                   location: aiData.location || prev.location,
                   liters: aiData.liters || prev.liters,
                   description: aiData.description || prev.description,
-                  // Ha van km óra állás a számlán, felülírjuk, ha nincs, marad a régi
                   mileage: aiData.mileage || prev.mileage 
               }))
 
-              // 4. Highlight lista összeállítása
+              // Highlight beállítása
               const filledFields = []
               if (aiData.title) filledFields.push('title')
               if (aiData.cost) filledFields.push('cost')
               if (aiData.liters) filledFields.push('liters')
               if (aiData.location) filledFields.push('location')
-              if (aiData.mileage) filledFields.push('mileage') // Km is highlightos lesz
+              if (aiData.mileage) filledFields.push('mileage')
               setAiFilled(filledFields)
 
-              // 5. Figyelmeztetés megjelenítése
               setShowAiDisclaimer(true)
-
               showToast('✨ Adatok sikeresen kinyerve!', 'success')
           } else {
               showToast('Nem sikerült minden adatot kinyerni.', 'error')
@@ -147,8 +140,6 @@ function EventForm() {
     e.preventDefault()
     setSaving(true)
     const submitData = new FormData(e.target as HTMLFormElement)
-
-    // Biztosítjuk, hogy a helyes típus menjen el (mert a state vezérli a UI-t)
     submitData.set('type', type) 
 
     try {
@@ -177,12 +168,14 @@ function EventForm() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
       
+      {/* Toast értesítés */}
       {toast && (
           <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
               <span className="font-bold text-sm">{toast.message}</span>
           </div>
       )}
 
+      {/* AI Loading Overlay */}
       {scanning && (
           <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
               <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -191,6 +184,7 @@ function EventForm() {
           </div>
       )}
 
+      {/* Fejléc */}
       <div className="bg-slate-900 py-10 px-4 text-center shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
         <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider relative z-10">
@@ -205,6 +199,7 @@ function EventForm() {
 
       <div className="max-w-xl mx-auto px-4 -mt-6 relative z-20">
         
+        {/* --- AI SCANNER GOMB --- */}
         <div className="mb-6 flex justify-center">
             <label className={`cursor-pointer group relative w-full sm:w-auto flex justify-center items-center gap-3 px-6 py-4 rounded-2xl shadow-xl transition-all transform hover:-translate-y-1 active:scale-95 bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:shadow-amber-500/30`}>
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -221,7 +216,7 @@ function EventForm() {
             </label>
         </div>
 
-        {/* --- AI DISCLAIMER (ÚJ) --- */}
+        {/* AI Disclaimer */}
         {showAiDisclaimer && (
             <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
                 <svg className="w-6 h-6 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -238,7 +233,8 @@ function EventForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <input type="hidden" name="car_id" value={carId} />
             
-            <div className="grid grid-cols-2 gap-4">
+            {/* MOBIL JAVÍTÁS: grid-cols-1 mobilon, sm:grid-cols-2 tablettől */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <InputGroup 
                  label="Dátum" 
                  name="event_date" 
@@ -253,7 +249,7 @@ function EventForm() {
                  type="number" 
                  value={formData.mileage}
                  onChange={handleChange}
-                 highlight={aiFilled.includes('mileage')} // Highlight KM
+                 highlight={aiFilled.includes('mileage')} 
                  required 
                />
             </div>
@@ -299,7 +295,8 @@ function EventForm() {
                </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* MOBIL JAVÍTÁS ITT IS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <InputGroup 
                   label="Költség (Ft)" 
                   name="cost" 
