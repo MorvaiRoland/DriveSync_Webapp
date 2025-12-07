@@ -1,19 +1,29 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // --- A TE EREDETI BEÁLLÍTÁSAID ---
   experimental: {
     serverActions: {
-      bodySizeLimit: '20mb', // 1MB helyett 10MB lesz a limit a feltöltésnél
+      bodySizeLimit: '20mb',
     },
   },
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**', // Ez engedélyezi a külső képek (pl. Supabase) betöltését
+        hostname: '**', // Supabase és egyéb képek engedélyezése
       },
     ],
   },
+  // ----------------------------------
 };
 
-export default nextConfig;
+// PWA Konfiguráció inicializálása
+const withPWA = require('next-pwa')({
+  dest: 'public', // Ide generálja a service workert (sw.js)
+  register: true, // Automatikus regisztráció
+  skipWaiting: true, // Frissítéskor azonnal váltson az új verzióra
+  disable: process.env.NODE_ENV === 'development', // Fejlesztés közben NE cache-eljen (zavaró lenne)
+});
+
+// A két konfig összefésülése
+module.exports = withPWA(nextConfig);

@@ -6,20 +6,49 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'DriveSync',
     description: 'Saját autók és szervizkönyv kezelése',
     start_url: '/',
-    display: 'standalone', // Ez tünteti el a böngésző keretet!
-    background_color: '#0f172a', // Slate-900 (Sötét háttér betöltéskor)
-    theme_color: '#f59e0b', // Amber-500 (A fejléc színe)
+    display: 'standalone',
+    background_color: '#0f172a',
+    theme_color: '#f59e0b',
+    orientation: 'portrait', // Megakadályozza, hogy betöltéskor elforduljon
+    id: '/', // Egyedi azonosító a PWA követéshez
+    
     icons: [
       {
-        src: '/icon.png',
-        sizes: 'any',
+        src: '/icons/icon-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any', // Ez a "sima" ikon (pl. iOS, Windows)
+      },
+      {
+        src: '/icons/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable', // FONTOS! Ez kell Androidra (hogy kitöltse a kört/négyzetet)
+      },
+    ],
+    
+    // Opcionális: Ha szeretnéd, hogy a telepítéskor látványos "Store-szerű" előnézet legyen
+    // Ehhez képernyőképeket kell tenned a /public mappába
+    /*
+    screenshots: [
+      {
+        src: '/screenshots/mobile-1.png',
+        sizes: '1080x1920',
         type: 'image/png',
       },
       {
-        src: '/apple-icon.png',
-        sizes: 'any',
+        src: '/screenshots/desktop-1.png',
+        sizes: '1920x1080',
         type: 'image/png',
+        form_factor: 'wide',
       },
     ],
+    */
   }
 }
