@@ -59,127 +59,147 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* MODERN COLOR PALETTE (DriveSync Edition)
-  Használjuk a 'Slate' skálát a technikai érzetért és az 'Amber'-t a brand színnek.
-  OKLCH értékekkel a maximális színhűségért.
+/* LUXURY GOLD EDITION PALETTE
+   Meleg tónusú 'Stone' szürkék és mély 'Jet Black' fekete + Fémes Arany.
 */
 :root {
-  --radius: 0.75rem; /* Kicsit kerekebb, modernebb sarkok */
+  --radius: 0.75rem;
 
-  /* Light Mode: Tiszta, de nem vakító fehér (Slate-50 alap) */
-  --background: oklch(0.985 0.002 247.84); /* Slate-50 */
-  --foreground: oklch(0.13 0.028 261.69); /* Slate-900 */
+  /* Light Mode: Krémes, meleg fehér (Stone-50 jelleg) */
+  --background: oklch(0.985 0.002 90); 
+  --foreground: oklch(0.15 0.015 80); /* Nagyon sötét meleg szürke */
 
-  --card: oklch(1 0 0); /* White */
-  --card-foreground: oklch(0.13 0.028 261.69);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.015 80);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0.028 261.69);
+  --popover-foreground: oklch(0.15 0.015 80);
 
-  /* BRAND COLOR: Amber-500 (Ez lesz a fő gombok/aktív elemek színe) */
-  --primary: oklch(0.704 0.191 47.567); 
-  --primary-foreground: oklch(0.145 0 0); /* Fekete szöveg rajta */
+  /* BRAND COLOR: GOLD (Elegáns, nem citromsárga) */
+  --primary: oklch(0.62 0.16 75); /* Mély Arany */
+  --primary-foreground: oklch(1 0 0); /* Fehér szöveg rajta az olvashatóságért */
 
-  --secondary: oklch(0.97 0.001 247.84); /* Slate-100 */
-  --secondary-foreground: oklch(0.21 0.034 264.66); /* Slate-800 */
+  --secondary: oklch(0.96 0.005 90); /* Stone-100 */
+  --secondary-foreground: oklch(0.25 0.02 80);
 
-  --muted: oklch(0.97 0.001 247.84);
-  --muted-foreground: oklch(0.552 0.013 255.85); /* Slate-500 */
+  --muted: oklch(0.96 0.005 90);
+  --muted-foreground: oklch(0.55 0.02 80);
 
-  --accent: oklch(0.97 0.001 247.84);
-  --accent-foreground: oklch(0.21 0.034 264.66);
+  --accent: oklch(0.96 0.005 90);
+  --accent-foreground: oklch(0.25 0.02 80);
 
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: oklch(0.58 0.22 28); /* Mélyvörös */
   --destructive-foreground: oklch(0.985 0 0);
 
-  --border: oklch(0.92 0.004 247.84); /* Slate-200 */
-  --input: oklch(0.92 0.004 247.84);
-  --ring: oklch(0.704 0.191 47.567); /* Focus ring is Amber */
+  --border: oklch(0.90 0.01 90); /* Stone-200 */
+  --input: oklch(0.90 0.01 90);
+  --ring: oklch(0.62 0.16 75); /* Gold ring */
 
-  /* Charts */
-  --chart-1: oklch(0.704 0.191 47.567); /* Amber */
-  --chart-2: oklch(0.13 0.028 261.69); /* Slate */
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* Charts - Gold variációk */
+  --chart-1: oklch(0.62 0.16 75); /* Primary Gold */
+  --chart-2: oklch(0.15 0.015 80); /* Dark Stone */
+  --chart-3: oklch(0.50 0.12 75); /* Darker Gold */
+  --chart-4: oklch(0.75 0.14 75); /* Light Gold */
+  --chart-5: oklch(0.40 0.08 75); /* Bronze */
 
-  /* Sidebar (ha használnád a shadcn sidebart) */
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.13 0.028 261.69);
-  --sidebar-primary: oklch(0.704 0.191 47.567);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0.001 247.84);
-  --sidebar-accent-foreground: oklch(0.21 0.034 264.66);
-  --sidebar-border: oklch(0.92 0.004 247.84);
-  --sidebar-ring: oklch(0.704 0.191 47.567);
+  --sidebar: oklch(0.985 0.002 90);
+  --sidebar-foreground: oklch(0.15 0.015 80);
+  --sidebar-primary: oklch(0.62 0.16 75);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.005 90);
+  --sidebar-accent-foreground: oklch(0.25 0.02 80);
+  --sidebar-border: oklch(0.90 0.01 90);
+  --sidebar-ring: oklch(0.62 0.16 75);
 }
 
-/* Dark Mode: Mély, prémium sötétkék/szürke (Slate-950 alap) */
+/* Dark Mode: Luxus Fekete (Jet Black) és Ragyogó Arany */
 .dark {
-  --background: oklch(0.12 0.028 261.69); /* Slate-950 */
-  --foreground: oklch(0.985 0.002 247.84); /* Slate-50 */
+  /* Mélyebb, melegebb fekete (nem kék-fekete, hanem barna-fekete tónus) */
+  --background: oklch(0.10 0.01 80); 
+  --foreground: oklch(0.95 0.005 90); 
 
-  --card: oklch(0.17 0.03 260); /* Slate-900 */
-  --card-foreground: oklch(0.985 0.002 247.84);
+  /* Kártyák kicsit világosabbak, mint a háttér */
+  --card: oklch(0.14 0.01 80);
+  --card-foreground: oklch(0.95 0.005 90);
 
-  --popover: oklch(0.17 0.03 260);
-  --popover-foreground: oklch(0.985 0.002 247.84);
+  --popover: oklch(0.14 0.01 80);
+  --popover-foreground: oklch(0.95 0.005 90);
 
-  /* BRAND COLOR: Kicsit világosabb Amber a sötét háttérhez */
-  --primary: oklch(0.75 0.18 47.567); 
-  --primary-foreground: oklch(0.12 0.028 261.69);
+  /* BRAND COLOR: Világosabb, fémesebb arany a sötét háttérhez */
+  --primary: oklch(0.72 0.16 75); 
+  --primary-foreground: oklch(0.10 0.01 80); /* Fekete szöveg az aranyon */
 
-  --secondary: oklch(0.27 0.035 260); /* Slate-800 */
-  --secondary-foreground: oklch(0.985 0.002 247.84);
+  --secondary: oklch(0.20 0.01 80); /* Stone-800 */
+  --secondary-foreground: oklch(0.95 0.005 90);
 
-  --muted: oklch(0.27 0.035 260);
-  --muted-foreground: oklch(0.71 0.013 255.85); /* Slate-400 */
+  --muted: oklch(0.20 0.01 80);
+  --muted-foreground: oklch(0.65 0.01 90);
 
-  --accent: oklch(0.27 0.035 260);
-  --accent-foreground: oklch(0.985 0.002 247.84);
+  --accent: oklch(0.20 0.01 80);
+  --accent-foreground: oklch(0.95 0.005 90);
 
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.985 0.002 247.84);
+  --destructive: oklch(0.40 0.15 28);
+  --destructive-foreground: oklch(0.95 0 0);
 
-  --border: oklch(0.27 0.035 260);
-  --input: oklch(0.27 0.035 260);
-  --ring: oklch(0.75 0.18 47.567);
+  --border: oklch(0.20 0.01 80);
+  --input: oklch(0.20 0.01 80);
+  --ring: oklch(0.72 0.16 75);
 
   /* Charts */
-  --chart-1: oklch(0.75 0.18 47.567);
-  --chart-2: oklch(0.27 0.035 260);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --chart-1: oklch(0.72 0.16 75); /* Bright Gold */
+  --chart-2: oklch(0.20 0.01 80); /* Stone Grey */
+  --chart-3: oklch(0.60 0.14 75); /* Medium Gold */
+  --chart-4: oklch(0.85 0.12 75); /* Pale Gold */
+  --chart-5: oklch(0.50 0.10 75); /* Bronze */
 
-  --sidebar: oklch(0.17 0.03 260);
-  --sidebar-foreground: oklch(0.985 0.002 247.84);
-  --sidebar-primary: oklch(0.75 0.18 47.567);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.27 0.035 260);
-  --sidebar-accent-foreground: oklch(0.985 0.002 247.84);
-  --sidebar-border: oklch(0.27 0.035 260);
-  --sidebar-ring: oklch(0.75 0.18 47.567);
+  --sidebar: oklch(0.14 0.01 80);
+  --sidebar-foreground: oklch(0.95 0.005 90);
+  --sidebar-primary: oklch(0.72 0.16 75);
+  --sidebar-primary-foreground: oklch(0.10 0.01 80);
+  --sidebar-accent: oklch(0.20 0.01 80);
+  --sidebar-accent-foreground: oklch(0.95 0.005 90);
+  --sidebar-border: oklch(0.20 0.01 80);
+  --sidebar-ring: oklch(0.72 0.16 75);
 }
+
+/* --- PWA FIX KEZDETE --- */
+:root {
+  touch-action: pan-x pan-y;
+}
+
+html {
+  height: 100%;
+  overscroll-behavior-y: none;
+  scroll-behavior: smooth;
+}
+
+body {
+  height: 100%;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  
+  @apply bg-background text-foreground antialiased;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+.select-text {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* --- PWA FIX VÉGE --- */
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  
-  html {
-    scroll-behavior: smooth;
-  }
 
-  body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1; /* Szebb betűkötések */
-  }
-
-  /* --- MODERN SCROLLBAR (Chrome/Safari/Edge) --- */
+  /* LUXUS SCROLLBAR (Arany) */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -187,22 +207,27 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 dark:bg-slate-700 rounded-full border-[2px] border-transparent bg-clip-content;
+    @apply bg-stone-300 dark:bg-stone-700 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-400 dark:bg-slate-600;
+    @apply bg-primary/70; /* Arany hover */
   }
 
-  /* Kijelölés színe (Selection) */
+  /* Kijelölés színe (Arany) */
   ::selection {
-    @apply bg-amber-500/30 text-amber-600 dark:text-amber-400;
+    @apply bg-primary/20 text-primary;
   }
 }
 
 @layer utilities {
-  /* Extra utility ha nagyon blur-ös hátteret akarsz */
+  /* Arany-hatású üveg (Glassmorphism) */
   .glass {
-    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/20 dark:border-white/10;
+    @apply bg-white/80 dark:bg-[#1a1917]/80 backdrop-blur-xl border border-stone-200/50 dark:border-primary/10;
+  }
+  
+  /* Arany színátmenet szövegre (opcionális, pl. címsorokhoz) */
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#b38728];
   }
 }
