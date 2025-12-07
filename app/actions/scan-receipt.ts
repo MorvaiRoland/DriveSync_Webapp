@@ -2,18 +2,25 @@
 
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
 export async function scanReceipt(formData: FormData) {
+  // 1. JAVÍTÁS: Itt, a függvényen BELÜL hozzuk létre a klienst!
+  // Így biztosan látja már a környezeti változókat.
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  })
+
   const file = formData.get('receipt') as File
 
   if (!file) {
     return { error: 'Nincs kép feltöltve.' }
   }
 
-  // A fájlt Buffer-ré, majd Base64-é alakítjuk, hogy az OpenAI megegye
+  // Ellenőrizzük, hogy van-e kulcs, mielőtt pénzt költenénk a hívásra
+  if (!process.env.OPENAI_API_KEY) {
+      console.error("HIBA: Hiányzik az OPENAI_API_KEY a .env.local fájlból!")
+      return { error: 'Szerver konfigurációs hiba (Hiányzó API kulcs).' }
+  }
+
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
   const base64Image = buffer.toString('base64')
@@ -21,7 +28,7 @@ export async function scanReceipt(formData: FormData) {
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", // A legokosabb modell képekhez
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -56,8 +63,6 @@ export async function scanReceipt(formData: FormData) {
     })
 
     const content = response.choices[0].message.content
-    
-    // Tisztítjuk a választ (ha az AI véletlenül tenne bele markdown-t)
     const jsonString = content?.replace(/```json/g, '').replace(/```/g, '').trim()
     
     if (!jsonString) throw new Error('Üres válasz az AI-tól')
