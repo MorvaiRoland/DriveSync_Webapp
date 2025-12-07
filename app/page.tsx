@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import ChangelogModal from '@/components/ChangelogModal'
 import { WeatherWidget, FuelWidget } from '@/components/DashboardWidgets'
+import ReminderChecker from '@/components/ReminderChecker'
 
 // --- SERVER ACTION: Km Naplózása ---
 async function logCurrentMileage(formData: FormData) {
@@ -96,7 +97,7 @@ export default async function Home() {
       <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-24 transition-colors duration-300">
         
         <ChangelogModal />
-
+        <ReminderChecker />
         <nav className="bg-slate-900 sticky top-0 z-50 shadow-lg border-b border-white/5 backdrop-blur-md bg-opacity-95">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">

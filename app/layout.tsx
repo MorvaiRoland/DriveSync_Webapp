@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import RegisterSW from "./RegisterSW";
-// 1. FONTOS: Visszahozzuk a ThemeProvider-t!
-// Ha neked máshol van a fájl, írd át az import útvonalat (pl. "@/components/theme-provider")
-import { ThemeProvider } from "@/components/theme-provider"; 
+import { ThemeProvider } from "@/components/theme-provider";
+// 1. ÚJ: Importáljuk a Toaster-t a sonner-ből
+import { Toaster } from "sonner"; 
 
 export const viewport: Viewport = {
   themeColor: "#0f172a",
@@ -39,11 +39,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // 2. FONTOS: suppressHydrationWarning kell a html tagre a next-themes miatt
     <html lang="hu" suppressHydrationWarning>
       <body className="antialiased bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
         
-        {/* 3. FONTOS: Itt a hiányzó rész! Visszacsomagoljuk a gyerekeket a Providerbe */}
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -51,6 +49,11 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            
+            {/* 2. ÚJ: Itt helyezzük el a Toaster-t, hogy megjelenjenek az üzenetek */}
+            {/* A richColors szebb színeket ad, a position pedig fentre teszi */}
+            <Toaster position="top-center" richColors closeButton />
+            
             <RegisterSW />
         </ThemeProvider>
 

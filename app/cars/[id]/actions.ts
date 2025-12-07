@@ -3,6 +3,10 @@
 import { createClient } from 'supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { Resend } from 'resend'
+// FONTOS: Ez kell a szép emailhez! 
+// Ha a components mappád máshol van, módosítsd az útvonalat!
+import ServiceReminderEmail from '@/components/emails/ServiceReminderEmail'
 
 // --- 1. ESEMÉNYEK KEZELÉSE ---
 
@@ -94,7 +98,8 @@ export async function addReminder(formData: FormData) {
   if (!user) return redirect('/login')
 
   const car_id = formData.get('car_id')
- const reminderData = {
+  
+  const reminderData = {
     car_id: car_id,
     user_id: user.id,
     service_type: String(formData.get('service_type')),
@@ -102,12 +107,20 @@ export async function addReminder(formData: FormData) {
     notify_email: formData.get('notify_email') === 'on',
     notify_push: formData.get('notify_push') === 'on',
     note: String(formData.get('note')),
-    // --- ÚJ SOROK ---
-    notification_sent: false, // Jelezzük, hogy még nem küldtük ki
-    status: 'pending'         // Jelezzük, hogy ez egy aktív emlékeztető
+    notification_sent: false,
+    status: 'pending' // Ez okozta a hibát, mert nem volt ilyen oszlop
   }
 
-  await supabase.from('service_reminders').insert(reminderData)
+  // Itt kérjük le az 'error'-t is
+  const { error } = await supabase.from('service_reminders').insert(reminderData)
+
+  // Ha hiba van, kiírjuk a terminálba!
+  if (error) {
+      console.error("Hiba az emlékeztető mentésekor:", error)
+      // Opcionális: visszairányíthatunk hibaüzenettel
+      return redirect(`/cars/${car_id}?error=Nem sikerült menteni: ${error.message}`)
+  }
+
   revalidatePath(`/cars/${car_id}`)
   redirect(`/cars/${car_id}`)
 }
@@ -150,9 +163,6 @@ export async function updateCar(formData: FormData) {
   
   const motExpiry = formData.get('mot_expiry');
   const insuranceExpiry = formData.get('insurance_expiry');
-  
-  // ITT A JAVÍTÁS: A státuszt a formData-ból olvassuk ki, ami most már helyes
-  // A státusz jöhet 'status' vagy 'status_radio' néven is, attól függően melyik inputot használod
   const status = String(formData.get('status') || formData.get('status_radio') || 'active');
 
   const updates: any = {
@@ -164,7 +174,7 @@ export async function updateCar(formData: FormData) {
     fuel_type: String(formData.get('fuel_type')),
     color: String(formData.get('color')),
     vin: String(formData.get('vin')),
-    status: status, // A javított státusz
+    status: status,
     service_interval_km: parseInt(String(formData.get('service_interval_km'))) || 15000,
     service_interval_days: parseInt(String(formData.get('service_interval_days'))) || 365,
     mot_expiry: motExpiry && motExpiry !== '' ? String(motExpiry) : null,
@@ -178,7 +188,6 @@ export async function updateCar(formData: FormData) {
     
     if (uploadError) {
         console.error('Képfeltöltési hiba:', uploadError)
-        // Nem állítjuk meg a folyamatot, csak logoljuk
     } else {
         const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
         updates.image_url = data.publicUrl;
@@ -189,25 +198,20 @@ export async function updateCar(formData: FormData) {
     .from('cars')
     .update(updates)
     .eq('id', carId)
-    // .eq('user_id', user.id) // Ezt kivesszük, mert a közös autót is szerkesztheted! (RLS policy védi)
 
   if (error) {
     console.error('Autó frissítési hiba:', error)
-    // Itt dobunk hibát, hogy a kliens elkapja a try-catch-ben
     throw new Error('Nem sikerült menteni az adatbázisba')
   }
 
   revalidatePath(`/cars/${carId}`)
   revalidatePath('/') 
-  // NEM hívunk redirect-et, mert a kliens oldali router.refresh() frissíti az oldalt
-  // és a Toast üzenet jelzi a sikert. A redirect "hibát" okozna a kliensben.
 }
 
 export async function deleteCar(formData: FormData) {
   const supabase = await createClient()
   const carId = String(formData.get('car_id'))
   
-  // Törlés sorrend: Trip -> Gumi -> Esemény -> Emlékeztető -> Autó
   await supabase.from('trips').delete().eq('car_id', carId)
   await supabase.from('tires').delete().eq('car_id', carId)
   await supabase.from('events').delete().eq('car_id', carId)
@@ -300,7 +304,7 @@ export async function swapTire(formData: FormData) {
   revalidatePath(`/cars/${carId}`)
 }
 
-// --- 6. ÚTNYILVÁNTARTÁS (TRIP LOGGER) - ÚJ! ---
+// --- 6. ÚTNYILVÁNTARTÁS (TRIP LOGGER) ---
 
 export async function addTrip(formData: FormData) {
   const supabase = await createClient()
@@ -370,22 +374,21 @@ export async function deletePart(formData: FormData) {
   
   revalidatePath(`/cars/${carId}/parts`)
 }
+
 export async function uploadDocument(formData: FormData) {
   const supabase = await createClient()
 
   const file = formData.get('file') as File
   const carId = formData.get('car_id') as string
-  const label = formData.get('label') as string // pl. "Forgalmi"
+  const label = formData.get('label') as string
 
   if (!file || !carId) {
     throw new Error('Hiányzó adatok')
   }
 
-  // 1. Felhasználó ellenőrzése
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Nem vagy bejelentkezve')
 
-  // 2. Fájl feltöltése Storage-ba
   const fileExt = file.name.split('.').pop()
   const fileName = `${carId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
   
@@ -398,7 +401,6 @@ export async function uploadDocument(formData: FormData) {
     throw new Error('Hiba a fájl feltöltésekor')
   }
 
-  // 3. Adatbázis bejegyzés
   const { error: dbError } = await supabase
     .from('car_documents')
     .insert({
@@ -424,17 +426,14 @@ export async function deleteDocument(formData: FormData) {
   const filePath = formData.get('file_path') as string
   const carId = formData.get('car_id') as string
 
-  // 1. Törlés Storage-ból
   const { error: storageError } = await supabase.storage
     .from('car-documents')
     .remove([filePath])
 
   if (storageError) {
     console.error('Storage delete error:', storageError)
-    // Nem dobunk hibát, megpróbáljuk törölni a DB-ből is, hogy ne ragadjon be
   }
 
-  // 2. Törlés DB-ből
   const { error: dbError } = await supabase
     .from('car_documents')
     .delete()
@@ -448,8 +447,6 @@ export async function deleteDocument(formData: FormData) {
 export async function getDocumentUrl(filePath: string, shouldDownload: boolean = false) {
     const supabase = await createClient()
     
-    console.log("Generálás ehhez:", filePath); // <--- DEBUG 1
-
     const { data, error } = await supabase.storage
         .from('car-documents')
         .createSignedUrl(filePath, 3600, {
@@ -457,10 +454,114 @@ export async function getDocumentUrl(filePath: string, shouldDownload: boolean =
         })
 
     if (error) {
-        console.error("Hiba a link generálásakor:", error) // <--- DEBUG 2 (Ez írja ki a konkrét bajt)
+        console.error("Hiba a link generálásakor:", error)
         return null
     }
     
-    console.log("Generált URL:", data.signedUrl); // <--- DEBUG 3
     return data.signedUrl
+}
+
+// --- 8. ÉRTESÍTÉSEK KÜLDÉSE (Lusta módszer) ---
+
+export async function checkAndSendReminders() {
+  'use server'
+  
+  console.log("--- 🔍 EMLÉKEZTETŐ ELLENŐRZÉS INDUL ---"); // DEBUG 1
+
+  const supabase = await createClient()
+  
+  if (!process.env.RESEND_API_KEY) {
+      console.error("❌ HIBA: Nincs RESEND_API_KEY beállítva!");
+      return { count: 0, alerts: [] };
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+
+  const today = new Date()
+  const threeDaysFromNow = new Date()
+  threeDaysFromNow.setDate(today.getDate() + 3)
+  
+  console.log(`📅 Dátum ablak: ${today.toISOString().split('T')[0]} - ${threeDaysFromNow.toISOString().split('T')[0]}`); // DEBUG 2
+
+  // 1. Keressük a lejárt/közeli emlékeztetőket
+  const { data: reminders, error } = await supabase
+    .from('service_reminders')
+    .select('*, cars(make, model, plate, user_id)')
+    .eq('notification_sent', false)
+    .lte('due_date', threeDaysFromNow.toISOString().split('T')[0]) 
+
+  if (error) {
+      console.error("❌ DB LEKÉRDEZÉSI HIBA:", error);
+      return { count: 0, alerts: [] };
+  }
+
+  console.log(`✅ Talált emlékeztetők száma: ${reminders?.length || 0}`); // DEBUG 3
+
+  if (!reminders || reminders.length === 0) {
+      console.log("--- 🏁 NINCS TEENDŐ, LEÁLLÁS ---");
+      return { count: 0, alerts: [] }
+  }
+
+  let emailCount = 0
+  let pushAlerts: string[] = [] 
+
+  for (const reminder of reminders) {
+    console.log(`👉 Feldolgozás: ${reminder.id} - ${reminder.service_type}`); // DEBUG 4
+
+    // A. EMAIL KÜLDÉS
+    if (reminder.notify_email) {
+      const { data: { user } } = await supabase.auth.admin.getUserById(reminder.user_id)
+      
+      if (user?.email) {
+        console.log(`📧 Email küldése ide: ${user.email}`); // DEBUG 5
+        try {
+            const { data, error } = await resend.emails.send({
+              from: 'DriveSync <onboarding@resend.dev>',
+              to: [user.email], // FONTOS: Resend Free-ben ez csak a te sajátod lehet!
+              subject: `🔔 Szerviz: ${reminder.cars.make} ${reminder.cars.model}`,
+              react: ServiceReminderEmail({
+                userName: user.user_metadata?.full_name || 'Felhasználó',
+                carMake: reminder.cars.make,
+                carModel: reminder.cars.model,
+                plate: reminder.cars.plate,
+                serviceType: reminder.service_type,
+                dueDate: reminder.due_date,
+                note: reminder.note
+              })
+            })
+
+            if (error) {
+                console.error("❌ RESEND HIBA:", error); // ITT FOG KIBUKNI, HA BAJ VAN
+            } else {
+                console.log("✅ Email sikeresen elküldve!", data);
+                emailCount++
+            }
+
+        } catch (err) {
+            console.error("❌ VÉGZETES HIBA EMAILNÉL:", err);
+        }
+      } else {
+          console.log("⚠️ Nincs user email cím!");
+      }
+    } else {
+        console.log("ℹ️ Ennél az elemnél nincs email kérve.");
+    }
+
+    // B. PUSH ÉRTESÍTÉS
+    if (reminder.notify_push) {
+      console.log("🔔 Push értesítés hozzáadva");
+      pushAlerts.push(`${reminder.cars.make}: ${reminder.service_type}`)
+    }
+
+    // C. STÁTUSZ FRISSÍTÉS
+    const { error: updateError } = await supabase
+      .from('service_reminders')
+      .update({ notification_sent: true })
+      .eq('id', reminder.id)
+    
+    if (updateError) console.error("❌ Státusz frissítési hiba:", updateError);
+  }
+
+  console.log("--- ✅ KÉSZ ---");
+  return { count: emailCount, alerts: pushAlerts }
 }
