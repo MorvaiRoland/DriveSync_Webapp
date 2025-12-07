@@ -442,15 +442,22 @@ export async function deleteDocument(formData: FormData) {
   revalidatePath(`/cars/${carId}`)
 }
 
-export async function getDocumentUrl(filePath: string) {
+export async function getDocumentUrl(filePath: string, shouldDownload: boolean = false) {
     const supabase = await createClient()
     
-    // Mivel Private a bucket, Signed URL kell a letöltéshez/megtekintéshez
-    // 1 óráig (3600s) érvényes linket generálunk
+    console.log("Generálás ehhez:", filePath); // <--- DEBUG 1
+
     const { data, error } = await supabase.storage
         .from('car-documents')
-        .createSignedUrl(filePath, 3600)
+        .createSignedUrl(filePath, 3600, {
+            download: shouldDownload ? true : undefined
+        })
 
-    if (error) return null
+    if (error) {
+        console.error("Hiba a link generálásakor:", error) // <--- DEBUG 2 (Ez írja ki a konkrét bajt)
+        return null
+    }
+    
+    console.log("Generált URL:", data.signedUrl); // <--- DEBUG 3
     return data.signedUrl
 }

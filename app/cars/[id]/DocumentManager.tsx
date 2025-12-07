@@ -21,21 +21,17 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
   const [docLabel, setDocLabel] = useState("")
   const [consentGiven, setConsentGiven] = useState(false)
 
-  // 1. Fájl kiválasztása -> Modal megnyitása
+  // Fájl kiválasztása
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     setSelectedFile(file)
-    setDocLabel(file.name.split('.')[0]) // Alapértelmezett név a fájl neve
-    setConsentGiven(false) // Minden új fájlnál újra kell pipálni
+    setDocLabel(file.name.split('.')[0])
+    setConsentGiven(false)
     setIsModalOpen(true)
-    
-    // Input resetelése, hogy ugyanazt a fájlt újra ki lehessen választani ha megszakítják
     e.target.value = ''
   }
 
-  // 2. Mégse gomb
   const handleCancel = () => {
     setIsModalOpen(false)
     setSelectedFile(null)
@@ -43,10 +39,8 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
     setConsentGiven(false)
   }
 
-  // 3. Feltöltés indítása (csak ha pipálva van)
   const handleUploadConfirm = async () => {
     if (!selectedFile || !consentGiven) return
-
     setUploading(true)
     const formData = new FormData()
     formData.append('file', selectedFile)
@@ -55,7 +49,7 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
 
     try {
       await uploadDocument(formData)
-      setIsModalOpen(false) // Modal bezárása siker esetén
+      setIsModalOpen(false)
     } catch (error) {
       alert('Hiba történt a feltöltéskor')
     } finally {
@@ -64,10 +58,28 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
     }
   }
 
+  // Megtekintés (View)
   const openDocument = async (filePath: string) => {
-      const url = await getDocumentUrl(filePath)
+      const url = await getDocumentUrl(filePath, false) // false = nem letöltés, csak megnyitás
       if (url) window.open(url, '_blank')
       else alert("Nem sikerült megnyitni a dokumentumot.")
+  }
+
+  // Letöltés (Download)
+  const downloadDocument = async (e: React.MouseEvent, filePath: string, fileName: string) => {
+      e.stopPropagation() // Ne nyissa meg a megtekintőt is egyszerre
+      const url = await getDocumentUrl(filePath, true) // true = kényszerített letöltés
+      if (url) {
+          // Létrehozunk egy ideiglenes linket és "rákattintunk"
+          const link = document.createElement('a')
+          link.href = url
+          link.setAttribute('download', fileName)
+          document.body.appendChild(link)
+          link.click()
+          link.parentNode?.removeChild(link)
+      } else {
+          alert("Nem sikerült letölteni a dokumentumot.")
+      }
   }
 
   return (
@@ -82,32 +94,46 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
-          {/* Dokumentumok listázása */}
           {documents.map((doc) => (
-            <div key={doc.id} className="group relative border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 md:p-3 flex flex-col justify-between h-20 md:h-24 bg-slate-50 dark:bg-slate-900/50 hover:border-amber-400 dark:hover:border-amber-500 transition-all">
+            <div key={doc.id} className="group relative border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 md:p-3 flex flex-col justify-between h-20 md:h-24 bg-slate-50 dark:bg-slate-900/50 hover:border-amber-400 dark:hover:border-amber-500 transition-all cursor-pointer" onClick={() => openDocument(doc.file_path)}>
               
-              <form action={deleteDocument} className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <input type="hidden" name="doc_id" value={doc.id} />
-                  <input type="hidden" name="file_path" value={doc.file_path} />
-                  <input type="hidden" name="car_id" value={carId} />
-                  <button className="bg-white dark:bg-slate-800 text-red-500 p-1 rounded-full shadow-md hover:scale-110 transition-transform" title="Törlés">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              {/* --- AKCIÓ GOMBOK (Jobb felül) --- */}
+              <div className="absolute top-1 right-1 z-20 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  
+                  {/* Letöltés Gomb */}
+                  <button 
+                    onClick={(e) => downloadDocument(e, doc.file_path, doc.name)}
+                    className="bg-white dark:bg-slate-800 text-slate-500 hover:text-amber-500 p-1.5 rounded-full shadow-md hover:scale-110 transition-transform border border-slate-100 dark:border-slate-700" 
+                    title="Letöltés"
+                  >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   </button>
-              </form>
 
-              <div onClick={() => openDocument(doc.file_path)} className="cursor-pointer h-full flex flex-col justify-between">
-                  <div className="absolute top-0 right-0 p-2 opacity-10">
+                  {/* Törlés Gomb */}
+                  <form action={deleteDocument} onClick={(e) => e.stopPropagation()}>
+                      <input type="hidden" name="doc_id" value={doc.id} />
+                      <input type="hidden" name="file_path" value={doc.file_path} />
+                      <input type="hidden" name="car_id" value={carId} />
+                      <button className="bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500 p-1.5 rounded-full shadow-md hover:scale-110 transition-transform border border-slate-100 dark:border-slate-700" title="Törlés">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                  </form>
+              </div>
+
+              {/* Dokumentum Ikon és Név */}
+              <div className="h-full flex flex-col justify-between pr-6 md:pr-0">
+                  <div className="absolute top-0 right-0 p-2 opacity-10 pointer-events-none">
                       <svg className="w-10 md:w-12 h-10 md:h-12 dark:text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2a2 2 0 00-2 2v1h10V4a2 2 0 00-2-2H7zm12 4h-2V4a4 4 0 00-4-4H7a4 4 0 00-4 4v1H1a1 1 0 00-1 1v12a1 1 0 001 1h18a1 1 0 001-1V7a1 1 0 00-1-1zM3 8h14v10H3V8zm2 2v2h10v-2H5zm0 4v2h8v-2H5z"/></svg>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate pr-4">{doc.name}</span>
-                  <span className="text-[10px] md:text-xs font-bold text-amber-600 dark:text-amber-500 flex items-center gap-1 group-hover:gap-2 transition-all">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate w-full">{doc.name}</span>
+                  <span className="text-[10px] md:text-xs font-bold text-amber-600 dark:text-amber-500 flex items-center gap-1">
                       Megnyitás <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                   </span>
               </div>
             </div>
           ))}
 
-          {/* Feltöltés Gomb (Trigger) */}
+          {/* Feltöltés Gomb */}
           <label className={`border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:border-amber-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors h-20 md:h-24 bg-slate-50 dark:bg-slate-900/50 cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
             <input 
               type="file" 
@@ -140,7 +166,7 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
             </div>
 
             <div className="space-y-4">
-              {/* 1. Név megadása */}
+              {/* Név megadása */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Dokumentum típusa</label>
                 <input 
@@ -152,7 +178,7 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
                 />
               </div>
 
-              {/* 2. Jogi Nyilatkozat (GDPR) */}
+              {/* Jogi Nyilatkozat */}
               <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
                 <label className="flex items-start gap-3 cursor-pointer group">
                   <div className="relative flex items-center">
