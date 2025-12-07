@@ -1,8 +1,7 @@
 'use client'
-
+import Link from 'next/link'
 import { useState, useRef } from 'react'
 import { uploadDocument, deleteDocument, getDocumentUrl } from './actions'
-import Link from 'next/link'
 
 type Doc = {
   id: string
@@ -21,7 +20,8 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
   const [docLabel, setDocLabel] = useState("")
   const [consentGiven, setConsentGiven] = useState(false)
 
-  // Fájl kiválasztása
+  // --- LOGIKA ---
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -58,27 +58,54 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
     }
   }
 
-  // Megtekintés (View)
+  // --- JAVÍTOTT MEGNYITÁS (View) ---
   const openDocument = async (filePath: string) => {
-      const url = await getDocumentUrl(filePath, false) // false = nem letöltés, csak megnyitás
-      if (url) window.open(url, '_blank')
-      else alert("Nem sikerült megnyitni a dokumentumot.")
+      // 1. TRÜKK: Azonnal nyitunk egy üres ablakot (szinkron művelet)
+      // Ezt a böngésző engedi, mert közvetlenül a kattintásra reagál.
+      const newWindow = window.open('', '_blank')
+      
+      if (newWindow) {
+          newWindow.document.write('Betöltés... Kérlek várj.');
+      }
+
+      // 2. Lekérjük az URL-t (aszinkron)
+      const url = await getDocumentUrl(filePath, false)
+
+      if (url && newWindow) {
+          // 3. Ha megvan az URL, átirányítjuk az előre megnyitott ablakot
+          newWindow.location.href = url
+      } else {
+          // Ha hiba volt, bezárjuk az üres ablakot és szólunk
+          newWindow?.close()
+          alert("Nem sikerült betölteni a dokumentumot. Lehet, hogy törölve lett.")
+      }
   }
 
-  // Letöltés (Download)
+  // --- JAVÍTOTT LETÖLTÉS (Download) ---
   const downloadDocument = async (e: React.MouseEvent, filePath: string, fileName: string) => {
-      e.stopPropagation() // Ne nyissa meg a megtekintőt is egyszerre
-      const url = await getDocumentUrl(filePath, true) // true = kényszerített letöltés
+      e.stopPropagation() // Ne fusson le a kártya kattintás (openDocument)
+      
+      // Jelezzük a usernek, hogy történik valami (opcionális, de jó UX)
+      const originalText = (e.currentTarget as HTMLButtonElement).innerHTML;
+      // (Itt lehetne egy spinner is, de most egyszerűsítünk)
+      
+      const url = await getDocumentUrl(filePath, true) // true = download flag
+
       if (url) {
-          // Létrehozunk egy ideiglenes linket és "rákattintunk"
+          // Létrehozunk egy ideiglenes <a> elemet a DOM-ban
           const link = document.createElement('a')
           link.href = url
-          link.setAttribute('download', fileName)
+          link.setAttribute('download', fileName) // Ez adja a fájl nevét
+          link.setAttribute('target', '_blank')   // Biztonsági háló
           document.body.appendChild(link)
+          
+          // Szimuláljuk a kattintást
           link.click()
-          link.parentNode?.removeChild(link)
+          
+          // Takarítás
+          document.body.removeChild(link)
       } else {
-          alert("Nem sikerült letölteni a dokumentumot.")
+          alert("Hiba a letöltési link generálásakor.")
       }
   }
 
@@ -94,6 +121,7 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
+          {/* Dokumentumok listázása */}
           {documents.map((doc) => (
             <div key={doc.id} className="group relative border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 md:p-3 flex flex-col justify-between h-20 md:h-24 bg-slate-50 dark:bg-slate-900/50 hover:border-amber-400 dark:hover:border-amber-500 transition-all cursor-pointer" onClick={() => openDocument(doc.file_path)}>
               
@@ -153,8 +181,10 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
         </div>
       </div>
 
-      {/* --- HIVATALOS ADATVÉDELMI MODAL --- */}
+      {/* --- MODAL (Marad a régi) --- */}
       {isModalOpen && (
+        // ... (Ez a rész változatlan, benne hagytam a fenti kódban csak rövidítve jelzem, de a komplett kódot másold be)
+        // A te esetedben a teljes fájlt cseréld, szóval bemásolom a Modalt is ide alább:
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200">
             
@@ -166,7 +196,6 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
             </div>
 
             <div className="space-y-4">
-              {/* Név megadása */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Dokumentum típusa</label>
                 <input 
@@ -178,7 +207,6 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
                 />
               </div>
 
-              {/* Jogi Nyilatkozat */}
               <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
                 <label className="flex items-start gap-3 cursor-pointer group">
                   <div className="relative flex items-center">
@@ -201,7 +229,6 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
               </div>
             </div>
 
-            {/* Gombok */}
             <div className="flex gap-3 mt-6">
               <button 
                 onClick={handleCancel}
