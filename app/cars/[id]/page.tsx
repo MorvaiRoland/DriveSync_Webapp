@@ -4,8 +4,9 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { deleteEvent, deleteReminder, resetServiceCounter } from './actions'
 import PdfDownloadButton from './PdfDownloadButton'
+import DocumentManager from './DocumentManager'
 
-// --- Típusdefiníciók (opcionális, de segít a fejlesztésben) ---
+// --- Típusdefiníciók ---
 type Car = {
   id: string
   make: string
@@ -45,11 +46,13 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
   const supabase = await createClient()
 
   // 1. Adatlekérések párhuzamosítása (gyorsabb betöltés)
-  const [carRes, eventsRes, remindersRes, tiresRes] = await Promise.all([
+  // Bővítve a car_documents lekérésével
+  const [carRes, eventsRes, remindersRes, tiresRes, docsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('id', params.id).single(),
     supabase.from('events').select('*').eq('car_id', params.id).order('event_date', { ascending: false }),
     supabase.from('service_reminders').select('*').eq('car_id', params.id).order('due_date', { ascending: true }),
-    supabase.from('tires').select('*').eq('car_id', params.id).order('is_mounted', { ascending: false })
+    supabase.from('tires').select('*').eq('car_id', params.id).order('is_mounted', { ascending: false }),
+    supabase.from('car_documents').select('*').eq('car_id', params.id).order('created_at', { ascending: false })
   ])
 
   if (carRes.error || !carRes.data) return notFound()
@@ -58,6 +61,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
   const safeEvents = eventsRes.data || []
   const safeReminders = remindersRes.data || []
   const safeTires = tiresRes.data || []
+  const safeDocs = docsRes.data || []
 
   // --- Üzleti Logika Számítások ---
   
@@ -151,7 +155,8 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
              <RemindersList reminders={safeReminders} carId={car.id} />
              
-             <DigitalGloveBox />
+             {/* DIGITÁLIS KESZTYŰTARTÓ (Dinamikus) */}
+             <DocumentManager carId={car.id} documents={safeDocs} />
              
              <TechnicalSpecs car={car} avgConsumption={avgConsumption} />
              
@@ -496,42 +501,6 @@ function RemindersList({ reminders, carId }: any) {
                    <div className="p-8 text-center text-slate-400 text-xs md:text-sm">Nincs közelgő karbantartás.</div>
                 )}
             </div>
-        </div>
-    )
-}
-
-function DigitalGloveBox() {
-    return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
-             <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm md:text-base">
-                    <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                    Digitális Kesztyűtartó
-                </h3>
-             </div>
-             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
-                <DocCard label="Forgalmi" />
-                <DocCard label="Biztosítás" />
-                <DocCard label="Szervizkönyv" />
-                <button className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:border-amber-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors h-20 md:h-24 bg-slate-50 dark:bg-slate-900/50">
-                    <svg className="w-5 md:w-6 h-5 md:h-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                    <span className="text-[10px] md:text-xs font-bold">Feltöltés</span>
-                </button>
-             </div>
-        </div>
-    )
-}
-
-function DocCard({ label }: any) {
-    return (
-        <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 md:p-3 flex flex-col justify-between h-20 md:h-24 bg-slate-50 dark:bg-slate-900/50 cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-sm transition-all relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                <svg className="w-10 md:w-12 h-10 md:h-12 dark:text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2a2 2 0 00-2 2v1h10V4a2 2 0 00-2-2H7zm12 4h-2V4a4 4 0 00-4-4H7a4 4 0 00-4 4v1H1a1 1 0 00-1 1v12a1 1 0 001 1h18a1 1 0 001-1V7a1 1 0 00-1-1zM3 8h14v10H3V8zm2 2v2h10v-2H5zm0 4v2h8v-2H5z"/></svg>
-            </div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
-            <span className="text-[10px] md:text-xs font-bold text-amber-600 dark:text-amber-500 flex items-center gap-1 group-hover:gap-2 transition-all">
-                Megnyitás <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-            </span>
         </div>
     )
 }

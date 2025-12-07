@@ -367,3 +367,90 @@ export async function deletePart(formData: FormData) {
   
   revalidatePath(`/cars/${carId}/parts`)
 }
+export async function uploadDocument(formData: FormData) {
+  const supabase = await createClient()
+
+  const file = formData.get('file') as File
+  const carId = formData.get('car_id') as string
+  const label = formData.get('label') as string // pl. "Forgalmi"
+
+  if (!file || !carId) {
+    throw new Error('Hiányzó adatok')
+  }
+
+  // 1. Felhasználó ellenőrzése
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nem vagy bejelentkezve')
+
+  // 2. Fájl feltöltése Storage-ba
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${carId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+  
+  const { error: uploadError } = await supabase.storage
+    .from('car-documents')
+    .upload(fileName, file)
+
+  if (uploadError) {
+    console.error('Upload error:', uploadError)
+    throw new Error('Hiba a fájl feltöltésekor')
+  }
+
+  // 3. Adatbázis bejegyzés
+  const { error: dbError } = await supabase
+    .from('car_documents')
+    .insert({
+      car_id: carId,
+      user_id: user.id,
+      name: label || file.name,
+      file_path: fileName,
+      file_type: file.type
+    })
+
+  if (dbError) {
+    console.error('Database error:', dbError)
+    throw new Error('Hiba az adatbázis mentésekor')
+  }
+
+  revalidatePath(`/cars/${carId}`)
+  return { success: true }
+}
+
+export async function deleteDocument(formData: FormData) {
+  const supabase = await createClient()
+  const docId = formData.get('doc_id') as string
+  const filePath = formData.get('file_path') as string
+  const carId = formData.get('car_id') as string
+
+  // 1. Törlés Storage-ból
+  const { error: storageError } = await supabase.storage
+    .from('car-documents')
+    .remove([filePath])
+
+  if (storageError) {
+    console.error('Storage delete error:', storageError)
+    // Nem dobunk hibát, megpróbáljuk törölni a DB-ből is, hogy ne ragadjon be
+  }
+
+  // 2. Törlés DB-ből
+  const { error: dbError } = await supabase
+    .from('car_documents')
+    .delete()
+    .eq('id', docId)
+
+  if (dbError) throw new Error('Hiba a törléskor')
+
+  revalidatePath(`/cars/${carId}`)
+}
+
+export async function getDocumentUrl(filePath: string) {
+    const supabase = await createClient()
+    
+    // Mivel Private a bucket, Signed URL kell a letöltéshez/megtekintéshez
+    // 1 óráig (3600s) érvényes linket generálunk
+    const { data, error } = await supabase.storage
+        .from('car-documents')
+        .createSignedUrl(filePath, 3600)
+
+    if (error) return null
+    return data.signedUrl
+}
