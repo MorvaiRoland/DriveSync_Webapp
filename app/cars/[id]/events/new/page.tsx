@@ -9,7 +9,6 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useState, Suspense, useRef } from 'react'
 
 // --- SEGÉDFÜGGVÉNY: Helyi idő szerinti YYYY-MM-DD ---
-// Ez biztosítja, hogy a naptár mindig helyesen jelenjen meg
 const getLocalToday = () => {
   const d = new Date()
   const year = d.getFullYear()
@@ -47,9 +46,9 @@ function EventForm() {
 
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
-  // JAVÍTÁS: A getLocalToday() használata a stabil dátumért
+  // JAVÍTÁS 1: 'date' helyett 'event_date' a state kulcsa
   const [formData, setFormData] = useState({
-      date: getLocalToday(), // Alapértelmezés: Ma
+      event_date: getLocalToday(), 
       mileage: '',
       title: '',
       cost: '',
@@ -108,24 +107,21 @@ function EventForm() {
 
               let newTitle = aiData.title || formData.title;
 
-              // JAVÍTÁS: Dátum ellenőrzése
-              // Ha az AI talál dátumot, megpróbáljuk YYYY-MM-DD formátumra vágni
-              let newDate = formData.date;
+              // JAVÍTÁS 2: 'formData.date' helyett 'formData.event_date' használata
+              let newDate = formData.event_date;
               if (aiData.date) {
-                 // Ha ISO stringet ad vissza (pl. 2023-10-10T00:00:00), levágjuk az időt
                  if (aiData.date.includes('T')) {
                      newDate = aiData.date.split('T')[0];
                  } else if (aiData.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                     // Ha már eleve jó formátum
                      newDate = aiData.date;
                  }
-                 // Egyéb esetben (ha az AI furcsa formátumot küld) marad a mai dátum, hogy ne törjön el az input
               }
 
+              // JAVÍTÁS 3: State frissítésnél is 'event_date' kulcsot használunk
               setFormData(prev => ({
                   ...prev,
                   title: newTitle, 
-                  date: newDate,
+                  event_date: newDate,
                   cost: aiData.cost || prev.cost,
                   location: aiData.location || prev.location,
                   liters: aiData.liters || prev.liters,
@@ -135,7 +131,7 @@ function EventForm() {
 
               const filledFields = []
               if (aiData.title) filledFields.push('title')
-              if (aiData.date) filledFields.push('date') // Jelöljük, ha a dátumot is kitöltötte
+              if (aiData.date) filledFields.push('event_date') // A highlight logic is frissítve
               if (aiData.cost) filledFields.push('cost')
               if (aiData.liters) filledFields.push('liters')
               if (aiData.location) filledFields.push('location')
@@ -251,13 +247,14 @@ function EventForm() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div className="min-w-0">
+                   {/* JAVÍTÁS 4: Itt a 'name' és a 'value' kulcs már szinkronban van (event_date) */}
                    <InputGroup 
                      label="Dátum" 
                      name="event_date" 
                      type="date" 
-                     value={formData.date}
+                     value={formData.event_date}
                      onChange={handleChange}
-                     highlight={aiFilled.includes('date')}
+                     highlight={aiFilled.includes('event_date')}
                      required 
                    />
                </div>
