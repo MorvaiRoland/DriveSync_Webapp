@@ -1,23 +1,14 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { ThemeProvider } from '@/components/theme-provider' // ÚJ IMPORT
+import { ThemeProvider } from '@/components/theme-provider' // IMPORTÁLD BE!
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'DriveSync',
-  description: 'Professzionális autókezelő rendszer saját célra.',
+  description: 'Professzionális autókezelő rendszer.',
   manifest: '/manifest.webmanifest',
-  icons: {
-    icon: '/icon.png',
-    apple: '/apple-icon.png',
-  },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'DriveSync',
-  },
 }
 
 export const viewport: Viewport = {
@@ -34,10 +25,9 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    // A suppressHydrationWarning fontos a next-themes miatt!
     <html lang="hu" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-background antialiased`}>
-        <ThemeProvider
+      <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased`}>
+          <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem

@@ -1,30 +1,29 @@
 'use client'
 
-import { useTheme } from "next-themes" // Ez kezeli a sötét módot
+import { useTheme } from "next-themes" // Ez kell a globális váltáshoz
 import { useEffect, useState } from "react"
-import { updatePreferences } from "@/app/settings/actions" // Ellenőrizd az elérési utat!
+import { updatePreferences } from "@/app/settings/actions"
 
 export function PreferencesForm({ settings }: { settings: any }) {
-  const { theme, setTheme } = useTheme()
+  const { setTheme, theme } = useTheme() // Hook a témához
   const [mounted, setMounted] = useState(false)
 
-  // Megvárjuk, amíg a kliens betölt, hogy elkerüljük a "Hydration mismatch" hibát
+  // Megvárjuk, amíg a kliens betölt
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Push értesítés engedély kérése a böngészőtől
   const handlePushChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
-        alert('Az értesítések engedélyezése elutasítva a böngészőben.')
+        alert('Az értesítések engedélyezése elutasítva.')
         e.target.checked = false
       }
     }
   }
 
-  // Ez azért kell, hogy ne villanjon a UI betöltéskor
+  // Loading state a villódzás elkerülésére
   if (!mounted) {
     return <div className="p-6 animate-pulse bg-slate-100 dark:bg-slate-800 h-64 rounded-2xl"></div>
   }
@@ -38,51 +37,34 @@ export function PreferencesForm({ settings }: { settings: any }) {
         </h2>
       </div>
       
-      {/* Server Action-t hívjuk meg a form action-ben */}
       <form action={updatePreferences} className="p-6 space-y-6">
         
+        {/* Értesítés Kapcsolók */}
         <div className="space-y-4">
-            {/* Email Kapcsoló */}
             <label className="flex items-center justify-between cursor-pointer p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg border border-transparent hover:border-slate-100 dark:hover:border-slate-600 transition-colors">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                    </div>
-                    <div>
-                        <span className="block font-bold text-slate-800 dark:text-slate-200 text-sm">Email Értesítések</span>
-                        <span className="block text-xs text-slate-500 dark:text-slate-400">Havi összesítő</span>
-                    </div>
+                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">📧</div>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">Email Értesítések</span>
                 </div>
                 <input type="checkbox" name="notify_email" defaultChecked={settings.notify_email} className="w-5 h-5 accent-amber-500" />
             </label>
 
-            {/* Push Kapcsoló */}
             <label className="flex items-center justify-between cursor-pointer p-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg border border-transparent hover:border-slate-100 dark:hover:border-slate-600 transition-colors">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                    </div>
-                    <div>
-                        <span className="block font-bold text-slate-800 dark:text-slate-200 text-sm">Push Értesítések</span>
-                        <span className="block text-xs text-slate-500 dark:text-slate-400">Azonnali jelzés telefonra</span>
-                    </div>
+                    <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">🔔</div>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">Push Értesítések</span>
                 </div>
-                <input 
-                    type="checkbox" 
-                    name="notify_push" 
-                    defaultChecked={settings.notify_push} 
-                    onChange={handlePushChange}
-                    className="w-5 h-5 accent-amber-500" 
-                />
+                <input type="checkbox" name="notify_push" defaultChecked={settings.notify_push} onChange={handlePushChange} className="w-5 h-5 accent-amber-500" />
             </label>
         </div>
 
+        {/* TÉMA VÁLASZTÓ */}
         <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Megjelenés</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Téma</label>
             <select 
                 name="theme" 
-                value={theme} // Itt kötjük össze a next-themes-el
-                onChange={(e) => setTheme(e.target.value)} // Ez váltja azonnal a témát
+                value={theme} // A jelenlegi aktív téma
+                onChange={(e) => setTheme(e.target.value)} // Ez váltja át az EGÉSZ appot
                 className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white"
             >
                 <option value="light">Világos</option>

@@ -15,13 +15,7 @@ const features = [
 ];
 
 // 2. Jövőbeli fejlesztések
-const upcoming = [
-  {
-    emoji: '-',
-    title: '',
-    desc: '',
-  }
-];
+
 
 export default function ChangelogModal() {
   const [isOpen, setIsOpen] = useState(false)
@@ -86,28 +80,8 @@ export default function ChangelogModal() {
                 ))}
             </div>
 
-            {/* Következő Fejlesztés Doboz */}
-            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 relative overflow-hidden">
-                 <div className="absolute -right-4 -top-4 w-20 h-20 bg-amber-200/30 rounded-full blur-xl"></div>
-                 <h3 className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                    </span>
-                    Következő Fejlesztés
-                 </h3>
-                 {upcoming.map((item, idx) => (
-                    <div key={idx} className="flex gap-4 relative z-10">
-                        <div className="w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center text-xl flex-shrink-0 shadow-sm">
-                            {item.emoji}
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-slate-900 text-sm">{item.title}</h3>
-                            <p className="text-xs text-slate-600 leading-relaxed mt-0.5">{item.desc}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
+           
+           
 
         </div>
 
