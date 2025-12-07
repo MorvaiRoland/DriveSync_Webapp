@@ -14,13 +14,13 @@ export default function manifest(): MetadataRoute.Manifest {
     
     icons: [
       {
-        src: '/icons/icon-192x192.png',
+        src: '/icons/drivesync-icon.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any', // Ez a "sima" ikon (pl. iOS, Windows)
       },
       {
-        src: '/icons/icon-512x512.png',
+        src: '/icons/drivesync-icon.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
