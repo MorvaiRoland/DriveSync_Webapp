@@ -1,8 +1,9 @@
 import { createClient } from 'supabase/server'
-import { updateCar, deleteCar, addTire, deleteTire, swapTire } from '../actions' // Importáljuk az új actionöket
+import { updateCar, deleteCar, addTire, deleteTire, swapTire } from '../actions'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
+import ShareManager from '@/components/ShareManager' // FONTOS: Ezt importálni kell!
 
 export default async function EditCarPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params
@@ -24,9 +25,17 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
     .from('tires')
     .select('*')
     .eq('car_id', params.id)
-    .order('is_mounted', { ascending: false }) // A felszerelt legyen elől
+    .order('is_mounted', { ascending: false })
+
+  // 3. MEGOSZTÁSOK LEKÉRÉSE (Ez hiányzott!)
+  const { data: shares } = await supabase
+    .from('car_shares')
+    .select('*')
+    .eq('car_id', params.id)
+    .order('created_at', { ascending: false })
 
   const safeTires = tires || []
+  const safeShares = shares || []
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
@@ -117,7 +126,11 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
           </form>
         </div>
 
-        {/* --- 2. GUMIABRONCS HOTEL (ÚJ) --- */}
+        {/* --- 2. KÖZÖS GARÁZS (ÚJ!) --- */}
+        {/* Ide illesztjük be a ShareManager komponenst */}
+        <ShareManager carId={car.id} shares={safeShares} />
+
+        {/* --- 3. GUMIABRONCS HOTEL --- */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 mb-8 transition-colors">
              <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-6 flex items-center gap-2">
                 <svg className="w-6 h-6 text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -194,7 +207,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
              </div>
         </div>
 
-        {/* --- 3. VESZÉLYZÓNA --- */}
+        {/* --- 4. VESZÉLYZÓNA --- */}
         <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl p-6 border border-red-200 dark:border-red-900/30 mb-8">
             <h3 className="text-red-800 dark:text-red-400 font-bold text-lg mb-2">Veszélyzóna</h3>
             <p className="text-red-600/80 dark:text-red-400/80 text-sm mb-4">
