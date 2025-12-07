@@ -2,20 +2,15 @@
 
 import { useState, useEffect } from 'react'
 
-const CURRENT_VERSION = '1.3.4'; 
+const CURRENT_VERSION = '1.3.5'; 
 const RELEASE_DATE = '2025. December 07.';
 
 // 1. Jelenlegi funkciók listája (Bővített leírásokkal)
 const features = [
   {
-    emoji: '🌤️', 
-    title: 'Időjárás Előrejelzés',
-    desc: 'ÚJ! Megérkezett! Valós idejű időjárás adatok közvetlenül a műszerfalon, hogy sose érjen váratlanul az eső.',
-  },
-  {
-    emoji: '⛽', 
-    title: 'Üzemanyag Árak',
-    desc: 'ÚJ! Kövesd a benzin és gázolaj árváltozásait naprakészen az appban. Spórolj a tankoláson az aktuális adatokkal!',
+    emoji: '🌗', 
+    title: 'Sötét & Világos Téma',
+    desc: 'ÚJ! Kíméld a szemed éjszakai vezetésnél! Válts egy kattintással sötét módra, vagy állítsd be, hogy kövesse a telefonod rendszerbeállításait.',
   },
 ];
 

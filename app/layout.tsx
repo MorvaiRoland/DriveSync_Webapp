@@ -1,19 +1,18 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { ThemeProvider } from '@/components/theme-provider' // ÚJ IMPORT
 
 const inter = Inter({ subsets: ['latin'] })
 
-// Ez állítja be, hogy hogyan jelenjen meg a böngészőben/mobilon
 export const metadata: Metadata = {
   title: 'DriveSync',
   description: 'Professzionális autókezelő rendszer saját célra.',
-  manifest: '/manifest.webmanifest', // Hivatkozás a manifestre
+  manifest: '/manifest.webmanifest',
   icons: {
     icon: '/icon.png',
-    apple: '/apple-icon.png', // iOS ikon
+    apple: '/apple-icon.png',
   },
-  // Apple specifikus beállítások, hogy szép legyen iPhone-on
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -21,13 +20,12 @@ export const metadata: Metadata = {
   },
 }
 
-// Ez állítja be a mobil nézet viselkedését (tiltja a nagyítást, színezi a keretet)
 export const viewport: Viewport = {
-  themeColor: '#0f172a', // A címsor színe mobilon
+  themeColor: '#0f172a',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  userScalable: false, // Eztől lesz "appos" érzése, nem lehet csiptetve nagyítani
+  userScalable: false,
 }
 
 export default function RootLayout({
@@ -36,8 +34,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="hu">
-      <body className={`${inter.className} bg-slate-50`}>{children}</body>
+    // A suppressHydrationWarning fontos a next-themes miatt!
+    <html lang="hu" suppressHydrationWarning>
+      <body className={`${inter.className} min-h-screen bg-background antialiased`}>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+      </body>
     </html>
   )
 }
