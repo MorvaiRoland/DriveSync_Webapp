@@ -26,7 +26,7 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any',
       },
       {
-        src: '/icons/icon-512x512.png',
+        src: '/icons/drivesync-icon.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable', // FONTOS! Ez kell Androidra (hogy kitöltse a kört/négyzetet)
