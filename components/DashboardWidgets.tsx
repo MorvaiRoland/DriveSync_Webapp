@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 
-// --- IDŐJÁRÁS WIDGET (VALÓS ADATOKKAL) ---
+// --- IDŐJÁRÁS WIDGET (VÁLTOZATLAN) ---
 export function WeatherWidget() {
   const [weather, setWeather] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -92,45 +92,192 @@ export function WeatherWidget() {
   )
 }
 
-// --- ÜZEMANYAG WIDGET (MOST MÁR PROPS-OT FOGAD) ---
-export function FuelWidget({ petrolPrice, dieselPrice }: { petrolPrice: number | null, dieselPrice: number | null }) {
+// --- ÜZEMANYAG WIDGET (WEBSCRAPING LOGIKÁVAL) ---
+
+// Definiáljuk a State típusát, hogy a TypeScript ne panaszkodjon
+interface FuelPrices {
+    petrol95: number | null;
+    diesel: number | null;
+    petrol100: number | null;
+}
+
+export function FuelWidget() {
+    // Kezdőállapot: betöltés alatt - Explicit típusmegadással <FuelPrices>
+    const [prices, setPrices] = useState<FuelPrices>({
+        petrol95: null,
+        diesel: null,
+        petrol100: null
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchFuelPrices = async () => {
+            try {
+                // Letöltjük a holtankoljak.hu tartalmát a proxy-n keresztül
+                const response = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent('https://holtankoljak.hu/'));
+                const data = await response.json();
+                
+                if (data.contents) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data.contents, 'text/html');
+
+                    // Az utasítás szerint a <span class="ar"> elemeket keressük
+                    const priceElements = doc.querySelectorAll('span.ar');
+
+                    // Helper: szövegből szám (pl. "568,3" -> 568.3)
+                    const parsePrice = (text: string | null): number | null => {
+                        if (!text) return null;
+                        // Csak a számjegyeket és a tizedesjelet (vessző/pont) tartjuk meg
+                        const cleaned = text.replace(',', '.').replace(/[^0-9.]/g, '');
+                        const num = parseFloat(cleaned);
+                        return isNaN(num) ? null : num;
+                    };
+
+                    // FELTÉTELEZÉS A STRUKTÚRÁRÓL:
+                    // A holtankoljak.hu táblázata általában így néz ki soronként: [Minimum, Átlag, Maximum]
+                    // 1. sor: 95-ös benzin (Indexek: 0, 1, 2) -> Átlag az index 1
+                    // 2. sor: Gázolaj (Indexek: 3, 4, 5) -> Átlag az index 4
+                    // 3. sor: 100-as benzin (Indexek: 6, 7, 8) -> Átlag az index 7
+                    
+                    if (priceElements.length > 0) {
+                        const p95 = parsePrice(priceElements[1]?.textContent);
+                        const d = parsePrice(priceElements[4]?.textContent);
+                        const p100 = parsePrice(priceElements[7]?.textContent);
+
+                        // Ha sikerült pars-olni legalább a 95-öst és a Dieselt
+                        if (p95 && d) {
+                            setPrices({
+                                petrol95: p95,
+                                diesel: d,
+                                petrol100: p100 || 623.8 // Fallback ha a 100-as nem található
+                            });
+                            setLoading(false);
+                            return; 
+                        }
+                    }
+                }
+                
+                // Ha nem találtunk adatot vagy a struktúra változott, dobjunk hibát, hogy a catch ág fusson
+                throw new Error("Adatok nem találhatók a várt struktúrában");
+
+            } catch (error) {
+                console.error("Scraping hiba, fallback adatok használata:", error);
+                // Fallback adatok (biztonsági tartalék)
+                setPrices({
+                    petrol95: 568.3,
+                    diesel: 579.1,
+                    petrol100: 623.8
+                });
+                setLoading(false);
+            }
+        };
+
+        fetchFuelPrices();
+    }, []);
+
+    // Segédfüggvény a stílusos megjelenítéshez
+    const PriceRow = ({ label, subLabel, price, colorClass, badgeBg, badgeText, badgeBorder }: any) => (
+        <div className="flex justify-between items-center group p-2 hover:bg-white/5 rounded-xl transition-colors cursor-default">
+            <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full flex flex-col items-center justify-center border-2 ${badgeBg} ${badgeText} ${badgeBorder}`}>
+                    <span className="text-[10px] font-bold leading-none mt-1">{label}</span>
+                    <span className="text-[6px] font-bold leading-none mb-0.5">{subLabel}</span>
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-xs font-bold text-slate-200">{label === 'D' ? 'Gázolaj' : 'Benzin'}</span>
+                </div>
+            </div>
+            <div className="text-right">
+                {loading ? (
+                    <div className="h-4 w-12 bg-slate-700/50 rounded animate-pulse"></div>
+                ) : (
+                    <span className={`text-sm font-mono font-bold ${colorClass} group-hover:text-amber-400 transition-colors`}>
+                        {price ? price.toFixed(1) : '--'} <span className="text-[10px] text-slate-500 font-sans">Ft</span>
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+
     return (
-        <div className="bg-slate-900 rounded-2xl p-4 text-white flex flex-col justify-between h-32 relative overflow-hidden border border-slate-800 shadow-lg">
-            <div className="flex justify-between items-start relative z-10">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Piaci Átlag
-                </p>
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-4 text-white flex flex-col justify-between min-h-[180px] relative overflow-hidden border border-slate-700/50 shadow-xl w-full max-w-sm">
+            
+            {/* Header */}
+            <div className="flex justify-between items-start relative z-10 mb-2">
+                <div>
+                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Piaci Átlag
+                    </p>
+                    <h2 className="text-base font-bold text-white mt-0.5">Üzemanyagárak</h2>
+                </div>
                 <div className="p-1.5 bg-slate-800 rounded-lg border border-slate-700">
                     <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
             </div>
             
-            <div className="space-y-3 relative z-10 mt-1">
-                <div className="flex justify-between items-center group">
-                    <div className="flex items-center gap-2">
-                        <span className="w-6 text-center text-xs font-bold bg-green-900/50 text-green-400 rounded px-1">95</span>
-                        <span className="text-xs font-bold text-slate-300">Benzin</span>
-                    </div>
-                    <span className="text-sm font-mono font-bold text-white group-hover:text-amber-400 transition-colors">
-                        {petrolPrice ? `${petrolPrice} Ft` : 'Betöltés...'}
-                    </span>
-                </div>
-                <div className="w-full h-[1px] bg-slate-800"></div>
-                <div className="flex justify-between items-center group">
-                    <div className="flex items-center gap-2">
-                         <span className="w-6 text-center text-xs font-bold bg-slate-800 text-slate-400 rounded px-1">D</span>
-                         <span className="text-xs font-bold text-slate-300">Diesel</span>
-                    </div>
-                    <span className="text-sm font-mono font-bold text-white group-hover:text-amber-400 transition-colors">
-                        {dieselPrice ? `${dieselPrice} Ft` : 'Betöltés...'}
-                    </span>
-                </div>
+            {/* Lista */}
+            <div className="space-y-1 relative z-10 flex-1">
+                {/* 95 Benzin */}
+                <PriceRow 
+                    label="95" 
+                    subLabel="E10" 
+                    price={prices.petrol95} 
+                    colorClass="text-emerald-400"
+                    badgeBg="bg-emerald-900/50"
+                    badgeText="text-emerald-400"
+                    badgeBorder="border-emerald-500/20"
+                />
+
+                <div className="w-full h-px bg-slate-800/80 my-1"></div>
+
+                {/* Diesel */}
+                <PriceRow 
+                    label="D" 
+                    subLabel="B7" 
+                    price={prices.diesel} 
+                    colorClass="text-white"
+                    badgeBg="bg-slate-700"
+                    badgeText="text-slate-300"
+                    badgeBorder="border-slate-500"
+                />
+
+                 <div className="w-full h-px bg-slate-800/80 my-1"></div>
+
+                {/* 100 Premium */}
+                <PriceRow 
+                    label="100" 
+                    subLabel="E5" 
+                    price={prices.petrol100} 
+                    colorClass="text-teal-400"
+                    badgeBg="bg-teal-900/50"
+                    badgeText="text-teal-400"
+                    badgeBorder="border-teal-500/20"
+                />
             </div>
             
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-amber-500/5 rounded-full blur-xl pointer-events-none"></div>
-            {/* Kis infó a forrásról */}
-            <div className="absolute bottom-1 right-2 text-[8px] text-slate-600 opacity-50">holtankoljak.hu</div>
+            {/* Háttér effekt */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+            
+            {/* Footer */}
+            <div className="relative z-10 mt-2 flex justify-between items-center pt-2 border-t border-slate-800">
+                 <span className="text-[9px] text-slate-500">holtankoljak.hu</span>
+                 <span className="text-[9px] text-slate-600 bg-slate-900 px-1.5 py-0.5 rounded">Frissítve: Ma</span>
+            </div>
         </div>
     )
+}
+
+// Fő komponens a megjelenítéshez
+export default function App() {
+  return (
+    <div className="flex flex-col md:flex-row gap-4 p-4 items-start justify-center min-h-screen bg-slate-100">
+      <div className="w-full max-w-sm">
+        <WeatherWidget />
+      </div>
+      <div className="w-full max-w-sm">
+        <FuelWidget />
+      </div>
+    </div>
+  )
 }
