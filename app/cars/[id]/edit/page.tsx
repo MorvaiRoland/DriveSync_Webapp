@@ -1,45 +1,106 @@
-import { createClient } from 'supabase/server'
+'use client'
+
+import { createBrowserClient } from '@supabase/ssr'
 import { updateCar, deleteCar, addTire, deleteTire, swapTire } from '../actions'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Image from 'next/image'
-import ShareManager from '@/components/ShareManager' // FONTOS: Ezt importálni kell!
+import { useState, useEffect } from 'react'
+import ShareManager from '@/components/ShareManager'
 
-export default async function EditCarPage(props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
-  const supabase = await createClient()
+export default function EditCarPage() {
+  const params = useParams()
+  const carId = params.id as string
+  const router = useRouter()
+  
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
-  // 1. Autó lekérése
-  const { data: car, error } = await supabase
-    .from('cars')
-    .select('*')
-    .eq('id', params.id)
-    .single()
+  // Állapotok
+  const [car, setCar] = useState<any>(null)
+  const [tires, setTires] = useState<any[]>([])
+  const [shares, setShares] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  // Státusz állapot (hogy ne ugráljon el mentéskor)
+  const [status, setStatus] = useState<string>('active')
+  
+  // Kép előnézet
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
-  if (error || !car) {
-    return notFound()
+  // Értesítés (Toast)
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
+
+  // Adatok betöltése
+  useEffect(() => {
+    async function fetchData() {
+      // 1. Autó
+      const { data: carData } = await supabase.from('cars').select('*').eq('id', carId).single()
+      if (carData) {
+          setCar(carData)
+          setStatus(carData.status) // Beállítjuk a helyes státuszt
+      }
+
+      // 2. Gumik
+      const { data: tireData } = await supabase.from('tires').select('*').eq('car_id', carId).order('is_mounted', { ascending: false })
+      if (tireData) setTires(tireData)
+
+      // 3. Megosztások
+      const { data: shareData } = await supabase.from('car_shares').select('*').eq('car_id', carId)
+      if (shareData) setShares(shareData)
+      
+      setLoading(false)
+    }
+    fetchData()
+  }, [carId])
+
+  // Értesítés kezelő
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 4000) // 4 mp után eltűnik
   }
 
-  // 2. Gumik lekérése
-  const { data: tires } = await supabase
-    .from('tires')
-    .select('*')
-    .eq('car_id', params.id)
-    .order('is_mounted', { ascending: false })
+  // Kép előnézet kezelése
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const objectUrl = URL.createObjectURL(file);
+      setImagePreview(objectUrl);
+      showToast('Kép kiválasztva! Ne felejts el menteni.', 'success')
+    }
+  };
 
-  // 3. MEGOSZTÁSOK LEKÉRÉSE (Ez hiányzott!)
-  const { data: shares } = await supabase
-    .from('car_shares')
-    .select('*')
-    .eq('car_id', params.id)
-    .order('created_at', { ascending: false })
+  // Mentés kezelése (hogy lássuk az eredményt)
+  const handleSave = async (formData: FormData) => {
+    try {
+        await updateCar(formData)
+        showToast('Sikeres mentés!', 'success')
+        router.refresh() // Frissítjük az adatokat
+    } catch (e) {
+        showToast('Hiba történt a mentéskor.', 'error')
+    }
+  }
 
-  const safeTires = tires || []
-  const safeShares = shares || []
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">Betöltés...</div>
+  if (!car) return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-red-500">Autó nem található</div>
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
       
+      {/* --- TOAST ÉRTESÍTÉS (FIXED TOP) --- */}
+      {toast && (
+          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+              {toast.type === 'success' ? (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              )}
+              <span className="font-bold text-sm">{toast.message}</span>
+          </div>
+      )}
+
       <div className="bg-slate-900 py-12 px-4 text-center shadow-lg">
         <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider">
           Jármű <span className="text-amber-500">Beállítások</span>
@@ -51,23 +112,23 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
         
         {/* --- 1. JÁRMŰ ADATOK SZERKESZTÉSE --- */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 mb-8 transition-colors">
-          <form action={updateCar} className="space-y-8">
+          <form action={handleSave} className="space-y-8">
             <input type="hidden" name="car_id" value={car.id} />
 
             {/* Képcsere */}
             <div className="flex flex-col items-center mb-6">
                 <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 dark:border-slate-700 shadow-md mb-4 bg-slate-200 dark:bg-slate-700">
-                   {car.image_url ? (
-                       <Image src={car.image_url} alt="Car" fill className="object-cover" />
+                   {imagePreview || car.image_url ? (
+                       <Image src={imagePreview || car.image_url} alt="Car" fill className="object-cover" />
                    ) : (
                        <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
                            <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                        </div>
                    )}
                 </div>
-                <label className="cursor-pointer bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                <label className="cursor-pointer bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm">
                     Fénykép módosítása
-                    <input type="file" name="image" accept="image/*" className="hidden" />
+                    <input type="file" name="image" accept="image/*" className="hidden" onChange={handleImageChange} />
                 </label>
             </div>
 
@@ -92,6 +153,39 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
                     </div>
                     <InputGroup label="Szín" name="color" defaultValue={car.color} />
                     <InputGroup label="Alvázszám (VIN)" name="vin" defaultValue={car.vin} />
+                </div>
+            </div>
+
+            {/* STÁTUSZ JAVÍTÁS: Controlled Input */}
+            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Jármű Állapota</label>
+                <div className="flex gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                        <input 
+                            type="radio" 
+                            name="status" 
+                            value="active" 
+                            checked={status === 'active'} // ITT A JAVÍTÁS
+                            onChange={() => setStatus('active')}
+                            className="w-5 h-5 text-amber-500 focus:ring-amber-500 border-gray-300" 
+                        />
+                        <span className={`text-sm font-bold ${status === 'active' ? 'text-emerald-500' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'}`}>
+                            Aktív (Használatban)
+                        </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                        <input 
+                            type="radio" 
+                            name="status" 
+                            value="service" 
+                            checked={status === 'service'} // ITT A JAVÍTÁS
+                            onChange={() => setStatus('service')}
+                            className="w-5 h-5 text-amber-500 focus:ring-amber-500 border-gray-300" 
+                        />
+                        <span className={`text-sm font-bold ${status === 'service' ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200'}`}>
+                            Szerviz alatt
+                        </span>
+                    </label>
                 </div>
             </div>
 
@@ -126,9 +220,8 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
           </form>
         </div>
 
-        {/* --- 2. KÖZÖS GARÁZS (ÚJ!) --- */}
-        {/* Ide illesztjük be a ShareManager komponenst */}
-        <ShareManager carId={car.id} shares={safeShares} />
+        {/* --- 2. KÖZÖS GARÁZS --- */}
+        <ShareManager carId={car.id} shares={shares} />
 
         {/* --- 3. GUMIABRONCS HOTEL --- */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 mb-8 transition-colors">
@@ -139,8 +232,8 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
 
              {/* Gumik listázása */}
              <div className="space-y-4 mb-8">
-                 {safeTires.length > 0 ? (
-                     safeTires.map((tire: any) => (
+                 {tires.length > 0 ? (
+                     tires.map((tire: any) => (
                          <div key={tire.id} className={`border rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${tire.is_mounted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
                              <div className="flex items-center gap-4">
                                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${tire.is_mounted ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'}`}>
@@ -155,7 +248,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
                              
                              <div className="flex gap-2 w-full sm:w-auto">
                                  {!tire.is_mounted && (
-                                     <form action={swapTire} className="flex-1">
+                                     <form action={async (fd) => { await swapTire(fd); showToast('Gumi felszerelve!', 'success'); router.refresh(); }} className="flex-1">
                                          <input type="hidden" name="car_id" value={car.id} />
                                          <input type="hidden" name="tire_id" value={tire.id} />
                                          <button type="submit" className="w-full px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white text-xs font-bold hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors">
@@ -163,7 +256,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
                                          </button>
                                      </form>
                                  )}
-                                 <form action={deleteTire} className="flex-shrink-0">
+                                 <form action={async (fd) => { await deleteTire(fd); showToast('Gumi törölve.', 'error'); router.refresh(); }} className="flex-shrink-0">
                                      <input type="hidden" name="car_id" value={car.id} />
                                      <input type="hidden" name="tire_id" value={tire.id} />
                                      <button type="submit" className="p-2 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" title="Törlés">
@@ -181,7 +274,7 @@ export default async function EditCarPage(props: { params: Promise<{ id: string 
              {/* Új Gumi Hozzáadása Form */}
              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700">
                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm mb-4 uppercase tracking-wide">Új szett hozzáadása</h4>
-                 <form action={addTire} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <form action={async (fd) => { await addTire(fd); showToast('Gumi hozzáadva!', 'success'); router.refresh(); }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <input type="hidden" name="car_id" value={car.id} />
                      
                      <div className="space-y-1">
