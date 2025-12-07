@@ -1,5 +1,5 @@
 import { createClient } from 'supabase/server'
-import { updateEvent } from '../../../actions' // Relatív útvonal az actions.ts-hez
+import { updateEvent } from '../../../actions' // Ellenőrizd, hogy az útvonal helyes-e a te mappaszerkezetedben!
 import Link from 'next/link'
 
 export default async function EditEventPage(props: { params: Promise<{ id: string, eventId: string }> }) {
@@ -8,7 +8,7 @@ export default async function EditEventPage(props: { params: Promise<{ id: strin
 
   // Ellenőrizzük, hogy megkaptuk-e az ID-kat
   if (!params.id || !params.eventId) {
-    return <div className="p-10 text-center text-red-600">Hiba: Hiányzó URL paraméterek.</div>
+    return <div className="p-10 text-center text-red-600 dark:text-red-400">Hiba: Hiányzó URL paraméterek.</div>
   }
 
   // 1. Lekérjük a szerkesztendő eseményt az adatbázisból
@@ -18,14 +18,14 @@ export default async function EditEventPage(props: { params: Promise<{ id: strin
     .eq('id', params.eventId)
     .single()
 
-  // Hibakezelés látható módon (nem csak notFound())
+  // Hibakezelés látható módon
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-red-200 text-center max-w-md">
-          <div className="text-red-500 text-xl font-bold mb-2">Hiba történt az adatok betöltésekor</div>
-          <p className="text-slate-600 mb-4">{error.message}</p>
-          <Link href={`/cars/${params.id}`} className="text-amber-600 font-bold hover:underline">Vissza az autóra</Link>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-red-200 dark:border-red-900/30 text-center max-w-md">
+          <div className="text-red-500 dark:text-red-400 text-xl font-bold mb-2">Hiba történt az adatok betöltésekor</div>
+          <p className="text-slate-600 dark:text-slate-300 mb-4">{error.message}</p>
+          <Link href={`/cars/${params.id}`} className="text-amber-600 dark:text-amber-500 font-bold hover:underline">Vissza az autóra</Link>
         </div>
       </div>
     )
@@ -33,10 +33,10 @@ export default async function EditEventPage(props: { params: Promise<{ id: strin
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white p-6 rounded-xl shadow-lg text-center">
-          <div className="text-slate-900 text-xl font-bold mb-2">A keresett bejegyzés nem található.</div>
-          <Link href={`/cars/${params.id}`} className="text-amber-600 font-bold hover:underline">Vissza az autóra</Link>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 text-center">
+          <div className="text-slate-900 dark:text-white text-xl font-bold mb-2">A keresett bejegyzés nem található.</div>
+          <Link href={`/cars/${params.id}`} className="text-amber-600 dark:text-amber-500 font-bold hover:underline">Vissza az autóra</Link>
         </div>
       </div>
     )
@@ -52,9 +52,10 @@ export default async function EditEventPage(props: { params: Promise<{ id: strin
   const isFuel = event.type === 'fuel'
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+    // Fő konténer sötét móddal
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
       
-      {/* Fejléc */}
+      {/* Fejléc - ez maradhat sötét alapból, mert jól néz ki */}
       <div className="bg-slate-900 py-12 px-4 text-center shadow-lg">
         <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider">
           Bejegyzés <span className="text-amber-500">Szerkesztése</span>
@@ -68,7 +69,7 @@ export default async function EditEventPage(props: { params: Promise<{ id: strin
 
       {/* Űrlap Konténer */}
       <div className="max-w-xl mx-auto px-4 -mt-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 transition-colors">
           
           <form action={updateEvent} className="space-y-6">
             {/* Rejtett mezők az azonosításhoz */}
@@ -126,12 +127,12 @@ export default async function EditEventPage(props: { params: Promise<{ id: strin
             {/* Leírás (csak ha nem tankolás) */}
             {!isFuel && (
                <div className="space-y-1">
-                 <label className="block text-sm font-semibold text-slate-700">Elvégzett munkák</label>
+                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Elvégzett munkák</label>
                  <textarea 
-                    name="description" 
-                    rows={3} 
-                    defaultValue={event.description || ''}
-                    className="block w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 bg-slate-50 border p-3 text-slate-900" 
+                   name="description" 
+                   rows={3} 
+                   defaultValue={event.description || ''}
+                   className="block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 bg-slate-50 dark:bg-slate-700 border p-3 text-slate-900 dark:text-white dark:placeholder-slate-400 transition-colors" 
                  />
                </div>
             )}
@@ -144,10 +145,10 @@ export default async function EditEventPage(props: { params: Promise<{ id: strin
             />
 
             {/* Gombok */}
-            <div className="pt-6 flex gap-4 border-t border-slate-100 mt-6">
+            <div className="pt-6 flex gap-4 border-t border-slate-100 dark:border-slate-700 mt-6">
               <Link 
                 href={`/cars/${params.id}`} 
-                className="w-1/3 py-3 rounded-lg text-slate-600 font-bold text-center border border-slate-200 hover:bg-slate-50 transition-colors"
+                className="w-1/3 py-3 rounded-lg text-slate-600 dark:text-slate-300 font-bold text-center border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center"
               >
                 Mégse
               </Link>
@@ -165,11 +166,13 @@ export default async function EditEventPage(props: { params: Promise<{ id: strin
   )
 }
 
-// Segéd komponens az inputokhoz (ugyanaz a design, mint a felvételnél)
+// Segéd komponens az inputokhoz (sötétítve)
 function InputGroup({ label, name, type = "text", placeholder, required = false, step, defaultValue }: any) {
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-semibold text-slate-700">{label}</label>
+      <label htmlFor={name} className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+        {label}
+      </label>
       <input 
         type={type} 
         name={name} 
@@ -178,7 +181,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
         defaultValue={defaultValue} 
         required={required} 
         placeholder={placeholder} 
-        className="block w-full rounded-md border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-3 bg-slate-50 border text-slate-900 transition-colors" 
+        className="block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-3 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white dark:placeholder-slate-400 transition-colors" 
       />
     </div>
   )

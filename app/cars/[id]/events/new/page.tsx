@@ -52,11 +52,11 @@ function EventForm() {
   }, [carId, isFuel])
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">Betöltés...</div>
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400">Betöltés...</div>
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
       <div className="bg-slate-900 py-12 px-4 text-center shadow-lg">
         <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider">
           {isFuel ? 'Tankolás' : 'Szerviz'} <span className="text-amber-500">Rögzítése</span>
@@ -69,10 +69,10 @@ function EventForm() {
       </div>
 
       <div className="max-w-xl mx-auto px-4 -mt-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700">
           
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6 text-red-700">
+            <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-4 rounded mb-6 text-red-700 dark:text-red-400">
               {error}
             </div>
           )}
@@ -108,7 +108,7 @@ function EventForm() {
                />
             ) : (
                <div className="space-y-1">
-                 <label htmlFor="title_select" className="block text-sm font-semibold text-slate-700">
+                 <label htmlFor="title_select" className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                    Szerviz Típusa <span className="text-amber-500">*</span>
                  </label>
                  <div className="relative">
@@ -116,7 +116,7 @@ function EventForm() {
                      name="title"
                      id="title_select"
                      required
-                     className="block w-full appearance-none rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all text-slate-700 cursor-pointer"
+                     className="block w-full appearance-none rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-900 dark:text-white cursor-pointer"
                    >
                      <option value="" disabled selected>Válassz a listából...</option>
                      {serviceTypes.map(s => (
@@ -124,7 +124,7 @@ function EventForm() {
                      ))}
                      <option value="Egyéb">Egyéb javítás</option>
                    </select>
-                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                    </div>
                  </div>
@@ -140,11 +140,11 @@ function EventForm() {
 
             {!isFuel && (
                <div className="space-y-1">
-                 <label className="block text-sm font-semibold text-slate-700">Megjegyzés / Részletek</label>
+                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Megjegyzés / Részletek</label>
                  <textarea 
                    name="description" 
                    rows={3} 
-                   className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 bg-slate-50 border p-3 text-slate-900" 
+                   className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 bg-slate-50 dark:bg-slate-700 border p-3 text-slate-900 dark:text-white dark:placeholder-slate-400" 
                    placeholder="pl. Castrol olaj, MANN szűrő..."
                  ></textarea>
                </div>
@@ -152,8 +152,8 @@ function EventForm() {
 
             <InputGroup label="Helyszín (Opcionális)" name="location" placeholder="Budapest" />
 
-            <div className="pt-4 flex gap-4 border-t border-slate-100 mt-6">
-              <Link href={`/cars/${carId}`} className="w-1/3 py-3 rounded-lg text-slate-600 font-bold text-center border border-slate-200 hover:bg-slate-50 flex items-center justify-center">
+            <div className="pt-4 flex gap-4 border-t border-slate-100 dark:border-slate-700 mt-6">
+              <Link href={`/cars/${carId}`} className="w-1/3 py-3 rounded-lg text-slate-600 dark:text-slate-300 font-bold text-center border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center">
                 Mégse
               </Link>
               <button type="submit" className="w-2/3 py-3 rounded-lg bg-amber-500 text-white font-bold shadow-lg hover:bg-amber-400 transition-all transform active:scale-[0.98]">
@@ -170,17 +170,17 @@ function EventForm() {
 // Fő oldal komponens Suspense-szel
 export default function NewEventPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50">Betöltés...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400">Betöltés...</div>}>
       <EventForm />
     </Suspense>
   )
 }
 
-// Segéd komponens
+// Segéd komponens (Input mezők sötétítése)
 function InputGroup({ label, name, type = "text", placeholder, required = false, step, defaultValue }: any) {
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-semibold text-slate-700">
+      <label htmlFor={name} className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
         {label} {required && <span className="text-amber-500">*</span>}
       </label>
       <input 
@@ -191,7 +191,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
         defaultValue={defaultValue} 
         required={required} 
         placeholder={placeholder} 
-        className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 border text-slate-900 transition-colors" 
+        className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-3 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white dark:placeholder-slate-400 transition-colors" 
       />
     </div>
   )

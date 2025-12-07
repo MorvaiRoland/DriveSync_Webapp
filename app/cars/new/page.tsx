@@ -82,20 +82,20 @@ function CarForm() {
   ]
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-200 dark:border-slate-700 transition-colors">
       <form action={addCar} className="p-8 space-y-8">
         
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6">
-            <p className="text-red-700 font-medium">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-4 rounded mb-6">
+            <p className="text-red-700 dark:text-red-400 font-medium">{error}</p>
           </div>
         )}
 
-        {/* --- KÉP FELTÖLTÉS (ÚJ SZEKCIÓ) --- */}
+        {/* --- KÉP FELTÖLTÉS --- */}
         <div className="flex justify-center mb-6">
             <div className="w-full">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Autó Fotója (Opcionális)</label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl hover:bg-slate-50 transition-colors group cursor-pointer relative overflow-hidden bg-slate-50/50">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Autó Fotója (Opcionális)</label>
+            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 dark:border-slate-600 border-dashed rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group cursor-pointer relative overflow-hidden bg-slate-50/50 dark:bg-slate-900/50">
                 <input 
                     type="file" 
                     name="image" 
@@ -107,18 +107,18 @@ function CarForm() {
                 {imagePreview ? (
                     <div className="relative z-10">
                         <img src={imagePreview} alt="Előnézet" className="h-48 object-cover rounded-lg shadow-md" />
-                        <p className="text-xs text-center text-slate-500 mt-2">Kattints a cseréhez</p>
+                        <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">Kattints a cseréhez</p>
                     </div>
                 ) : (
                     <div className="space-y-1 text-center z-10 py-4">
-                        <svg className="mx-auto h-12 w-12 text-slate-400 group-hover:text-amber-500 transition-colors" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                        <svg className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500 group-hover:text-amber-500 transition-colors" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                             <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        <div className="flex text-sm text-slate-600 justify-center">
-                            <span className="font-medium text-amber-600 hover:text-amber-500">Tölts fel egy képet</span>
+                        <div className="flex text-sm text-slate-600 dark:text-slate-400 justify-center">
+                            <span className="font-medium text-amber-600 dark:text-amber-500 hover:text-amber-500">Tölts fel egy képet</span>
                             <p className="pl-1">vagy húzd ide</p>
                         </div>
-                        <p className="text-xs text-slate-500">PNG, JPG, GIF (max 5MB)</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-500">PNG, JPG, GIF (max 5MB)</p>
                     </div>
                 )}
             </div>
@@ -126,7 +126,7 @@ function CarForm() {
         </div>
 
         <div>
-          <h3 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 flex items-center gap-2">
             <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             Jármű Azonosítás
           </h3>
@@ -134,7 +134,7 @@ function CarForm() {
             
             {/* MÁRKA - Adatbázisból */}
             <div className="space-y-1">
-              <label htmlFor="brand_select" className="block text-sm font-semibold text-slate-700">
+              <label htmlFor="brand_select" className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Gyártó (Márka) <span className="text-amber-500">*</span>
               </label>
               <div className="relative">
@@ -143,7 +143,7 @@ function CarForm() {
                   required
                   value={selectedBrandId}
                   onChange={(e) => setSelectedBrandId(e.target.value)}
-                  className="block w-full appearance-none rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all text-slate-700 cursor-pointer disabled:bg-slate-100"
+                  className="block w-full appearance-none rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-700 dark:text-white cursor-pointer disabled:bg-slate-100 dark:disabled:bg-slate-800"
                   disabled={loadingBrands}
                 >
                   <option value="" disabled>
@@ -154,10 +154,10 @@ function CarForm() {
                   ))}
                   <option value="other">Egyéb / Nem listázott</option>
                 </select>
-                {/* Rejtett input, hogy a nevet küldjük el a szervernek, ne az ID-t */}
+                {/* Rejtett input */}
                 <input type="hidden" name="make" value={selectedBrandName || (selectedBrandId === 'other' ? 'Egyéb' : '')} />
                 
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </div>
               </div>
@@ -165,18 +165,17 @@ function CarForm() {
 
             {/* MODELL - Adatbázisból */}
             <div className="space-y-1">
-              <label htmlFor="model_select" className="block text-sm font-semibold text-slate-700">
+              <label htmlFor="model_select" className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Modell (Típus) <span className="text-amber-500">*</span>
               </label>
               
-              {/* Ha "Egyéb" a márka, vagy nincs modell az adatbázisban, engedjük gépelni */}
               {selectedBrandId === "other" || (models.length === 0 && !loadingModels && selectedBrandId !== "") ? (
                 <input
                   type="text"
                   name="model"
                   required
                   placeholder="Írd be a típust"
-                  className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border"
+                  className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
                 />
               ) : (
                 <div className="relative">
@@ -185,7 +184,7 @@ function CarForm() {
                     id="model_select"
                     required
                     disabled={!selectedBrandId || loadingModels}
-                    className="block w-full appearance-none rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all text-slate-700 cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+                    className="block w-full appearance-none rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-700 dark:text-white cursor-pointer disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
                   >
                     <option value="" disabled selected>
                       {loadingModels ? "Betöltés..." : (!selectedBrandId ? "Először válassz márkát..." : "Válassz típust...")}
@@ -195,7 +194,7 @@ function CarForm() {
                     ))}
                     <option value="Egyéb">Egyéb / Nincs a listában</option>
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </div>
                 </div>
@@ -209,7 +208,7 @@ function CarForm() {
 
         {/* Szekció 2: Részletek */}
         <div>
-          <h3 className="text-lg font-bold text-slate-900 border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 flex items-center gap-2">
             <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
             Műszaki Adatok
           </h3>
@@ -238,29 +237,29 @@ function CarForm() {
             </SelectGroup>
             
             <div className="space-y-1 md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700">Státusz</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Státusz</label>
               <div className="flex gap-4 pt-2">
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <div className="relative flex items-center">
                       <input type="radio" name="status" value="active" defaultChecked className="peer sr-only" />
-                      <div className="w-5 h-5 border-2 border-slate-300 rounded-full peer-checked:border-amber-500 peer-checked:bg-amber-500 transition-all"></div>
+                      <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded-full peer-checked:border-amber-500 peer-checked:bg-amber-500 transition-all"></div>
                   </div>
-                  <span className="text-slate-700 group-hover:text-amber-600 transition-colors">Aktív (Használatban)</span>
+                  <span className="text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-500 transition-colors">Aktív (Használatban)</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <div className="relative flex items-center">
                       <input type="radio" name="status" value="service" className="peer sr-only" />
-                      <div className="w-5 h-5 border-2 border-slate-300 rounded-full peer-checked:border-amber-500 peer-checked:bg-amber-500 transition-all"></div>
+                      <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded-full peer-checked:border-amber-500 peer-checked:bg-amber-500 transition-all"></div>
                   </div>
-                  <span className="text-slate-700 group-hover:text-amber-600 transition-colors">Szerviz alatt</span>
+                  <span className="text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-500 transition-colors">Szerviz alatt</span>
                 </label>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="pt-6 border-t border-slate-200 flex items-center justify-end gap-4">
-          <Link href="/" className="px-6 py-3 rounded-lg text-slate-600 font-semibold hover:bg-slate-100 transition-colors">
+        <div className="pt-6 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-4">
+          <Link href="/" className="px-6 py-3 rounded-lg text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
             Mégse
           </Link>
           <button type="submit" className="px-8 py-3 rounded-lg bg-amber-500 text-white font-bold shadow-lg hover:bg-amber-400 hover:shadow-xl transition-all transform active:scale-[0.98]">
@@ -272,11 +271,11 @@ function CarForm() {
   )
 }
 
-// --- FŐ OLDAL (Suspense Wrapperrel a Hiba Elkerülésére) ---
+// --- FŐ OLDAL ---
 export default function NewCarPage() {
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
-      <div className="bg-slate-900 pt-10 pb-24 px-4 sm:px-6 lg:px-8 shadow-lg">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
+      <div className="bg-slate-900 py-10 pb-24 px-4 sm:px-6 lg:px-8 shadow-lg">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider">
             Új Jármű <span className="text-amber-500">Rögzítése</span>
@@ -285,8 +284,8 @@ export default function NewCarPage() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16">
-        <Suspense fallback={<div className="p-8 text-center bg-white rounded-2xl shadow">Betöltés...</div>}>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-10">
+        <Suspense fallback={<div className="p-8 text-center bg-white dark:bg-slate-800 rounded-2xl shadow">Betöltés...</div>}>
           <CarForm />
         </Suspense>
       </div>
@@ -299,7 +298,7 @@ export default function NewCarPage() {
 function InputGroup({ label, name, type = "text", placeholder, required = false, uppercase = false }: any) {
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-semibold text-slate-700">
+      <label htmlFor={name} className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
         {label} {required && <span className="text-amber-500">*</span>}
       </label>
       <input
@@ -308,7 +307,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
         id={name}
         required={required}
         placeholder={placeholder}
-        className={`block w-full rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all ${uppercase ? 'uppercase placeholder:normal-case' : ''}`}
+        className={`block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-all ${uppercase ? 'uppercase placeholder:normal-case' : ''}`}
       />
     </div>
   )
@@ -317,7 +316,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
 function SelectGroup({ label, name, children, required = false }: any) {
   return (
     <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-semibold text-slate-700">
+      <label htmlFor={name} className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
         {label} {required && <span className="text-amber-500">*</span>}
       </label>
       <div className="relative">
@@ -325,11 +324,11 @@ function SelectGroup({ label, name, children, required = false }: any) {
           name={name}
           id={name}
           required={required}
-          className="block w-full appearance-none rounded-lg border-slate-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 border transition-all text-slate-700 cursor-pointer"
+          className="block w-full appearance-none rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-700 dark:text-white cursor-pointer"
         >
           {children}
         </select>
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
         </div>
       </div>
