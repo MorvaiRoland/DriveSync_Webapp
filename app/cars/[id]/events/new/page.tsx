@@ -27,6 +27,7 @@ function EventForm() {
   const [serviceTypes, setServiceTypes] = useState<{id: number, name: string}[]>([])
   const [loading, setLoading] = useState(true)
   
+  // --- STATE-EK ---
   const [scanning, setScanning] = useState(false) 
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -36,8 +37,12 @@ function EventForm() {
 
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
+  // JAVÍTÁS: A dátumot biztonságos "YYYY-MM-DD" stringként inicializáljuk
+  // (A new Date().toISOString() néha bezavarhat az időzónák miatt)
+  const today = new Date().toLocaleDateString('en-CA'); // Ez mindig YYYY-MM-DD formátumot ad
+
   const [formData, setFormData] = useState({
-      date: new Date().toISOString().split('T')[0],
+      date: today,
       mileage: '',
       title: '',
       cost: '',
@@ -96,10 +101,13 @@ function EventForm() {
 
               let newTitle = aiData.title || formData.title;
 
+              // JAVÍTÁS: Ha az AI nem talál dátumot, ne írjuk felül üresre
+              let newDate = aiData.date || formData.date;
+
               setFormData(prev => ({
                   ...prev,
                   title: newTitle, 
-                  date: aiData.date || prev.date,
+                  date: newDate,
                   cost: aiData.cost || prev.cost,
                   location: aiData.location || prev.location,
                   liters: aiData.liters || prev.liters,
@@ -150,6 +158,7 @@ function EventForm() {
     }
   }
 
+  // JAVÍTOTT handleChange: Egyszerűen átvesszük az értéket
   const handleChange = (e: any) => {
       const { name, value } = e.target
       setFormData(prev => ({ ...prev, [name]: value }))
@@ -222,9 +231,6 @@ function EventForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <input type="hidden" name="car_id" value={carId} />
             
-            {/* JAVÍTÁS: min-w-0 a túlcsordulás ellen, 
-                és fix magasság (h-11) a mezőknek az egyformaságért 
-            */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div className="min-w-0">
                    <InputGroup 
@@ -271,7 +277,6 @@ function EventForm() {
                      required
                      value={formData.title} 
                      onChange={handleChange}
-                     /* JAVÍTÁS: h-11 fix magasság és appearance-none */
                      className={`block w-full appearance-none h-11 rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-base sm:text-sm px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-900 dark:text-white cursor-pointer ${aiFilled.includes('title') ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20' : ''}`}
                    >
                      <option value="" disabled>Válassz...</option>
@@ -370,7 +375,7 @@ export default function NewEventPage() {
   )
 }
 
-// JAVÍTOTT InputGroup: Fix magasság (h-11) és appearance-none a mobilos hibák ellen
+// JAVÍTOTT InputGroup: Fix magasság (h-11) és appearance-none
 function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight }: any) {
   return (
     <div className="space-y-1">

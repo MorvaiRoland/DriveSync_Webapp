@@ -125,7 +125,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
 
 
   return (
-    // FŐ KONTÉNER: Háttér és szövegszín sötét módra igazítva
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-24 md:pb-20 transition-colors duration-300">
       
       {/* --- HEADER (KÉP & NAVIGÁCIÓ) --- */}
@@ -139,7 +138,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
         
         <div className="absolute inset-0 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
            
-           {/* Navigáció - ezek maradnak fehérek/áttetszők, mert a háttér mindig sötét */}
            <div className="absolute top-6 left-4 right-4 flex justify-between items-center">
              <Link href="/" className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-white/5 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:bg-white/10">
                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -156,7 +154,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
            </div>
 
            <div className="flex flex-col md:flex-row items-center md:items-end gap-8 pb-4 mt-8">
-             {/* Kép keret */}
              <div className="w-40 h-40 md:w-56 md:h-56 rounded-3xl border-[6px] border-slate-800 shadow-2xl overflow-hidden relative flex-shrink-0 bg-slate-900">
                 {car.image_url ? (
                     <Image src={car.image_url} alt="Car" fill className="object-cover" />
@@ -198,7 +195,6 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
       </div>
 
       {/* --- GYORS AKCIÓ GOMBOK --- */}
-      {/* A gombok hátterét és szegélyét igazítjuk a sötét módhoz */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-3 gap-4">
           <Link href={`/cars/${car.id}/events/new?type=fuel`} className="bg-amber-500 hover:bg-amber-400 text-slate-900 p-4 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-transform hover:-translate-y-1 font-bold">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -335,7 +331,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                  </div>
              </div>
 
-             {/* 4. AI INSIGHTS (A háttér gradiens, így ez jól néz ki mindkét módban) */}
+             {/* 4. AI INSIGHTS */}
              <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 shadow-lg text-white relative overflow-hidden">
                  <div className="absolute top-0 right-0 p-4 opacity-10"><svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></div>
                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2 relative z-10">
@@ -429,7 +425,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                  </div>
              </div>
 
-             {/* ESEMÉNYNAPLÓ */}
+             {/* ESEMÉNYNAPLÓ (JAVÍTVA: INTERAKTÍV LISTA) */}
              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-white dark:border-slate-700 overflow-hidden">
                  <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
                      <h3 className="font-bold text-lg text-slate-900 dark:text-white">Eseménynapló</h3>
@@ -439,39 +435,55 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
                  <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
                     {safeEvents.length > 0 ? (
                         safeEvents.map((event: any) => (
-                            <div key={event.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-all group flex gap-4 items-start">
-                                {/* Dátum */}
-                                <div className="flex-shrink-0 w-12 text-center pt-1">
-                                    <span className="block text-lg font-black text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors leading-none">{new Date(event.event_date).getDate()}</span>
-                                    <span className="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">{new Date(event.event_date).toLocaleDateString('hu-HU', { month: 'short' }).replace('.', '')}</span>
-                                </div>
+                            <div key={event.id} className="relative p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-all group flex gap-4 items-start">
                                 
-                                {/* Ikon */}
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white dark:border-slate-700 ${event.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                                    {event.type === 'fuel' 
-                                      ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                                      : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                    }
-                                </div>
+                                {/* A teljes sor egy LINK a szerkesztőre */}
+                                <Link href={`/cars/${car.id}/events/${event.id}/edit`} className="flex-1 flex gap-4 items-start cursor-pointer">
+                                    
+                                    {/* Dátum */}
+                                    <div className="flex-shrink-0 w-12 text-center pt-1">
+                                        <span className="block text-lg font-black text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors leading-none">{new Date(event.event_date).getDate()}</span>
+                                        <span className="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">{new Date(event.event_date).toLocaleDateString('hu-HU', { month: 'short' }).replace('.', '')}</span>
+                                    </div>
+                                    
+                                    {/* Ikon */}
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white dark:border-slate-700 ${event.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                                        {event.type === 'fuel' 
+                                          ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                                          : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                        }
+                                    </div>
 
-                                {/* Tartalom */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-start">
-                                        <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate pr-2">{event.title}</h4>
-                                        <span className="font-black text-slate-900 dark:text-slate-100 whitespace-nowrap">-{event.cost.toLocaleString()} Ft</span>
+                                    {/* Tartalom */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start">
+                                            <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate pr-2 group-hover:text-amber-600 dark:group-hover:text-amber-500 transition-colors">{event.title}</h4>
+                                            <span className="font-black text-slate-900 dark:text-slate-100 whitespace-nowrap">-{event.cost.toLocaleString()} Ft</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                            <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300 font-medium">{event.mileage.toLocaleString()} km</span>
+                                            {event.type === 'fuel' && <span className="text-amber-600 dark:text-amber-500 font-medium">• {event.liters}L</span>}
+                                            {event.location && <span className="truncate">• {event.location}</span>}
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                        <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300 font-medium">{event.mileage.toLocaleString()} km</span>
-                                        {event.type === 'fuel' && <span className="text-amber-600 dark:text-amber-500 font-medium">• {event.liters}L</span>}
-                                        {event.location && <span className="truncate">• {event.location}</span>}
+
+                                    {/* Kis nyíl jelzi a kattinthatóságot */}
+                                    <div className="self-center text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors">
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                                     </div>
-                                </div>
+                                </Link>
                                 
-                                {/* Törlés gomb (csak hoverre) */}
-                                <form action={deleteEvent} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                {/* Törlés gomb (Külön, abszolút pozícionálva, hogy ne zavarja a linket, de mégis elérhető legyen) */}
+                                <form action={deleteEvent} className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <input type="hidden" name="event_id" value={event.id} />
                                     <input type="hidden" name="car_id" value={car.id} />
-                                    <button className="p-2 text-slate-300 hover:text-red-500 transition-colors"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                    <button 
+                                        className="p-2 bg-white dark:bg-slate-800 rounded-full shadow-md text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-colors border border-slate-100 dark:border-slate-700" 
+                                        title="Törlés"
+                                        onClick={(e) => e.stopPropagation()} // Megakadályozza, hogy a linkre is rákattintsunk
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
                                 </form>
                             </div>
                         ))
@@ -486,42 +498,19 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
       </div>
 
       {/* --- STICKY MOBILE BOTTOM BAR --- */}
-    
-      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 pb-safe">
-         {/* A görgethető konténer (overflow-x-auto) */}
-         <div className="flex items-center gap-3 overflow-x-auto px-4 py-3 no-scrollbar">
-             
-             {/* 1. Tankolás */}
-             <Link href={`/cars/${car.id}/events/new?type=fuel`} className="flex-shrink-0 w-24 bg-amber-500 text-slate-900 py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                Tankolás
-             </Link>
-
-             {/* 2. Szerviz */}
-             <Link href={`/cars/${car.id}/events/new?type=service`} className="flex-shrink-0 w-24 bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                Szerviz
-             </Link>
-
-             {/* 3. Tervező */}
-             <Link href={`/cars/${car.id}/reminders/new`} className="flex-shrink-0 w-24 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                Tervező
-             </Link>
-
-             {/* 4. Útnyilvántartás (ÚJ) */}
-             <Link href={`/cars/${car.id}/trips`} className="flex-shrink-0 w-24 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
-                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
-                Utak
-             </Link>
-
-             {/* 5. Alkatrészek (ÚJ) */}
-             <Link href={`/cars/${car.id}/parts`} className="flex-shrink-0 w-24 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
-                <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                Alkatrész
-             </Link>
-
-         </div>
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] px-4 py-3 z-50 flex gap-3 pb-safe">
+         <Link href={`/cars/${car.id}/events/new?type=fuel`} className="flex-1 bg-amber-500 text-slate-900 py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Tankolás
+         </Link>
+         <Link href={`/cars/${car.id}/events/new?type=service`} className="flex-1 bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            Szerviz
+         </Link>
+         <Link href={`/cars/${car.id}/reminders/new`} className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold text-center shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            Tervező
+         </Link>
       </div>
 
     </div>
