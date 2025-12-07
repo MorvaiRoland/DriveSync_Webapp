@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import RegisterSW from "./RegisterSW"; // FONTOS: Ezt hoztuk létre az előbb!
 
 // 1. VIEWPORT BEÁLLÍTÁSOK (Mobilra optimalizálás)
 export const viewport: Viewport = {
-  themeColor: "#0f172a", // A státuszsor színe (egyező a manifest backgrounddal)
+  themeColor: "#0f172a", // A státuszsor színe
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1, // Megakadályozza, hogy belezoomoljon input mezőknél
+  maximumScale: 1, // Megakadályozza a véletlen nagyítást
   userScalable: false, // Letiltja a kétujjas nagyítást (appos érzés)
 };
 
@@ -14,23 +15,26 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "DriveSync",
   description: "Járműnyilvántartó alkalmazás",
-  manifest: "/manifest.webmanifest", // Ez köti be a manifest fájlt!
+  manifest: "/manifest.webmanifest",
   
-  // iOS specifikus beállítások
-  appleWebApp: {
-    capable: true, // Ez mondja meg a Safarinak, hogy "lehetek app"
-    statusBarStyle: "black-translucent", // Átlátszó státuszsor
-    title: "DriveSync", // Az ikon alatti név
-    // startupImage: [], // Itt lehetne splash screen-t is megadni később
-  },
-  
-  // Ha nem használnád az app/apple-icon.png automatikát, itt is megadhatod:
-  /*
+  // ITT A LÉNYEG: Kézzel megmondjuk, hol vannak a képek.
+  // Győződj meg róla, hogy a public/icons mappában TÉNYLEG ezek a nevek vannak!
   icons: {
-    icon: "/icons/icon-192x192.png",
-    apple: "/icons/icon-512x512.png", // Apple Touch Icon
+    icon: [
+      { url: '/icons/drivesync-logo.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/drivesync-logo.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/apple-icon.png' }, // Az iPhone ezt fogja használni főképernyő ikonnak
+    ],
   },
-  */
+
+  // iOS specifikus beállítások (Hogy eltűnjön a címsor)
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "DriveSync",
+  },
 };
 
 export default function RootLayout({
@@ -42,6 +46,9 @@ export default function RootLayout({
     <html lang="hu">
       <body className="antialiased bg-slate-50 dark:bg-slate-950">
         {children}
+        
+        {/* Ez indítja el a Service Workert az offline működéshez */}
+        <RegisterSW /> 
       </body>
     </html>
   );
