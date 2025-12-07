@@ -20,7 +20,7 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'any', // Ez a "sima" ikon (pl. iOS, Windows)
       },
       {
-        src: '/icons/drivesync-icon.png',
+        src: '/icons/apple-icon.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
