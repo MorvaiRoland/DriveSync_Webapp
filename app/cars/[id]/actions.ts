@@ -40,7 +40,7 @@ export async function addEvent(formData: FormData) {
   
   // Ha szerviz esemény volt, automatikusan nullázzuk a számlálót az aktuális km-re
   if (type === 'service') {
-     await supabase.from('cars').update({ last_service_mileage: mileage }).eq('id', car_id)
+      await supabase.from('cars').update({ last_service_mileage: mileage }).eq('id', car_id)
   }
 
   revalidatePath(`/cars/${car_id}`)
@@ -147,6 +147,10 @@ export async function updateCar(formData: FormData) {
   
   const motExpiry = formData.get('mot_expiry');
   const insuranceExpiry = formData.get('insurance_expiry');
+  
+  // ITT A JAVÍTÁS: A státuszt a formData-ból olvassuk ki, ami most már helyes
+  // A státusz jöhet 'status' vagy 'status_radio' néven is, attól függően melyik inputot használod
+  const status = String(formData.get('status') || formData.get('status_radio') || 'active');
 
   const updates: any = {
     make: String(formData.get('make')),
@@ -157,7 +161,7 @@ export async function updateCar(formData: FormData) {
     fuel_type: String(formData.get('fuel_type')),
     color: String(formData.get('color')),
     vin: String(formData.get('vin')),
-    status: String(formData.get('status')),
+    status: status, // A javított státusz
     service_interval_km: parseInt(String(formData.get('service_interval_km'))) || 15000,
     service_interval_days: parseInt(String(formData.get('service_interval_days'))) || 365,
     mot_expiry: motExpiry && motExpiry !== '' ? String(motExpiry) : null,
@@ -169,9 +173,12 @@ export async function updateCar(formData: FormData) {
     const fileName = `${user.id}/${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
     const { error: uploadError } = await supabase.storage.from('car-images').upload(fileName, imageFile);
     
-    if (!uploadError) {
-      const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
-      updates.image_url = data.publicUrl;
+    if (uploadError) {
+        console.error('Képfeltöltési hiba:', uploadError)
+        // Nem állítjuk meg a folyamatot, csak logoljuk
+    } else {
+        const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
+        updates.image_url = data.publicUrl;
     }
   }
 
@@ -179,16 +186,18 @@ export async function updateCar(formData: FormData) {
     .from('cars')
     .update(updates)
     .eq('id', carId)
-    .eq('user_id', user.id)
+    // .eq('user_id', user.id) // Ezt kivesszük, mert a közös autót is szerkesztheted! (RLS policy védi)
 
   if (error) {
     console.error('Autó frissítési hiba:', error)
-    return redirect(`/cars/${carId}/edit?error=Nem sikerült a mentés`)
+    // Itt dobunk hibát, hogy a kliens elkapja a try-catch-ben
+    throw new Error('Nem sikerült menteni az adatbázisba')
   }
 
   revalidatePath(`/cars/${carId}`)
   revalidatePath('/') 
-  redirect(`/cars/${carId}`)
+  // NEM hívunk redirect-et, mert a kliens oldali router.refresh() frissíti az oldalt
+  // és a Toast üzenet jelzi a sikert. A redirect "hibát" okozna a kliensben.
 }
 
 export async function deleteCar(formData: FormData) {
@@ -262,17 +271,17 @@ export async function swapTire(formData: FormData) {
     .single()
 
   if (currentMounted) {
-     const distanceDriven = car.mileage - (currentMounted.mounted_at_mileage || car.mileage);
-     const validDistance = Math.max(0, distanceDriven);
+      const distanceDriven = car.mileage - (currentMounted.mounted_at_mileage || car.mileage);
+      const validDistance = Math.max(0, distanceDriven);
 
-     await supabase
-       .from('tires')
-       .update({ 
-          is_mounted: false, 
-          mounted_at_mileage: null,
-          total_distance: (currentMounted.total_distance || 0) + validDistance
-       })
-       .eq('id', currentMounted.id)
+      await supabase
+        .from('tires')
+        .update({ 
+           is_mounted: false, 
+           mounted_at_mileage: null,
+           total_distance: (currentMounted.total_distance || 0) + validDistance
+        })
+        .eq('id', currentMounted.id)
   }
 
   if (newTireId && newTireId !== 'none') {
