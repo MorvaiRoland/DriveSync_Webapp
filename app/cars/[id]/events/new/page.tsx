@@ -8,6 +8,16 @@ import Link from 'next/link'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useEffect, useState, Suspense, useRef } from 'react'
 
+// --- SEGÉDFÜGGVÉNY: Helyi idő szerinti YYYY-MM-DD ---
+// Ez biztosítja, hogy a naptár mindig helyesen jelenjen meg
+const getLocalToday = () => {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function EventForm() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -37,12 +47,9 @@ function EventForm() {
 
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
-  // JAVÍTÁS: A dátumot biztonságos "YYYY-MM-DD" stringként inicializáljuk
-  // (A new Date().toISOString() néha bezavarhat az időzónák miatt)
-  const today = new Date().toLocaleDateString('en-CA'); // Ez mindig YYYY-MM-DD formátumot ad
-
+  // JAVÍTÁS: A getLocalToday() használata a stabil dátumért
   const [formData, setFormData] = useState({
-      date: today,
+      date: getLocalToday(), // Alapértelmezés: Ma
       mileage: '',
       title: '',
       cost: '',
@@ -101,8 +108,19 @@ function EventForm() {
 
               let newTitle = aiData.title || formData.title;
 
-              // JAVÍTÁS: Ha az AI nem talál dátumot, ne írjuk felül üresre
-              let newDate = aiData.date || formData.date;
+              // JAVÍTÁS: Dátum ellenőrzése
+              // Ha az AI talál dátumot, megpróbáljuk YYYY-MM-DD formátumra vágni
+              let newDate = formData.date;
+              if (aiData.date) {
+                 // Ha ISO stringet ad vissza (pl. 2023-10-10T00:00:00), levágjuk az időt
+                 if (aiData.date.includes('T')) {
+                     newDate = aiData.date.split('T')[0];
+                 } else if (aiData.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                     // Ha már eleve jó formátum
+                     newDate = aiData.date;
+                 }
+                 // Egyéb esetben (ha az AI furcsa formátumot küld) marad a mai dátum, hogy ne törjön el az input
+              }
 
               setFormData(prev => ({
                   ...prev,
@@ -117,6 +135,7 @@ function EventForm() {
 
               const filledFields = []
               if (aiData.title) filledFields.push('title')
+              if (aiData.date) filledFields.push('date') // Jelöljük, ha a dátumot is kitöltötte
               if (aiData.cost) filledFields.push('cost')
               if (aiData.liters) filledFields.push('liters')
               if (aiData.location) filledFields.push('location')
@@ -158,7 +177,6 @@ function EventForm() {
     }
   }
 
-  // JAVÍTOTT handleChange: Egyszerűen átvesszük az értéket
   const handleChange = (e: any) => {
       const { name, value } = e.target
       setFormData(prev => ({ ...prev, [name]: value }))
@@ -239,6 +257,7 @@ function EventForm() {
                      type="date" 
                      value={formData.date}
                      onChange={handleChange}
+                     highlight={aiFilled.includes('date')}
                      required 
                    />
                </div>
@@ -375,7 +394,6 @@ export default function NewEventPage() {
   )
 }
 
-// JAVÍTOTT InputGroup: Fix magasság (h-11) és appearance-none
 function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight }: any) {
   return (
     <div className="space-y-1">
