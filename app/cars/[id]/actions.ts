@@ -326,3 +326,35 @@ export async function deleteTrip(formData: FormData) {
   
   revalidatePath(`/cars/${carId}/trips`)
 }
+
+export async function addPart(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return redirect('/login')
+
+  const car_id = formData.get('car_id')
+  
+  const partData = {
+    user_id: user.id,
+    car_id: car_id,
+    name: String(formData.get('name')),
+    part_number: String(formData.get('part_number') || ''),
+    brand: String(formData.get('brand') || ''),
+    shop_url: String(formData.get('shop_url') || ''),
+    note: String(formData.get('note') || '')
+  }
+
+  await supabase.from('parts').insert(partData)
+  
+  revalidatePath(`/cars/${car_id}/parts`)
+}
+
+export async function deletePart(formData: FormData) {
+  const supabase = await createClient()
+  const partId = String(formData.get('part_id'))
+  const carId = String(formData.get('car_id'))
+  
+  await supabase.from('parts').delete().eq('id', partId)
+  
+  revalidatePath(`/cars/${carId}/parts`)
+}
