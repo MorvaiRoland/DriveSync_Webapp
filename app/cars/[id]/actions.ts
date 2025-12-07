@@ -4,6 +4,7 @@ import { createClient } from 'supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { Resend } from 'resend'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 // FONTOS: Ez kell a szép emailhez! 
 // Ha a components mappád máshol van, módosítsd az útvonalat!
 import ServiceReminderEmail from '@/components/emails/ServiceReminderEmail'
@@ -466,9 +467,21 @@ export async function getDocumentUrl(filePath: string, shouldDownload: boolean =
 export async function checkAndSendReminders() {
   'use server'
   
-  console.log("--- 🔍 EMLÉKEZTETŐ ELLENŐRZÉS INDUL ---"); // DEBUG 1
+  console.log("--- 🔍 EMLÉKEZTETŐ ELLENŐRZÉS INDUL ---");
 
+  // 1. Normál kliens (az adatbázis íráshoz/olvasáshoz)
   const supabase = await createClient()
+  
+  // 2. ÚJ: Admin kliens (csak a user email címének lekéréséhez kell!)
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("❌ HIBA: Nincs SUPABASE_SERVICE_ROLE_KEY az .env fájlban!");
+      return { count: 0, alerts: [] };
+  }
+  
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
   
   if (!process.env.RESEND_API_KEY) {
       console.error("❌ HIBA: Nincs RESEND_API_KEY beállítva!");
@@ -481,9 +494,9 @@ export async function checkAndSendReminders() {
   const threeDaysFromNow = new Date()
   threeDaysFromNow.setDate(today.getDate() + 3)
   
-  console.log(`📅 Dátum ablak: ${today.toISOString().split('T')[0]} - ${threeDaysFromNow.toISOString().split('T')[0]}`); // DEBUG 2
+  console.log(`📅 Dátum ablak: ${today.toISOString().split('T')[0]} - ${threeDaysFromNow.toISOString().split('T')[0]}`);
 
-  // 1. Keressük a lejárt/közeli emlékeztetőket
+  // Emlékeztetők keresése
   const { data: reminders, error } = await supabase
     .from('service_reminders')
     .select('*, cars(make, model, plate, user_id)')
@@ -495,7 +508,7 @@ export async function checkAndSendReminders() {
       return { count: 0, alerts: [] };
   }
 
-  console.log(`✅ Talált emlékeztetők száma: ${reminders?.length || 0}`); // DEBUG 3
+  console.log(`✅ Talált emlékeztetők száma: ${reminders?.length || 0}`);
 
   if (!reminders || reminders.length === 0) {
       console.log("--- 🏁 NINCS TEENDŐ, LEÁLLÁS ---");
@@ -506,18 +519,23 @@ export async function checkAndSendReminders() {
   let pushAlerts: string[] = [] 
 
   for (const reminder of reminders) {
-    console.log(`👉 Feldolgozás: ${reminder.id} - ${reminder.service_type}`); // DEBUG 4
+    console.log(`👉 Feldolgozás: ${reminder.id} - ${reminder.service_type}`);
 
     // A. EMAIL KÜLDÉS
     if (reminder.notify_email) {
-      const { data: { user } } = await supabase.auth.admin.getUserById(reminder.user_id)
+      // ITT A VÁLTOZÁS: supabaseAdmin-t használunk a user lekéréshez!
+      const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserById(reminder.user_id)
       
+      if (userError) {
+          console.error("❌ Nem sikerült lekérni a usert:", userError);
+      }
+
       if (user?.email) {
-        console.log(`📧 Email küldése ide: ${user.email}`); // DEBUG 5
+        console.log(`📧 Email küldése ide: ${user.email}`);
         try {
             const { data, error } = await resend.emails.send({
               from: 'DriveSync <onboarding@resend.dev>',
-              to: [user.email], // FONTOS: Resend Free-ben ez csak a te sajátod lehet!
+              to: [user.email], 
               subject: `🔔 Szerviz: ${reminder.cars.make} ${reminder.cars.model}`,
               react: ServiceReminderEmail({
                 userName: user.user_metadata?.full_name || 'Felhasználó',
@@ -531,7 +549,7 @@ export async function checkAndSendReminders() {
             })
 
             if (error) {
-                console.error("❌ RESEND HIBA:", error); // ITT FOG KIBUKNI, HA BAJ VAN
+                console.error("❌ RESEND HIBA:", error);
             } else {
                 console.log("✅ Email sikeresen elküldve!", data);
                 emailCount++
@@ -541,7 +559,7 @@ export async function checkAndSendReminders() {
             console.error("❌ VÉGZETES HIBA EMAILNÉL:", err);
         }
       } else {
-          console.log("⚠️ Nincs user email cím!");
+          console.log("⚠️ Még mindig nincs user email cím (vagy hiba volt a lekérésnél)!");
       }
     } else {
         console.log("ℹ️ Ennél az elemnél nincs email kérve.");
