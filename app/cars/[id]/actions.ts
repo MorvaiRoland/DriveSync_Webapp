@@ -94,14 +94,17 @@ export async function addReminder(formData: FormData) {
   if (!user) return redirect('/login')
 
   const car_id = formData.get('car_id')
-  const reminderData = {
+ const reminderData = {
     car_id: car_id,
     user_id: user.id,
     service_type: String(formData.get('service_type')),
     due_date: String(formData.get('due_date')),
     notify_email: formData.get('notify_email') === 'on',
     notify_push: formData.get('notify_push') === 'on',
-    note: String(formData.get('note'))
+    note: String(formData.get('note')),
+    // --- ÚJ SOROK ---
+    notification_sent: false, // Jelezzük, hogy még nem küldtük ki
+    status: 'pending'         // Jelezzük, hogy ez egy aktív emlékeztető
   }
 
   await supabase.from('service_reminders').insert(reminderData)
