@@ -2,35 +2,15 @@
 
 import { useState, useEffect } from 'react'
 
-const CURRENT_VERSION = '1.3.2'; 
-const RELEASE_DATE = '2025. December 06.';
+const CURRENT_VERSION = '1.3.3'; 
+const RELEASE_DATE = '2025. December 07.';
 
 // 1. Jelenlegi funkciók listája (Bővített leírásokkal)
 const features = [
-  {
-    emoji: '🚗',
-    title: 'Teljeskörű Járműnyilvántartás',
-    desc: 'Rögzítsd autóid minden adatát: rendszám, alvázszám (VIN), évjárat, üzemanyag típus és fotó. Kezeld a teljes flottádat egyetlen, átlátható felületen.',
-  },
-  {
-    emoji: '🔧',
-    title: 'Okos Szervizkönyv & Karbantartás',
-    desc: 'Naplózd a szervizeket és javításokat. A rendszer automatikusan számolja a következő olajcsere idejét a futásteljesítmény alapján, és időben figyelmeztet a teendőkre.',
-  },
-  {
-    emoji: '🛞',
-    title: 'Gumiabroncs Hotel',
-    desc: 'Kezeld külön a téli és nyári szetteket! A rendszer intelligensen, csak a felszerelt gumikba számolja a kilométert, így pontosan látod az abroncsok kopását.',
-  },
-  {
-    emoji: '📊',
-    title: 'Pénzügyi Elemzés & Fogyasztás',
-    desc: 'Lásd át a költségeket grafikonokon. Kövesd nyomon a tankolásokat, szervizdíjakat és az átlagfogyasztást havi és mindenkori bontásban.',
-  },
-  {
-    emoji: '📂',
-    title: 'Digitális Kesztyűtartó',
-    desc: 'Minden fontos irat (Forgalmi, Biztosítás) lejárata és státusza egy helyen. A rendszer státuszjelzőkkel figyelmeztet a közelgő lejáratra.',
+   {
+    emoji: '🛒', // ÚJ FUNKCIÓ KIEMELVE
+    title: 'Alkatrész Nyilvántartó',
+    desc: 'ÚJ! Soha többé nem felejted el, milyen olaj vagy szűrő kell az autódba. Mentsd el a cikkszámokat, márkákat és webshop linkeket egy helyre.',
   },
 ];
 
