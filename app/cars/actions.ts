@@ -114,3 +114,55 @@ export async function deleteCar(formData: FormData) {
   // Ha a részletes oldalról törlünk, akkor a redirect fontos, ha a listából, akkor nem árt
   redirect('/') 
 }
+// --- ÚTNYILVÁNTARTÁS (TRIP LOGGER) ---
+
+export async function addTrip(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return redirect('/login')
+
+  const car_id = String(formData.get('car_id'))
+  
+  // Koordináták kinyerése a formból
+  const start_lat = formData.get('start_lat')
+  const start_lng = formData.get('start_lng')
+  const end_lat = formData.get('end_lat')
+  const end_lng = formData.get('end_lng')
+
+  // Segédfüggvény a koordináták átalakításához (hogy ne "null" string, hanem valódi null legyen)
+  const parseCoord = (val: any) => (val && val !== '' ? parseFloat(val) : null)
+
+  const tripData = {
+    user_id: user.id,
+    car_id: car_id,
+    start_location: String(formData.get('start_location')),
+    end_location: String(formData.get('end_location')),
+    distance: parseInt(String(formData.get('distance'))),
+    purpose: String(formData.get('purpose')),
+    trip_date: String(formData.get('trip_date')),
+    // Itt mentjük el a térképhez szükséges koordinátákat
+    start_lat: parseCoord(start_lat),
+    start_lng: parseCoord(start_lng),
+    end_lat: parseCoord(end_lat),
+    end_lng: parseCoord(end_lng),
+  }
+
+  const { error } = await supabase.from('trips').insert(tripData)
+
+  if (error) {
+    console.error('Út mentési hiba:', error)
+    return { error: 'Hiba történt a mentéskor' }
+  }
+  
+  revalidatePath(`/cars/${car_id}/trips`)
+}
+
+export async function deleteTrip(formData: FormData) {
+  const supabase = await createClient()
+  const tripId = String(formData.get('trip_id'))
+  const carId = String(formData.get('car_id'))
+  
+  await supabase.from('trips').delete().eq('id', tripId)
+  
+  revalidatePath(`/cars/${carId}/trips`)
+}

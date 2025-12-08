@@ -1,7 +1,8 @@
-import { createClient } from 'supabase/server'
+import { createClient } from 'supabase/server' // Vagy 'supabase/server' - a tied szerint
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { addTrip, deleteTrip } from '../actions'
+import { deleteTrip } from '../actions' // <--- FONTOS: Ez a helyes import!
+import TripForm from '@/components/TripForm'
 
 export default async function TripLoggerPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params
@@ -19,7 +20,7 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
 
   const safeTrips = trips || []
 
-  // Statisztika
+  // Statisztika számolás
   const totalBusinessKm = safeTrips.filter(t => t.purpose === 'business').reduce((sum, t) => sum + t.distance, 0)
   const totalPersonalKm = safeTrips.filter(t => t.purpose === 'personal').reduce((sum, t) => sum + t.distance, 0)
   const totalKm = totalBusinessKm + totalPersonalKm
@@ -64,43 +65,8 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
 
       <div className="max-w-4xl mx-auto px-4 -mt-10 relative z-10 space-y-8">
          
-         {/* Új Út Rögzítése */}
-         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 border border-slate-200 dark:border-slate-700 transition-colors">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Új út rögzítése
-            </h3>
-            <form action={addTrip} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                <input type="hidden" name="car_id" value={car.id} />
-                
-                <div className="md:col-span-2 space-y-1">
-                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Dátum</label>
-                    <input type="date" name="trip_date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors" required />
-                </div>
-                <div className="md:col-span-3 space-y-1">
-                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Honnan</label>
-                    <input type="text" name="start_location" placeholder="Indulás" className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors" required />
-                </div>
-                <div className="md:col-span-3 space-y-1">
-                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Hova</label>
-                    <input type="text" name="end_location" placeholder="Érkezés" className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors" required />
-                </div>
-                <div className="md:col-span-2 space-y-1">
-                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Táv (km)</label>
-                    <input type="number" name="distance" placeholder="0" className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors" required />
-                </div>
-                <div className="md:col-span-2 space-y-1">
-                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Típus</label>
-                    <select name="purpose" className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors">
-                        <option value="business">Céges 💼</option>
-                        <option value="personal">Magán 🏠</option>
-                    </select>
-                </div>
-                <div className="md:col-span-12 pt-2">
-                    <button type="submit" className="w-full bg-slate-900 dark:bg-slate-700 text-white font-bold py-2.5 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors shadow-md active:scale-[0.99]">Rögzítés</button>
-                </div>
-            </form>
-         </div>
+         {/* ITT HASZNÁLJUK AZ ÚJ KOMPONENST */}
+         <TripForm carId={car.id} />
 
          {/* Napló Lista */}
          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">

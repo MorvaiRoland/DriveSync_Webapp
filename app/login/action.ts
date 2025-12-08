@@ -2,95 +2,77 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from 'supabase/server'
-import { headers } from 'next/headers'
+import { createClient } from 'supabase/server' // Vagy 'supabase/server' attól függően hol van a helper
 
-// Segédfüggvény: email tisztítás
-function sanitizeEmail(formDataEntryValue: FormDataEntryValue | null): string {
-  if (!formDataEntryValue) return ''
-  return String(formDataEntryValue).toLowerCase().replace(/\s/g, '')
-}
-
-// --- LOGIN (MÁR HELYES) ---
 export async function login(formData: FormData) {
-  const supabase = await createClient()
-  const email = sanitizeEmail(formData.get('email'))
-  const password = String(formData.get('password')).trim()
+  const supabase = await createClient()
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
 
-  if (error) {
-    return redirect(`/login?message=${encodeURIComponent('Hiba: ' + error.message)}`)
-  }
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
 
-  revalidatePath('/', 'layout')
-  redirect('/')
+  if (error) {
+    return redirect('/login?message=Helytelen email vagy jelszó')
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/')
 }
 
-// --- SIGNUP (JAVÍTOTT) ---
 export async function signup(formData: FormData) {
-  const supabase = await createClient()
-  const email = sanitizeEmail(formData.get('email'))
-  const password = String(formData.get('password')).trim()
-  
-  const origin = (await headers()).get('origin')
+  const supabase = await createClient()
 
-  if (!email || !email.includes('@')) {
-    return redirect(`/login?message=${encodeURIComponent('Hiba: Érvénytelen email formátum')}`)
-  }
-  if (password.length < 6) {
-    return redirect(`/login?message=${encodeURIComponent('Hiba: A jelszó túl rövid (min. 6 karakter)')}`)
-  }
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+  const fullName = formData.get('full_name') as string // Ha van ilyen meződ
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback`,
-    },
-  })
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+      },
+    },
+  })
 
-  if (error) {
-    return redirect(`/login?message=${encodeURIComponent('Hiba: ' + error.message)}`)
-  }
+  if (error) {
+    return redirect('/login?message=Sikertelen regisztráció')
+  }
 
-  // JAVÍTÁS: Kódoljuk a siker üzenetet is!
-  const encodedSuccessMessage = encodeURIComponent('Sikeres regisztráció! Jelentkezz be.');
-
-  return redirect(`/login?message=${encodedSuccessMessage}`);
+  revalidatePath('/', 'layout')
+  redirect('/login?message=Ellenőrizd az email fiókodat a megerősítéshez')
 }
 
-// --- SIGN IN WITH GOOGLE (MÁR HELYES) ---
 export async function signInWithGoogle() {
-  const supabase = await createClient()
-  const origin = (await headers()).get('origin')
+  const supabase = await createClient()
+  
+  // Fontos: A callback URL-t pontosan be kell állítani a Supabase Dashboard-on is!
+  // Pl: https://te-projekted.vercel.app/auth/callback vagy http://localhost:3000/auth/callback
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+    },
+  })
 
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${origin}/auth/callback`,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
-    },
-  })
+  if (error) {
+    return redirect('/login?message=Google bejelentkezés sikertelen')
+  }
 
-  if (error) {
-    return redirect(`/login?message=${encodeURIComponent('Google hiba: ' + error.message)}`)
-  }
-
-  if (data.url) {
-    redirect(data.url)
-  }
+  if (data.url) {
+    redirect(data.url)
+  }
 }
 
-// --- SIGN OUT (HELYES) ---
 export async function signOut() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-  return redirect('/login')
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    
+    revalidatePath('/', 'layout')
+    redirect('/login')
 }

@@ -1,4 +1,4 @@
-import { createClient } from 'supabase/server'
+import { createClient } from 'supabase/server' // Vagy 'supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { updateProfile, signOutAction } from './actions'
@@ -13,12 +13,18 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
   if (!user) return redirect('/login')
 
   const meta = user.user_metadata || {}
-  const settings = meta.settings || { notify_email: true, notify_push: false, theme: 'light' }
+  
+  // Alapértelmezett értékek kezelése, ha még nincs mentve semmi
+  const settings = meta.settings || { 
+      notify_email: true, 
+      notify_push: false, 
+      theme: 'light' 
+  }
+  
   const message = searchParams.success || searchParams.error
-  const isError = searchParams.error ? true : false
+  const isError = !!searchParams.error
 
   return (
-    // Itt már nem kell "themeClass" változó, a body-ra kerül a class automatikusan
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
         
         {/* HEADER */}
@@ -37,7 +43,8 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
         <div className="max-w-3xl mx-auto px-4 -mt-10 space-y-6 pb-20">
 
             {message && (
-                <div className={`p-4 rounded-xl shadow-sm border flex items-center gap-3 ${isError ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                <div className={`p-4 rounded-xl shadow-sm border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${isError ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                    <span className="text-xl">{isError ? '⚠️' : '✅'}</span>
                     <span className="font-medium text-sm">{message}</span>
                 </div>
             )}
@@ -66,7 +73,8 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                             <input 
                                 name="fullName" 
                                 defaultValue={meta.full_name || ''} 
-                                className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white"
+                                placeholder="Pl. Kiss János"
+                                className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white placeholder:text-slate-400"
                             />
                         </div>
                         <div className="space-y-1">
@@ -74,17 +82,20 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                             <input 
                                 name="phone" 
                                 defaultValue={meta.phone || ''} 
-                                className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white"
+                                placeholder="+36 30 123 4567"
+                                className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white placeholder:text-slate-400"
                             />
                         </div>
                     </div>
                     <div className="pt-4 flex justify-end">
-                        <button type="submit" className="bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-900 px-6 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-md active:scale-95">Mentés</button>
+                        <button type="submit" className="bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-900 px-6 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-md active:scale-95">
+                            Mentés
+                        </button>
                     </div>
                 </form>
             </div>
 
-            {/* PREFERENCIÁK FORM */}
+            {/* PREFERENCIÁK FORM - Beillesztve a klienstől */}
             <PreferencesForm settings={settings} />
 
             {/* Kijelentkezés */}

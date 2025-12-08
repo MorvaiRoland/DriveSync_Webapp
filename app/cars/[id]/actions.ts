@@ -1,13 +1,11 @@
 'use server'
 
-import { createClient } from 'supabase/server'
+import { createClient } from 'supabase/server' // Vagy 'supabase/server' - ellenőrizd az importodat!
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { Resend } from 'resend'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { render } from '@react-email/render'
-// FONTOS: Ez kell a szép emailhez! 
-// Ha a components mappád máshol van, módosítsd az útvonalat!
 import ServiceReminderEmail from '@/components/emails/ServiceReminderEmail'
 
 // --- 1. ESEMÉNYEK KEZELÉSE ---
@@ -110,16 +108,13 @@ export async function addReminder(formData: FormData) {
     notify_push: formData.get('notify_push') === 'on',
     note: String(formData.get('note')),
     notification_sent: false,
-    status: 'pending' // Ez okozta a hibát, mert nem volt ilyen oszlop
+    status: 'pending'
   }
 
-  // Itt kérjük le az 'error'-t is
   const { error } = await supabase.from('service_reminders').insert(reminderData)
 
-  // Ha hiba van, kiírjuk a terminálba!
   if (error) {
       console.error("Hiba az emlékeztető mentésekor:", error)
-      // Opcionális: visszairányíthatunk hibaüzenettel
       return redirect(`/cars/${car_id}?error=Nem sikerült menteni: ${error.message}`)
   }
 
@@ -306,15 +301,24 @@ export async function swapTire(formData: FormData) {
   revalidatePath(`/cars/${carId}`)
 }
 
-// --- 6. ÚTNYILVÁNTARTÁS (TRIP LOGGER) ---
+// --- 6. ÚTNYILVÁNTARTÁS (TRIP LOGGER) - JAVÍTVA ÉS EGYESÍTVE ---
 
 export async function addTrip(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
-  const car_id = formData.get('car_id')
+  const car_id = String(formData.get('car_id'))
   
+  // Koordináták kinyerése
+  const start_lat = formData.get('start_lat')
+  const start_lng = formData.get('start_lng')
+  const end_lat = formData.get('end_lat')
+  const end_lng = formData.get('end_lng')
+
+  // Segédfüggvény a null kezelésre
+  const parseCoord = (val: any) => (val && val !== '' ? parseFloat(val) : null)
+
   const tripData = {
     user_id: user.id,
     car_id: car_id,
@@ -323,7 +327,12 @@ export async function addTrip(formData: FormData) {
     distance: parseInt(String(formData.get('distance'))),
     purpose: String(formData.get('purpose')),
     trip_date: String(formData.get('trip_date')),
-    notes: String(formData.get('notes') || '')
+    notes: String(formData.get('notes') || ''),
+    // ÚJ: Koordináták mentése
+    start_lat: parseCoord(start_lat),
+    start_lng: parseCoord(start_lng),
+    end_lat: parseCoord(end_lat),
+    end_lng: parseCoord(end_lng),
   }
 
   const { error } = await supabase.from('trips').insert(tripData)
@@ -344,6 +353,8 @@ export async function deleteTrip(formData: FormData) {
   
   revalidatePath(`/cars/${carId}/trips`)
 }
+
+// --- 7. ALKATRÉSZEK & DOKUMENTUMOK ---
 
 export async function addPart(formData: FormData) {
   const supabase = await createClient()
@@ -463,10 +474,10 @@ export async function getDocumentUrl(filePath: string, shouldDownload: boolean =
     return data.signedUrl
 }
 
-// --- 8. ÉRTESÍTÉSEK KÜLDÉSE (Lusta módszer) ---
+// --- 8. ÉRTESÍTÉSEK KÜLDÉSE (CRON JOB) ---
 
 export async function checkAndSendReminders() {
-  'use server'
+  // 'use server' // Ez itt felesleges, ha a fájl elején már ott van
   
   console.log("--- 🔍 EMLÉKEZTETŐ ELLENŐRZÉS INDUL ---");
 
@@ -531,7 +542,6 @@ export async function checkAndSendReminders() {
       if (user?.email) {
         console.log(`📧 Email küldése ide: ${user.email}`);
         try {
-            // --- ITT A JAVÍTÁS: Előre rendereljük HTML-be ---
             const emailHtml = await render(
               ServiceReminderEmail({
                 userName: user.user_metadata?.full_name || 'Felhasználó',
@@ -548,9 +558,8 @@ export async function checkAndSendReminders() {
               from: 'DriveSync <onboarding@resend.dev>',
               to: [user.email], 
               subject: `🔔 Szerviz: ${reminder.cars.make} ${reminder.cars.model}`,
-              html: emailHtml // 'react' helyett 'html'-t küldünk!
+              html: emailHtml 
             })
-            // ----------------------------------------------
 
             if (error) {
                 console.error("❌ RESEND HIBA:", error);
