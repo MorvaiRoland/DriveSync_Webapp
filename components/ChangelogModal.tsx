@@ -2,17 +2,21 @@
 
 import { useState, useEffect } from 'react'
 
-const CURRENT_VERSION = '1.6.0'; // Új verzió az értesítések miatt
-const RELEASE_DATE = '2025. December 08.';
+const CURRENT_VERSION = '1.7.0'; // Új verzió a kereskedői modul miatt
+const RELEASE_DATE = '2025. December 09.';
 
 // 1. Jelenlegi funkciók listája
 const features = [
   {
-    emoji: '🔔', // KIEMELT FUNKCIÓ
-    title: 'Automata Értesítések',
-    desc: 'Soha többé nem felejted el a szervizt! Mostantól a DriveSync minden reggel automatikusan emailt és értesítést küld, ha 3 napon belül esedékes valamilyen karbantartás. Nem kell belépned az appba, mi szólunk!',
+    emoji: '🏷️', // KIEMELT FUNKCIÓ
+    title: 'Kereskedői Adatlap',
+    desc: 'Eladnád az autót? Készíts profi, nyomtatható adatlapot egy kattintással! Állítsd be az árat, az extrákat, és generálj egy QR kódot, amit a vevők beszkennelve azonnal látják a hiteles szerviztörténetet.',
   },
-  
+  {
+    emoji: '🔔', 
+    title: 'Automata Értesítések',
+    desc: 'Soha többé nem felejted el a szervizt! Mostantól a DriveSync minden reggel automatikusan emailt és értesítést küld, ha 3 napon belül esedékes valamilyen karbantartás.',
+  },
 ];
 
 // 2. Jövőbeli fejlesztések
@@ -58,14 +62,14 @@ export default function ChangelogModal() {
             <div className="relative z-10">
                 <div className="flex justify-between items-start">
                     <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 border border-white/10 text-amber-400">
-                        v{CURRENT_VERSION} • Értesítések 🔔
+                        v{CURRENT_VERSION} • Eladás 🏷️
                     </div>
                     <button onClick={handleClose} className="text-slate-400 hover:text-white transition-colors">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                <h2 className="text-2xl font-black">Már szólunk is, ha baj van! 🚀</h2>
-                <p className="text-slate-400 text-sm mt-1">Íme az új automata rendszerünk:</p>
+                <h2 className="text-2xl font-black">Segítünk eladni az autód! 🤝</h2>
+                <p className="text-slate-400 text-sm mt-1">Az új funkcióval növelheted az autód értékét.</p>
             </div>
         </div>
 
