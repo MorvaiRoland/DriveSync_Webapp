@@ -17,7 +17,7 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    // JAVÍTÁS: Ékezetek nélkül vagy URL kódolva
+    // FONTOS: encodeURIComponent használata az ékezetes karakterek miatt!
     return redirect(`/login?message=${encodeURIComponent('Helytelen email vagy jelszó')}`)
   }
 
@@ -44,10 +44,12 @@ export async function signup(formData: FormData) {
   })
 
   if (error) {
+    // FONTOS: encodeURIComponent használata!
     return redirect(`/login?message=${encodeURIComponent('Sikertelen regisztráció')}`)
   }
 
   revalidatePath('/', 'layout')
+  // FONTOS: encodeURIComponent használata!
   redirect(`/login?message=${encodeURIComponent('Ellenőrizd az email fiókodat a megerősítéshez')}`)
 }
 
@@ -75,6 +77,7 @@ export async function signInWithGoogle() {
 
   if (error) {
     console.error("Google Auth Hiba:", error);
+    // FONTOS: encodeURIComponent használata!
     return redirect(`/login?message=${encodeURIComponent('Google bejelentkezés sikertelen')}`)
   }
 
