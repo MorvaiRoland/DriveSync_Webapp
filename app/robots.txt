@@ -1,0 +1,13 @@
+import { MetadataRoute } from 'next'
+ 
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: {
+      userAgent: '*',
+      allow: '/',
+      // A privát fiók oldalakat nem kell indexelni, mert úgyse látja a bot bejelentkezés nélkül
+      disallow: ['/cars/', '/dashboard/', '/settings/'], 
+    },
+    sitemap: 'https://drivesync-hungary.hu/sitemap.xml',
+  }
+}

@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
-// 1. ÚJ: Importáljuk a Toaster-t a sonner-ből
 import { Toaster } from "sonner"; 
 
 export const viewport: Viewport = {
@@ -13,9 +12,20 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+// FONTOS: Ez segít a Next.js-nek a relatív linkek (pl. képek) helyes feloldásában
+export const metadataBase = new URL('https://drivesync-hungary.hu');
+
 export const metadata: Metadata = {
-  title: "DriveSync",
-  description: "Járműnyilvántartó alkalmazás",
+  metadataBase,
+  title: {
+    default: "DriveSync - Prémium Garázsmenedzsment",
+    template: "%s | DriveSync"
+  },
+  description: "A DriveSync Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen. Digitális szervizkönyv, automata értesítések és kereskedői adatlap generálás.",
+  keywords: ["drivesync", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
+  authors: [{ name: "DriveSync Technologies" }],
+  
+  // --- PWA Beállítások (Megmaradtak) ---
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -30,6 +40,35 @@ export const metadata: Metadata = {
     apple: [
       { url: '/icons/apple-icon.png', sizes: '512x512', type: 'image.png' },
     ],
+  },
+
+  // --- Social Media Megosztás (Facebook, LinkedIn, Discord stb. ezt látja) ---
+  openGraph: {
+    title: "DriveSync - Az autód digitális garázsa",
+    description: "Felejtsd el a papírokat. Kezeld a szervizkönyvet és a költségeket egyetlen prémium felületen.",
+    url: "https://drivesync-hungary.hu",
+    siteName: "DriveSync Hungary",
+    locale: "hu_HU",
+    type: "website",
+    images: [
+      {
+        url: '/icons/drivesync-logo.png', // A logót használjuk előnézeti képnek
+        width: 512,
+        height: 512,
+        alt: 'DriveSync Hungary Logo',
+      },
+    ],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
@@ -50,10 +89,10 @@ export default function RootLayout({
           >
             {children}
             
-            {/* 2. ÚJ: Itt helyezzük el a Toaster-t, hogy megjelenjenek az üzenetek */}
-            {/* A richColors szebb színeket ad, a position pedig fentre teszi */}
+            {/* Értesítések megjelenítése */}
             <Toaster position="top-center" richColors closeButton />
             
+            {/* Service Worker regisztráció (PWA) */}
             <RegisterSW />
         </ThemeProvider>
 
