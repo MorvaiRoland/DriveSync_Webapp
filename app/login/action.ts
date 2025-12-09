@@ -11,21 +11,25 @@ export async function login(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
+  console.log("🔑 Bejelentkezési kísérlet:", email);
+
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
 
   if (error) {
-    // FONTOS: encodeURIComponent használata az ékezetes karakterek miatt!
-    return redirect(`/login?message=${encodeURIComponent('Helytelen email vagy jelszó')}`)
+    console.error("❌ Login Hiba:", error.message);
+    // Hiba esetén visszaadjuk a konkrét hibaüzenetet (angolul jön a Supabase-től)
+    return redirect(`/login?message=${encodeURIComponent(error.message)}`)
   }
 
+  console.log("✅ Sikeres bejelentkezés:", email);
   revalidatePath('/', 'layout')
   redirect('/')
 }
 
-// --- 2. SIGNUP ---
+// --- 2. SIGNUP (REGISZTRÁCIÓ) ---
 export async function signup(formData: FormData) {
   const supabase = await createClient()
 
@@ -33,24 +37,45 @@ export async function signup(formData: FormData) {
   const password = formData.get('password') as string
   const fullName = formData.get('full_name') as string
 
-  const { error } = await supabase.auth.signUp({
+  console.log("📝 Regisztrációs kísérlet:", { email, fullName, passwordLength: password?.length });
+
+  // VALIDÁCIÓ: A Supabase alapból visszadobja, ha 6-nál rövidebb, de jobb előre szólni
+  if (!password || password.length < 6) {
+      console.log("⚠️ Jelszó túl rövid");
+      return redirect(`/login?message=${encodeURIComponent('A jelszónak legalább 6 karakternek kell lennie!')}`)
+  }
+
+  // Meghatározzuk a visszatérési URL-t (Email megerősítéshez)
+  const isLocal = process.env.NODE_ENV === 'development';
+  const siteUrl = isLocal ? 'http://localhost:3000' : 'https://www.drivesync-hungary.hu';
+  
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         full_name: fullName,
       },
+      // Ez fontos, hogy hova irányítson vissza a klikkelés után
+      emailRedirectTo: `${siteUrl}/auth/callback`,
     },
   })
 
   if (error) {
-    // FONTOS: encodeURIComponent használata!
-    return redirect(`/login?message=${encodeURIComponent('Sikertelen regisztráció')}`)
+    console.error("❌ Signup Hiba (Supabase):", error);
+    // Itt a trükk: Visszaküldjük a VALÓDI hibaüzenetet a frontendnek
+    return redirect(`/login?message=${encodeURIComponent(error.message)}`)
   }
 
+  // Ha nincs hiba, megnézzük, létrejött-e a session (ha nem, akkor email megerősítés kell)
+  if (data.user && !data.session) {
+      console.log("✅ Regisztráció elindítva, email megerősítés szükséges.");
+      return redirect(`/login?message=${encodeURIComponent('Sikeres regisztráció! Kérlek, erősítsd meg az email címedet a belépéshez.')}`)
+  }
+
+  console.log("✅ Sikeres regisztráció és automatikus belépés.");
   revalidatePath('/', 'layout')
-  // FONTOS: encodeURIComponent használata!
-  redirect(`/login?message=${encodeURIComponent('Ellenőrizd az email fiókodat a megerősítéshez')}`)
+  redirect('/')
 }
 
 // --- 3. GOOGLE LOGIN ---
@@ -62,7 +87,7 @@ export async function signInWithGoogle() {
 
   const callbackUrl = `${siteUrl}/auth/callback`;
 
-  console.log("🔗 Google Redirect ide fog történni:", callbackUrl);
+  console.log("🔗 Google Redirect indítása ide:", callbackUrl);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -76,9 +101,8 @@ export async function signInWithGoogle() {
   })
 
   if (error) {
-    console.error("Google Auth Hiba:", error);
-    // FONTOS: encodeURIComponent használata!
-    return redirect(`/login?message=${encodeURIComponent('Google bejelentkezés sikertelen')}`)
+    console.error("❌ Google Auth Hiba:", error);
+    return redirect(`/login?message=${encodeURIComponent('Google bejelentkezés sikertelen: ' + error.message)}`)
   }
 
   if (data.url) {
@@ -91,6 +115,7 @@ export async function signOut() {
     const supabase = await createClient()
     await supabase.auth.signOut()
     
+    console.log("👋 Kijelentkezés");
     revalidatePath('/', 'layout')
     redirect('/login')
 }
