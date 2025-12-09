@@ -12,20 +12,19 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-// FONTOS: Ez segít a Next.js-nek a relatív linkek (pl. képek) helyes feloldásában
-export const metadataBase = new URL('https://drivesync-hungary.hu');
-
 export const metadata: Metadata = {
-  metadataBase,
+  // JAVÍTÁS: Itt, a metadata objektumon belül definiáljuk, nem külön exportként!
+  metadataBase: new URL('https://drivesync-hungary.hu'),
+  
   title: {
     default: "DriveSync - Prémium Garázsmenedzsment",
     template: "%s | DriveSync"
   },
-  description: "A DriveSync Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen. Digitális szervizkönyv, automata értesítések és kereskedői adatlap generálás.",
+  description: "A DriveSync Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen.",
   keywords: ["drivesync", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
   authors: [{ name: "DriveSync Technologies" }],
   
-  // --- PWA Beállítások (Megmaradtak) ---
+  // PWA Beállítások
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -42,7 +41,7 @@ export const metadata: Metadata = {
     ],
   },
 
-  // --- Social Media Megosztás (Facebook, LinkedIn, Discord stb. ezt látja) ---
+  // Social Media
   openGraph: {
     title: "DriveSync - Az autód digitális garázsa",
     description: "Felejtsd el a papírokat. Kezeld a szervizkönyvet és a költségeket egyetlen prémium felületen.",
@@ -52,7 +51,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: '/icons/drivesync-logo.png', // A logót használjuk előnézeti képnek
+        url: '/icons/drivesync-logo.png',
         width: 512,
         height: 512,
         alt: 'DriveSync Hungary Logo',
@@ -89,10 +88,8 @@ export default function RootLayout({
           >
             {children}
             
-            {/* Értesítések megjelenítése */}
             <Toaster position="top-center" richColors closeButton />
             
-            {/* Service Worker regisztráció (PWA) */}
             <RegisterSW />
         </ThemeProvider>
 
