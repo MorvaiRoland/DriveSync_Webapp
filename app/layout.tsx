@@ -3,7 +3,7 @@ import "./globals.css";
 import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner"; 
-import PromoBanner from "@/components/PromoBanner"; // <--- 1. ÚJ IMPORT
+// TÖRÖLVE: import PromoBanner from "@/components/PromoBanner"; 
 
 export const viewport: Viewport = {
   themeColor: "#0f172a",
@@ -86,8 +86,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {/* 2. IDE KERÜL A BANNER, HOGY MINDEN OLDALON LÁTSZÓDJON */}
-            <PromoBanner />
+            {/* TÖRÖLVE: <PromoBanner /> - Mert a page.tsx-ben kezeljük! */}
 
             {children}
             

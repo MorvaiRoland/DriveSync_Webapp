@@ -9,7 +9,7 @@ import { WeatherWidget, FuelWidget } from '@/components/DashboardWidgets'
 import ReminderChecker from '@/components/ReminderChecker'
 import AiMechanic from '@/components/AiMechanic'
 import GamificationWidget from '@/components/GamificationWidget'
-import PromoBanner from '@/components/PromoBanner' // Importáljuk a bannert
+import PromoBanner from '@/components/PromoBanner'
 
 // --- SERVER ACTION: Km Naplózása ---
 async function logCurrentMileage(formData: FormData) {
@@ -126,17 +126,14 @@ export default async function Home() {
         <ChangelogModal />
         <ReminderChecker />
         
-        {/* --- ÚJ: PROMO BANNER (csak ha még tart az akció) --- */}
-        <PromoBanner />
+        {/* BEJELENTKEZVE: NINCS PROMO BANNER */}
 
         <nav className="bg-slate-900 sticky top-0 z-50 shadow-lg border-b border-white/5 backdrop-blur-md bg-opacity-95">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
               
-              {/* BAL OLDAL: Logo + Navigáció */}
-              <div className="flex items-center gap-6"> {/* Közös konténer a logonak és a menünek */}
-                
-                {/* LOGO */}
+              {/* BAL OLDAL */}
+              <div className="flex items-center gap-6"> 
                 <Link href="/" className="flex items-center gap-3">
                   <div className="relative w-8 h-8">
                     <Image src="/drivesync-logo.png" alt="DriveSync" fill className="object-contain" priority />
@@ -146,18 +143,29 @@ export default async function Home() {
                   </span>
                 </Link>
 
-                {/* ÚJ MENÜPONT: CSOMAGOK (Csak desktopon látszik) */}
                 <Link 
                   href="/pricing" 
                   className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
                 >
                     Csomagok
                 </Link>
-
               </div>
 
-              {/* JOBB OLDAL: Beállítások + Kilépés */}
+              {/* JOBB OLDAL */}
               <div className="flex items-center gap-4">
+                
+                {/* CSOMAG STATUSZ BADGE */}
+                <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                    subscription?.plan_type === 'founder' 
+                        ? 'bg-amber-500/10 border-amber-500/50 text-amber-500 hover:bg-amber-500/20' 
+                    : subscription?.plan_type === 'pro' 
+                        ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 hover:bg-blue-500/20' 
+                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
+                }`}>
+                    {subscription?.plan_type === 'founder' && <span className="text-sm">🚀</span>}
+                    {subscription?.plan_type === 'founder' ? 'Founder' : subscription?.plan_type === 'pro' ? 'Pro' : 'Starter'}
+                </Link>
+
                 <Link 
                   href="/settings" 
                   className="rounded-full bg-white/10 text-white p-2 hover:bg-white/20 transition-colors" 
@@ -178,7 +186,7 @@ export default async function Home() {
 
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           
-          {/* --- FOUNDER ÜDVÖZLŐ KÁRTYA (ÚJ) --- */}
+          {/* --- FOUNDER ÜDVÖZLŐ KÁRTYA (BEJELENTKEZVE) --- */}
           {subscription?.plan_type === 'founder' && (
              <div className="mb-8 p-4 md:p-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-xl relative overflow-hidden animate-in slide-in-from-top-4 duration-700">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
@@ -190,13 +198,8 @@ export default async function Home() {
                       </div>
                       <h2 className="text-2xl font-black mb-1">Gratulálunk, Alapító Tag vagy!</h2>
                       <p className="text-amber-100 text-sm max-w-lg">
-                         Sikeresen regisztráltál az indulási időszakban, így az örökös Pro tagság a tiéd. Élvezd az összes prémium funkciót ingyen, örökre!
+                         Örökös Pro tagsággal rendelkezel. Köszönjük a bizalmat!
                       </p>
-                   </div>
-                   <div className="hidden md:block">
-                      <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
-                         <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
-                      </div>
                    </div>
                 </div>
              </div>
@@ -205,9 +208,22 @@ export default async function Home() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
               <div>
                 <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1">{greeting},</h2>
-                <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">
-                    {user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]}
-                </h1>
+                <div className="flex items-center gap-3">
+                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">
+                        {user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]}
+                    </h1>
+                    
+                    {/* MOBILON IS LÁTHATÓ CSOMAG JELZÉS */}
+                    <span className={`sm:hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border align-middle ${
+                        subscription?.plan_type === 'founder' 
+                            ? 'bg-amber-500 text-white border-amber-600' 
+                        : subscription?.plan_type === 'pro' 
+                            ? 'bg-blue-600 text-white border-blue-500' 
+                            : 'bg-slate-700 text-slate-300 border-slate-600'
+                    }`}>
+                        {subscription?.plan_type === 'founder' ? 'Founder' : subscription?.plan_type === 'pro' ? 'Pro' : 'Free'}
+                    </span>
+                </div>
               </div>
               {cars.length > 0 && (
                   <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
@@ -358,7 +374,7 @@ export default async function Home() {
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${act.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
                                             {act.type === 'fuel' 
                                                 ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> 
-                                                : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                             }
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -385,19 +401,19 @@ export default async function Home() {
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-950 font-sans text-slate-200 flex flex-col lg:flex-row selection:bg-amber-500/30">
       
-      {/* LANDING PAGE PROMO BANNER (RÖGZÍTETT) */}
-      <div className="sticky top-0 z-50">
+      {/* LANDING PAGE PROMO BANNER (RÖGZÍTETT & Z-INDEXELT) */}
+      <div className="fixed top-0 left-0 w-full z-50">
         <PromoBanner />
       </div>
 
-      <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950">
+      <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950 mt-10 md:mt-0"> {/* Helyet hagyunk a bannernek mobilon */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
            <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse-slow"></div>
            <div className="absolute bottom-[10%] left-[-10%] w-[30vw] h-[30vw] bg-blue-900/10 rounded-full blur-[100px]"></div>
            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
         </div>
         
-        <div className="relative z-10 p-6 sm:p-12 lg:p-16 xl:p-24 flex flex-col gap-16 lg:gap-24">
+        <div className="relative z-10 p-6 sm:p-12 lg:p-16 xl:p-24 flex flex-col gap-16 lg:gap-24 pt-20 lg:pt-24"> {/* Extra padding top a banner miatt */}
            <div className="space-y-8 animate-in slide-in-from-left-10 duration-700 fade-in">
              <div className="flex items-center gap-3">
                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 relative overflow-hidden">
@@ -448,8 +464,8 @@ export default async function Home() {
                <span>Fiók létrehozása</span>
             </Link>
             <Link href="/pricing" className="block text-center text-sm text-slate-500 hover:text-amber-500 transition-colors mt-4">
-        Csomagok és Árak megtekintése →
-    </Link>
+               Csomagok és Árak megtekintése →
+            </Link>
           </div>
         </div>
       </div>
@@ -524,7 +540,7 @@ function StatCard({ label, value, subValue, icon, customColor, alert, highlight,
          <div className="text-slate-400">
             {icon === 'total' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
             {icon === 'avg' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>}
-            {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+            {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
             {icon === 'fuel' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
          </div>
        </div>
