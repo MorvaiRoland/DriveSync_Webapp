@@ -1,9 +1,6 @@
-// utils/pdfGenerator.ts
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import QRCode from 'qrcode'
 
-// Segédfüggvény
 const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
     let binary = '';
     const bytes = new Uint8Array(buffer);
@@ -53,10 +50,15 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
             if (e.type === 'fuel') typeLabel = 'Tankolás';
             if (e.type === 'maintenance') typeLabel = 'Karbantartás';
 
+            // Leírás formázása
+            let desc = e.title || '';
+            if (e.type === 'fuel') desc = `${e.liters}L Üzemanyag`;
+            if (e.description) desc += ` - ${e.description}`;
+
             return [
                 new Date(e.event_date).toLocaleDateString('hu-HU'),
                 typeLabel,
-                e.title || (e.type === 'fuel' ? `${e.liters}L Üzemanyag` : '-'),
+                desc,
                 e.mileage ? `${e.mileage.toLocaleString()} km` : '-',
                 e.cost ? `${e.cost.toLocaleString()} Ft` : '-'
             ]
@@ -76,6 +78,6 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
 
     } catch (error) {
         console.error("PDF Hiba:", error)
-        alert("Hiba történt a PDF generálása közben.")
+        throw error;
     }
 }

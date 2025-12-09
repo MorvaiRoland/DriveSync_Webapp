@@ -2,18 +2,24 @@
 
 import { useState } from 'react'
 import DealerModal from './DealerModal'
-import { generatePersonalPDF } from '@/utils/pdfGenerator' // Ezt majd kiszervezzük, vagy maradhat a korábbi logikád inline
+import { generatePersonalPDF } from '@/utils/pdfGenerator'
 
 export default function ExportMenu({ car, events }: { car: any, events: any[] }) {
   const [showDealerModal, setShowDealerModal] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  // Személyes PDF generálása (A korábbi SaleSheetButton logikája egyszerűsítve)
   const handlePersonalExport = async () => {
-     // Ide jön a korábbi PDF generáló kódod, ami mindent (szerviz, tankolás) kilistáz
-     // Most csak szimuláljuk a hívást, de ide másolhatod a korábbi SaleSheetButton tartalmát
-     // csak tankolás szűréssel ha kell.
-     alert("Személyes teljes export indítása...") 
+     setIsGenerating(true)
+     try {
+        await generatePersonalPDF(car, events)
+     } catch (error) {
+        console.error(error)
+        alert('Hiba történt a PDF generálása közben.')
+     } finally {
+        setIsGenerating(false)
+        setIsOpen(false)
+     }
   }
 
   return (
@@ -21,7 +27,7 @@ export default function ExportMenu({ car, events }: { car: any, events: any[] })
       <div className="relative">
         <button 
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-xl font-bold hover:bg-white/20 transition-all"
+            className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-xl font-bold hover:bg-white/20 transition-all h-[40px]"
         >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             <span>Export</span>
@@ -29,30 +35,38 @@ export default function ExportMenu({ car, events }: { car: any, events: any[] })
         </button>
 
         {isOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in zoom-in duration-200 origin-top-right">
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in zoom-in duration-200 origin-top-right">
+                
+                {/* SZEMÉLYES EXPORT */}
                 <button 
-                    onClick={() => { setIsOpen(false); handlePersonalExport(); }}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3 border-b border-slate-100"
+                    onClick={handlePersonalExport}
+                    disabled={isGenerating}
+                    className="w-full text-left px-4 py-4 hover:bg-slate-50 flex items-center gap-4 border-b border-slate-100 transition-colors disabled:opacity-50"
                 >
-                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    <div className="bg-blue-100 text-blue-600 p-2.5 rounded-xl shrink-0">
+                        {isGenerating ? (
+                            <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        ) : (
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        )}
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-slate-800">Személyes</p>
-                        <p className="text-[10px] text-slate-500">Teljes előzmény, tankolások</p>
+                        <p className="text-sm font-bold text-slate-900">Személyes Riport</p>
+                        <p className="text-[11px] text-slate-500 leading-tight">Teljes szerviztörténet és tankolási napló saját használatra.</p>
                     </div>
                 </button>
 
+                {/* KERESKEDŐI EXPORT */}
                 <button 
                     onClick={() => { setIsOpen(false); setShowDealerModal(true); }}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3"
+                    className="w-full text-left px-4 py-4 hover:bg-slate-50 flex items-center gap-4 transition-colors"
                 >
-                    <div className="bg-amber-100 text-amber-600 p-2 rounded-lg">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <div className="bg-amber-100 text-amber-600 p-2.5 rounded-xl shrink-0">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-slate-800">Kereskedő</p>
-                        <p className="text-[10px] text-slate-500">Adatlap, Ár, QR kód</p>
+                        <p className="text-sm font-bold text-slate-900">Kereskedői Adatlap</p>
+                        <p className="text-[11px] text-slate-500 leading-tight">Eladásra készített adatlap QR kóddal, árral és extrákkal.</p>
                     </div>
                 </button>
             </div>
