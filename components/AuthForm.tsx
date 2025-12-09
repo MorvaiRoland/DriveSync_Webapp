@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { login, signup, signInWithGoogle } from '@/app/login/action'
+import { login, signup, signInWithGoogle, resetPassword } from '@/app/login/action'
 import Link from 'next/link'
 
 type AuthFormProps = {
@@ -12,12 +12,71 @@ type AuthFormProps = {
 export default function AuthForm({ isLogin, message }: AuthFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [resetMode, setResetMode] = useState(false)
 
-  // Submit handler, hogy beállítsuk a loading állapotot
   const handleSubmit = () => {
       setLoading(true);
   }
 
+  const showResetMessage = message && (message.toLowerCase().includes('visszaállító linket') || message.toLowerCase().includes('küldtük'));
+  
+  // --- JELSZÓ VISSZAÁLLÍTÁS KÉPERNYŐ ---
+  if (resetMode || showResetMessage) {
+    return (
+      <>
+        <div className="text-center lg:text-left mb-8">
+            <h2 className="text-2xl font-bold tracking-tight text-white">Jelszó visszaállítása</h2>
+            <p className="mt-2 text-sm text-slate-400">
+                Kérjük, add meg a fiókodhoz tartozó email címet.
+            </p>
+        </div>
+
+        {message && (
+          <div className={`p-4 rounded-lg text-sm flex items-start gap-3 border mb-5 ${
+            showResetMessage
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200' 
+              : 'bg-red-500/10 border-red-500/20 text-red-200' 
+          }`}>
+             <span className="flex-1">{message}</span>
+          </div>
+        )}
+
+        <form action={resetPassword} onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Email cím</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                placeholder="pelda@mail.com"
+                className="block w-full rounded-xl border-0 bg-slate-900/50 py-3 px-4 text-white shadow-sm ring-1 ring-inset ring-slate-800 placeholder:text-slate-600 focus:ring-2 focus:ring-inset focus:ring-amber-500 sm:text-sm transition-all"
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={loading || !!showResetMessage}
+              className="flex w-full justify-center rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-3 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500 transition-all transform active:scale-[0.98] uppercase tracking-wide disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Folyamatban...' : 'Link küldése'}
+            </button>
+        </form>
+
+        <div className="mt-8 text-center">
+            <Link 
+              href="/login" 
+              className="font-bold text-slate-500 hover:text-amber-400 transition-colors"
+              onClick={() => { setResetMode(false); setLoading(false); }}
+            >
+              Vissza a belépéshez
+            </Link>
+        </div>
+      </>
+    )
+  }
+
+  // --- ALAP BEJELENTKEZÉS / REGISZTRÁCIÓ KÉPERNYŐ ---
   return (
     <>
       <div className="text-center lg:text-left mb-8">
@@ -29,7 +88,6 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
         </p>
       </div>
 
-      {/* Google Login Form */}
       <form action={signInWithGoogle} className="mb-6">
         <button type="submit" className="flex w-full items-center justify-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-bold text-slate-900 shadow-sm hover:bg-slate-100 transition-all active:scale-[0.98]">
            <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -49,9 +107,8 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
         </div>
       </div>
 
-      {/* Email / Jelszó Form */}
       <form 
-        action={isLogin ? login : signup} // Itt adjuk meg a szerver akciót
+        action={isLogin ? login : signup}
         onSubmit={handleSubmit}
         className="space-y-5" 
       >
@@ -68,6 +125,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
         </div>
 
         <div>
+          {/* JAVÍTVA: className a class helyett */}
           <label htmlFor="password" className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Jelszó</label>
           <div className="relative">
             <input
@@ -90,23 +148,30 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
               )}
             </button>
           </div>
+          
+          {isLogin && (
+            <div className="text-right mt-2">
+              <button 
+                type="button" 
+                onClick={() => setResetMode(true)}
+                className="text-xs font-medium text-slate-500 hover:text-amber-500 transition-colors"
+              >
+                Elfelejtetted a jelszavad?
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Hibaüzenet */}
         {message && (
           <div className={`p-4 rounded-lg text-sm flex items-start gap-3 border ${
             message.toLowerCase().includes('siker') 
               ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200'
               : 'bg-red-500/10 border-red-500/20 text-red-200' 
           }`}>
-            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
             <span>{message}</span>
           </div>
         )}
 
-        {/* Fő Gomb */}
         <button
           type="submit"
           disabled={loading}
@@ -122,7 +187,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
           <Link 
             href={isLogin ? '/login?mode=signup' : '/login?mode=signin'} 
             className="font-bold text-amber-500 hover:text-amber-400 transition-colors"
-            onClick={() => setLoading(false)} // Reset loading ha váltunk
+            onClick={() => setLoading(false)}
           >
             {isLogin ? 'Regisztrálj ingyen' : 'Jelentkezz be'}
           </Link>

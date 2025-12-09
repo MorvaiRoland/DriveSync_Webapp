@@ -9,7 +9,6 @@ export default async function LoginPage(props: Props) {
   const searchParams = await props.searchParams
   const message = typeof searchParams.message === 'string' ? searchParams.message : null
   
-  // Ha a mode paraméter 'signup', akkor regisztrációs mód, egyébként login
   const mode = searchParams.mode === 'signup' ? 'signup' : 'signin'
   const isLogin = mode === 'signin'
 
@@ -24,7 +23,7 @@ export default async function LoginPage(props: Props) {
         
         <div className="relative z-10 flex flex-col items-center text-center px-12">
            <div className="relative w-64 h-64 mb-8 animate-in zoom-in duration-700">
-              <Image src="/drivesync-logo.png" alt="DriveSync Logo" fill className="object-contain drop-shadow-2xl" priority />
+             <Image src="/drivesync-logo.png" alt="DriveSync Logo" fill className="object-contain drop-shadow-2xl" priority />
            </div>
            <h1 className="text-5xl font-black text-white tracking-tight mb-4 drop-shadow-lg">
              Drive<span className="text-amber-500">Sync</span>
@@ -51,7 +50,6 @@ export default async function LoginPage(props: Props) {
               <h1 className="text-3xl font-black text-white">Drive<span className="text-amber-500">Sync</span></h1>
           </div>
 
-          {/* Form meghívása */}
           <AuthForm isLogin={isLogin} message={message} />
 
         </div>
