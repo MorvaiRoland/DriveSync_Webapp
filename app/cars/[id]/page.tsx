@@ -1,4 +1,4 @@
-import { createClient } from 'supabase/server'
+import { createClient } from '@/supabase/server' // Vagy 'supabase/server', attól függően hol van a fájl
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
@@ -6,6 +6,7 @@ import { deleteEvent, deleteReminder, resetServiceCounter } from './actions'
 import PdfDownloadButton from './PdfDownloadButton'
 import DocumentManager from './DocumentManager'
 import SaleSheetButton from '@/components/SaleSheetButton'
+
 // --- Típusdefiníciók ---
 type Car = {
   id: string
@@ -41,12 +42,17 @@ const getExpiryStatus = (dateString: string | null) => {
 
 // --- FŐ KOMPONENS ---
 
-export default async function CarDetailsPage(props: { params: Promise<{ id: string }> }) {
+// Next.js 15+ kompatibilis Props típus
+type Props = {
+  params: Promise<{ id: string }>
+}
+
+export default async function CarDetailsPage(props: Props) {
+  // Await params a Next.js 15 szabvány szerint
   const params = await props.params
   const supabase = await createClient()
 
-  // 1. Adatlekérések párhuzamosítása (gyorsabb betöltés)
-  // Bővítve a car_documents lekérésével
+  // 1. Adatlekérések párhuzamosítása
   const [carRes, eventsRes, remindersRes, tiresRes, docsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('id', params.id).single(),
     supabase.from('events').select('*').eq('car_id', params.id).order('event_date', { ascending: false }),
@@ -174,7 +180,7 @@ export default async function CarDetailsPage(props: { params: Promise<{ id: stri
 }
 
 // ----------------------------------------------------------------------
-// ALKOMPONENSEK (Hogy a fő fájl tiszta maradjon)
+// ALKOMPONENSEK
 // ----------------------------------------------------------------------
 
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents }: any) {
@@ -189,25 +195,26 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
             
             <div className="absolute inset-0 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
                 {/* Top Nav */}
-                <div className="absolute top-safe md:top-6 left-4 right-4 flex justify-between items-center pt-4 md:pt-0">
-                    <Link href="/" className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-3 md:px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:bg-white/10">
+                <div className="absolute top-4 md:top-6 left-4 right-4 flex justify-between items-center pt-4 md:pt-0">
+                    <Link href="/" className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-3 md:px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:bg-white/10 h-[40px]">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                         <span className="hidden sm:inline">Garázs</span>
                     </Link>
                     
                     <div className="flex gap-2 items-center">
-                        {/* --- ÚJ ELADÁSI ADATLAP GOMB --- */}
-                        {/* A stílust kicsit igazítottuk, hogy illeszkedjen a headerhez (glassmorphism) */}
-                        <div className="scale-90 md:scale-100">
+                        {/* Eladási Adatlap Gomb */}
+                        <div className="scale-90 md:scale-100 origin-right">
                              <SaleSheetButton car={car} events={safeEvents} />
                         </div>
 
                         {/* Meglévő gombok */}
-                        <PdfDownloadButton car={car} events={safeEvents} />
+                        <div className="scale-90 md:scale-100 origin-right">
+                             <PdfDownloadButton car={car} events={safeEvents} />
+                        </div>
                         
                         <Link href={`/cars/${car.id}/edit`} className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-3 md:px-4 py-2 rounded-full border border-white/10 hover:bg-white/10 h-[40px]">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                            <span className="text-xs font-bold uppercase hidden md:inline">Szerkesztés</span>
+                            <span className="text-xs font-bold uppercase hidden md:inline">Szerk.</span>
                         </Link>
                     </div>
                 </div>
@@ -261,13 +268,11 @@ function StatBadge({ label, value, valueColor = "text-white" }: any) {
 }
 
 function MobileBottomNav({ carId }: { carId: string }) {
-    // Kiemelt stílus a nagyon fontos gombokhoz
     const btnBase = "flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-all active:scale-95";
     
     return (
         <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_10px_rgba(0,0,0,0.1)] z-50 pb-[env(safe-area-inset-bottom)]">
             <div className="grid grid-cols-5 gap-1 px-2 py-2">
-                
                 <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnBase} text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20`}>
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
                     <span className="text-[10px] font-bold leading-none">Tankolás</span>
@@ -292,7 +297,6 @@ function MobileBottomNav({ carId }: { carId: string }) {
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
                     <span className="text-[10px] font-bold leading-none">Alkatrész</span>
                 </Link>
-
             </div>
         </div>
     )
