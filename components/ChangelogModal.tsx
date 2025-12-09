@@ -2,29 +2,29 @@
 
 import { useState, useEffect } from 'react'
 
-const CURRENT_VERSION = '1.7.0'; // Új verzió a kereskedői modul miatt
+const CURRENT_VERSION = '1.8.0'; // Verzió emelése az AI funkció miatt
 const RELEASE_DATE = '2025. December 09.';
 
 // 1. Jelenlegi funkciók listája
 const features = [
   {
-    emoji: '🏷️', // KIEMELT FUNKCIÓ
-    title: 'Kereskedői Adatlap',
-    desc: 'Eladnád az autót? Készíts profi, nyomtatható adatlapot egy kattintással! Állítsd be az árat, az extrákat, és generálj egy QR kódot, amit a vevők beszkennelve azonnal látják a hiteles szerviztörténetet.',
+    emoji: '🤖', // KIEMELT ÚJDONSÁG
+    title: 'AI Szerelő Asszisztens',
+    desc: 'Beszélgess az adataiddal! A jobb alsó sarokban elérhető mesterséges intelligencia ismeri az autód szervizmúltját és költségeit. Kérdezd meg: "Mikor volt olajcsere?" vagy "Mennyit tankoltam idén?", és azonnal választ kapsz.',
   },
   {
-    emoji: '🔔', 
-    title: 'Automata Értesítések',
-    desc: 'Soha többé nem felejted el a szervizt! Mostantól a DriveSync minden reggel automatikusan emailt és értesítést küld, ha 3 napon belül esedékes valamilyen karbantartás.',
+    emoji: '📱', 
+    title: 'Mobilbarát Chat',
+    desc: 'Az új asszisztens mobilon egy kényelmes, alulról felcsúszó felületen érhető el, így vezetés közben vagy a garázsban állva is könnyen használhatod.',
   },
 ];
 
 // 2. Jövőbeli fejlesztések
 const upcoming = [
   { 
-    emoji: '🗺️', 
-    title: 'Interaktív Térkép', 
-    desc: 'Hamarosan visszanézheted az útjaidat térképen is! Lásd vizuálisan, merre jártál és hol tankoltál.' 
+    emoji: '🏷️', 
+    title: 'Kereskedői Adatlap 2.0', 
+    desc: 'Hamarosan még több sablon közül választhatsz, ha eladásra kínálnád az autódat.' 
   }
 ];
 
@@ -56,20 +56,20 @@ export default function ChangelogModal() {
       {/* Modal Ablak */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-800">
         
-        {/* Fejléc */}
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white relative overflow-hidden shrink-0">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl -mr-10 -mt-10"></div>
+        {/* Fejléc - AI Téma */}
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-900 p-6 text-white relative overflow-hidden shrink-0">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl -mr-10 -mt-10"></div>
             <div className="relative z-10">
                 <div className="flex justify-between items-start">
-                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 border border-white/10 text-amber-400">
-                        v{CURRENT_VERSION} • Eladás 🏷️
+                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 border border-white/10 text-blue-200">
+                        v{CURRENT_VERSION} • AI Update 🤖
                     </div>
-                    <button onClick={handleClose} className="text-slate-400 hover:text-white transition-colors">
+                    <button onClick={handleClose} className="text-blue-200 hover:text-white transition-colors">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                <h2 className="text-2xl font-black">Segítünk eladni az autód! 🤝</h2>
-                <p className="text-slate-400 text-sm mt-1">Az új funkcióval növelheted az autód értékét.</p>
+                <h2 className="text-2xl font-black">Megérkezett az AI! ✨</h2>
+                <p className="text-blue-100 text-sm mt-1">Mostantól saját digitális szerelőd van.</p>
             </div>
         </div>
 
@@ -123,9 +123,9 @@ export default function ChangelogModal() {
         <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
             <button 
                 onClick={handleClose}
-                className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-900 font-bold shadow-lg hover:bg-slate-800 dark:hover:bg-amber-400 hover:scale-[1.02] transition-all active:scale-[0.98]"
+                className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-blue-600 text-white font-bold shadow-lg hover:bg-slate-800 dark:hover:bg-blue-500 hover:scale-[1.02] transition-all active:scale-[0.98]"
             >
-                Király, köszönöm!
+                Kipróbálom!
             </button>
         </div>
 

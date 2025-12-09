@@ -110,7 +110,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                  </div>
             </div>
 
-            <div className="text-center text-xs text-slate-400 py-4">DriveSync v1.6.0</div>
+            <div className="text-center text-xs text-slate-400 py-4">DriveSync v1.8.0</div>
         </div>
     </div>
   )
