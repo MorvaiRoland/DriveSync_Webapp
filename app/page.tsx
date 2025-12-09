@@ -1,4 +1,4 @@
-import { createClient } from 'supabase/server'
+import { createClient } from '@/supabase/server' // Vagy 'supabase/server'
 import { signOut } from './login/action'
 import { deleteCar } from './cars/actions'
 import Link from 'next/link'
@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import ChangelogModal from '@/components/ChangelogModal'
 import { WeatherWidget, FuelWidget } from '@/components/DashboardWidgets'
 import ReminderChecker from '@/components/ReminderChecker'
+import AiMechanic from '@/components/AiMechanic' // <--- ÚJ IMPORT: AI Szerelő
 
 // --- SERVER ACTION: Km Naplózása ---
 async function logCurrentMileage(formData: FormData) {
@@ -31,8 +32,8 @@ export default async function Home() {
 
   // Adatok inicializálása
   let cars: any[] = []
-  let myCars: any[] = []      // ÚJ: Saját autók
-  let sharedCars: any[] = []  // ÚJ: Megosztott autók
+  let myCars: any[] = []      // Saját autók
+  let sharedCars: any[] = []  // Megosztott autók
   
   let upcomingReminders: any[] = []
   let recentActivity: any[] = []
@@ -96,6 +97,9 @@ export default async function Home() {
     return (
       <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-24 transition-colors duration-300">
         
+        {/* --- ÚJ: AI SZERELŐ WIDGET --- */}
+        <AiMechanic />
+
         <ChangelogModal />
         <ReminderChecker />
         <nav className="bg-slate-900 sticky top-0 z-50 shadow-lg border-b border-white/5 backdrop-blur-md bg-opacity-95">
@@ -111,7 +115,7 @@ export default async function Home() {
               </div>
               <div className="flex items-center gap-4">
                 <Link href="/settings" className="rounded-full bg-white/10 text-white p-2 hover:bg-white/20 transition-colors" title="Beállítások">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </Link>
                 <form action={signOut}>
                   <button className="bg-white/10 hover:bg-red-500/20 hover:text-red-400 text-slate-300 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all border border-white/5">Kilépés</button>
@@ -132,15 +136,15 @@ export default async function Home() {
               </div>
               {cars.length > 0 && (
                   <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                     <div className="text-right">
+                      <div className="text-right">
                         <p className="text-[10px] uppercase font-bold text-slate-400">Flotta Egészség</p>
                         <p className={`text-lg font-black ${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'}`}>{fleetHealth}%</p>
-                     </div>
-                     <div className="h-10 w-1 bg-slate-100 dark:bg-slate-700 rounded-full"></div>
-                     <div className="text-right">
+                      </div>
+                      <div className="h-10 w-1 bg-slate-100 dark:bg-slate-700 rounded-full"></div>
+                      <div className="text-right">
                         <p className="text-[10px] uppercase font-bold text-slate-400">E havi kiadás</p>
                         <p className="text-lg font-black text-slate-900 dark:text-white">{totalSpentThisMonth.toLocaleString()} Ft</p>
-                     </div>
+                      </div>
                   </div>
               )}
           </div>
@@ -306,24 +310,21 @@ export default async function Home() {
   // --- LOGGED OUT LANDING PAGE ---
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-950 font-sans text-slate-200 flex flex-col lg:flex-row selection:bg-amber-500/30">
-      
-      {/* BAL OLDAL (Landing Page tartalom) */}
+      {/* ... (A landing page kódja változatlan) ... */}
       <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950">
-        
-        {/* Dekorációk */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
            <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse-slow"></div>
            <div className="absolute bottom-[10%] left-[-10%] w-[30vw] h-[30vw] bg-blue-900/10 rounded-full blur-[100px]"></div>
            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
         </div>
-
+        {/* ... (Többi landing page tartalom) ... */}
         <div className="relative z-10 p-6 sm:p-12 lg:p-16 xl:p-24 flex flex-col gap-16 lg:gap-24">
            <div className="space-y-8 animate-in slide-in-from-left-10 duration-700 fade-in">
              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 relative overflow-hidden">
-                   <Image src="/drivesync-logo.png" alt="DriveSync Logo" fill className="object-contain p-2" priority />
-                </div>
-                <span className="text-xl font-bold tracking-tight text-white uppercase">DriveSync</span>
+               <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 relative overflow-hidden">
+                  <Image src="/drivesync-logo.png" alt="DriveSync Logo" fill className="object-contain p-2" priority />
+               </div>
+               <span className="text-xl font-bold tracking-tight text-white uppercase">DriveSync</span>
              </div>
              <div>
                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.1] mb-6 drop-shadow-2xl">
@@ -341,7 +342,6 @@ export default async function Home() {
              </div>
            </div>
            
-           {/* Statisztika Sáv */}
             <div className="grid grid-cols-3 gap-4 border-y border-slate-800/50 py-8 bg-slate-900/20 backdrop-blur-sm rounded-2xl animate-in fade-in duration-1000 delay-200">
                 <StatCard number="100%" label="Papírmentes" />
                 <StatCard number="0 Ft" label="Rejtett költség" />
@@ -378,8 +378,8 @@ export default async function Home() {
 // --- SEGÉD KOMPONENSEK ---
 
 function CarCard({ car, shared }: { car: any, shared?: boolean }) {
+  // ... (CarCard kódja marad változatlan) ...
   return (
-    // CAR CARD SÖTÉTÍTÉSE
     <div className={`bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative flex flex-col h-full ${shared ? 'ring-2 ring-blue-500/20' : ''}`}>
       <Link href={`/cars/${car.id}`} className="block h-full flex flex-col">
         <div className="h-48 bg-slate-100 dark:bg-slate-900 relative flex items-center justify-center overflow-hidden">
@@ -392,7 +392,6 @@ function CarCard({ car, shared }: { car: any, shared?: boolean }) {
               {car.status === 'active' ? 'Aktív' : 'Szerviz'}
            </div>
            
-           {/* Megosztott ikon ha shared */}
            {shared && (
                 <div className="absolute top-4 left-4 bg-blue-500 text-white p-1.5 rounded-full shadow-lg z-20" title="Megosztott autó">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -415,17 +414,13 @@ function CarCard({ car, shared }: { car: any, shared?: boolean }) {
           </div>
         </div>
       </Link>
-      
-      {/* Gombok: Megosztott autónál csak a tulaj törölhet, de a szerkesztés maradhat, mert editor joga van */}
       <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-30">
         {!shared ? (
-            // SAJÁT AUTÓNÁL MINDEN GOMB
             <>
                 <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></Link>
                 <form action={deleteCar}><input type="hidden" name="id" value={car.id} /><button className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-red-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></form>
             </>
         ) : (
-            // MEGOSZTOTT AUTÓNÁL NINCS TÖRLÉS GOMB A KÁRTYÁN (Csak a megosztást tudná visszavonni magától, de azt nem itt)
             <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></Link>
         )}
       </div>
@@ -434,7 +429,8 @@ function CarCard({ car, shared }: { car: any, shared?: boolean }) {
 }
 
 function StatCard({ label, value, subValue, icon, customColor, alert, highlight, number }: any) {
-  if (number) { // Landing Page verzió
+  // ... (StatCard kódja marad változatlan) ...
+  if (number) {
       return (
         <div className={`text-center p-4 rounded-xl hover:bg-white/5 transition-colors cursor-default`}>
            <div className="text-3xl font-black text-white mb-1">{number}</div>
@@ -448,7 +444,7 @@ function StatCard({ label, value, subValue, icon, customColor, alert, highlight,
          <div className="text-slate-400">
             {icon === 'total' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
             {icon === 'avg' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>}
-            {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+            {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
             {icon === 'fuel' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
          </div>
        </div>
@@ -462,17 +458,4 @@ function StatCard({ label, value, subValue, icon, customColor, alert, highlight,
 
 function Badge({ text }: { text: string }) {
   return <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-slate-800 text-slate-400 text-xs font-bold">{text}</span>
-}
-
-function Logo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-      <path d="M12 17v-6" />
-      <path d="M8.5 14.5 12 11l3.5 3.5" />
-      <circle cx="7" cy="17" r="2" />
-      <circle cx="17" cy="17" r="2" />
-      <path d="M14.7 9a3 3 0 0 0-4.2 0L5 14.5a2.12 2.12 0 0 0 3 3l5.5-5.5" opacity="0.5" />
-    </svg>
-  )
 }
