@@ -124,22 +124,28 @@ export default function AiMechanic() {
         `}>
           
           {/* FEJLÉC */}
+        {/* FEJLÉC */}
           <div className="bg-slate-950 p-4 flex items-center justify-between border-b border-slate-800 shrink-0">
-             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg">
-                    {/* Szerelőkulcs ikon a fejlécben */}
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+             <div className="flex items-center gap-3 overflow-hidden">
+                {/* IKON TÁROLÓ: Hozzáadva a 'shrink-0', hogy ne nyomódjon össze */}
+                <div className="w-10 h-10 shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg border border-white/10">
+                    {/* Szerelőkulcs ikon */}
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                 </div>
-                <div>
-                    <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                <div className="min-w-0"> {/* min-w-0 segít a szöveg csonkításában flexboxon belül */}
+                    <h3 className="text-white font-bold text-sm flex items-center gap-2 truncate">
                         DriveSync Asszisztens
-                        <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-mono">AI</span>
+                        <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-mono shrink-0">AI</span>
                     </h3>
-                    <p className="text-slate-400 text-xs">A flottád szakértője.</p>
+                    <p className="text-slate-400 text-xs truncate">A flottád szakértője.</p>
                 </div>
              </div>
-             {/* Mobilon itt is be lehet zárni egy kis lefelé nyíllal, opcionális */}
-             <button onClick={() => setIsOpen(false)} className="md:hidden text-slate-500 hover:text-white">
+             
+             {/* Bezáró gomb (Mobilon és Desktopon is hasznos lehet, de mobilon rejtettem el eddig) */}
+             <button onClick={() => setIsOpen(false)} className="md:hidden text-slate-500 hover:text-white p-2">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
              </button>
           </div>
