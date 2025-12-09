@@ -5,13 +5,21 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/supabase/server'
 
-// Segédfüggvény az URL meghatározásához
+// --- JAVÍTOTT URL MEGHATÁROZÁS ---
 function getSiteUrl() {
-  let url = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
-  if (process.env.VERCEL_URL) {
-      url = `https://${process.env.VERCEL_URL}`;
+  // 1. Prioritás: A manuálisan beállított éles domain (Vercel Env Variable)
+  // Ha ez be van állítva (pl. https://www.drivesync-hungary.hu), akkor EZT használjuk.
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    return process.env.NEXT_PUBLIC_BASE_URL;
   }
-  return url.startsWith('http') ? url : `https://${url}`;
+
+  // 2. Ha nincs manuális beállítás, de Vercelen vagyunk (pl. Preview ágak)
+  if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL}`;
+  }
+
+  // 3. Fallback: Localhost fejlesztéshez
+  return 'http://localhost:3000';
 }
 
 // --- 1. LOGIN ---
@@ -49,6 +57,7 @@ export async function signup(formData: FormData) {
     password,
     options: {
       data: { full_name: fullName },
+      // Itt már a helyes URL-t fogja használni
       emailRedirectTo: `${getSiteUrl()}/auth/callback`,
     },
   })
@@ -72,6 +81,7 @@ export async function signup(formData: FormData) {
 // --- 3. GOOGLE LOGIN ---
 export async function signInWithGoogle() {
   const supabase = await createClient()
+  // Itt is a helyes URL lesz: https://www.drivesync-hungary.hu/auth/callback
   const callbackUrl = `${getSiteUrl()}/auth/callback`
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -112,8 +122,9 @@ export async function resetPassword(formData: FormData) {
     }
 
     const siteUrl = getSiteUrl();
+    console.log("Jelszó visszaállítási link alapja:", siteUrl); // Logolás a biztonság kedvéért
 
-    // Ez a kulcs: a "next" paraméter mondja meg, hova menjen a user a linkre kattintás után
+    // A redirectTo most már fixen a https://www.drivesync-hungary.hu címmel kezdődik majd
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${siteUrl}/auth/callback?next=/update-password`, 
     });
@@ -122,12 +133,10 @@ export async function resetPassword(formData: FormData) {
         console.error("Jelszó visszaállítási hiba:", error.message);
     }
 
-    // Biztonsági okból mindig sikert jelzünk
     return redirect(`/login?message=${encodeURIComponent('Ha az email cím regisztrálva van, elküldtük a visszaállító linket.')}`);
 }
 
 // --- 6. UPDATE PASSWORD (Új jelszó mentése) ---
-// Ez ÚJ, ez kell a folyamat végére!
 export async function updatePassword(formData: FormData) {
   const supabase = await createClient()
   const password = formData.get('password') as string
