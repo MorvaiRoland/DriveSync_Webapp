@@ -1,34 +1,45 @@
-// app/verify/[id]/page.tsx
+// FILE: app/verify/[id]/page.tsx
+
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 
-// Külön kliens, ami megkerüli a biztonsági szabályokat (CSAK OLVASÁSRA!)
+// Ez a kliens a publikus adatok lekéréséhez kell (Service Role)
+// Ellenőrizd, hogy a .env.local fájlban benne van-e a SUPABASE_SERVICE_ROLE_KEY!
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // Ezt add hozzá az .env.local fájlhoz!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export default async function VerifyPage({ params }: { params: { id: string } }) {
-  // 1. Autó lekérése
+// --- JAVÍTÁS: A params típusa Promise (Next.js 15 szabvány) ---
+type Props = {
+  params: Promise<{ id: string }>
+}
+
+export default async function VerifyPage(props: Props) {
+  // --- JAVÍTÁS: Megvárjuk az adatot (await) ---
+  const params = await props.params
+  const { id } = params
+
+  // 1. Autó lekérése (Service Role klienssel, hogy ne kelljen bejelentkezni)
   const { data: car } = await supabaseAdmin
     .from('cars')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!car) return notFound()
 
-  // 2. Szervizek lekérése (csak a publikusak vagy fontosak)
+  // 2. Szervizek lekérése
   const { data: events } = await supabaseAdmin
     .from('events')
     .select('*')
     .eq('car_id', car.id)
-    .in('type', ['service', 'repair', 'maintenance']) // Csak szerviz dolgok
+    .in('type', ['service', 'repair', 'maintenance'])
     .order('event_date', { ascending: false })
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4 font-sans text-slate-900">
       
       {/* Hitelesítés Badge */}
       <div className="bg-emerald-100 text-emerald-800 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 mb-8 shadow-sm">
@@ -38,7 +49,7 @@ export default async function VerifyPage({ params }: { params: { id: string } })
 
       <div className="bg-white max-w-2xl w-full rounded-3xl shadow-xl overflow-hidden border border-slate-200">
         
-        {/* Fejléc Kép (ha van) vagy Szín */}
+        {/* Fejléc */}
         <div className="h-32 bg-slate-900 relative flex items-center justify-center">
             {car.image_url && <Image src={car.image_url} alt="Car" fill className="object-cover opacity-50" />}
             <div className="relative z-10 text-center">
