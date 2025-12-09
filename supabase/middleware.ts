@@ -2,7 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  // Kezdeti válasz létrehozása
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -25,12 +24,10 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // 1. Beállítjuk a sütiket a kérésen (hogy a szerver komponensek lássák)
           cookiesToSet.forEach(({ name, value, options }) =>
             request.cookies.set(name, value)
           )
           
-          // 2. Beállítjuk a sütiket a válaszon (hogy a böngésző elmentse)
           response = NextResponse.next({
             request,
           })
@@ -42,18 +39,12 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Felhasználó lekérése a token frissítéséhez
   const { data: { user }, error } = await supabase.auth.getUser()
-
-  // --- JAVÍTOTT ÁTIRÁNYÍTÁSI LOGIKA ---
 
   // 1. Ha a felhasználó be van jelentkezve, és a Login oldalon van -> Irány a Dashboard (/)
   if (user && !error && request.nextUrl.pathname.startsWith('/login')) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
-    
-    // FONTOS JAVÍTÁS: Nem sima redirectet küldünk, hanem átmásoljuk a frissített response sütijeit!
-    // Így ha a getUser() frissítette a tokent, az nem vész el az átirányításkor.
     const redirectResponse = NextResponse.redirect(url)
     copyCookies(response, redirectResponse)
     return redirectResponse
@@ -61,11 +52,13 @@ export async function updateSession(request: NextRequest) {
 
   // 2. Ha NINCS bejelentkezve (vagy hiba van a tokennel)
   if (!user || error) {
-    // Ha védett oldalt próbál elérni (pl. /cars/...) -> Irány a /login
-    // De a főoldalt (/) és a /login-t békén hagyjuk!
+    // ITT A JAVÍTÁS:
+    // Hozzáadtuk a !request.nextUrl.pathname.startsWith('/update-password') feltételt.
+    // Így ha a jelszó frissítő oldalon vagyunk, nem dob ki akkor sem, ha a session még nem 100%-os.
     if (
         !request.nextUrl.pathname.startsWith('/login') && 
         !request.nextUrl.pathname.startsWith('/auth') && 
+        !request.nextUrl.pathname.startsWith('/update-password') && // <--- EZT ADD HOZZÁ!
         request.nextUrl.pathname !== '/'
     ) {
         const url = request.nextUrl.clone()
@@ -79,7 +72,6 @@ export async function updateSession(request: NextRequest) {
   return response
 }
 
-// Segédfüggvény a sütik átmásolásához
 function copyCookies(sourceResponse: NextResponse, targetResponse: NextResponse) {
     sourceResponse.cookies.getAll().forEach((cookie) => {
         targetResponse.cookies.set(cookie.name, cookie.value, {
