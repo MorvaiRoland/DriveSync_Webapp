@@ -1,7 +1,7 @@
-// components/DealerModal.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom' // <--- FONTOS IMPORT
 import { updateDealerInfo } from '@/app/cars/[id]/actions'
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
@@ -17,6 +17,17 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
 
 export default function DealerModal({ car, onClose }: { car: any, onClose: () => void }) {
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Csak a kliens oldalon renderelünk a body-ba
+  useEffect(() => {
+    setMounted(true)
+    // Megakadályozzuk a háttér görgetését, amíg nyitva van
+    document.body.style.overflow = 'hidden'
+    return () => {
+        document.body.style.overflow = 'unset'
+    }
+  }, [])
 
   const handleSaveAndGenerate = async (formData: FormData) => {
     setLoading(true)
@@ -42,7 +53,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
 
         // --- PDF DESIGN ---
         doc.setFillColor(15, 23, 42) // Slate-900
-        doc.rect(0, 0, 210, 60, 'F') // Nagyobb fejléc
+        doc.rect(0, 0, 210, 60, 'F') 
         
         doc.setTextColor(255, 255, 255)
         doc.setFontSize(30)
@@ -67,7 +78,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.setTextColor(80, 80, 80)
         const yStart = 120
         
-        // Bal oszlop adatok
+        // Bal oszlop
         doc.text(`Évjárat:`, 30, yStart)
         doc.setFontSize(14); doc.setTextColor(0,0,0); 
         doc.text(`${car.year}`, 70, yStart); doc.setTextColor(80,80,80);
@@ -76,7 +87,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.setFontSize(14); doc.setTextColor(0,0,0);
         doc.text(`${car.fuel_type}`, 70, yStart + 15); doc.setTextColor(80,80,80);
 
-        // Jobb oszlop adatok
+        // Jobb oszlop
         doc.text(`Futásteljesítmény:`, 110, yStart)
         doc.setFontSize(14); doc.setTextColor(0,0,0);
         doc.text(`${car.mileage.toLocaleString()} km`, 160, yStart); doc.setTextColor(80,80,80);
@@ -99,7 +110,6 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
             
             features.forEach((feat, i) => {
                 if(feat.trim()) {
-                    // Két oszlopba rendezés
                     if (i % 2 === 0) xPos = 40; else xPos = 120;
                     doc.text(`• ${feat.trim()}`, xPos, yFeat)
                     if (i % 2 !== 0) yFeat += 10;
@@ -129,14 +139,19 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
     }
   }
 
-  return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 md:p-8">
-        
-        {/* MODAL KONTÉNER: Most már max-w-4xl (szélesebb) */}
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in duration-300 flex flex-col max-h-[95vh]">
+  // Ha még nem töltött be a kliens, ne rendereljünk semmit
+  if (!mounted) return null
+
+  // PORTAL HASZNÁLATA: Ez teszi ki a modalt a body tag-be
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        {/* Sötét háttér overlay */}
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+
+        {/* MODAL KONTÉNER */}
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in duration-200 flex flex-col max-h-[90vh] relative z-10">
             
-            {/* FEJLÉC */}
-            <div className="bg-slate-950 px-8 py-6 flex justify-between items-center shrink-0 border-b border-slate-800">
+            <div className="bg-slate-900 px-8 py-6 flex justify-between items-center shrink-0 border-b border-slate-800">
                 <div className="flex items-center gap-4">
                     <div className="bg-amber-500 p-2 rounded-lg">
                         <svg className="w-6 h-6 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -146,12 +161,11 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
                         <p className="text-slate-400 text-sm">Állítsd be az eladási paramétereket a nyomtatáshoz.</p>
                     </div>
                 </div>
-                <button onClick={onClose} className="bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-full p-2 transition-colors">
+                <button type="button" onClick={onClose} className="bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-full p-2 transition-colors">
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
             
-            {/* TARTALOM (Görgethető) */}
             <form action={handleSaveAndGenerate} className="flex-1 overflow-y-auto bg-slate-50/50">
                 <input type="hidden" name="id" value={car.id} />
                 
@@ -212,21 +226,16 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Sebességváltó</label>
-                                <div className="relative">
-                                    <select 
-                                        name="transmission" 
-                                        defaultValue={car.transmission} 
-                                        className="w-full rounded-xl border-slate-300 bg-slate-50 py-3 px-4 focus:ring-blue-500 focus:border-blue-500 appearance-none font-medium"
-                                    >
-                                        <option value="Manuális">Manuális</option>
-                                        <option value="Automata">Automata</option>
-                                        <option value="Félautomata">Félautomata (DSG/DCT)</option>
-                                        <option value="Fokozatmentes">Fokozatmentes (CVT)</option>
-                                    </select>
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-500">
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                    </div>
-                                </div>
+                                <select 
+                                    name="transmission" 
+                                    defaultValue={car.transmission} 
+                                    className="w-full rounded-xl border-slate-300 bg-slate-50 py-3 px-4 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                                >
+                                    <option value="Manuális">Manuális</option>
+                                    <option value="Automata">Automata</option>
+                                    <option value="Félautomata">Félautomata (DSG/DCT)</option>
+                                    <option value="Fokozatmentes">Fokozatmentes (CVT)</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -251,31 +260,21 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
 
                 </div>
 
-                {/* FOOTER - Rögzített az alján mobilon is */}
-                <div className="sticky bottom-0 bg-white border-t border-slate-200 p-6 flex justify-between items-center z-10">
-                    <button type="button" onClick={onClose} className="text-slate-500 font-bold hover:text-slate-800 px-4 py-2 transition-colors">
+                <div className="sticky bottom-0 bg-white border-t border-slate-200 p-6 flex justify-end gap-3 z-10">
+                    <button type="button" onClick={onClose} className="px-6 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors">
                         Mégsem
                     </button>
                     <button 
                         type="submit" 
                         disabled={loading}
-                        className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-xl shadow-slate-900/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-3 transition-all transform active:scale-95"
+                        className="px-8 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-900 font-bold rounded-xl shadow-lg shadow-amber-500/20 disabled:opacity-50 flex items-center gap-2 transition-all transform active:scale-95"
                     >
-                        {loading ? (
-                            <>
-                                <svg className="animate-spin -ml-1 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                Feldolgozás...
-                            </>
-                        ) : (
-                            <>
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                                Mentés és PDF Nyomtatás
-                            </>
-                        )}
+                        {loading ? 'Generálás...' : 'Mentés és Nyomtatás'}
                     </button>
                 </div>
             </form>
         </div>
-    </div>
+    </div>,
+    document.body
   )
 }
