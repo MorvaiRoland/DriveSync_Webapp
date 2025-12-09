@@ -3,6 +3,7 @@ import "./globals.css";
 import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner"; 
+import PromoBanner from "@/components/PromoBanner"; // <--- 1. ÚJ IMPORT
 
 export const viewport: Viewport = {
   themeColor: "#0f172a",
@@ -13,7 +14,6 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  // JAVÍTÁS: Itt, a metadata objektumon belül definiáljuk, nem külön exportként!
   metadataBase: new URL('https://drivesync-hungary.hu'),
   
   title: {
@@ -86,6 +86,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            {/* 2. IDE KERÜL A BANNER, HOGY MINDEN OLDALON LÁTSZÓDJON */}
+            <PromoBanner />
+
             {children}
             
             <Toaster position="top-center" richColors closeButton />

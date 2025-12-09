@@ -10,12 +10,11 @@ export default async function AdminDashboard() {
   const { data: { user } } = await authSupabase.auth.getUser()
 
   // KÖRNYEZETI VÁLTOZÓ HASZNÁLATA
-  // A Vercelen add hozzá: ADMIN_EMAILS="email1@gmail.com,email2@gmail.com"
   const allowedEmailsEnv = process.env.ADMIN_EMAILS || '';
   const allowedEmails = allowedEmailsEnv.split(',').map(email => email.trim());
 
   if (!user || !user.email || !allowedEmails.includes(user.email)) {
-    return notFound() // Ha nem admin, 404-et kap (biztonságos)
+    return notFound() // Ha nem admin, 404-et kap
   }
 
   // 2. Admin Kliens létrehozása (Service Role - lát mindent)
@@ -24,27 +23,42 @@ export default async function AdminDashboard() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // 3. Adatok lekérése
-  const [carsRes, eventsRes] = await Promise.all([
+  // 3. Adatok lekérése (BŐVÍTVE a subscriptions táblával)
+  const [carsRes, eventsRes, subsRes] = await Promise.all([
     supabaseAdmin
       .from('cars')
       .select('id, make, model, year, plate, created_at, user_id, mileage, fuel_type'),
     supabaseAdmin
       .from('events')
-      .select('id, type, cost, created_at, title, car_id')
+      .select('id, type, cost, created_at, title, car_id'),
+    supabaseAdmin
+      .from('subscriptions')
+      .select('user_id, status, plan_type, created_at')
   ])
 
   const cars = carsRes.data || []
   const events = eventsRes.data || []
+  const subscriptions = subsRes.data || []
 
   // --- ÜZLETI LOGIKA ÉS ELEMZÉS ---
 
-  const uniqueUsers = new Set(cars.map((c: any) => c.user_id)).size
+  const uniqueUsers = new Set(cars.map((c: any) => c.user_id)).size // Autót rögzített userek
+  // Megjegyzés: A 'subscriptions' tábla minden regisztrált usert tartalmaz, így pontosabb a user szám onnan
+  const totalRegisteredUsers = subscriptions.length 
+  
   const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0)
-  const avgCostPerEvent = events.length > 0 ? Math.round(totalCost / events.length) : 0;
   const serviceCount = events.filter(e => e.type === 'service' || e.type === 'repair').length
   const fuelCount = events.filter(e => e.type === 'fuel').length
 
+  // ELŐFIZETÉS STATISZTIKA (ÚJ)
+  const founderCount = subscriptions.filter(s => s.plan_type === 'founder' && s.status === 'active').length
+  const proCount = subscriptions.filter(s => s.plan_type === 'pro' && s.status === 'active').length
+  const freeCount = subscriptions.filter(s => s.status === 'free').length
+  
+  // Összes aktív fizetős/founder tag aránya
+  const proRate = totalRegisteredUsers > 0 ? Math.round(((founderCount + proCount) / totalRegisteredUsers) * 100) : 0
+
+  // Top listák
   const topMileageCars = [...cars]
     .sort((a, b) => b.mileage - a.mileage)
     .slice(0, 5);
@@ -90,13 +104,27 @@ export default async function AdminDashboard() {
 
       {/* KPI GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <KPICard 
-            title="Felhasználók" 
-            value={uniqueUsers} 
-            subtitle="Aktív fiókok" 
-            icon={<svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
-            color="blue"
-        />
+        
+        {/* ÚJ: ELŐFIZETŐK KÁRTYA */}
+        <div className="p-6 rounded-2xl border bg-slate-900 border-slate-800 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
+            <div className="flex justify-between items-start mb-4">
+                <div>
+                    <p className="text-xs uppercase font-bold text-slate-400 mb-1 tracking-wider">Összes Tag</p>
+                    <h2 className="text-3xl font-black text-white tracking-tight">{totalRegisteredUsers}</h2>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 shadow-inner group-hover:border-blue-500/30 transition-colors">
+                    <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                </div>
+            </div>
+            <div className="flex justify-between items-end">
+               <div className="flex gap-2">
+                  <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20 font-bold" title="Founder Plan">{founderCount} 🚀</span>
+                  <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 font-bold" title="Pro Plan">{proCount} PRO</span>
+               </div>
+               <p className="text-xs text-slate-500 font-medium">{proRate}% Prémium</p>
+            </div>
+        </div>
+
         <KPICard 
             title="Flotta Méret" 
             value={cars.length} 
@@ -260,7 +288,7 @@ export default async function AdminDashboard() {
                       <span className="text-slate-300 font-mono">eu-central-1</span>
                   </div>
                   <div className="pt-3 border-t border-slate-800 mt-2 text-center text-[10px] text-slate-600">
-                      DriveSync Admin v2.1 • {new Date().getFullYear()}
+                      DriveSync Admin v2.2 • {new Date().getFullYear()}
                   </div>
               </div>
 

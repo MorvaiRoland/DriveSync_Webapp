@@ -8,7 +8,8 @@ import ChangelogModal from '@/components/ChangelogModal'
 import { WeatherWidget, FuelWidget } from '@/components/DashboardWidgets'
 import ReminderChecker from '@/components/ReminderChecker'
 import AiMechanic from '@/components/AiMechanic'
-import GamificationWidget from '@/components/GamificationWidget' // <--- ÚJ IMPORT
+import GamificationWidget from '@/components/GamificationWidget'
+import PromoBanner from '@/components/PromoBanner' // Importáljuk a bannert
 
 // --- SERVER ACTION: Km Naplózása ---
 async function logCurrentMileage(formData: FormData) {
@@ -33,8 +34,8 @@ export default async function Home() {
 
   // Adatok inicializálása
   let cars: any[] = []
-  let myCars: any[] = []      // Saját autók
-  let sharedCars: any[] = []  // Megosztott autók
+  let myCars: any[] = []      
+  let sharedCars: any[] = []  
   
   let upcomingReminders: any[] = []
   let recentActivity: any[] = []
@@ -44,24 +45,31 @@ export default async function Home() {
   let fleetHealth = 100 
   let latestCarId = null
 
-  // Gamification változók
+  // Gamification & Előfizetés
   let badges: any[] = []
+  let subscription: any = null
 
   if (user) {
-    // 1. Autók lekérése
+    // 1. Előfizetés lekérése
+    const { data: subData } = await supabase
+        .from('subscriptions')
+        .select('status, plan_type')
+        .eq('user_id', user.id)
+        .single();
+    subscription = subData;
+
+    // 2. Autók lekérése
     const { data: carsData } = await supabase.from('cars').select('*').order('created_at', { ascending: false })
     
     if (carsData) {
         cars = carsData
-        // SZÉTVÁLOGATÁS: Saját vs. Megosztott
         myCars = carsData.filter(car => car.user_id === user.id)
         sharedCars = carsData.filter(car => car.user_id !== user.id)
-        
         latestCarId = cars.length > 0 ? cars[0].id : null;
     }
 
     if (cars.length > 0) {
-        // 2. Összes Emlékeztető
+        // 3. Emlékeztetők
         const { data: reminders } = await supabase
             .from('service_reminders')
             .select('*, cars(make, model)')
@@ -69,7 +77,7 @@ export default async function Home() {
             .limit(3)
         if (reminders) upcomingReminders = reminders
 
-        // 3. Legutóbbi aktivitások
+        // 4. Aktivitások
         const { data: activities } = await supabase
             .from('events')
             .select('*, cars(make, model)')
@@ -77,7 +85,7 @@ export default async function Home() {
             .limit(5)
         if (activities) recentActivity = activities
 
-        // 4. Pénzügyek
+        // 5. Pénzügyek
         const { data: allCosts } = await supabase.from('events').select('cost, event_date')
         if (allCosts) {
             const now = new Date()
@@ -87,48 +95,21 @@ export default async function Home() {
                 .reduce((sum, e) => sum + (e.cost || 0), 0)
         }
 
-        // 5. Flotta egészség
+        // 6. Flotta egészség
         const sickCars = cars.filter(c => c.status === 'service').length
         fleetHealth = Math.round(((cars.length - sickCars) / cars.length) * 100)
 
-        // --- 6. GAMIFICATION LOGIKA ---
-        
-        // High Miler: Van-e 200e km feletti autó?
+        // 7. Gamification Logika
         const isHighMiler = cars.some(c => c.mileage >= 200000);
-
-        // Pontos Admin: Volt-e aktivitás az elmúlt 7 napban?
         const lastActivityDate = recentActivity.length > 0 ? new Date(recentActivity[0].event_date) : new Date(0);
         const diffDays = Math.floor((new Date().getTime() - lastActivityDate.getTime()) / (1000 * 3600 * 24));
         const isAdmin = recentActivity.length > 0 && diffDays <= 7;
-
-        // Eco Driver: Flotta egészség > 90%
         const isEcoDriver = fleetHealth >= 90;
 
         badges = [
-            {
-                id: 'high-miler',
-                name: 'High Miler',
-                icon: '🛣️',
-                description: 'Léptél már át 200.000 km-t valamelyik autóddal. Igazi világutazó!',
-                earned: isHighMiler,
-                color: 'from-purple-500 to-indigo-600 text-white'
-            },
-            {
-                id: 'eco-driver',
-                name: 'Eco Driver',
-                icon: '🍃',
-                description: 'A flottád állapota kiváló (>90%). Vigyázol a környezetedre és a pénztárcádra.',
-                earned: isEcoDriver,
-                color: 'from-emerald-400 to-green-600 text-white'
-            },
-            {
-                id: 'admin',
-                name: 'Pontos Admin',
-                icon: '📅',
-                description: 'Rögzítettél eseményt az elmúlt 7 napban. A rend a lelke mindennek!',
-                earned: isAdmin,
-                color: 'from-blue-400 to-blue-600 text-white'
-            }
+            { id: 'high-miler', name: 'High Miler', icon: '🛣️', description: '200.000+ km valamelyik autódban.', earned: isHighMiler, color: 'from-purple-500 to-indigo-600 text-white' },
+            { id: 'eco-driver', name: 'Eco Driver', icon: '🍃', description: 'A flotta egészsége >90%.', earned: isEcoDriver, color: 'from-emerald-400 to-green-600 text-white' },
+            { id: 'admin', name: 'Pontos Admin', icon: '📅', description: 'Aktivitás az elmúlt 7 napban.', earned: isAdmin, color: 'from-blue-400 to-blue-600 text-white' }
         ];
     }
   }
@@ -141,22 +122,41 @@ export default async function Home() {
     return (
       <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-24 transition-colors duration-300">
         
-        {/* --- ÚJ: AI SZERELŐ WIDGET --- */}
         <AiMechanic />
-
         <ChangelogModal />
         <ReminderChecker />
+        
+        {/* --- ÚJ: PROMO BANNER (csak ha még tart az akció) --- */}
+        <PromoBanner />
+
         <nav className="bg-slate-900 sticky top-0 z-50 shadow-lg border-b border-white/5 backdrop-blur-md bg-opacity-95">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="relative w-8 h-8">
-                  <Image src="/drivesync-logo.png" alt="DriveSync" fill className="object-contain" priority />
-                </div>
-                <span className="text-xl font-bold tracking-tight text-white uppercase hidden sm:block">
-                  Drive<span className="text-amber-500">Sync</span>
-                </span>
+              
+              {/* BAL OLDAL: Logo + Navigáció */}
+              <div className="flex items-center gap-6"> {/* Közös konténer a logonak és a menünek */}
+                
+                {/* LOGO */}
+                <Link href="/" className="flex items-center gap-3">
+                  <div className="relative w-8 h-8">
+                    <Image src="/drivesync-logo.png" alt="DriveSync" fill className="object-contain" priority />
+                  </div>
+                  <span className="text-xl font-bold tracking-tight text-white uppercase hidden sm:block">
+                    Drive<span className="text-amber-500">Sync</span>
+                  </span>
+                </Link>
+
+                {/* ÚJ MENÜPONT: CSOMAGOK (Csak desktopon látszik) */}
+                <Link 
+                  href="/pricing" 
+                  className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
+                >
+                    Csomagok
+                </Link>
+
               </div>
+
+              {/* JOBB OLDAL: Beállítások + Kilépés */}
               <div className="flex items-center gap-4">
                 <Link 
                   href="/settings" 
@@ -178,6 +178,30 @@ export default async function Home() {
 
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           
+          {/* --- FOUNDER ÜDVÖZLŐ KÁRTYA (ÚJ) --- */}
+          {subscription?.plan_type === 'founder' && (
+             <div className="mb-8 p-4 md:p-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-xl relative overflow-hidden animate-in slide-in-from-top-4 duration-700">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                   <div>
+                      <div className="flex items-center gap-2 mb-2">
+                         <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border border-white/20">Founder Member</span>
+                         <span className="text-xl">🚀</span>
+                      </div>
+                      <h2 className="text-2xl font-black mb-1">Gratulálunk, Alapító Tag vagy!</h2>
+                      <p className="text-amber-100 text-sm max-w-lg">
+                         Sikeresen regisztráltál az indulási időszakban, így az örökös Pro tagság a tiéd. Élvezd az összes prémium funkciót ingyen, örökre!
+                      </p>
+                   </div>
+                   <div className="hidden md:block">
+                      <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
+                         <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                      </div>
+                   </div>
+                </div>
+             </div>
+          )}
+
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
               <div>
                 <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1">{greeting},</h2>
@@ -285,12 +309,7 @@ export default async function Home() {
                 {/* 1. GAMIFICATION WIDGET (Legfelül) */}
                 <GamificationWidget badges={badges} />
 
-                {/* 2. DASHBOARD WIDGETS (Időjárás + Benzinár) 
-                    Reszponzív Grid:
-                    - Mobile: grid-cols-2 (egymás mellett, ha elfér)
-                    - Laptop (lg): grid-cols-1 (egymás alatt, mert keskeny a sáv)
-                    - Wide (xl): grid-cols-2 (újra egymás mellett)
-                */}
+                {/* 2. DASHBOARD WIDGETS (Időjárás + Benzinár) */}
                 <div className="grid grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
                     <WeatherWidget />
                     <FuelWidget />
@@ -365,6 +384,12 @@ export default async function Home() {
   // --- LOGGED OUT LANDING PAGE ---
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-950 font-sans text-slate-200 flex flex-col lg:flex-row selection:bg-amber-500/30">
+      
+      {/* LANDING PAGE PROMO BANNER (RÖGZÍTETT) */}
+      <div className="sticky top-0 z-50">
+        <PromoBanner />
+      </div>
+
       <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950">
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
            <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse-slow"></div>
@@ -422,6 +447,9 @@ export default async function Home() {
             <Link href="/login?mode=signup" className="group flex w-full items-center justify-center gap-3 rounded-xl bg-slate-900 border border-slate-800 px-4 py-4 text-sm font-bold text-white shadow-lg hover:bg-slate-800 hover:border-slate-700 transition-all transform active:scale-[0.98]">
                <span>Fiók létrehozása</span>
             </Link>
+            <Link href="/pricing" className="block text-center text-sm text-slate-500 hover:text-amber-500 transition-colors mt-4">
+        Csomagok és Árak megtekintése →
+    </Link>
           </div>
         </div>
       </div>
@@ -496,7 +524,7 @@ function StatCard({ label, value, subValue, icon, customColor, alert, highlight,
          <div className="text-slate-400">
             {icon === 'total' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
             {icon === 'avg' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>}
-            {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+            {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
             {icon === 'fuel' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
          </div>
        </div>
