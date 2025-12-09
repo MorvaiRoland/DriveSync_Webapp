@@ -17,7 +17,8 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    return redirect('/login?message=Helytelen email vagy jelszó')
+    // JAVÍTÁS: Ékezetek nélkül vagy URL kódolva
+    return redirect(`/login?message=${encodeURIComponent('Helytelen email vagy jelszó')}`)
   }
 
   revalidatePath('/', 'layout')
@@ -43,19 +44,17 @@ export async function signup(formData: FormData) {
   })
 
   if (error) {
-    return redirect('/login?message=Sikertelen regisztráció')
+    return redirect(`/login?message=${encodeURIComponent('Sikertelen regisztráció')}`)
   }
 
   revalidatePath('/', 'layout')
-  redirect('/login?message=Ellenőrizd az email fiókodat a megerősítéshez')
+  redirect(`/login?message=${encodeURIComponent('Ellenőrizd az email fiókodat a megerősítéshez')}`)
 }
 
-// --- 3. GOOGLE LOGIN (DOMAIN FIX) ---
+// --- 3. GOOGLE LOGIN ---
 export async function signInWithGoogle() {
   const supabase = await createClient()
   
-  // ITT A VÁLTOZÁS: Fixen a te domainedet állítjuk be
-  // Ha localhoston vagy, akkor localhost, egyébként a domain
   const isLocal = process.env.NODE_ENV === 'development';
   const siteUrl = isLocal ? 'http://localhost:3000' : 'https://www.drivesync-hungary.hu';
 
@@ -76,7 +75,7 @@ export async function signInWithGoogle() {
 
   if (error) {
     console.error("Google Auth Hiba:", error);
-    return redirect('/login?message=Google bejelentkezés sikertelen')
+    return redirect(`/login?message=${encodeURIComponent('Google bejelentkezés sikertelen')}`)
   }
 
   if (data.url) {
