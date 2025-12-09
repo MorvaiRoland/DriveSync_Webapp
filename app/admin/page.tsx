@@ -4,21 +4,17 @@ import { createClient as createAuthClient } from '@/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
-// --- KONFIGURÁCIÓ ---
-// Ide írd be a SAJÁT email címeidet, akik hozzáférhetnek
-const ADMIN_EMAILS = ['morvairoland@gmail.com', 'info@drivesync-hungary.hu']; 
-
 export default async function AdminDashboard() {
   // 1. Biztonsági ellenőrzés (Auth)
   const authSupabase = await createAuthClient()
   const { data: { user } } = await authSupabase.auth.getUser()
 
-  // Ellenőrizzük, hogy a user admin-e (környezeti változó vagy lista alapján)
-  const adminEmailEnv = process.env.ADMIN_EMAIL;
-  const isEnvAdmin = adminEmailEnv && user?.email === adminEmailEnv;
-  const isListAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
+  // KÖRNYEZETI VÁLTOZÓ HASZNÁLATA
+  // A Vercelen add hozzá: ADMIN_EMAILS="email1@gmail.com,email2@gmail.com"
+  const allowedEmailsEnv = process.env.ADMIN_EMAILS || '';
+  const allowedEmails = allowedEmailsEnv.split(',').map(email => email.trim());
 
-  if (!user || (!isListAdmin && !isEnvAdmin)) {
+  if (!user || !user.email || !allowedEmails.includes(user.email)) {
     return notFound() // Ha nem admin, 404-et kap (biztonságos)
   }
 
@@ -28,7 +24,7 @@ export default async function AdminDashboard() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // 3. Adatok lekérése (JAVÍTVA: 'plate' hozzáadva!)
+  // 3. Adatok lekérése
   const [carsRes, eventsRes] = await Promise.all([
     supabaseAdmin
       .from('cars')
@@ -43,23 +39,16 @@ export default async function AdminDashboard() {
 
   // --- ÜZLETI LOGIKA ÉS ELEMZÉS ---
 
-  // 1. Felhasználói bázis (egyedi user_id-k száma)
   const uniqueUsers = new Set(cars.map((c: any) => c.user_id)).size
-
-  // 2. Pénzügyi adatok
   const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0)
   const avgCostPerEvent = events.length > 0 ? Math.round(totalCost / events.length) : 0;
-
-  // 3. Esemény típusok
   const serviceCount = events.filter(e => e.type === 'service' || e.type === 'repair').length
   const fuelCount = events.filter(e => e.type === 'fuel').length
 
-  // 4. TOPLISTA: Legtöbbet futott autók
   const topMileageCars = [...cars]
     .sort((a, b) => b.mileage - a.mileage)
     .slice(0, 5);
 
-  // 5. TOPLISTA: Legdrágább fenntartású autók (Összegzés)
   const carCosts: Record<string, number> = {};
   events.forEach(e => {
       if (!carCosts[e.car_id]) carCosts[e.car_id] = 0;
@@ -69,14 +58,12 @@ export default async function AdminDashboard() {
   const topCostCars = Object.entries(carCosts)
     .map(([carId, cost]) => {
         const car = cars.find(c => c.id === carId);
-        // Csak akkor adjuk vissza, ha az autó még létezik az adatbázisban
         return car ? { ...car, totalSpent: cost } : null;
     })
-    .filter((c): c is NonNullable<typeof c> => c !== null) // Null-ok kiszűrése
+    .filter((c): c is NonNullable<typeof c> => c !== null)
     .sort((a, b) => b.totalSpent - a.totalSpent)
     .slice(0, 5);
 
-  // 6. Legutóbbi aktivitás (Live Feed)
   const recentActivity = [...events]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 7);
@@ -101,7 +88,7 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* KPI GRID (Fő számok) */}
+      {/* KPI GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <KPICard 
             title="Felhasználók" 
@@ -135,10 +122,10 @@ export default async function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* BAL OSZLOP: LIVE FEED és TOPLISTÁK */}
+          {/* BAL OSZLOP */}
           <div className="lg:col-span-2 space-y-8">
               
-              {/* Esemény eloszlás (Vizuális sáv - Chart helyett) */}
+              {/* Esemény eloszlás */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
                   <h3 className="font-bold text-white mb-4 flex items-center gap-2">
                       <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -162,7 +149,7 @@ export default async function AdminDashboard() {
                   )}
               </div>
 
-              {/* Legdrágább Autók (High Rollers) */}
+              {/* Legdrágább Autók */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
                   <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
                       <h3 className="font-bold text-white flex items-center gap-2">
@@ -190,7 +177,7 @@ export default async function AdminDashboard() {
                   </div>
               </div>
 
-              {/* Legtöbbet futott autók (Iron Horses) */}
+              {/* Legtöbbet futott autók */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
                   <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
                       <h3 className="font-bold text-white flex items-center gap-2">
@@ -219,12 +206,11 @@ export default async function AdminDashboard() {
 
           </div>
 
-          {/* JOBB OSZLOP: Live Feed és Technikai Info */}
+          {/* JOBB OSZLOP */}
           <div className="space-y-8">
               
               {/* LIVE FEED */}
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-fit relative overflow-hidden">
-                  {/* Háttér effekt */}
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
                   
                   <h3 className="font-bold text-white mb-6 flex items-center gap-2 relative z-10">
