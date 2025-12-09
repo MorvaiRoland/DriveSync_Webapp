@@ -594,3 +594,35 @@ export async function checkAndSendReminders() {
   console.log("--- ✅ KÉSZ ---");
   return { count: emailCount, alerts: pushAlerts }
 }
+export async function updateDealerInfo(formData: FormData) {
+  const supabase = await createClient()
+  
+  const id = formData.get('id') as string
+  const price = formData.get('price') ? parseInt(formData.get('price') as string) : null
+  const engine_details = formData.get('engine_details') as string
+  const performance_hp = formData.get('performance_hp') ? parseInt(formData.get('performance_hp') as string) : null
+  const transmission = formData.get('transmission') as string
+  // Az extrák vesszővel elválasztva jönnek a formból, tömbbé alakítjuk
+  const featuresString = formData.get('features') as string
+  const features = featuresString ? featuresString.split(',').map(f => f.trim()).filter(f => f !== '') : []
+
+  const { error } = await supabase
+    .from('cars')
+    .update({ 
+      price, 
+      engine_details, 
+      performance_hp, 
+      features,
+      transmission 
+    })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Hiba a mentéskor:', error)
+    return { error: 'Sikertelen mentés' }
+  }
+
+  revalidatePath(`/cars/${id}`)
+  revalidatePath(`/verify/${id}`) // A publikus oldalt is frissítjük
+  return { success: true }
+}

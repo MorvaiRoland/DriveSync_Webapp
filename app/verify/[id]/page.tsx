@@ -19,7 +19,7 @@ export default async function VerifyPage(props: Props) {
   const params = await props.params
   const { id } = params
 
-  // 1. Autó lekérése
+  // 1. Autó lekérése (beleértve a kereskedelmi mezőket is, ha vannak)
   const { data: car } = await supabaseAdmin
     .from('cars')
     .select('*')
@@ -33,7 +33,7 @@ export default async function VerifyPage(props: Props) {
     .from('events')
     .select('*')
     .eq('car_id', car.id)
-    .in('type', ['service', 'repair', 'maintenance']) // Tankolást elrejtjük, az privátabb
+    .in('type', ['service', 'repair', 'maintenance'])
     .order('event_date', { ascending: false })
 
   return (
@@ -104,6 +104,59 @@ export default async function VerifyPage(props: Props) {
                     <p className="text-lg sm:text-2xl font-black text-slate-900 capitalize">{car.fuel_type}</p>
                 </div>
             </div>
+
+            {/* --- KERESKEDŐI SZEKCIÓ (Csak ha van adat) --- */}
+            {(car.price || (car.features && car.features.length > 0)) && (
+                <div className="bg-slate-50 border-b border-slate-200 p-6 md:p-8">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                        
+                        {/* ÁR ÉS MOTOR */}
+                        <div className="flex-shrink-0">
+                            {car.price && (
+                                <div className="mb-3">
+                                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Vételár</p>
+                                    <p className="text-4xl font-black text-slate-900">{car.price.toLocaleString()} Ft</p>
+                                </div>
+                            )}
+                            <div className="flex flex-wrap gap-4 text-sm font-bold text-slate-700">
+                                {car.engine_details && (
+                                    <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-slate-200">
+                                        <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                        {car.engine_details}
+                                    </div>
+                                )}
+                                {car.performance_hp && (
+                                    <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-slate-200">
+                                        <span className="text-slate-400">⚡</span>
+                                        {car.performance_hp} LE
+                                    </div>
+                                )}
+                                {car.transmission && (
+                                    <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-slate-200">
+                                        <span className="text-slate-400">⚙️</span>
+                                        {car.transmission}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* EXTRÁK */}
+                        {car.features && car.features.length > 0 && (
+                            <div className="flex-1 w-full md:w-auto">
+                                <p className="text-xs text-slate-500 uppercase font-bold mb-3 tracking-wider">Kiemelt Felszereltség</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {car.features.map((feat: string, i: number) => (
+                                        <span key={i} className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-sm flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                            {feat}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <div className="p-6 md:p-10 bg-white">
                 
