@@ -11,69 +11,54 @@ export async function login(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
-  console.log("🔑 Bejelentkezési kísérlet:", email);
-
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
 
   if (error) {
-    console.error("❌ Login Hiba:", error.message);
-    // Hiba esetén visszaadjuk a konkrét hibaüzenetet (angolul jön a Supabase-től)
-    return redirect(`/login?message=${encodeURIComponent(error.message)}`)
+    return redirect(`/login?message=${encodeURIComponent('Helytelen email vagy jelszó: ' + error.message)}`)
   }
 
-  console.log("✅ Sikeres bejelentkezés:", email);
   revalidatePath('/', 'layout')
   redirect('/')
 }
 
-// --- 2. SIGNUP (REGISZTRÁCIÓ) ---
+// --- 2. SIGNUP ---
 export async function signup(formData: FormData) {
   const supabase = await createClient()
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
-  const fullName = formData.get('full_name') as string
+  const fullName = formData.get('full_name') as string // Ha van ilyen meződ
 
-  console.log("📝 Regisztrációs kísérlet:", { email, fullName, passwordLength: password?.length });
-
-  // VALIDÁCIÓ: A Supabase alapból visszadobja, ha 6-nál rövidebb, de jobb előre szólni
+  // Validáció
   if (!password || password.length < 6) {
-      console.log("⚠️ Jelszó túl rövid");
       return redirect(`/login?message=${encodeURIComponent('A jelszónak legalább 6 karakternek kell lennie!')}`)
   }
 
-  // Meghatározzuk a visszatérési URL-t (Email megerősítéshez)
-  const isLocal = process.env.NODE_ENV === 'development';
-  const siteUrl = isLocal ? 'http://localhost:3000' : 'https://www.drivesync-hungary.hu';
-  
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
-        full_name: fullName,
+        full_name: fullName, // Opcionális
       },
-      // Ez fontos, hogy hova irányítson vissza a klikkelés után
-      emailRedirectTo: `${siteUrl}/auth/callback`,
+      // Ha localhoston tesztelsz, ez localhost, élesben a domain
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/auth/callback`,
     },
   })
 
   if (error) {
-    console.error("❌ Signup Hiba (Supabase):", error);
-    // Itt a trükk: Visszaküldjük a VALÓDI hibaüzenetet a frontendnek
-    return redirect(`/login?message=${encodeURIComponent(error.message)}`)
+    return redirect(`/login?message=${encodeURIComponent('Hiba a regisztráció során: ' + error.message)}`)
   }
 
-  // Ha nincs hiba, megnézzük, létrejött-e a session (ha nem, akkor email megerősítés kell)
+  // Ha a Supabase email megerősítést kér (alapértelmezett), akkor nem kapunk session-t.
   if (data.user && !data.session) {
-      console.log("✅ Regisztráció elindítva, email megerősítés szükséges.");
-      return redirect(`/login?message=${encodeURIComponent('Sikeres regisztráció! Kérlek, erősítsd meg az email címedet a belépéshez.')}`)
+      return redirect(`/login?message=${encodeURIComponent('Sikeres regisztráció! Ellenőrizd az email fiókodat a megerősítéshez.')}`)
   }
 
-  console.log("✅ Sikeres regisztráció és automatikus belépés.");
+  // Ha nincs email megerősítés (kikapcsoltad a Supabase-en), akkor belépünk.
   revalidatePath('/', 'layout')
   redirect('/')
 }
@@ -82,12 +67,8 @@ export async function signup(formData: FormData) {
 export async function signInWithGoogle() {
   const supabase = await createClient()
   
-  const isLocal = process.env.NODE_ENV === 'development';
-  const siteUrl = isLocal ? 'http://localhost:3000' : 'https://www.drivesync-hungary.hu';
-
+  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   const callbackUrl = `${siteUrl}/auth/callback`;
-
-  console.log("🔗 Google Redirect indítása ide:", callbackUrl);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -101,8 +82,7 @@ export async function signInWithGoogle() {
   })
 
   if (error) {
-    console.error("❌ Google Auth Hiba:", error);
-    return redirect(`/login?message=${encodeURIComponent('Google bejelentkezés sikertelen: ' + error.message)}`)
+    return redirect(`/login?message=${encodeURIComponent('Google hiba: ' + error.message)}`)
   }
 
   if (data.url) {
@@ -114,8 +94,6 @@ export async function signInWithGoogle() {
 export async function signOut() {
     const supabase = await createClient()
     await supabase.auth.signOut()
-    
-    console.log("👋 Kijelentkezés");
     revalidatePath('/', 'layout')
     redirect('/login')
 }
