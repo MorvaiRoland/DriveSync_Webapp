@@ -1,9 +1,11 @@
 'use server'
 
-import { createClient } from 'supabase/server' // Vagy 'supabase/server' attól függően hol van a helper
+import { createClient } from '@/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+// --- 1. PROFIL FRISSÍTÉSE ---
 export async function updateProfile(formData: FormData) {
   const supabase = await createClient()
 
@@ -27,10 +29,11 @@ export async function updateProfile(formData: FormData) {
   }
 
   revalidatePath('/settings')
-  revalidatePath('/', 'layout') // Mindenhol frissüljön a név
+  revalidatePath('/', 'layout') // Mindenhol frissüljön a név a fejlécben is
   redirect('/settings?success=Profil sikeresen frissítve')
 }
 
+// --- 2. BEÁLLÍTÁSOK FRISSÍTÉSE ---
 export async function updatePreferences(formData: FormData) {
   const supabase = await createClient()
 
@@ -39,10 +42,6 @@ export async function updatePreferences(formData: FormData) {
   const notifyPush = formData.get('notify_push') === 'on'
   const theme = String(formData.get('theme'))
 
-  // Lekérjük a jelenlegi metaadatokat, hogy ne írjuk felül a meglévőket (pl. full_name), 
-  // hanem csak a settings objektumot update-eljük.
-  // A Supabase updateUser 'data' mezője merge-el, de a biztonság kedvéért érdemes tudatosnak lenni.
-  
   const { error } = await supabase.auth.updateUser({
     data: { 
         settings: {
@@ -62,8 +61,44 @@ export async function updatePreferences(formData: FormData) {
   redirect('/settings?success=Beállítások elmentve')
 }
 
+// --- 3. KIJELENTKEZÉS ---
 export async function signOutAction() {
     const supabase = await createClient()
     await supabase.auth.signOut()
     redirect('/login')
+}
+
+// --- 4. FIÓK TÖRLÉSE (ÚJ) ---
+export async function deleteAccountAction() {
+  const supabase = await createClient()
+
+  // Lekérjük a jelenlegi felhasználót
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  
+  if (authError || !user) {
+      return redirect('/login')
+  }
+
+  // Admin kliens létrehozása a törléshez (Service Role Key szükséges!)
+  // Győződj meg róla, hogy ez a kulcs be van állítva az .env fájlban!
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Felhasználó törlése az Auth-ból
+  // Ha az adatbázis tábláknál beállítottad az "ON DELETE CASCADE"-ot, 
+  // minden adat (autók, események) automatikusan törlődik.
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id)
+
+  if (error) {
+    console.error('Delete Account Error:', error)
+    return redirect('/settings?error=Fiók törlése sikertelen. Próbáld újra később.')
+  }
+
+  // Kijelentkeztetés a biztonság kedvéért (bár a user már nem létezik)
+  await supabase.auth.signOut()
+
+  // Visszairányítás a login oldalra üzenettel
+  return redirect('/login?message=Fiók sikeresen törölve. Sajnáljuk, hogy elmégy.')
 }

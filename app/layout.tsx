@@ -3,7 +3,7 @@ import "./globals.css";
 import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner"; 
-// TÖRÖLVE: import PromoBanner from "@/components/PromoBanner"; 
+import CookieBanner from '@/components/CookieBanner'
 
 export const viewport: Viewport = {
   themeColor: "#0f172a",
@@ -86,11 +86,11 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {/* TÖRÖLVE: <PromoBanner /> - Mert a page.tsx-ben kezeljük! */}
-
             {children}
             
             <Toaster position="top-center" richColors closeButton />
+            
+            <CookieBanner /> {/* <--- IDE KERÜLT A SÜTI SÁV */}
             
             <RegisterSW />
         </ThemeProvider>

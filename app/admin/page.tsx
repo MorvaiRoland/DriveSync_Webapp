@@ -3,9 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createAuthClient } from '@/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from 'next/cache' // FONTOS IMPORT
 
-// --- FONTOS: Ez kapcsolja ki a Cache-t az admin oldalon ---
+// --- FONTOS: Cache kikapcsolása ---
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -23,27 +23,29 @@ async function updateSubscriptionPlan(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // 1. Frissítés
+  // Előfizetés frissítése
   const { error } = await supabaseAdmin
     .from('subscriptions')
     .upsert({ 
         user_id: userId, 
         plan_type: newPlan,
         status: 'active',
-        // Kivettem az updated_at-et, hogy ne okozzon SQL hibát, ha nincs az oszlop
+        // updated_at: new Date().toISOString() // Ha nincs az oszlop, vedd ki!
     }, { onConflict: 'user_id' })
 
   if (error) {
       console.error("Admin update error:", error)
   }
 
-  // 2. Kényszerített újratöltés
+  // FONTOS: Ez utasítja a Next.js-t, hogy töltse újra az admin oldalt
   revalidatePath('/admin', 'page') 
 }
 
 // --- FŐ KOMPONENS ---
 export default async function AdminDashboard() {
-  // 1. Biztonsági ellenőrzés (Auth)
+  // ... (A komponens többi része változatlan marad, másold be a lenti kódot)
+  
+  // 1. Biztonsági ellenőrzés
   const authSupabase = await createAuthClient()
   const { data: { user } } = await authSupabase.auth.getUser()
 
@@ -54,17 +56,15 @@ export default async function AdminDashboard() {
     return notFound()
   }
 
-  // 2. Admin Kliens
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // 3. Adatok lekérése
   const [carsRes, eventsRes, subsRes, usersRes] = await Promise.all([
-    supabaseAdmin.from('cars').select('id, make, model, year, plate, created_at, user_id, mileage, fuel_type'),
-    supabaseAdmin.from('events').select('id, type, cost, created_at, title, car_id'),
-    supabaseAdmin.from('subscriptions').select('user_id, status, plan_type, created_at'),
+    supabaseAdmin.from('cars').select('id'), // Elég az ID a darabszámhoz
+    supabaseAdmin.from('events').select('id, type, cost, car_id'),
+    supabaseAdmin.from('subscriptions').select('user_id, status, plan_type'),
     supabaseAdmin.auth.admin.listUsers()
   ])
 
@@ -79,25 +79,23 @@ export default async function AdminDashboard() {
       return {
           id: u.id,
           email: u.email,
-          last_sign_in: u.last_sign_in_at,
           created_at: u.created_at,
           plan: sub?.plan_type || 'free',
           status: sub?.status || 'inactive'
       }
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  // --- KPI Számítások ---
   const totalRegisteredUsers = userList.length
   const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0)
   
+  // Számolás a FRISS subscriptions listából
   const founderCount = subscriptions.filter(s => s.plan_type === 'founder' && s.status === 'active').length
   const proCount = subscriptions.filter(s => s.plan_type === 'pro' && s.status === 'active').length
   const proRate = totalRegisteredUsers > 0 ? Math.round(((founderCount + proCount) / totalRegisteredUsers) * 100) : 0
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans p-4 md:p-8">
-      
-      {/* HEADER */}
+      {/* ... HEADER ... */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 border-b border-slate-800 pb-6">
         <div>
             <div className="flex items-center gap-3">
@@ -108,13 +106,12 @@ export default async function AdminDashboard() {
         </div>
         <div className="flex gap-3">
             <Link href="/" className="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 hover:text-white">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                 Vissza az Appba
             </Link>
         </div>
       </div>
 
-      {/* KPI GRID */}
+      {/* ... KPI GRID ... */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="p-6 rounded-2xl border bg-slate-900 border-slate-800 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
             <div className="flex justify-between items-start mb-4">
@@ -134,13 +131,12 @@ export default async function AdminDashboard() {
                <p className="text-xs text-slate-500 font-medium">{proRate}% Prémium</p>
             </div>
         </div>
-
-        <KPICard title="Autók száma" value={cars.length} subtitle="Rögzített jármű" color="amber" />
-        <KPICard title="Adatok" value={events.length} subtitle="Esemény sor" color="purple" />
-        <KPICard title="Forgalom" value={`${(totalCost / 1000000).toFixed(1)}M`} subtitle="Költség (HUF)" color="emerald" />
+        <KPICard title="Autók száma" value={cars.length} subtitle="Rögzített jármű" color="amber" icon={<svg className="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>} />
+        <KPICard title="Adatok" value={events.length} subtitle="Esemény sor" color="purple" icon={<svg className="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>} />
+        <KPICard title="Forgalom" value={`${(totalCost / 1000000).toFixed(1)}M`} subtitle="Költség (HUF)" color="emerald" icon={<svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
       </div>
 
-      {/* --- FELHASZNÁLÓKEZELÉS --- */}
+      {/* --- FELHASZNÁLÓK TÁBLÁZAT --- */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8">
           <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
               <h3 className="font-bold text-white flex items-center gap-2">
@@ -154,7 +150,7 @@ export default async function AdminDashboard() {
                   <thead className="bg-slate-950 text-slate-200 uppercase font-bold text-xs">
                       <tr>
                           <th className="px-6 py-4">User</th>
-                          <th className="px-6 py-4 text-center">Csomag</th>
+                          <th className="px-6 py-4 text-center">Jelenlegi Csomag</th>
                           <th className="px-6 py-4 text-right">Módosítás</th>
                       </tr>
                   </thead>

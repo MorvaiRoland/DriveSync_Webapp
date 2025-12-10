@@ -37,7 +37,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
               ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200' 
               : 'bg-red-500/10 border-red-500/20 text-red-200' 
           }`}>
-             <span className="flex-1">{message}</span>
+              <span className="flex-1">{message}</span>
           </div>
         )}
 
@@ -125,7 +125,6 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
         </div>
 
         <div>
-          {/* JAVÍTVA: className a class helyett */}
           <label htmlFor="password" className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Jelszó</label>
           <div className="relative">
             <input
@@ -161,6 +160,22 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
             </div>
           )}
         </div>
+
+        {/* --- JOGI CHECKBOX CSAK REGISZTRÁCIÓNÁL --- */}
+        {!isLogin && (
+          <div className="flex items-start gap-3 mt-2">
+            <input 
+              id="terms" 
+              name="terms"
+              type="checkbox" 
+              required 
+              className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-900/50 text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900 accent-amber-500" 
+            />
+            <label htmlFor="terms" className="text-xs text-slate-400 leading-relaxed">
+              Elolvastam és elfogadom az <Link href="/terms" target="_blank" className="text-amber-500 hover:text-amber-400 hover:underline transition-colors">Általános Szerződési Feltételeket</Link> és az <Link href="/privacy" target="_blank" className="text-amber-500 hover:text-amber-400 hover:underline transition-colors">Adatvédelmi Tájékoztatót</Link>.
+            </label>
+          </div>
+        )}
 
         {message && (
           <div className={`p-4 rounded-lg text-sm flex items-start gap-3 border ${

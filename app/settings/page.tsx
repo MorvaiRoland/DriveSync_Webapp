@@ -1,8 +1,9 @@
-import { createClient } from 'supabase/server' // Vagy 'supabase/server'
+import { createClient } from '@/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { updateProfile, signOutAction } from './actions'
 import { PreferencesForm } from '@/components/SettingsForms'
+import DeleteAccountSection from '@/components/DeleteAccountSection' // <--- ÚJ IMPORT
 
 export default async function SettingsPage(props: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
   const searchParams = await props.searchParams
@@ -109,6 +110,9 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                     </form>
                  </div>
             </div>
+
+            {/* --- FIÓK TÖRLÉSE (Veszélyzóna) --- */}
+            <DeleteAccountSection />
 
             <div className="text-center text-xs text-slate-400 py-4">DriveSync v1.8.0</div>
         </div>
