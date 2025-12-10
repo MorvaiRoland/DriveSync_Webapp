@@ -24,9 +24,6 @@ async function logCurrentMileage(formData: FormData) {
   }
 
   const supabase = await createClient();
-  
-  // Opcionális: Ellenőrizhetnénk, hogy az új km nagyobb-e a réginél, 
-  // de a gyors rögzítésnél feltételezzük, hogy a felhasználó tudja mit csinál.
   const { error } = await supabase.from('cars').update({ mileage: current_mileage }).eq('id', car_id);
   
   if (error) console.error("Hiba:", error);
@@ -38,41 +35,31 @@ export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // --- VÁLTOZÓK DEKLARÁLÁSA (Scope hiba elkerülése végett) ---
+  // Változók inicializálása
   let cars: any[] = []
   let myCars: any[] = []      
   let sharedCars: any[] = []  
-  
   let upcomingReminders: any[] = []
   let recentActivity: any[] = []
-  
   let totalSpentAllTime = 0
   let totalSpentThisMonth = 0
-  let spentLast30Days = 0; // Deklarálva itt
-  let spendingTrend = 0;   // Deklarálva itt
-  
+  let spentLast30Days = 0; 
+  let spendingTrend = 0;   
   let fleetHealth = 100 
   let latestCarId = null
-
   let badges: any[] = []
   let subscription: any = null
   let plan: SubscriptionPlan = 'free'; 
-  
   let canAddCar = true;
   let canUseAi = false;
 
   if (user) {
-    // 1. Előfizetés
+    // 1. Előfizetés és Adatok lekérése
     plan = await getSubscriptionStatus(user.id);
-
-    const { data: subData } = await supabase
-        .from('subscriptions')
-        .select('status, plan_type')
-        .eq('user_id', user.id)
-        .single();
+    const { data: subData } = await supabase.from('subscriptions').select('status, plan_type').eq('user_id', user.id).single();
     subscription = subData;
 
-    // 2. Autók és Események lekérése
+    // 2. Autók lekérése (Eseményekkel együtt a pontos számításhoz)
     const { data: carsData } = await supabase
         .from('cars')
         .select('*, events(type, mileage)') 
@@ -82,88 +69,58 @@ export default async function Home() {
         cars = carsData
         myCars = carsData.filter(car => car.user_id === user.id)
         sharedCars = carsData.filter(car => car.user_id !== user.id)
-        // Alapértelmezett autó a listához (első saját autó)
         latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
     }
 
-    // 3. Limitek
     canAddCar = checkLimit(plan, 'maxCars', myCars.length);
     canUseAi = checkLimit(plan, 'allowAi');
 
     if (cars.length > 0) {
-        // 4. Emlékeztetők
-        const { data: reminders } = await supabase
-            .from('service_reminders')
-            .select('*, cars(make, model)')
-            .order('due_date', { ascending: true })
-            .limit(3)
-        if (reminders) upcomingReminders = reminders
+        // 3. Emlékeztetők & Aktivitások
+        const { data: reminders } = await supabase.from('service_reminders').select('*, cars(make, model)').order('due_date', { ascending: true }).limit(3);
+        if (reminders) upcomingReminders = reminders;
 
-        // 5. Aktivitások
-        const { data: activities } = await supabase
-            .from('events')
-            .select('*, cars(make, model)')
-            .order('event_date', { ascending: false })
-            .limit(5)
-        if (activities) recentActivity = activities
+        const { data: activities } = await supabase.from('events').select('*, cars(make, model)').order('event_date', { ascending: false }).limit(5);
+        if (activities) recentActivity = activities;
 
-        // 6. Pénzügyek
-        const { data: allCosts } = await supabase.from('events').select('cost, event_date')
-        
+        // 4. Pénzügyek (Smart 30 napos)
+        const { data: allCosts } = await supabase.from('events').select('cost, event_date');
         if (allCosts) {
-            const now = new Date()
-            const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000))
-            const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000))
+            const now = new Date();
+            const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+            const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
 
-            totalSpentAllTime = allCosts.reduce((sum, e) => sum + (e.cost || 0), 0)
-            
-            // Havi (naptári) kiadás
-            totalSpentThisMonth = allCosts
-                .filter(e => new Date(e.event_date).getMonth() === now.getMonth() && new Date(e.event_date).getFullYear() === now.getFullYear())
-                .reduce((sum, e) => sum + (e.cost || 0), 0)
+            totalSpentAllTime = allCosts.reduce((sum, e) => sum + (e.cost || 0), 0);
+            spentLast30Days = allCosts.filter(e => new Date(e.event_date) >= thirtyDaysAgo).reduce((sum, e) => sum + (e.cost || 0), 0);
+            const spentPrev30Days = allCosts.filter(e => { const d = new Date(e.event_date); return d >= sixtyDaysAgo && d < thirtyDaysAgo; }).reduce((sum, e) => sum + (e.cost || 0), 0);
 
-            // Gördülő 30 napos kiadás
-            spentLast30Days = allCosts
-                .filter(e => new Date(e.event_date) >= thirtyDaysAgo)
-                .reduce((sum, e) => sum + (e.cost || 0), 0)
-
-            // Előző 30 nap (trendhez)
-            const spentPrev30Days = allCosts
-                .filter(e => {
-                    const d = new Date(e.event_date)
-                    return d >= sixtyDaysAgo && d < thirtyDaysAgo
-                })
-                .reduce((sum, e) => sum + (e.cost || 0), 0)
-
-            // Trend számítása
-            if (spentPrev30Days > 0) {
-                spendingTrend = Math.round(((spentLast30Days - spentPrev30Days) / spentPrev30Days) * 100)
-            } else if (spentLast30Days > 0) {
-                spendingTrend = 100
-            }
+            if (spentPrev30Days > 0) spendingTrend = Math.round(((spentLast30Days - spentPrev30Days) / spentPrev30Days) * 100);
+            else if (spentLast30Days > 0) spendingTrend = 100;
         }
 
-        // 7. Flotta egészség (Javított logika)
-        const carsToCalc = myCars.length > 0 ? myCars : cars; 
-        
-        if (carsToCalc.length > 0) {
-            const totalHealthScore = carsToCalc.reduce((sum, car) => {
+        // 5. JAVÍTOTT FLOTTA EGÉSZSÉG SZÁMÍTÁS (Csak saját autók)
+        if (myCars.length > 0) {
+            const totalHealthScore = myCars.reduce((sum, car) => {
                 if (car.status === 'service') return sum + 0;
 
                 const interval = car.service_interval_km || 15000;
                 let lastServiceKm = car.last_service_mileage || 0;
 
+                // Friss szerviz keresése az eseményekben
                 if (car.events && car.events.length > 0) {
-                    const serviceEvents = car.events
-                        .filter((e: any) => e.type === 'service')
-                        .map((e: any) => e.mileage);
-                    
+                    const serviceEvents = car.events.filter((e: any) => e.type === 'service').map((e: any) => e.mileage);
                     if (serviceEvents.length > 0) {
                         const maxServiceKm = Math.max(...serviceEvents);
-                        if (maxServiceKm > lastServiceKm) {
-                            lastServiceKm = maxServiceKm;
-                        }
+                        if (maxServiceKm > lastServiceKm) lastServiceKm = maxServiceKm;
                     }
+                }
+
+                // Ha nincs szerviz adat, de van futás, becsüljük meg (hogy ne 0 legyen)
+                // Ez akkor hasznos, ha most regisztráltad az autót és még nem vittél fel szervizt
+                if (lastServiceKm === 0 && car.mileage > 0) {
+                     // Feltételezzük, hogy az autó 'félidőben' van, vagy az utolsó 'intervallumnyi' szorzónál volt szerviz
+                     // De a legbiztosabb a felhasználót ösztönözni. Itt most a futásból kivonjuk a legutolsó elméleti szervizt
+                     lastServiceKm = Math.floor(car.mileage / interval) * interval;
                 }
 
                 const drivenSinceService = Math.max(0, car.mileage - lastServiceKm);
@@ -173,12 +130,12 @@ export default async function Home() {
                 return sum + carHealth;
             }, 0);
 
-            fleetHealth = Math.round(totalHealthScore / carsToCalc.length);
+            fleetHealth = Math.round(totalHealthScore / myCars.length);
         } else {
-            fleetHealth = 100;
+            fleetHealth = 100; // Ha nincs saját autó, legyen 100 (vagy 0, ízlés kérdése)
         }
 
-        // 8. Gamification
+        // 6. Gamification
         const isHighMiler = cars.some(c => c.mileage >= 200000);
         const lastActivityDate = recentActivity.length > 0 ? new Date(recentActivity[0].event_date) : new Date(0);
         const diffDays = Math.floor((new Date().getTime() - lastActivityDate.getTime()) / (1000 * 3600 * 24));
@@ -199,55 +156,38 @@ export default async function Home() {
   // --- DASHBOARD NÉZET (BEJELENTKEZVE) ---
   if (user) {
     return (
-      <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-24 transition-colors duration-300">
+      <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-32 transition-colors duration-300 selection:bg-amber-500/30">
         
         <AiMechanic isPro={canUseAi} />
         <ChangelogModal />
         <ReminderChecker />
         
+        {/* --- NAVBAR --- */}
         <nav className="bg-slate-900 sticky top-0 z-50 shadow-lg border-b border-white/5 backdrop-blur-md bg-opacity-95">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
-              
               <div className="flex items-center gap-6"> 
-                <Link href="/" className="flex items-center gap-3">
-                  <div className="relative w-8 h-8">
+                <Link href="/" className="flex items-center gap-3 group">
+                  <div className="relative w-8 h-8 group-hover:scale-110 transition-transform">
                     <Image src="/drivesync-logo.png" alt="DriveSync" fill className="object-contain" priority />
                   </div>
                   <span className="text-xl font-bold tracking-tight text-white uppercase hidden sm:block">
                     Drive<span className="text-amber-500">Sync</span>
                   </span>
                 </Link>
-
-                <Link 
-                  href="/pricing" 
-                  className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
-                >
-                    Csomagok
-                </Link>
+                <Link href="/pricing" className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors">Csomagok</Link>
               </div>
-
               <div className="flex items-center gap-4">
                 <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
-                    subscription?.plan_type === 'founder' 
-                        ? 'bg-amber-500/10 border-amber-500/50 text-amber-500 hover:bg-amber-500/20' 
-                    : subscription?.plan_type === 'pro' 
-                        ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 hover:bg-blue-500/20' 
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
+                    subscription?.plan_type === 'founder' ? 'bg-amber-500/10 border-amber-500/50 text-amber-500 hover:bg-amber-500/20' 
+                    : subscription?.plan_type === 'pro' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 hover:bg-blue-500/20' 
+                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
                 }`}>
                     {subscription?.plan_type === 'founder' && <span className="text-sm">🚀</span>}
                     {subscription?.plan_type === 'founder' ? 'Founder' : subscription?.plan_type === 'pro' ? 'Pro' : 'Starter'}
                 </Link>
-
-                <Link 
-                  href="/settings" 
-                  className="rounded-full bg-white/10 text-white p-2 hover:bg-white/20 transition-colors" 
-                  title="Beállítások"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                <Link href="/settings" className="rounded-full bg-white/10 text-white p-2 hover:bg-white/20 transition-colors" title="Beállítások">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </Link>
                 <form action={signOut}>
                   <button className="bg-white/10 hover:bg-red-500/20 hover:text-red-400 text-slate-300 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all border border-white/5">Kilépés</button>
@@ -259,26 +199,8 @@ export default async function Home() {
 
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           
-          {subscription?.plan_type === 'founder' && (
-             <div className="mb-8 p-4 md:p-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-xl relative overflow-hidden animate-in slide-in-from-top-4 duration-700">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                   <div>
-                      <div className="flex items-center gap-2 mb-2">
-                         <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border border-white/20">Founder Member</span>
-                         <span className="text-xl">🚀</span>
-                      </div>
-                      <h2 className="text-2xl font-black mb-1">Gratulálunk, Alapító Tag vagy!</h2>
-                      <p className="text-amber-100 text-sm max-w-lg">
-                         Örökös Pro tagsággal rendelkezel. Köszönjük a bizalmat!
-                      </p>
-                   </div>
-                </div>
-             </div>
-          )}
-
-          {/* --- ÚJ DASHBOARD HEADER (Üdvözlés + Smart Metrics) --- */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-8 gap-6">
+          {/* --- DASHBOARD HEADER & METRICS --- */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
               
               {/* Bal oldal: Üdvözlés */}
               <div>
@@ -287,52 +209,44 @@ export default async function Home() {
                     <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">
                         {user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]}
                     </h1>
-                    
                     <span className={`sm:hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border align-middle ${
-                        subscription?.plan_type === 'founder' 
-                            ? 'bg-amber-500 text-white border-amber-600' 
-                        : subscription?.plan_type === 'pro' 
-                            ? 'bg-blue-600 text-white border-blue-500' 
-                            : 'bg-slate-700 text-slate-300 border-slate-600'
+                        subscription?.plan_type === 'founder' ? 'bg-amber-500 text-white border-amber-600' : 'bg-slate-700 text-slate-300 border-slate-600'
                     }`}>
-                        {subscription?.plan_type === 'founder' ? 'Founder' : subscription?.plan_type === 'pro' ? 'Pro' : 'Free'}
+                        {subscription?.plan_type === 'founder' ? 'Founder' : 'Free'}
                     </span>
                 </div>
               </div>
 
               {/* Jobb oldal: Metrics Kártya (Flotta Egészség + Kiadás) */}
               {cars.length > 0 && (
-                  <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                  <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-6 bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700">
                       
                       {/* Flotta Egészség */}
-                      <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-4">
+                      <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-6">
                           <div className="text-left sm:text-right">
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Flotta Egészség</p>
-                            <div className="flex items-center sm:justify-end gap-2">
-                                <p className={`text-2xl font-black ${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'}`}>
-                                    {fleetHealth}%
-                                </p>
-                            </div>
+                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Flotta Egészség</p>
+                            <p className={`text-3xl font-black ${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                                {fleetHealth}%
+                            </p>
                           </div>
-                          {/* Mini Pie Chart Visual */}
-                          <div className="relative w-10 h-10 flex-shrink-0">
+                          <div className="relative w-12 h-12 flex-shrink-0">
                              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                                 <path className="text-slate-100 dark:text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
-                                <path className={`${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'} transition-all duration-1000`} strokeDasharray={`${fleetHealth}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                                <path className={`${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeDasharray={`${fleetHealth}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                              </svg>
                           </div>
                       </div>
 
                       {/* 30 Napos Kiadás + Trend */}
                       <div className="flex-1 flex items-center justify-between sm:justify-start gap-4 sm:pl-2">
-                          <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                          <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                           </div>
                           <div>
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Elmúlt 30 nap</p>
+                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Elmúlt 30 nap</p>
                             <div className="flex items-baseline gap-2">
-                                <p className="text-xl font-black text-slate-900 dark:text-white">
-                                    {spentLast30Days.toLocaleString()} Ft
+                                <p className="text-2xl font-black text-slate-900 dark:text-white">
+                                    {spentLast30Days.toLocaleString()} <span className="text-sm font-bold text-slate-400">Ft</span>
                                 </p>
                                 {spendingTrend !== 0 && (
                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center ${spendingTrend > 0 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
@@ -342,83 +256,91 @@ export default async function Home() {
                             </div>
                           </div>
                       </div>
-
                   </div>
               )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* --- FŐ TARTALOM GRID --- */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               
-              {/* --- BAL OSZLOP: Autók --- */}
-              <div className="lg:col-span-2 space-y-10">
+              {/* --- BAL OSZLOP (8/12) --- */}
+              <div className="lg:col-span-8 space-y-10">
                 
                 {/* 1. GYORS KM NAPLÓZÁS (Választható autóval) */}
                 {myCars.length > 0 && (
-                    <div className="p-5 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-lg flex flex-col md:flex-row justify-between items-center gap-4 text-white border border-slate-700">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white/10 rounded-lg">
+                    <div className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 text-white border border-slate-700 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none group-hover:bg-white/10 transition-colors duration-500"></div>
+                        <div className="relative z-10 flex items-center gap-4 w-full md:w-auto">
+                            <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
                                 <svg className="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                             </div>
                             <div>
-                                <p className="font-bold text-sm text-slate-300">Gyors Km Rögzítés</p>
+                                <p className="font-bold text-base text-white">Gyors Km Rögzítés</p>
                                 <p className="text-xs text-slate-400">Válaszd ki az autót és írd be az új állást.</p>
                             </div>
                         </div>
-                        <form action={logCurrentMileage} className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                        <form action={logCurrentMileage} className="relative z-10 flex flex-col sm:flex-row gap-3 w-full md:w-auto items-stretch">
                             <select 
                                 name="car_id" 
-                                className="px-4 py-2 border-0 rounded-xl bg-white/10 text-white focus:ring-2 focus:ring-amber-500 cursor-pointer text-sm font-medium"
-                                defaultValue={myCars[0].id}
+                                className="px-4 py-3 border border-white/10 rounded-xl bg-slate-800/50 text-white focus:ring-2 focus:ring-amber-500 focus:outline-none cursor-pointer text-sm font-medium appearance-none hover:bg-slate-800 transition-colors min-w-[200px]"
+                                defaultValue={latestCarId || ""}
                             >
                                 {myCars.map((car) => (
-                                    <option key={car.id} value={car.id} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">
+                                    <option key={car.id} value={car.id} className="text-slate-900 bg-white">
                                         {car.make} {car.model} ({car.plate})
                                     </option>
                                 ))}
                             </select>
-                            <input 
-                                type="number" 
-                                name="current_mileage" 
-                                placeholder="Új km állás..."
-                                className="px-4 py-2 border-0 rounded-xl w-full sm:w-40 focus:ring-2 focus:ring-amber-500 bg-white/10 text-white placeholder-slate-400 text-sm"
-                                required
-                            />
-                            <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-4 py-2 rounded-xl transition-colors shadow-lg text-sm">Mentés</button>
+                            <div className="relative">
+                                <input 
+                                    type="number" 
+                                    name="current_mileage" 
+                                    placeholder="Új km..."
+                                    className="pl-4 pr-12 py-3 border border-white/10 rounded-xl w-full sm:w-32 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-slate-800/50 text-white placeholder-slate-500 text-sm font-mono"
+                                    required
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-bold">KM</span>
+                            </div>
+                            <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-amber-500/20 active:scale-95 text-sm">Mentés</button>
                         </form>
                     </div>
                 )}
 
                 {/* --- 2. SAJÁT AUTÓK LISTÁJA --- */}
                 {myCars.length > 0 && (
-                    <div>
-                        <div className="flex justify-between items-end mb-4">
-                            <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
-                                <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-end px-1">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-xl flex items-center gap-2">
+                                <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                                 Saját Garázs
                             </h3>
-                            <span className="text-xs font-bold text-slate-400">
+                            <span className="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">
                                 {myCars.length} / {PLAN_LIMITS[plan].maxCars} autó
                             </span>
                         </div>
+                        
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {myCars.map((car) => (
                                 <CarCard key={car.id} car={car} />
                             ))}
                             
+                            {/* ÚJ AUTÓ KÁRTYA */}
                             {canAddCar ? (
-                                <Link href="/cars/new" className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center p-8 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all group min-h-[300px] cursor-pointer bg-slate-50/50 dark:bg-slate-900/50">
-                                    <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                                        <svg className="w-8 h-8 text-slate-300 dark:text-slate-600 group-hover:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                <Link href="/cars/new" className="group relative flex flex-col items-center justify-center min-h-[320px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/0 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                        <svg className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                                     </div>
-                                    <span className="font-bold text-slate-400 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű</span>
+                                    <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
+                                    <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat</span>
                                 </Link>
                             ) : (
-                                <Link href="/pricing" className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center p-8 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-amber-400 transition-all group min-h-[300px] cursor-pointer opacity-80 hover:opacity-100">
+                                <Link href="/pricing" className="group relative flex flex-col items-center justify-center min-h-[320px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all duration-300 cursor-pointer">
                                     <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-amber-500 shadow-sm">
                                         <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                     </div>
                                     <span className="font-bold text-slate-500 text-lg mb-1">Garázs megtelt</span>
-                                    <span className="text-xs font-bold text-amber-500 uppercase tracking-wide">Válts Pro-ra a bővítéshez</span>
+                                    <span className="text-xs font-bold text-amber-500 uppercase tracking-wide bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Válts Pro csomagra</span>
                                 </Link>
                             )}
                         </div>
@@ -427,9 +349,9 @@ export default async function Home() {
 
                 {/* --- 3. MEGOSZTOTT AUTÓK LISTÁJA --- */}
                 {sharedCars.length > 0 && (
-                    <div>
-                        <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-4 flex items-center gap-2">
-                            <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <h3 className="font-bold text-slate-900 dark:text-white text-xl flex items-center gap-2 px-1">
+                            <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                             Megosztva Velem
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -442,22 +364,28 @@ export default async function Home() {
 
                 {/* HA MINDEN ÜRES */}
                 {cars.length === 0 && (
-                    <div className="bg-white dark:bg-slate-800 p-12 rounded-3xl border border-slate-200 dark:border-slate-700 text-center shadow-sm">
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">A garázsod üres</h3>
-                        <Link href="/cars/new" className="inline-flex items-center gap-2 bg-amber-500 text-slate-900 px-8 py-3 rounded-xl font-bold hover:bg-amber-400 transition-colors shadow-lg mt-4">Első autó felvétele</Link>
+                    <div className="bg-white dark:bg-slate-800 p-16 rounded-3xl border border-slate-200 dark:border-slate-700 text-center shadow-lg">
+                        <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center mx-auto mb-6 text-amber-500">
+                            <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                        </div>
+                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">A garázsod még üres</h3>
+                        <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">Adj hozzá egy autót, hogy elkezdhesd követni a költségeket, a fogyasztást és a szerviz intervallumokat.</p>
+                        <Link href="/cars/new" className="inline-flex items-center gap-2 bg-amber-500 text-slate-900 px-8 py-3 rounded-xl font-bold hover:bg-amber-400 transition-all shadow-lg hover:shadow-amber-500/25 transform hover:-translate-y-1">
+                            Első autó felvétele
+                        </Link>
                     </div>
                 )}
 
               </div>
 
-              {/* --- JOBB OSZLOP: Widgetek és Értesítések --- */}
-              <div className="lg:col-span-1 space-y-6">
+              {/* --- JOBB OSZLOP (4/12) --- */}
+              <div className="lg:col-span-4 space-y-8">
                 
-                {/* 1. GAMIFICATION WIDGET (Legfelül) */}
+                {/* 1. GAMIFICATION WIDGET */}
                 <GamificationWidget badges={badges} />
 
-                {/* 2. DASHBOARD WIDGETS (Időjárás + Benzinár) */}
-                <div className="grid grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+                {/* 2. DASHBOARD WIDGETS */}
+                <div className="grid grid-cols-2 gap-4">
                     <WeatherWidget />
                     <FuelWidget />
                 </div>
@@ -469,12 +397,13 @@ export default async function Home() {
                            <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                            Emlékeztetők
                         </h3>
+                        {upcomingReminders.length > 0 && <Link href="/reminders" className="text-xs font-bold text-slate-400 hover:text-amber-500 transition-colors">Összes</Link>}
                     </div>
                     <div className="p-4 space-y-3">
                         {upcomingReminders.length > 0 ? (
                             upcomingReminders.map((rem: any) => (
-                                <div key={rem.id} className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-900/30">
-                                    <div className="flex-col flex items-center justify-center w-10 h-10 bg-white dark:bg-slate-800 rounded-lg border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-500 font-bold text-xs shadow-sm">
+                                <div key={rem.id} className="flex items-center gap-3 p-3 bg-amber-50/50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/30 hover:border-amber-300 dark:hover:border-amber-700 transition-colors cursor-pointer group">
+                                    <div className="flex-col flex items-center justify-center w-10 h-10 bg-white dark:bg-slate-800 rounded-lg border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-500 font-bold text-xs shadow-sm group-hover:scale-105 transition-transform">
                                         <span>{new Date(rem.due_date).getDate()}</span>
                                         <span className="text-[8px] uppercase">{new Date(rem.due_date).toLocaleString('hu-HU', { month: 'short' }).replace('.', '')}</span>
                                     </div>
@@ -485,7 +414,9 @@ export default async function Home() {
                                 </div>
                             ))
                         ) : (
-                            <p className="text-sm text-slate-400 text-center py-4 italic">Nincs közelgő teendő.</p>
+                            <div className="text-center py-6">
+                                <p className="text-sm text-slate-400 italic">Nincs közelgő teendő.</p>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -516,7 +447,9 @@ export default async function Home() {
                                 </div>
                             ))
                         ) : (
-                            <p className="text-sm text-slate-400 text-center py-4 italic">Nincs előzmény.</p>
+                            <div className="text-center py-6">
+                                <p className="text-sm text-slate-400 italic">Nincs előzmény.</p>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -531,20 +464,16 @@ export default async function Home() {
   // --- LOGGED OUT LANDING PAGE ---
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-950 font-sans text-slate-200 flex flex-col lg:flex-row selection:bg-amber-500/30">
-      
-      {/* LANDING PAGE PROMO BANNER (RÖGZÍTETT & Z-INDEXELT) */}
       <div className="fixed top-0 left-0 w-full z-50">
         <PromoBanner />
       </div>
-
-      <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950 mt-10 md:mt-0"> {/* Helyet hagyunk a bannernek mobilon */}
+      <div className="lg:w-[60%] xl:w-[65%] w-full relative bg-slate-950 mt-10 md:mt-0">
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
            <div className="absolute top-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse-slow"></div>
            <div className="absolute bottom-[10%] left-[-10%] w-[30vw] h-[30vw] bg-blue-900/10 rounded-full blur-[100px]"></div>
            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
         </div>
-        
-        <div className="relative z-10 p-6 sm:p-12 lg:p-16 xl:p-24 flex flex-col gap-16 lg:gap-24 pt-20 lg:pt-24"> {/* Extra padding top a banner miatt */}
+        <div className="relative z-10 p-6 sm:p-12 lg:p-16 xl:p-24 flex flex-col gap-16 lg:gap-24 pt-20 lg:pt-24">
            <div className="space-y-8 animate-in slide-in-from-left-10 duration-700 fade-in">
              <div className="flex items-center gap-3">
                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 relative overflow-hidden">
@@ -567,20 +496,17 @@ export default async function Home() {
                 <Badge text="Minden eszközön" />
              </div>
            </div>
-           
             <div className="grid grid-cols-3 gap-4 border-y border-slate-800/50 py-8 bg-slate-900/20 backdrop-blur-sm rounded-2xl animate-in fade-in duration-1000 delay-200">
                 <StatCard number="100%" label="Papírmentes" />
                 <StatCard number="0 Ft" label="Rejtett költség" />
                 <StatCard number="24/7" label="Elérhetőség" />
             </div>
-
            <div className="pt-10 border-t border-slate-800/50 text-slate-500 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
              <p className="italic">"Az egyetlen app, amire az autósoknak szükségük van."</p>
              <div className="text-slate-600 text-xs">© 2025 DriveSync Technologies</div>
            </div>
         </div>
       </div>
-
       <div className="lg:w-[40%] xl:w-[35%] w-full bg-slate-950 lg:border-l lg:border-white/5 relative flex flex-col justify-center p-6 lg:p-12 shadow-2xl lg:min-h-screen z-20">
         <div className="lg:sticky lg:top-12 w-full max-w-sm mx-auto animate-in slide-in-from-right-10 duration-700 fade-in">
           <div className="text-center mb-10">
@@ -604,85 +530,109 @@ export default async function Home() {
   )
 }
 
-// --- SEGÉD KOMPONENSEK ---
-
+// --- FULLOS AUTÓ KÁRTYA ---
 function CarCard({ car, shared }: { car: any, shared?: boolean }) {
-  return (
-    <div className={`bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative flex flex-col h-full ${shared ? 'ring-2 ring-blue-500/20' : ''}`}>
-      <Link href={`/cars/${car.id}`} className="block h-full flex flex-col">
-        <div className="h-48 bg-slate-100 dark:bg-slate-900 relative flex items-center justify-center overflow-hidden">
-           {car.image_url ? (
-             <Image src={car.image_url} alt={`${car.make} ${car.model}`} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
-           ) : (
-             <div className="text-slate-300 dark:text-slate-700 font-bold text-4xl uppercase tracking-widest opacity-20">{car.make}</div>
-           )}
-           <div className={`absolute top-4 right-4 px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider shadow-sm z-20 ${car.status === 'active' ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-500'}`}>
-              {car.status === 'active' ? 'Aktív' : 'Szerviz'}
-           </div>
-           
-           {shared && (
-                <div className="absolute top-4 left-4 bg-blue-500 text-white p-1.5 rounded-full shadow-lg z-20" title="Megosztott autó">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                </div>
-           )}
-        </div>
-        <div className="p-6 flex-1 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-start mb-2">
-               <div>
-                 <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase tracking-tight">{car.make}</h3>
-                 <p className="font-medium text-slate-500 dark:text-slate-400">{car.model}</p>
-               </div>
-               <span className="text-xs font-mono font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">{car.plate}</span>
-            </div>
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 grid grid-cols-2 gap-4 text-sm">
-               <div><p className="text-slate-400 text-xs uppercase font-bold mb-1">Futás</p><p className="font-bold text-slate-800 dark:text-slate-200">{car.mileage.toLocaleString()} km</p></div>
-               <div><p className="text-slate-400 text-xs uppercase font-bold mb-1">Évjárat</p><p className="font-bold text-slate-800 dark:text-slate-200">{car.year}</p></div>
-            </div>
-          </div>
-        </div>
-      </Link>
-      <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-30">
-        {!shared ? (
-            <>
-                <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></Link>
-                <form action={deleteCar}><input type="hidden" name="id" value={car.id} /><button className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-red-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></form>
-            </>
-        ) : (
-            <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></Link>
-        )}
-      </div>
-      </div>
-  )
+  return (
+    <div className={`relative group flex flex-col bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-slate-200 dark:border-slate-700 h-full ${shared ? 'ring-2 ring-blue-500/30' : ''}`}>
+      
+      {/* Kép konténer */}
+      <Link href={`/cars/${car.id}`} className="relative h-56 bg-slate-900 overflow-hidden">
+         {car.image_url ? (
+            <Image 
+                src={car.image_url} 
+                alt={`${car.make} ${car.model}`} 
+                fill 
+                className="object-cover group-hover:scale-110 transition-transform duration-700" 
+            />
+         ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
+                <span className="text-4xl font-black text-slate-700 uppercase tracking-widest">{car.make}</span>
+            </div>
+         )}
+         
+         {/* Gradiens overlay a szöveg olvashatóságáért */}
+         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent"></div>
+
+         {/* Státusz Badge */}
+         <div className={`absolute top-4 right-4 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full backdrop-blur-md shadow-lg border border-white/10 ${
+             car.status === 'active' 
+             ? 'bg-emerald-500/90 text-white' 
+             : 'bg-amber-500/90 text-white'
+         }`}>
+             {car.status === 'active' ? 'Aktív' : 'Szerviz'}
+         </div>
+
+         {/* Megosztott ikon */}
+         {shared && (
+             <div className="absolute top-4 left-4 bg-blue-600/90 backdrop-blur-md text-white p-2 rounded-full shadow-lg" title="Megosztott autó">
+                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+             </div>
+         )}
+
+         {/* Autó Név & Rendszám (Képen) */}
+         <div className="absolute bottom-4 left-4 right-4">
+             <h3 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-1 drop-shadow-md">
+                 {car.make} <span className="font-light text-slate-300">{car.model}</span>
+             </h3>
+             <div className="flex items-center gap-2">
+                 <span className="bg-white/20 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-mono font-bold text-white border border-white/20">
+                     {car.plate}
+                 </span>
+             </div>
+         </div>
+      </Link>
+
+      {/* Adatok Szekció */}
+      <Link href={`/cars/${car.id}`} className="p-5 flex-1 flex flex-col justify-between gap-4">
+         <div className="grid grid-cols-2 gap-4">
+             <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 group-hover:border-amber-500/20 transition-colors">
+                 <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Futásteljesítmény</p>
+                 <p className="font-bold text-slate-900 dark:text-white text-sm font-mono">{car.mileage.toLocaleString()} km</p>
+             </div>
+             <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 group-hover:border-amber-500/20 transition-colors">
+                 <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Évjárat</p>
+                 <p className="font-bold text-slate-900 dark:text-white text-sm">{car.year}</p>
+             </div>
+         </div>
+      </Link>
+
+      {/* Lebegő Szerkesztés Gombok (Csak Hoverre) */}
+      <div className="absolute top-4 left-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-[-10px] group-hover:translate-x-0">
+         {!shared && (
+             <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-lg hover:scale-110 transition-all border border-slate-200 dark:border-slate-600" title="Szerkesztés">
+                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+             </Link>
+         )}
+      </div>
+    </div>
+  )
 }
 
-function StatCard({ label, value, subValue, icon, customColor, alert, highlight, number }: any) {
-  if (number) {
-      return (
-        <div className={`text-center p-4 rounded-xl hover:bg-white/5 transition-colors cursor-default`}>
-           <div className="text-3xl font-black text-white mb-1">{number}</div>
-           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</div>
-        </div>
-      )
-  }
-  return (
-    <div className={`bg-white dark:bg-slate-800 p-4 rounded-2xl border shadow-sm flex flex-col justify-between h-full border-slate-100 dark:border-slate-700 ${highlight ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
-       <div className="flex justify-between items-start mb-2">
-         <div className="text-slate-400">
-            {icon === 'total' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-            {icon === 'avg' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>}
-            {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
-            {icon === 'fuel' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
-         </div>
-       </div>
-       <div>
-         <p className="text-xs font-bold text-slate-400 uppercase">{label}</p>
-         <p className="text-xl font-black text-slate-900 dark:text-white">{value}</p>
-       </div>
-    </div>
-  )
+function StatCard({ label, value, number, highlight, icon }: any) {
+  if (number) {
+      return (
+        <div className={`text-center p-4 rounded-xl hover:bg-white/5 transition-colors cursor-default`}>
+           <div className="text-3xl font-black text-white mb-1">{number}</div>
+           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</div>
+        </div>
+      )
+  }
+  return (
+    <div className={`bg-white dark:bg-slate-800 p-4 rounded-2xl border shadow-sm flex flex-col justify-between h-full border-slate-100 dark:border-slate-700 ${highlight ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
+       <div className="flex justify-between items-start mb-2">
+         <div className="text-slate-400">
+            {icon === 'total' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+            {/* ... többi ikon logika maradhat, ha használod ... */}
+         </div>
+       </div>
+       <div>
+         <p className="text-xs font-bold text-slate-400 uppercase">{label}</p>
+         <p className="text-xl font-black text-slate-900 dark:text-white">{value}</p>
+       </div>
+    </div>
+  )
 }
 
 function Badge({ text }: { text: string }) {
-  return <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-slate-800 text-slate-400 text-xs font-bold">{text}</span>
+  return <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-slate-800 text-slate-400 text-xs font-bold">{text}</span>
 }
