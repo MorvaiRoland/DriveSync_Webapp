@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { updateProfile, signOutAction } from './actions'
 import { PreferencesForm } from '@/components/SettingsForms'
-import DeleteAccountSection from '@/components/DeleteAccountSection' // <--- ÚJ IMPORT
+import DeleteAccountSection from '@/components/DeleteAccountSection'
 
 export default async function SettingsPage(props: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
   const searchParams = await props.searchParams
@@ -15,7 +15,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
 
   const meta = user.user_metadata || {}
   
-  // Alapértelmezett értékek kezelése, ha még nincs mentve semmi
+  // Alapértelmezett értékek kezelése
   const settings = meta.settings || { 
       notify_email: true, 
       notify_push: false, 
@@ -96,7 +96,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                 </form>
             </div>
 
-            {/* PREFERENCIÁK FORM - Beillesztve a klienstől */}
+            {/* PREFERENCIÁK FORM */}
             <PreferencesForm settings={settings} />
 
             {/* Kijelentkezés */}
@@ -111,7 +111,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                  </div>
             </div>
 
-            {/* --- FIÓK TÖRLÉSE (Veszélyzóna) --- */}
+            {/* FIÓK TÖRLÉSE - VESZÉLYZÓNA */}
             <DeleteAccountSection />
 
             <div className="text-center text-xs text-slate-400 py-4">DriveSync v1.8.0</div>
