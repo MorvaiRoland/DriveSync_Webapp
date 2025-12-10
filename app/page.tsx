@@ -1,3 +1,4 @@
+// app/page.tsx
 import { createClient } from '@/supabase/server'
 import { signOut } from './login/action'
 import { deleteCar } from './cars/actions'
@@ -23,47 +24,66 @@ async function logCurrentMileage(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from('cars').update({ mileage: current_mileage }).eq('id', car_id);
   
-  if (error) console.error("Hiba:", error);
+  // 1. Autó km frissítése
+  const { error: carError } = await supabase.from('cars').update({ mileage: current_mileage }).eq('id', car_id);
+  
+  if (carError) {
+      console.error("Hiba az autó frissítésekor:", carError);
+      return redirect(`/?error=${encodeURIComponent('Hiba történt.')}`);
+  }
+
+  // 2. Opcionális: Esemény létrehozása, hogy nyoma legyen a naplóban
+  // Ez segít abban, hogy a CarDetailsPage-en is frissüljön minden számítás
+  await supabase.from('events').insert({
+      car_id: car_id,
+      type: 'other', // Vagy egy új 'log' típus
+      title: 'Futás rögzítése',
+      event_date: new Date().toISOString(),
+      mileage: current_mileage,
+      cost: 0,
+      notes: 'Gyors rögzítés a főoldalról'
+  });
+
   return redirect('/?success=Km+frissitve');
 }
 
 // --- ÚJ ÜZEMANYAG WIDGET ---
 function FuelWidget() {
-  // Ideális esetben ezeket az adatokat egy API-ból kérnénk le
   const fuelPrices = [
-    { type: 'Benzin 95', price: 566.5, color: 'bg-emerald-500', textColor: 'text-emerald-600' },
-    { type: 'Gázolaj', price: 578.1, color: 'bg-slate-600', textColor: 'text-slate-700' },
-    { type: 'Benzin 100', price: 622.1, color: 'bg-teal-500', textColor: 'text-teal-600' },
+    { type: '95', name: 'Benzin', price: 612, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { type: 'D', name: 'Gázolaj', price: 618, color: 'text-slate-900 dark:text-slate-100', bg: 'bg-slate-100 dark:bg-slate-700' },
+    { type: '100', name: 'Prémium', price: 655, color: 'text-blue-500', bg: 'bg-blue-500/10' },
   ];
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden h-full flex flex-col">
       <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-        <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
+          <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
-          Üzemanyagárak
+          Piaci Átlagárak
         </h3>
-        <span className="text-[10px] text-slate-400">holtankoljak.hu</span>
+        <span className="text-[10px] text-slate-400 font-mono">Ma</span>
       </div>
-      <div className="p-4 flex-1 flex flex-col justify-between gap-4">
-        <div className="flex flex-col gap-3">
-          {fuelPrices.map((fuel, index) => (
-            <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50">
-              <div className="flex items-center gap-3">
-                <div className={`w-2 h-8 rounded-full ${fuel.color}`}></div>
-                <span className="font-medium text-slate-700 dark:text-slate-200">{fuel.type}</span>
+      <div className="p-4 flex-1 flex flex-col justify-center gap-3">
+          {fuelPrices.map((fuel, idx) => (
+              <div key={idx} className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${fuel.bg} ${fuel.color}`}>
+                          {fuel.type}
+                      </div>
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{fuel.name}</span>
+                  </div>
+                  <span className="font-bold text-slate-900 dark:text-white">{fuel.price} Ft</span>
               </div>
-              <div className="text-right">
-                <span className={`text-lg font-black ${fuel.textColor} dark:text-white`}>{fuel.price.toFixed(1)}</span>
-                <span className="text-xs font-bold text-slate-400 ml-1">Ft</span>
-              </div>
-            </div>
           ))}
-        </div>
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 text-center">
+              <a href="https://holtankoljak.hu" target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-amber-500 transition-colors">
+                  Adatok forrása: holtankoljak.hu
+              </a>
+          </div>
       </div>
     </div>
   );
@@ -98,7 +118,7 @@ export default async function Home() {
     const { data: subData } = await supabase.from('subscriptions').select('status, plan_type').eq('user_id', user.id).single();
     subscription = subData;
 
-    // 2. Autók lekérése (Eseményekkel együtt a pontos számításhoz)
+    // 2. Autók lekérése
     const { data: carsData } = await supabase
         .from('cars')
         .select('*, events(type, mileage)') 
@@ -137,33 +157,46 @@ export default async function Home() {
             else if (spentLast30Days > 0) spendingTrend = 100;
         }
 
-        // 5. JAVÍTOTT FLOTTA EGÉSZSÉG SZÁMÍTÁS (Csak saját autók)
+        // 5. JAVÍTOTT FLOTTA EGÉSZSÉG SZÁMÍTÁS
+        // Mostantól ugyanazt a logikát használja, mint a részletes nézet
         if (myCars.length > 0) {
             const totalHealthScore = myCars.reduce((sum, car) => {
+                // Ha szervizben van, 0%
                 if (car.status === 'service') return sum + 0;
 
                 const interval = car.service_interval_km || 15000;
                 let lastServiceKm = car.last_service_mileage || 0;
 
-                // Friss szerviz keresése az eseményekben
+                // Keressük meg a legfrissebb szervizt az események között
                 if (car.events && car.events.length > 0) {
-                    const serviceEvents = car.events.filter((e: any) => e.type === 'service').map((e: any) => e.mileage);
+                    const serviceEvents = car.events
+                        .filter((e: any) => e.type === 'service')
+                        .map((e: any) => e.mileage);
+                    
                     if (serviceEvents.length > 0) {
                         const maxServiceKm = Math.max(...serviceEvents);
-                        if (maxServiceKm > lastServiceKm) lastServiceKm = maxServiceKm;
+                        if (maxServiceKm > lastServiceKm) {
+                            lastServiceKm = maxServiceKm;
+                        }
                     }
                 }
 
-                // Ha nincs szerviz adat, de van futás, becsüljük meg (hogy ne 0 legyen)
-                // Ez akkor hasznos, ha most regisztráltad az autót és még nem vittél fel szervizt
-                if (lastServiceKm === 0 && car.mileage > 0) {
-                     // Feltételezzük, hogy az autó 'félidőben' van, vagy az utolsó 'intervallumnyi' szorzónál volt szerviz
-                     // De a legbiztosabb a felhasználót ösztönözni. Itt most a futásból kivonjuk a legutolsó elméleti szervizt
-                     lastServiceKm = Math.floor(car.mileage / interval) * interval;
+                // Ha még nincs szerviz, de az autó futása kicsi, akkor feltételezzük, hogy új/karbantartott
+                if (lastServiceKm === 0 && car.mileage < interval) {
+                    lastServiceKm = 0; // Új autó effektus
+                } 
+                // Ha nincs szerviz, de sokat futott -> valószínűleg nem volt rögzítve -> 0% felé tart
+                else if (lastServiceKm === 0) {
+                     // Itt dönthetünk: vagy 0-nak vesszük, vagy megpróbáljuk becsülni
+                     // A legbiztosabb, ha a felhasználót adatrögzítésre ösztönözzük, így hagyjuk, hogy lecsökkenjen.
                 }
 
                 const drivenSinceService = Math.max(0, car.mileage - lastServiceKm);
+                
+                // Egészség % számítása
                 let carHealth = (1 - (drivenSinceService / interval)) * 100;
+                
+                // Korlátok
                 carHealth = Math.max(0, Math.min(100, carHealth));
 
                 return sum + carHealth;
@@ -171,7 +204,7 @@ export default async function Home() {
 
             fleetHealth = Math.round(totalHealthScore / myCars.length);
         } else {
-            fleetHealth = 100; // Ha nincs saját autó, legyen 100 (vagy 0, ízlés kérdése)
+            fleetHealth = 100;
         }
 
         // 6. Gamification
@@ -426,7 +459,6 @@ export default async function Home() {
                 {/* 2. DASHBOARD WIDGETS */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                     <WeatherWidget />
-                    {/* Lecseréltük a régi FuelWidget-et az új, helyben definiált verzióra */}
                     <FuelWidget />
                 </div>
 
