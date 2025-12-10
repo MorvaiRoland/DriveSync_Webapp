@@ -5,28 +5,62 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-// --- 1. PROFIL FRISSÍTÉSE ---
+// --- 1. PROFIL FRISSÍTÉSE (KÉPFELTÖLTÉSSEL) ---
 export async function updateProfile(formData: FormData) {
   const supabase = await createClient()
+  
   const fullName = String(formData.get('fullName'))
   const phone = String(formData.get('phone'))
+  const avatarFile = formData.get('avatar') as File | null
 
+  // User lekérése
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return redirect('/login')
 
+  let avatarUrl = user.user_metadata?.avatar_url;
+
+  // KÉPFELTÖLTÉS LOGIKA
+  if (avatarFile && avatarFile.size > 0 && avatarFile.name !== 'undefined') {
+      const fileExt = avatarFile.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Feltöltés a 'avatars' bucket-be
+      const { error: uploadError } = await supabase
+          .storage
+          .from('avatars')
+          .upload(filePath, avatarFile, { upsert: true });
+
+      if (uploadError) {
+          console.error('Upload error:', uploadError);
+          return redirect(`/settings?error=${encodeURIComponent('Képfeltöltés sikertelen')}`);
+      }
+
+      // Publikus URL lekérése
+      const { data: { publicUrl } } = supabase
+          .storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+      
+      avatarUrl = publicUrl;
+  }
+
+  // Adatok mentése
   const { error } = await supabase.auth.updateUser({
-    data: { full_name: fullName, phone: phone }
+    data: { 
+        full_name: fullName, 
+        phone: phone,
+        avatar_url: avatarUrl
+    }
   })
 
   if (error) {
-    // JAVÍTVA: encodeURIComponent
     return redirect(`/settings?error=${encodeURIComponent('Nem sikerült a profil frissítése')}`)
   }
 
   revalidatePath('/settings')
-  revalidatePath('/', 'layout')
+  revalidatePath('/', 'layout') // Hogy a fejlécben is frissüljön a kép
   
-  // JAVÍTVA: encodeURIComponent
   return redirect(`/settings?success=${encodeURIComponent('Profil sikeresen frissítve')}`)
 }
 
@@ -48,13 +82,10 @@ export async function updatePreferences(formData: FormData) {
   })
 
   if (error) {
-    // JAVÍTVA: encodeURIComponent
-    return redirect(`/settings?error=${encodeURIComponent('Beállítások mentése sikertelen')}`)
+    return redirect(`/settings?error=${encodeURIComponent('Hiba a mentéskor')}`)
   }
 
   revalidatePath('/settings')
-  
-  // JAVÍTVA: encodeURIComponent
   return redirect(`/settings?success=${encodeURIComponent('Beállítások elmentve')}`)
 }
 
@@ -67,59 +98,23 @@ export async function signOutAction() {
 
 // --- 4. FIÓK TÖRLÉSE ---
 export async function deleteAccountAction() {
-  console.log("🔴 [DELETE] Fiók törlés indítása...")
-  
   const supabase = await createClient()
-
-  // 1. User azonosítása
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
   
-  if (authError || !user) {
-      return redirect('/login')
-  }
+  if (!user) return redirect('/login')
 
-  const userId = user.id
-
-  // 2. Admin kulcs ellenőrzése
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!serviceRoleKey) {
-      // JAVÍTVA: encodeURIComponent
-      return redirect(`/settings?error=${encodeURIComponent('Szerver konfigurációs hiba')}`)
-  }
+  if (!serviceRoleKey) return redirect(`/settings?error=${encodeURIComponent('Config hiba')}`)
 
-  // 3. Admin kliens
-  const supabaseAdmin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey
-  )
+  const supabaseAdmin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
 
-  // 4. Kijelentkeztetés
   await supabase.auth.signOut()
 
-  let deleteError = null;
-
-  try {
-    // 5. Törlés végrehajtása
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
-    
-    if (error) {
-        deleteError = error;
-        console.error("🔴 [DELETE] Hiba:", error)
-    }
-
-  } catch (err) {
-      console.error("🔴 [DELETE] Váratlan hiba:", err)
-      // JAVÍTVA: encodeURIComponent
-      return redirect(`/login?message=${encodeURIComponent('Hiba történt a törlés közben.')}`)
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id)
+  
+  if (error) {
+      return redirect(`/login?message=${encodeURIComponent('Hiba a törlésnél')}`)
   }
 
-  // 6. Hibakezelés
-  if (deleteError) {
-      // JAVÍTVA: encodeURIComponent
-      return redirect(`/login?message=${encodeURIComponent('Fiók kijelentkeztetve, de a törlés sikertelen. Írj a supportnak.')}`)
-  }
-
-  // 7. Siker
-  // JAVÍTVA: encodeURIComponent
-  return redirect(`/login?message=${encodeURIComponent('A fiókod és minden adatod véglegesen törölve.')}`)
+  return redirect(`/login?message=${encodeURIComponent('Fiók törölve')}`)
 }
