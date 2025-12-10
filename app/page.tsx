@@ -108,47 +108,48 @@ export default async function Home() {
         }
 
         // --- 2. JAVÍTOTT FLOTTA EGÉSZSÉG SZÁMÍTÁS ---
-        const totalHealthScore = cars.reduce((sum, car) => {
-            if (car.status === 'service') return sum + 0; // Ha szervizben van, 0%
+       // 8. Flotta egészség (Javított: csak a saját autók átlaga)
+        const carsToCalc = myCars.length > 0 ? myCars : cars; // Csak a saját autókat számoljuk, ha vannak
+        
+        if (carsToCalc.length > 0) {
+            const totalHealthScore = carsToCalc.reduce((sum, car) => {
+                // Ha az autó "szerviz" státuszban van, az 0%-ot ér a flotta átlagban
+                if (car.status === 'service') return sum + 0;
 
-            const interval = car.service_interval_km || 15000;
-            
-            // Megkeressük a legutóbbi szerviz óraállást az eseményekből
-            let lastServiceKm = car.last_service_mileage || 0;
-            
-            if (car.events && car.events.length > 0) {
-                // Kiszűrjük a szerviz típusú eseményeket és megkeressük a legnagyobbat
-                const serviceEvents = car.events
-                    .filter((e: any) => e.type === 'service')
-                    .map((e: any) => e.mileage);
-                
-                if (serviceEvents.length > 0) {
-                    const maxServiceKm = Math.max(...serviceEvents);
-                    // Ha van frissebb szerviz esemény, mint a mentett adat, azt használjuk
-                    if (maxServiceKm > lastServiceKm) {
-                        lastServiceKm = maxServiceKm;
+                const interval = car.service_interval_km || 15000;
+                let lastServiceKm = car.last_service_mileage || 0;
+
+                // Események ellenőrzése: Volt-e frissebb szerviz, mint ami az autó adatlapján van?
+                if (car.events && car.events.length > 0) {
+                    const serviceEvents = car.events
+                        .filter((e: any) => e.type === 'service')
+                        .map((e: any) => e.mileage);
+                    
+                    if (serviceEvents.length > 0) {
+                        const maxServiceKm = Math.max(...serviceEvents);
+                        if (maxServiceKm > lastServiceKm) {
+                            lastServiceKm = maxServiceKm;
+                        }
                     }
                 }
-            }
 
-            // Ha még nincs szerviz előzmény, de az autó nem 0 km-es, feltételezzük, 
-            // hogy a "jelenlegi" futás a kiindulópont (hogy ne 0%-ról induljon a dashboard)
-            // KIVÉVE, ha az autó futása nagyon kicsi (pl. új autó)
-            if (lastServiceKm === 0 && car.mileage > interval) {
-                 // Itt egy trükk: ha nincs adat, 50%-ra becsüljük, vagy 0-ra, 
-                 // de a te esetedben a 'CarDetailsPage' valószínűleg a car.mileage-t vette alapnak.
-                 // A legbiztosabb, ha 0 marad, DE a te képed alapján (1671 megtett) van adat.
-            }
+                // Megtett út a legutóbbi szerviz óta
+                const drivenSinceService = Math.max(0, car.mileage - lastServiceKm);
+                
+                // Százalék számítás (pontosan ahogy a Donut chart csinálja)
+                let carHealth = (1 - (drivenSinceService / interval)) * 100;
+                
+                // Határok közé szorítjuk (0-100%)
+                carHealth = Math.max(0, Math.min(100, carHealth));
 
-            const drivenSinceService = Math.max(0, car.mileage - lastServiceKm);
-            let carHealth = (1 - (drivenSinceService / interval)) * 100;
-            carHealth = Math.max(0, Math.min(100, carHealth));
+                return sum + carHealth;
+            }, 0);
 
-            return sum + carHealth;
-        }, 0);
-
-        fleetHealth = Math.round(totalHealthScore / cars.length);
-
+            // Átlagoljuk a 'carsToCalc' darabszámával (nem az összes 'cars'-szal)
+            fleetHealth = Math.round(totalHealthScore / carsToCalc.length);
+        } else {
+            fleetHealth = 100;
+        }
         // Gamification
         const isHighMiler = cars.some(c => c.mileage >= 200000);
         const lastActivityDate = recentActivity.length > 0 ? new Date(recentActivity[0].event_date) : new Date(0);
