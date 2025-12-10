@@ -257,8 +257,12 @@ async function DashboardComponent() {
       ];
   }
 
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét'
+  const hour = new Date().getHours();
+const greeting = hour < 10 
+  ? 'Jó reggelt' 
+  : hour < 18 
+    ? 'Szép napot' 
+    : 'Szép estét';
 
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-32 transition-colors duration-300 selection:bg-amber-500/30">
