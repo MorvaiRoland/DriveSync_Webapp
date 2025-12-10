@@ -5,34 +5,33 @@ import { createClient } from '@/supabase/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  
-  // Megpróbáljuk kinyerni a 'next' paramétert, ha nincs, akkor alapértelmezett a '/'
-  let next = searchParams.get('next') ?? '/'
+  // Kezeljük a 'next' paramétert, ha jelszóvisszaállításból jön
+  const next = searchParams.get('next') ?? '/'
 
   if (code) {
     const supabase = await createClient()
     
-    // Kód beváltása sessionre
+    // PKCE kód beváltása sessionre
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
-      // TRÜKK: Ha véletlenül elveszett volna a 'next' paraméter, de tudjuk, 
-      // hogy a felhasználó épp most állította vissza a jelszavát (mert belépett),
-      // akkor érdemes ránézni, hova irányítjuk.
+      // SIKER: Átirányítás a kért oldalra (pl. /update-password)
+      // Biztonsági ellenőrzés: csak relatív URL-re vagy a saját domainre irányítsunk
+      const forwardedHost = request.headers.get('x-forwarded-host') // Vercel esetén fontos
+      const isLocal = origin.includes('localhost')
       
-      // Ha a next '/' (kezdőlap), de a felhasználó most kattintott a reset linkre,
-      // akkor lehet, hogy elnyelődött a paraméter. 
-      // A biztonság kedvéért, ha a paraméterezés nem működne, 
-      // itt manuálisan is átírhatod '/update-password'-re teszteléshez, 
-      // de az alábbi kódnak működnie kell, ha az action.ts jól van beállítva.
+      // Ha Vercelen vagyunk, biztosítjuk, hogy a HTTPS és a helyes domain legyen
+      const baseUrl = isLocal ? origin : `https://${forwardedHost || 'www.drivesync-hungary.hu'}`
       
-      console.log(`Sikeres belépés, átirányítás ide: ${next}`)
-      return NextResponse.redirect(`${origin}${next}`)
+      console.log(`[Auth Callback] Siker. Redirect ide: ${baseUrl}${next}`)
+      return NextResponse.redirect(`${baseUrl}${next}`)
     } else {
-        console.error("Auth hiba:", error)
+       console.error("[Auth Callback] Hiba:", error.message)
+       // Részletesebb hibaüzenet a login oldalon
+       return NextResponse.redirect(`${origin}/login?message=Auth Error: ${error.message}`)
     }
   }
 
-  // Hiba esetén login oldal
-  return NextResponse.redirect(`${origin}/login?message=Auth error`)
+  // Ha nincs kód
+  return NextResponse.redirect(`${origin}/login?message=Hiányzó hitelesítési kód.`)
 }
