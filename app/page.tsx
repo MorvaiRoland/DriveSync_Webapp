@@ -1,4 +1,3 @@
-// app/page.tsx
 import { createClient } from '@/supabase/server'
 import { signOut } from './login/action'
 import { deleteCar } from './cars/actions'
@@ -6,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import ChangelogModal from '@/components/ChangelogModal'
-import { WeatherWidget, FuelWidget } from '@/components/DashboardWidgets'
+import { WeatherWidget } from '@/components/DashboardWidgets'
 import ReminderChecker from '@/components/ReminderChecker'
 import AiMechanic from '@/components/AiMechanic'
 import GamificationWidget from '@/components/GamificationWidget'
@@ -28,6 +27,46 @@ async function logCurrentMileage(formData: FormData) {
   
   if (error) console.error("Hiba:", error);
   return redirect('/?success=Km+frissitve');
+}
+
+// --- ÚJ ÜZEMANYAG WIDGET ---
+function FuelWidget() {
+  // Ideális esetben ezeket az adatokat egy API-ból kérnénk le
+  const fuelPrices = [
+    { type: 'Benzin 95', price: 566.5, color: 'bg-emerald-500', textColor: 'text-emerald-600' },
+    { type: 'Gázolaj', price: 578.1, color: 'bg-slate-600', textColor: 'text-slate-700' },
+    { type: 'Benzin 100', price: 622.1, color: 'bg-teal-500', textColor: 'text-teal-600' },
+  ];
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden h-full flex flex-col">
+      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+        <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Üzemanyagárak
+        </h3>
+        <span className="text-[10px] text-slate-400">holtankoljak.hu</span>
+      </div>
+      <div className="p-4 flex-1 flex flex-col justify-between gap-4">
+        <div className="flex flex-col gap-3">
+          {fuelPrices.map((fuel, index) => (
+            <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50">
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-8 rounded-full ${fuel.color}`}></div>
+                <span className="font-medium text-slate-700 dark:text-slate-200">{fuel.type}</span>
+              </div>
+              <div className="text-right">
+                <span className={`text-lg font-black ${fuel.textColor} dark:text-white`}>{fuel.price.toFixed(1)}</span>
+                <span className="text-xs font-bold text-slate-400 ml-1">Ft</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // --- FŐ KOMPONENS ---
@@ -385,8 +424,9 @@ export default async function Home() {
                 <GamificationWidget badges={badges} />
 
                 {/* 2. DASHBOARD WIDGETS */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                     <WeatherWidget />
+                    {/* Lecseréltük a régi FuelWidget-et az új, helyben definiált verzióra */}
                     <FuelWidget />
                 </div>
 
