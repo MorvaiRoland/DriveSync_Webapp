@@ -5,33 +5,24 @@ import { createClient } from '@/supabase/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // Kezeljük a 'next' paramétert, ha jelszóvisszaállításból jön
   const next = searchParams.get('next') ?? '/'
 
   if (code) {
     const supabase = await createClient()
-    
-    // PKCE kód beváltása sessionre
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
-      // SIKER: Átirányítás a kért oldalra (pl. /update-password)
-      // Biztonsági ellenőrzés: csak relatív URL-re vagy a saját domainre irányítsunk
-      const forwardedHost = request.headers.get('x-forwarded-host') // Vercel esetén fontos
-      const isLocal = origin.includes('localhost')
-      
-      // Ha Vercelen vagyunk, biztosítjuk, hogy a HTTPS és a helyes domain legyen
-      const baseUrl = isLocal ? origin : `https://${forwardedHost || 'www.drivesync-hungary.hu'}`
-      
-      console.log(`[Auth Callback] Siker. Redirect ide: ${baseUrl}${next}`)
-      return NextResponse.redirect(`${baseUrl}${next}`)
+      // Siker! Irány a jelszócsere oldal
+      // Biztosítjuk, hogy a www.drivesync-hungary.hu-ra menjen
+      const targetBase = origin.includes('localhost') ? origin : 'https://www.drivesync-hungary.hu'
+      return NextResponse.redirect(`${targetBase}${next}`)
     } else {
-       console.error("[Auth Callback] Hiba:", error.message)
-       // Részletesebb hibaüzenet a login oldalon
-       return NextResponse.redirect(`${origin}/login?message=Auth Error: ${error.message}`)
+        console.error('Auth error:', error)
     }
   }
 
-  // Ha nincs kód
-  return NextResponse.redirect(`${origin}/login?message=Hiányzó hitelesítési kód.`)
+  // Ha hiba van, akkor is engedjük rá a jelszócsere oldalra, de üzenettel
+  // Ez azért fontos, mert néha a session létrejön, csak a kód beváltás dob hibát
+  // De a legbiztosabb, ha újra kérjük a folyamatot
+  return NextResponse.redirect(`${origin}/login?message=A biztonsági kód lejárt. Kérlek, kezd újra a folyamatot.`)
 }
