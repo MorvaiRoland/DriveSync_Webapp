@@ -7,6 +7,7 @@ import { Resend } from 'resend'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { render } from '@react-email/render'
 import ServiceReminderEmail from '@/components/emails/ServiceReminderEmail'
+import { randomBytes } from 'crypto'
 
 // --- 1. ESEMÉNYEK KEZELÉSE ---
 
@@ -661,5 +662,40 @@ export async function deleteVignette(formData: FormData) {
 
   await supabase.from('vignettes').delete().eq('id', id)
   
+  revalidatePath(`/cars/${car_id}`)
+}
+
+export async function toggleSaleMode(formData: FormData) {
+  const supabase = await createClient()
+  const car_id = String(formData.get('car_id'))
+  const enable = formData.get('enable') === 'true'
+  const hide_prices = formData.get('hide_prices') === 'on'
+  const hide_sensitive = formData.get('hide_sensitive') === 'on'
+
+  if (enable) {
+    // Ha bekapcsoljuk, és még nincs token, generálunk egyet
+    // Ha már van, megtartjuk a régit (hogy ne törjön a link)
+    const { data: current } = await supabase.from('cars').select('share_token').eq('id', car_id).single()
+    
+    let token = current?.share_token
+    if (!token) {
+        token = randomBytes(16).toString('hex') // 32 karakteres véletlen string
+    }
+
+    await supabase.from('cars').update({
+        is_for_sale: true,
+        share_token: token,
+        hide_prices,
+        hide_sensitive
+    }).eq('id', car_id)
+
+  } else {
+    // Kikapcsolás
+    await supabase.from('cars').update({
+        is_for_sale: false,
+        // A tokent NEM töröljük, hogy ha véletlen kapcsolta ki, visszaállítható legyen
+    }).eq('id', car_id)
+  }
+
   revalidatePath(`/cars/${car_id}`)
 }

@@ -8,7 +8,8 @@ import ExportMenu from '@/components/ExportMenu'
 import LockedFeature from '@/components/LockedFeature'
 import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
 import VignetteManager from '@/components/VignetteManager'
-import ParkingAssistant from '@/components/ParkingAssistant' // <--- ÚJ IMPORT
+import ParkingAssistant from '@/components/ParkingAssistant'
+import SalesWidget from '@/components/SalesWidget' // <--- ÚJ IMPORT
 
 // --- LUCIDE ICONS IMPORT ---
 import { 
@@ -35,6 +36,11 @@ type Car = {
   fuel_type: string
   color: string | null
   vin: string | null
+  // Sales mode mezők (opcionális, mert lehet null)
+  share_token?: string | null
+  is_for_sale?: boolean | null
+  hide_prices?: boolean | null
+  hide_sensitive?: boolean | null
 }
 
 // --- Segédfüggvények ---
@@ -63,7 +69,7 @@ export default async function CarDetailsPage(props: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 1. Adatlekérések párhuzamosítása (Most már 7 db kérés fut egyszerre)
+  // 1. Adatlekérések párhuzamosítása
   const [carRes, eventsRes, remindersRes, tiresRes, docsRes, vigRes, parkingRes] = await Promise.all([
     supabase.from('cars').select('*').eq('id', params.id).single(),
     supabase.from('events').select('*').eq('car_id', params.id).order('event_date', { ascending: false }),
@@ -71,7 +77,7 @@ export default async function CarDetailsPage(props: Props) {
     supabase.from('tires').select('*').eq('car_id', params.id).order('is_mounted', { ascending: false }),
     supabase.from('car_documents').select('*').eq('car_id', params.id).order('created_at', { ascending: false }),
     supabase.from('vignettes').select('*').eq('car_id', params.id),
-    supabase.from('parking_sessions').select('*').eq('car_id', params.id).maybeSingle() // <--- PARKOLÁS LEKÉRÉSE
+    supabase.from('parking_sessions').select('*').eq('car_id', params.id).maybeSingle()
   ])
 
   if (carRes.error || !carRes.data) return notFound()
@@ -82,7 +88,7 @@ export default async function CarDetailsPage(props: Props) {
   const safeTires = tiresRes.data || []
   const safeDocs = docsRes.data || []
   const safeVignettes = vigRes.data || []
-  const activeParking = parkingRes.data || null // <--- AKTÍV PARKOLÁS ADAT
+  const activeParking = parkingRes.data || null
 
   // --- Előfizetés és Jogosultságok ---
   let plan: SubscriptionPlan = 'free';
@@ -169,7 +175,7 @@ export default async function CarDetailsPage(props: Props) {
           {/* 3. BAL OSZLOP (Status & Insights) */}
           <div className="space-y-6 md:space-y-8">
              
-             {/* PARKOLÁS ASSZISZTENS (ÚJ!) - Legfelülre tesszük a bal oszlopban */}
+             {/* PARKOLÁS ASSZISZTENS */}
              <ParkingAssistant carId={car.id} activeSession={activeParking} />
 
              <HealthCard 
@@ -188,8 +194,12 @@ export default async function CarDetailsPage(props: Props) {
              
              <CostCard total={totalCost} fuel={fuelCost} service={serviceCost} />
              
+             {/* OKOS TIPPEK & ELADÓSORBAN MÓD */}
              {isPro ? (
-                <SmartTipsCard tips={smartTips} />
+                <>
+                    <SmartTipsCard tips={smartTips} />
+                    <SalesWidget car={car} /> {/* <--- ELADÓSORBAN WIDGET (Pro) */}
+                </>
              ) : (
                 <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl p-6 shadow-lg border border-indigo-500/30 relative overflow-hidden group hover:scale-[1.01] transition-transform">
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
@@ -197,8 +207,8 @@ export default async function CarDetailsPage(props: Props) {
                         <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mb-3 text-indigo-400">
                             <Sparkles className="w-6 h-6" />
                         </div>
-                        <h3 className="font-bold text-white mb-1">AI Szerelő Tippek</h3>
-                        <p className="text-sm text-indigo-200 mb-4">Személyre szabott karbantartási tanácsok az autód adatai alapján.</p>
+                        <h3 className="font-bold text-white mb-1">AI Szerelő & Hirdetés</h3>
+                        <p className="text-sm text-indigo-200 mb-4">Személyre szabott tippek és autós hirdetési adatlap generálása.</p>
                         <Link href="/pricing" className="bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2">
                             <Lock className="w-3 h-3" /> Pro Funkció
                         </Link>
