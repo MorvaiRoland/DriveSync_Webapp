@@ -1,7 +1,6 @@
 // app/page.tsx
 import { createClient } from '@/supabase/server'
 import { signOut } from './login/action'
-import { deleteCar } from './cars/actions'
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
@@ -13,6 +12,11 @@ import GamificationWidget from '@/components/GamificationWidget'
 import PromoBanner from '@/components/PromoBanner'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
 
+// --- KONFIGURÁCIÓ ---
+// Ezt írd át arra, amit csak te tudsz! Ezzel a kóddal lépsz be fejlesztői módba.
+// Használat: te-oldalad.hu/?dev=admin
+const DEV_SECRET_KEY = "admin"; 
+
 // --- SERVER ACTION: Km Naplózása ---
 async function logCurrentMileage(formData: FormData) {
   'use server'
@@ -20,7 +24,7 @@ async function logCurrentMileage(formData: FormData) {
   const current_mileage = parseInt(String(formData.get('current_mileage')));
 
   if (!car_id || isNaN(current_mileage) || current_mileage <= 0) {
-    return redirect(`/?error=${encodeURIComponent('Hibás km állás.')}`);
+    return redirect(`/?dev=${DEV_SECRET_KEY}&error=${encodeURIComponent('Hibás km állás.')}`);
   }
 
   const supabase = await createClient();
@@ -30,10 +34,10 @@ async function logCurrentMileage(formData: FormData) {
   
   if (carError) {
       console.error("Hiba az autó frissítésekor:", carError);
-      return redirect(`/?error=${encodeURIComponent('Hiba történt.')}`);
+      return redirect(`/?dev=${DEV_SECRET_KEY}&error=${encodeURIComponent('Hiba történt.')}`);
   }
 
-  // 2. Esemény létrehozása (hogy látszódjon az előzményekben és frissüljön minden számítás)
+  // 2. Esemény létrehozása
   await supabase.from('events').insert({
       car_id: car_id,
       type: 'other', 
@@ -44,55 +48,82 @@ async function logCurrentMileage(formData: FormData) {
       notes: 'Gyors rögzítés a főoldalról'
   });
 
-  return redirect('/?success=Km+frissitve');
+  return redirect(`/?dev=${DEV_SECRET_KEY}&success=Km+frissitve`);
 }
 
-// --- JAVÍTOTT ÜZEMANYAG WIDGET ---
-function FuelWidget() {
-  const fuelPrices = [
-    { type: '95', name: 'Benzin', price: 612, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-500/20' },
-    { type: 'D', name: 'Gázolaj', price: 618, color: 'text-slate-700 dark:text-slate-300', bg: 'bg-slate-200 dark:bg-slate-700' },
-    { type: '100', name: 'Prémium', price: 655, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-500/20' },
-  ];
-
+// --- COMING SOON LANDING PAGE (ÚJ KOMPONENS) ---
+function ComingSoonPage() {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden h-full flex flex-col">
-      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-        <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
-          <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          Piaci Átlagárak
-        </h3>
-        <span className="text-[10px] text-slate-400 font-mono">Ma</span>
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center relative overflow-hidden font-sans selection:bg-amber-500/30">
+      
+      {/* Háttér Effektek */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-[10%] left-[-10%] w-[40vw] h-[40vw] bg-blue-900/10 rounded-full blur-[100px]"></div>
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
+          {/* Grid Háló */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
       </div>
-      <div className="p-4 flex-1 flex flex-col justify-center gap-3">
-          {fuelPrices.map((fuel, idx) => (
-              <div key={idx} className="flex justify-between items-center">
-                  <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-black text-xs ${fuel.bg} ${fuel.color}`}>
-                          {fuel.type}
-                      </div>
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-300 truncate">{fuel.name}</span>
-                  </div>
-                  <div className="text-right whitespace-nowrap">
-                    <span className="font-bold text-slate-900 dark:text-white">{fuel.price}</span>
-                    <span className="text-xs font-medium text-slate-400 ml-1">Ft</span>
-                  </div>
-              </div>
+
+      <div className="relative z-10 container mx-auto px-4 text-center">
+        
+        {/* Logo Animáció */}
+        <div className="mb-8 relative inline-block group">
+           <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-amber-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+           <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-slate-900 rounded-2xl flex items-center justify-center border border-slate-800 shadow-2xl">
+              <Image src="/drivesync-logo.png" alt="Logo" width={60} height={60} className="object-contain" priority />
+           </div>
+        </div>
+
+        {/* Fő Címsor */}
+        <h1 className="text-5xl sm:text-7xl font-black text-white mb-6 tracking-tight animate-in slide-in-from-bottom-4 duration-700 fade-in">
+          Jövőbiztos <br/>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600">Garázsmenedzsment.</span>
+        </h1>
+
+        <p className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-light animate-in slide-in-from-bottom-8 duration-1000 fade-in delay-100">
+          A DriveSync hamarosan megérkezik, hogy forradalmasítsa az autód karbantartását. 
+          Intelligens szerviznapló, költségkövetés és flotta menedzsment egyetlen prémium felületen.
+        </p>
+
+        {/* Feature Badges */}
+        <div className="flex flex-wrap justify-center gap-3 sm:gap-6 mb-16 animate-in fade-in duration-1000 delay-300">
+          {['AI Diagnosztika', 'Felhő Szinkronizáció', 'Smart Emlékeztetők', '0 Ft Rejtett Költség'].map((item) => (
+            <span key={item} className="px-4 py-2 rounded-full bg-slate-900/50 border border-slate-800 text-slate-300 text-sm font-medium backdrop-blur-sm shadow-sm hover:border-amber-500/30 transition-colors cursor-default">
+              {item}
+            </span>
           ))}
-          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 text-center">
-              <a href="https://holtankoljak.hu" target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-amber-500 transition-colors">
-                  Adatok forrása: holtankoljak.hu
-              </a>
-          </div>
+        </div>
+
+        {/* Értesítő Form (Vizuális) */}
+        <div className="max-w-md mx-auto w-full relative animate-in fade-in duration-1000 delay-500 group">
+           <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500 to-blue-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+           <div className="relative flex bg-slate-900 rounded-xl p-1 border border-slate-800">
+             <input 
+              type="text" 
+              placeholder="Értesíts, ha elindultok..." 
+              className="flex-1 bg-transparent border-none text-white px-4 py-3 focus:outline-none focus:ring-0 placeholder-slate-600"
+              disabled
+             />
+             <button disabled className="bg-white text-slate-900 font-bold px-6 py-2 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-80">
+               Feliratkozás
+             </button>
+           </div>
+           <p className="text-xs text-slate-600 mt-3">Hamarosan nyilvános béta teszt.</p>
+        </div>
+
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-6 w-full text-center">
+        <p className="text-slate-700 text-xs font-mono uppercase tracking-widest">Fejlesztés alatt • DriveSync 2025</p>
       </div>
     </div>
-  );
+  )
 }
 
-// --- FŐ KOMPONENS ---
-export default async function Home() {
+// --- EREDETI APPLIKÁCIÓ LOGIKA (DashboardComponent-re átnevezve) ---
+async function DashboardComponent() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -318,7 +349,7 @@ export default async function Home() {
                                 </p>
                                 {spendingTrend !== 0 && (
                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center ${spendingTrend > 0 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
-                                        {spendingTrend > 0 ? '↑' : '↓'} {Math.abs(spendingTrend)}%
+                                            {spendingTrend > 0 ? '↑' : '↓'} {Math.abs(spendingTrend)}%
                                     </span>
                                 )}
                             </div>
@@ -490,7 +521,6 @@ export default async function Home() {
                 </div>
 
                 {/* 4. JAVÍTOTT AKTIVITÁS (Event Log) */}
-               {/* 4. JAVÍTOTT AKTIVITÁS (Event Log) - FIX IKONOK */}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
                         <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -510,14 +540,14 @@ export default async function Home() {
                                             <span className="block text-sm font-black text-slate-400 dark:text-slate-500 uppercase">{new Date(act.event_date).toLocaleString('hu-HU', { month: 'short' }).replace('.','')}</span>
                                             <span className="block text-xl font-black text-slate-800 dark:text-slate-200">{new Date(act.event_date).getDate()}</span>
                                         </div>
-                                    </div>
 
-                                    {/* Ikon */}
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-slate-700 shadow-sm ${act.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                                        {act.type === 'fuel' 
-                                            ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> 
-                                            : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                        }
+                                        {/* Ikon */}
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-slate-700 shadow-sm ${act.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                                            {act.type === 'fuel' 
+                                                ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> 
+                                                : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                            }
+                                        </div>
                                     </div>
                                     
                                     {/* Szöveg */}
@@ -621,7 +651,51 @@ export default async function Home() {
   )
 }
 
-// --- FULLOS AUTÓ KÁRTYA ---
+// --- JAVÍTOTT ÜZEMANYAG WIDGET ---
+function FuelWidget() {
+  const fuelPrices = [
+    { type: '95', name: 'Benzin', price: 612, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-500/20' },
+    { type: 'D', name: 'Gázolaj', price: 618, color: 'text-slate-700 dark:text-slate-300', bg: 'bg-slate-200 dark:bg-slate-700' },
+    { type: '100', name: 'Prémium', price: 655, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-500/20' },
+  ];
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden h-full flex flex-col">
+      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+        <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
+          <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Piaci Átlagárak
+        </h3>
+        <span className="text-[10px] text-slate-400 font-mono">Ma</span>
+      </div>
+      <div className="p-4 flex-1 flex flex-col justify-center gap-3">
+          {fuelPrices.map((fuel, idx) => (
+              <div key={idx} className="flex justify-between items-center">
+                  <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-black text-xs ${fuel.bg} ${fuel.color}`}>
+                          {fuel.type}
+                      </div>
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-300 truncate">{fuel.name}</span>
+                  </div>
+                  <div className="text-right whitespace-nowrap">
+                    <span className="font-bold text-slate-900 dark:text-white">{fuel.price}</span>
+                    <span className="text-xs font-medium text-slate-400 ml-1">Ft</span>
+                  </div>
+              </div>
+          ))}
+          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 text-center">
+              <a href="https://holtankoljak.hu" target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-amber-500 transition-colors">
+                  Adatok forrása: holtankoljak.hu
+              </a>
+          </div>
+      </div>
+    </div>
+  );
+}
+
+// --- HELPER COMPONENT (FULLOS AUTÓ KÁRTYA) ---
 function CarCard({ car, shared }: { car: any, shared?: boolean }) {
   return (
     <div className={`relative group flex flex-col bg-white dark:bg-slate-800 rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-slate-200 dark:border-slate-700 h-full ${shared ? 'ring-2 ring-blue-500/30' : ''}`}>
@@ -719,4 +793,22 @@ function StatCard({ label, value, number, highlight, icon }: any) {
 
 function Badge({ text }: { text: string }) {
   return <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-slate-800 text-slate-400 text-xs font-bold">{text}</span>
+}
+
+// --- FŐ BELÉPÉSI PONT ---
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const params = await searchParams
+  const secret = params.dev
+
+  // Ha a titkos kód megvan, vagy már bejelentkezett a user és csak navigál (bár az URL paraméter a legbiztosabb tesztelésre), akkor a Dashboard-ot mutatjuk.
+  if (secret === DEV_SECRET_KEY) {
+    return <DashboardComponent />
+  }
+
+  // Egyébként a "Coming Soon" oldalt mutatjuk mindenkinek
+  return <ComingSoonPage />
 }
