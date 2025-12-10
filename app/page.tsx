@@ -12,7 +12,9 @@ import GamificationWidget from '@/components/GamificationWidget'
 import PromoBanner from '@/components/PromoBanner'
 import SubscribeForm from '@/components/SubscribeForm'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
-
+import { History, Fuel, Wrench } from 'lucide-react';
+import { Zap } from 'lucide-react';
+import FuelWidget from '@/components/FuelWidget';
 // --- KONFIGURÁCIÓ ---
 // Ezt írd át arra, amit csak te tudsz! Ezzel a kóddal lépsz be fejlesztői módba.
 // Használat: te-oldalad.hu/?dev=admin
@@ -525,56 +527,70 @@ async function DashboardComponent() {
               </div>
 
               {/* 4. AKTIVITÁS (Event Log) */}
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
-                      <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                         <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                         Legutóbbiak
-                      </h3>
-                  </div>
-                  <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {recentActivity.length > 0 ? (
-                          recentActivity.map((act: any) => (
-                              <div key={act.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-4">
-                                  
-                                  {/* Dátum & Ikon */}
-                                  <div className="flex flex-col items-center justify-center w-12 flex-shrink-0 gap-1">
-                                      <div className="text-center leading-none">
-                                          <span className="block text-sm font-black text-slate-400 dark:text-slate-500 uppercase">{new Date(act.event_date).toLocaleString('hu-HU', { month: 'short' }).replace('.','')}</span>
-                                          <span className="block text-xl font-black text-slate-800 dark:text-slate-200">{new Date(act.event_date).getDate()}</span>
-                                      </div>
-                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-slate-700 shadow-sm ${act.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                                          {act.type === 'fuel' 
-                                              ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> 
-                                              : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                          }
-                                      </div>
-                                  </div>
-                                  
-                                  {/* Szöveg */}
-                                  <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{act.title}</p>
-                                      <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 truncate">
-                                          <span className="truncate">{act.cars?.make} {act.cars?.model}</span>
-                                          {act.mileage > 0 && <span className="flex-shrink-0">• {act.mileage.toLocaleString()} km</span>}
-                                      </div>
-                                  </div>
+           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+  {/* Fejléc */}
+  <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+    <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+      <History className="w-5 h-5 text-slate-400" />
+      Legutóbbiak
+    </h3>
+  </div>
 
-                                  {/* Ár */}
-                                  <div className="text-right flex-shrink-0">
-                                      <span className={`block text-sm font-bold ${act.cost > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
-                                          {act.cost > 0 ? `${act.cost.toLocaleString()} Ft` : '-'}
-                                      </span>
-                                  </div>
-                              </div>
-                          ))
-                      ) : (
-                          <div className="text-center py-6">
-                              <p className="text-sm text-slate-400 italic">Nincs előzmény.</p>
-                          </div>
-                      )}
-                  </div>
-              </div>
+  {/* Lista */}
+  <div className="divide-y divide-slate-100 dark:divide-slate-700">
+    {recentActivity.length > 0 ? (
+      recentActivity.map((act: any) => (
+        <div key={act.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-4">
+          
+          {/* Dátum & Ikon */}
+          <div className="flex flex-col items-center justify-center w-12 flex-shrink-0 gap-1">
+            <div className="text-center leading-none">
+              <span className="block text-sm font-black text-slate-400 dark:text-slate-500 uppercase">
+                {new Date(act.event_date).toLocaleString('hu-HU', { month: 'short' }).replace('.', '')}
+              </span>
+              <span className="block text-xl font-black text-slate-800 dark:text-slate-200">
+                {new Date(act.event_date).getDate()}
+              </span>
+            </div>
+            
+            <div className={`
+              w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white shadow-sm dark:border-slate-700
+              ${act.type === 'fuel' 
+                ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' 
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+              }
+            `}>
+              {act.type === 'fuel' 
+                ? <Fuel className="w-5 h-5" /> 
+                : <Wrench className="w-5 h-5" />
+              }
+            </div>
+          </div>
+
+          {/* Szöveg */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{act.title}</p>
+            <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 truncate">
+              <span className="truncate">{act.cars?.make} {act.cars?.model}</span>
+              {act.mileage > 0 && <span className="flex-shrink-0">• {act.mileage.toLocaleString()} km</span>}
+            </div>
+          </div>
+
+          {/* Ár */}
+          <div className="text-right flex-shrink-0">
+            <span className={`block text-sm font-bold ${act.cost > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+              {act.cost > 0 ? `${act.cost.toLocaleString()} Ft` : '-'}
+            </span>
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="text-center py-6">
+        <p className="text-sm text-slate-400 italic">Nincs előzmény.</p>
+      </div>
+    )}
+  </div>
+</div>
 
             </div>
         </div>
@@ -584,48 +600,7 @@ async function DashboardComponent() {
 }
 
 // --- ÜZEMANYAG WIDGET ---
-function FuelWidget() {
-  const fuelPrices = [
-    { type: '95', name: 'Benzin', price: 612, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-500/20' },
-    { type: 'D', name: 'Gázolaj', price: 618, color: 'text-slate-700 dark:text-slate-300', bg: 'bg-slate-200 dark:bg-slate-700' },
-    { type: '100', name: 'Prémium', price: 655, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-500/20' },
-  ];
 
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden h-full flex flex-col">
-      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-        <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
-          <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          Piaci Átlagárak
-        </h3>
-        <span className="text-[10px] text-slate-400 font-mono">Ma</span>
-      </div>
-      <div className="p-4 flex-1 flex flex-col justify-center gap-3">
-          {fuelPrices.map((fuel, idx) => (
-              <div key={idx} className="flex justify-between items-center">
-                  <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-black text-xs ${fuel.bg} ${fuel.color}`}>
-                          {fuel.type}
-                      </div>
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-300 truncate">{fuel.name}</span>
-                  </div>
-                  <div className="text-right whitespace-nowrap">
-                    <span className="font-bold text-slate-900 dark:text-white">{fuel.price}</span>
-                    <span className="text-xs font-medium text-slate-400 ml-1">Ft</span>
-                  </div>
-              </div>
-          ))}
-          <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 text-center">
-              <a href="https://holtankoljak.hu" target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-400 hover:text-amber-500 transition-colors">
-                  Adatok forrása: holtankoljak.hu
-              </a>
-          </div>
-      </div>
-    </div>
-  );
-}
 
 // --- HELPER COMPONENT (FULLOS AUTÓ KÁRTYA) ---
 function CarCard({ car, shared }: { car: any, shared?: boolean }) {
