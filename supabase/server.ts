@@ -1,4 +1,5 @@
-import { createServerClient } from '@supabase/ssr'
+// utils/supabase/server.ts
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
@@ -15,11 +16,15 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, {
+                ...options,
+                 // FONTOS: Ez segít, ha a www és a sima domain keveredik
+                 // Ha localhoston vagy, ezt a domain sort vedd ki!
+                 // Élesben: domain: '.drivesync-hungary.hu'
+              })
             )
           } catch {
-            // A `setAll` szerver komponensből hívva hibát dobhat,
-            // de ezt biztonságosan figyelmen kívül hagyhatjuk olvasáskor.
+            // Server Actions környezetben a setAll néha hibát dobhat, de a művelet sikerül
           }
         },
       },
