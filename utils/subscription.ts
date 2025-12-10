@@ -1,38 +1,38 @@
 import { createClient } from '@/supabase/server'
 
-// 1. Definiáljuk a csomagok típusát
+// 1. Csomag típusok
 export type SubscriptionPlan = 'free' | 'pro' | 'founder';
 
-// 2. Definiáljuk, hogy milyen beállításai vannak egy csomagnak (Interface)
+// 2. Beállítások interface
 interface PlanConfig {
   maxCars: number;
   allowDocuments: boolean;
   allowExport: boolean;
-  allowAi: boolean;
+  allowAi: boolean; // <--- EZT KERESSÜK MAJD
   allowReminders: boolean;
 }
 
-// 3. Szigorúan típusos konfiguráció
+// 3. Konfiguráció
 export const PLAN_LIMITS: Record<SubscriptionPlan, PlanConfig> = {
   free: {
     maxCars: 1,
     allowDocuments: false,
     allowExport: false,
-    allowAi: false,
+    allowAi: false, // Ingyenes csomagban tiltva
     allowReminders: true, 
   },
   pro: {
     maxCars: 10,
     allowDocuments: true,
     allowExport: true,
-    allowAi: true,
+    allowAi: true, // Pro csomagban engedélyezve
     allowReminders: true,
   },
   founder: {
     maxCars: 999,
     allowDocuments: true,
     allowExport: true,
-    allowAi: true,
+    allowAi: true, // Founder csomagban engedélyezve
     allowReminders: true,
   }
 };
@@ -46,7 +46,6 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     .single();
 
   const isActive = data?.status === 'active' || data?.status === 'trialing';
-  // Kényszerítjük a típust, hogy biztosan SubscriptionPlan legyen
   const planType = data?.plan_type as SubscriptionPlan;
 
   if (isActive && (planType === 'pro' || planType === 'founder')) {
@@ -56,7 +55,6 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   return 'free';
 }
 
-// 4. A függvény, ami biztosan boolean-t ad vissza
 export function checkLimit(
   plan: SubscriptionPlan, 
   feature: keyof PlanConfig, 
@@ -68,7 +66,6 @@ export function checkLimit(
     return currentCount < limits.maxCars;
   }
   
-  // Mivel a maxCars-t már kezeltük, a maradék property biztosan boolean,
-  // de a biztonság kedvéért kényszerítjük a boolean visszatérést (!!)
-  return !!limits[feature as keyof PlanConfig]; 
+  // Minden más feature boolean
+  return !!limits[feature]; 
 }
