@@ -3,66 +3,98 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createAuthClient } from '@/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { revalidatePath } from 'next/cache'
 
-export default async function AdminDashboard() {
-  // 1. Biztonsági ellenőrzés (Auth)
-  const authSupabase = await createAuthClient()
-  const { data: { user } } = await authSupabase.auth.getUser()
+// --- SERVER ACTION: Csomag Módosítása ---
+async function updateSubscriptionPlan(formData: FormData) {
+  'use server'
+  
+  const userId = formData.get('userId') as string
+  const newPlan = formData.get('plan') as string
 
-  // KÖRNYEZETI VÁLTOZÓ HASZNÁLATA
-  const allowedEmailsEnv = process.env.ADMIN_EMAILS || '';
-  const allowedEmails = allowedEmailsEnv.split(',').map(email => email.trim());
+  if (!userId || !newPlan) return;
 
-  if (!user || !user.email || !allowedEmails.includes(user.email)) {
-    return notFound() // Ha nem admin, 404-et kap
-  }
-
-  // 2. Admin Kliens létrehozása (Service Role - lát mindent)
+  // Admin kliens létrehozása a művelethez
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // 3. Adatok lekérése (BŐVÍTVE a subscriptions táblával)
-  const [carsRes, eventsRes, subsRes] = await Promise.all([
-    supabaseAdmin
-      .from('cars')
-      .select('id, make, model, year, plate, created_at, user_id, mileage, fuel_type'),
-    supabaseAdmin
-      .from('events')
-      .select('id, type, cost, created_at, title, car_id'),
-    supabaseAdmin
-      .from('subscriptions')
-      .select('user_id, status, plan_type, created_at')
+  // Előfizetés frissítése (vagy létrehozása ha nincs)
+  const { error } = await supabaseAdmin
+    .from('subscriptions')
+    .upsert({ 
+        user_id: userId, 
+        plan_type: newPlan,
+        status: 'active', // Ha módosítunk, aktiváljuk is
+        updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' })
+
+  if (error) {
+      console.error("Admin update error:", error)
+  }
+
+  // Oldal újratöltése, hogy lássuk a változást
+  revalidatePath('/admin')
+}
+
+// --- FŐ KOMPONENS ---
+export default async function AdminDashboard() {
+  // 1. Biztonsági ellenőrzés (Auth)
+  const authSupabase = await createAuthClient()
+  const { data: { user } } = await authSupabase.auth.getUser()
+
+  const allowedEmailsEnv = process.env.ADMIN_EMAILS || '';
+  const allowedEmails = allowedEmailsEnv.split(',').map(email => email.trim());
+
+  if (!user || !user.email || !allowedEmails.includes(user.email)) {
+    return notFound()
+  }
+
+  // 2. Admin Kliens (Service Role)
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // 3. Adatok lekérése
+  // Lekérjük a usereket is az Auth API-ból, hogy lássuk az emaileket!
+  const [carsRes, eventsRes, subsRes, usersRes] = await Promise.all([
+    supabaseAdmin.from('cars').select('id, make, model, year, plate, created_at, user_id, mileage, fuel_type'),
+    supabaseAdmin.from('events').select('id, type, cost, created_at, title, car_id'),
+    supabaseAdmin.from('subscriptions').select('user_id, status, plan_type, created_at'),
+    supabaseAdmin.auth.admin.listUsers() // Ez adja vissza az emaileket
   ])
 
   const cars = carsRes.data || []
   const events = eventsRes.data || []
   const subscriptions = subsRes.data || []
+  const allUsers = usersRes.data.users || []
 
-  // --- ÜZLETI LOGIKA ÉS ELEMZÉS ---
+  // Összefésüljük a usereket az előfizetésekkel
+  const userList = allUsers.map(u => {
+      const sub = subscriptions.find(s => s.user_id === u.id);
+      return {
+          id: u.id,
+          email: u.email,
+          last_sign_in: u.last_sign_in_at,
+          created_at: u.created_at,
+          plan: sub?.plan_type || 'free',
+          status: sub?.status || 'inactive'
+      }
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); // Legújabbak elöl
 
-  const uniqueUsers = new Set(cars.map((c: any) => c.user_id)).size // Autót rögzített userek
-  // Megjegyzés: A 'subscriptions' tábla minden regisztrált usert tartalmaz, így pontosabb a user szám onnan
-  const totalRegisteredUsers = subscriptions.length 
-  
+  // --- ÜZLETI LOGIKA ---
+  const totalRegisteredUsers = userList.length
   const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0)
   const serviceCount = events.filter(e => e.type === 'service' || e.type === 'repair').length
   const fuelCount = events.filter(e => e.type === 'fuel').length
 
-  // ELŐFIZETÉS STATISZTIKA (ÚJ)
   const founderCount = subscriptions.filter(s => s.plan_type === 'founder' && s.status === 'active').length
   const proCount = subscriptions.filter(s => s.plan_type === 'pro' && s.status === 'active').length
-  const freeCount = subscriptions.filter(s => s.status === 'free').length
-  
-  // Összes aktív fizetős/founder tag aránya
   const proRate = totalRegisteredUsers > 0 ? Math.round(((founderCount + proCount) / totalRegisteredUsers) * 100) : 0
 
-  // Top listák
-  const topMileageCars = [...cars]
-    .sort((a, b) => b.mileage - a.mileage)
-    .slice(0, 5);
-
+  // Top listák (ugyanaz mint előbb)
   const carCosts: Record<string, number> = {};
   events.forEach(e => {
       if (!carCosts[e.car_id]) carCosts[e.car_id] = 0;
@@ -104,8 +136,6 @@ export default async function AdminDashboard() {
 
       {/* KPI GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        
-        {/* ÚJ: ELŐFIZETŐK KÁRTYA */}
         <div className="p-6 rounded-2xl border bg-slate-900 border-slate-800 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
             <div className="flex justify-between items-start mb-4">
                 <div>
@@ -148,9 +178,81 @@ export default async function AdminDashboard() {
         />
       </div>
 
+      {/* --- FELHASZNÁLÓKEZELÉS (ÚJ SZEKCIÓ) --- */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8">
+          <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
+              <h3 className="font-bold text-white flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                  Felhasználók és Előfizetések
+              </h3>
+              <span className="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded border border-slate-700">{userList.length} Regisztrált</span>
+          </div>
+          
+          <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-400">
+                  <thead className="bg-slate-950 text-slate-200 uppercase font-bold text-xs">
+                      <tr>
+                          <th className="px-6 py-4">Email / ID</th>
+                          <th className="px-6 py-4">Regisztrált</th>
+                          <th className="px-6 py-4">Státusz</th>
+                          <th className="px-6 py-4 text-center">Jelenlegi Csomag</th>
+                          <th className="px-6 py-4 text-right">Művelet</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                      {userList.map((u) => (
+                          <tr key={u.id} className="hover:bg-slate-800/50 transition-colors">
+                              <td className="px-6 py-4">
+                                  <div className="font-bold text-white">{u.email}</div>
+                                  <div className="text-[10px] font-mono text-slate-600 truncate max-w-[200px]" title={u.id}>{u.id}</div>
+                              </td>
+                              <td className="px-6 py-4 text-xs">
+                                  {new Date(u.created_at).toLocaleDateString('hu-HU')}
+                              </td>
+                              <td className="px-6 py-4">
+                                  {u.status === 'active' 
+                                    ? <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">AKTÍV</span>
+                                    : <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-400">INAKTÍV</span>
+                                  }
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold border ${
+                                      u.plan === 'founder' ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' :
+                                      u.plan === 'pro' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' :
+                                      'bg-slate-800 border-slate-700 text-slate-400'
+                                  }`}>
+                                      {u.plan === 'founder' && '🚀 '}
+                                      {u.plan.toUpperCase()}
+                                  </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                  {/* SERVER ACTION FORM */}
+                                  <form action={updateSubscriptionPlan} className="flex items-center justify-end gap-2">
+                                      <input type="hidden" name="userId" value={u.id} />
+                                      <select 
+                                        name="plan" 
+                                        className="bg-slate-950 border border-slate-700 text-white text-xs rounded-lg focus:ring-amber-500 focus:border-amber-500 p-1.5"
+                                        defaultValue={u.plan}
+                                      >
+                                          <option value="free">Free</option>
+                                          <option value="pro">Pro</option>
+                                          <option value="founder">Founder</option>
+                                      </select>
+                                      <button type="submit" className="bg-white text-slate-900 hover:bg-amber-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors shadow-lg">
+                                          Mentés
+                                      </button>
+                                  </form>
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
+          </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* BAL OSZLOP */}
+          {/* BAL OSZLOP: Top Listák */}
           <div className="lg:col-span-2 space-y-8">
               
               {/* Esemény eloszlás */}
@@ -204,34 +306,6 @@ export default async function AdminDashboard() {
                       {topCostCars.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">Nincs adat.</div>}
                   </div>
               </div>
-
-              {/* Legtöbbet futott autók */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-                  <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
-                      <h3 className="font-bold text-white flex items-center gap-2">
-                          <span>🏎️</span> Legtöbbet futott autók
-                      </h3>
-                      <span className="text-[10px] font-bold bg-slate-800 px-2 py-1 rounded text-slate-400 border border-slate-700">TOP 5</span>
-                  </div>
-                  <div className="divide-y divide-slate-800/50">
-                      {topMileageCars.map((car, i) => (
-                          <div key={car.id} className="p-4 flex justify-between items-center hover:bg-white/5 transition-colors">
-                              <div className="flex items-center gap-4">
-                                  <div className={`text-lg font-black w-8 h-8 flex items-center justify-center rounded-lg ${i===0 ? 'bg-blue-500/20 text-blue-500' : 'text-slate-600 bg-slate-800'}`}>#{i+1}</div>
-                                  <div>
-                                      <p className="font-bold text-white text-sm">{car.make} {car.model}</p>
-                                      <p className="text-xs text-slate-500 capitalize">{car.fuel_type || 'Ismeretlen üzemanyag'}</p>
-                                  </div>
-                              </div>
-                              <div className="text-right">
-                                  <p className="font-black text-blue-400">{car.mileage.toLocaleString()} km</p>
-                              </div>
-                          </div>
-                      ))}
-                      {topMileageCars.length === 0 && <div className="p-4 text-center text-slate-500 text-sm">Nincs adat.</div>}
-                  </div>
-              </div>
-
           </div>
 
           {/* JOBB OSZLOP */}
