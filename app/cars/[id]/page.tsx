@@ -1,12 +1,12 @@
-import { createClient } from '@/supabase/server' // Vagy 'supabase/server', attól függően hol van a fájl
+import { createClient } from '@/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { deleteEvent, deleteReminder, resetServiceCounter } from './actions'
-import PdfDownloadButton from './PdfDownloadButton'
 import DocumentManager from './DocumentManager'
-import SaleSheetButton from '@/components/SaleSheetButton'
 import ExportMenu from '@/components/ExportMenu'
+import LockedFeature from '@/components/LockedFeature'
+import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
 
 // --- Típusdefiníciók ---
 type Car = {
@@ -43,15 +43,14 @@ const getExpiryStatus = (dateString: string | null) => {
 
 // --- FŐ KOMPONENS ---
 
-// Next.js 15+ kompatibilis Props típus
 type Props = {
   params: Promise<{ id: string }>
 }
 
 export default async function CarDetailsPage(props: Props) {
-  // Await params a Next.js 15 szabvány szerint
   const params = await props.params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   // 1. Adatlekérések párhuzamosítása
   const [carRes, eventsRes, remindersRes, tiresRes, docsRes] = await Promise.all([
@@ -69,6 +68,13 @@ export default async function CarDetailsPage(props: Props) {
   const safeReminders = remindersRes.data || []
   const safeTires = tiresRes.data || []
   const safeDocs = docsRes.data || []
+
+  // --- Előfizetés és Jogosultságok ---
+  let plan: SubscriptionPlan = 'free';
+  if (user) {
+      plan = await getSubscriptionStatus(user.id);
+  }
+  const isPro = plan === 'pro' || plan === 'founder';
 
   // --- Üzleti Logika Számítások ---
   
@@ -92,12 +98,11 @@ export default async function CarDetailsPage(props: Props) {
   const serviceIntervalKm = car.service_interval_km || 15000;
   let baseKm = car.last_service_mileage || 0;
   
-  // Ha volt azóta szerviz esemény, ami frissebb, mint az autón tárolt bázis
   const lastServiceEvent = safeEvents.find(e => e.type === 'service');
   if (lastServiceEvent && lastServiceEvent.mileage > baseKm) {
       baseKm = lastServiceEvent.mileage;
   }
-  if (baseKm === 0) baseKm = car.mileage; // Fallback
+  if (baseKm === 0) baseKm = car.mileage; 
 
   const nextServiceKm = baseKm + serviceIntervalKm;
   const kmRemaining = nextServiceKm - car.mileage;
@@ -131,7 +136,14 @@ export default async function CarDetailsPage(props: Props) {
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
       
       {/* 1. HEADER SZEKCIÓ */}
-      <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} />
+      <HeaderSection 
+        car={car} 
+        healthStatus={healthStatus} 
+        nextServiceKm={nextServiceKm} 
+        kmRemaining={kmRemaining} 
+        safeEvents={safeEvents} 
+        isPro={isPro} // Átadjuk az előfizetési státuszt
+      />
 
       {/* 2. DESKTOP GYORS GOMBOK (Mobilon rejtve) */}
       <DesktopActionGrid carId={car.id} />
@@ -155,15 +167,41 @@ export default async function CarDetailsPage(props: Props) {
              
              <CostCard total={totalCost} fuel={fuelCost} service={serviceCost} />
              
-             <SmartTipsCard tips={smartTips} />
+             {isPro ? (
+                <SmartTipsCard tips={smartTips} />
+             ) : (
+                <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl p-6 shadow-lg border border-indigo-500/30 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+                    <div className="relative z-10 flex flex-col items-center text-center">
+                        <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mb-3 text-indigo-400">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        </div>
+                        <h3 className="font-bold text-white mb-1">AI Szerelő Tippek</h3>
+                        <p className="text-sm text-indigo-200 mb-4">Személyre szabott karbantartási tanácsok az autód adatai alapján.</p>
+                        <Link href="/pricing" className="bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-500/20">
+                            Pro Funkció
+                        </Link>
+                    </div>
+                </div>
+             )}
           </div>
 
           {/* 4. JOBB OSZLOP (Timeline & Lists) */}
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
              <RemindersList reminders={safeReminders} carId={car.id} />
              
-             {/* DIGITÁLIS KESZTYŰTARTÓ (Dinamikus) */}
-             <DocumentManager carId={car.id} documents={safeDocs} />
+             {/* DIGITÁLIS KESZTYŰTARTÓ (KORLÁTOZOTT) */}
+             {isPro ? (
+                 <DocumentManager carId={car.id} documents={safeDocs} />
+             ) : (
+                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                     <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                        <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Digitális Kesztyűtartó
+                     </h3>
+                     <LockedFeature label="dokumentum kezelés" />
+                 </div>
+             )}
              
              <TechnicalSpecs car={car} avgConsumption={avgConsumption} />
              
@@ -184,7 +222,7 @@ export default async function CarDetailsPage(props: Props) {
 // ALKOMPONENSEK
 // ----------------------------------------------------------------------
 
-function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents }: any) {
+function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
         <div className="relative bg-slate-900 h-[22rem] md:h-[28rem] overflow-hidden shadow-2xl shrink-0 group">
             {car.image_url && (
@@ -204,12 +242,20 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                     
                     <div className="flex gap-2 items-center">
                         
-                        {/* --- ÚJ EXPORT MENÜ (Ez váltja ki a régi gombokat) --- */}
+                        {/* --- EXPORT MENÜ (Feltételes megjelenítés) --- */}
                         <div className="scale-90 md:scale-100 origin-right">
-                             <ExportMenu car={car} events={safeEvents} />
+                            {isPro ? (
+                                <ExportMenu car={car} events={safeEvents} />
+                            ) : (
+                                <Link href="/pricing" className="inline-flex items-center gap-2 text-slate-400 bg-black/20 px-3 py-2 rounded-full border border-white/5 hover:bg-white/5 transition-colors h-[40px]" title="Pro funkció">
+                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                     <span className="text-xs font-bold uppercase hidden md:inline">Export</span>
+                                     <svg className="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                </Link>
+                            )}
                         </div>
                         
-                        {/* Szerkesztés Gomb (Marad a régi) */}
+                        {/* Szerkesztés Gomb */}
                         <Link href={`/cars/${car.id}/edit`} className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-3 md:px-4 py-2 rounded-full border border-white/10 hover:bg-white/10 h-[40px]">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                             <span className="text-xs font-bold uppercase hidden md:inline">Szerk.</span>
@@ -277,7 +323,7 @@ function MobileBottomNav({ carId }: { carId: string }) {
                 </Link>
 
                 <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnBase} text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800`}>
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     <span className="text-[10px] font-bold leading-none">Szerviz</span>
                 </Link>
 
@@ -310,7 +356,7 @@ function DesktopActionGrid({ carId }: { carId: string }) {
                  Tankolás Rögzítése
              </Link>
              <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnClass} bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white`}>
-                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                  Szerviz Rögzítése
              </Link>
              <Link href={`/cars/${carId}/reminders/new`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}>
@@ -489,23 +535,23 @@ function RemindersList({ reminders, carId }: any) {
             <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
                 {reminders.length > 0 ? (
                    reminders.map((rem: any) => (
-                     <div key={rem.id} className="p-4 flex items-center gap-3 md:gap-4 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors group">
-                         <div className="w-11 h-11 md:w-12 md:h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500 rounded-xl flex flex-col items-center justify-center shadow-sm border border-amber-200 dark:border-amber-800/50 flex-shrink-0">
-                             <span className="text-xs font-bold uppercase">{new Date(rem.due_date).toLocaleString('hu-HU', { month: 'short' }).replace('.', '')}</span>
-                             <span className="text-lg font-black leading-none">{new Date(rem.due_date).getDate()}</span>
-                         </div>
-                         <div className="flex-1 min-w-0">
-                             <p className="font-bold text-slate-900 dark:text-slate-100 text-sm md:text-base truncate">{rem.service_type}</p>
-                             <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 truncate">{rem.note || 'Nincs megjegyzés'}</p>
-                         </div>
-                         <form action={deleteReminder}>
-                             <input type="hidden" name="id" value={rem.id} />
-                             <input type="hidden" name="car_id" value={carId} />
-                             <button className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 flex-shrink-0">
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                             </button>
-                         </form>
-                     </div>
+                      <div key={rem.id} className="p-4 flex items-center gap-3 md:gap-4 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors group">
+                          <div className="w-11 h-11 md:w-12 md:h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500 rounded-xl flex flex-col items-center justify-center shadow-sm border border-amber-200 dark:border-amber-800/50 flex-shrink-0">
+                              <span className="text-xs font-bold uppercase">{new Date(rem.due_date).toLocaleString('hu-HU', { month: 'short' }).replace('.', '')}</span>
+                              <span className="text-lg font-black leading-none">{new Date(rem.due_date).getDate()}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm md:text-base truncate">{rem.service_type}</p>
+                              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 truncate">{rem.note || 'Nincs megjegyzés'}</p>
+                          </div>
+                          <form action={deleteReminder}>
+                              <input type="hidden" name="id" value={rem.id} />
+                              <input type="hidden" name="car_id" value={carId} />
+                              <button className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 flex-shrink-0">
+                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                          </form>
+                      </div>
                    ))
                 ) : (
                    <div className="p-8 text-center text-slate-400 text-xs md:text-sm">Nincs közelgő karbantartás.</div>
@@ -567,7 +613,7 @@ function EventLog({ events, carId }: any) {
                                 <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white dark:border-slate-700 ${event.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
                                     {event.type === 'fuel' 
                                       ? <svg className="w-4 md:w-5 h-4 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                                      : <svg className="w-4 md:w-5 h-4 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                      : <svg className="w-4 md:w-5 h-4 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                     }
                                 </div>
 
