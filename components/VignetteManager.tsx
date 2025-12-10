@@ -68,13 +68,25 @@ export default function VignetteManager({ carId, vignettes }: { carId: string, v
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Megye</label>
                                     <select name="region" className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
-                                        <option value="Pest">Pest</option>
-                                        <option value="Fejér">Fejér</option>
-                                        <option value="Győr-Moson-Sopron">Győr-Moson-Sopron</option>
-                                        <option value="Komárom-Esztergom">Komárom-Esztergom</option>
-                                        <option value="Somogy">Somogy</option>
-                                        <option value="Baranya">Baranya</option>
-                                        {/* Többi megye... */}
+                                        <option value="Bács-Kiskun">Bács-Kiskun</option>
+<option value="Baranya">Baranya</option>
+<option value="Békés">Békés</option>
+<option value="Borsod-Abaúj-Zemplén">Borsod-Abaúj-Zemplén</option>
+<option value="Csongrád-Csanád">Csongrád-Csanád</option>
+<option value="Fejér">Fejér</option>
+<option value="Győr-Moson-Sopron">Győr-Moson-Sopron</option>
+<option value="Hajdú-Bihar">Hajdú-Bihar</option>
+<option value="Heves">Heves</option>
+<option value="Jász-Nagykun-Szolnok">Jász-Nagykun-Szolnok</option>
+<option value="Komárom-Esztergom">Komárom-Esztergom</option>
+<option value="Nógrád">Nógrád</option>
+<option value="Pest">Pest</option>
+<option value="Somogy">Somogy</option>
+<option value="Szabolcs-Szatmár-Bereg">Szabolcs-Szatmár-Bereg</option>
+<option value="Tolna">Tolna</option>
+<option value="Vas">Vas</option>
+<option value="Veszprém">Veszprém</option>
+<option value="Zala">Zala</option>
                                     </select>
                                 </div>
                             )}

@@ -8,6 +8,7 @@ import ExportMenu from '@/components/ExportMenu'
 import LockedFeature from '@/components/LockedFeature'
 import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
 import VignetteManager from '@/components/VignetteManager'
+import ParkingAssistant from '@/components/ParkingAssistant' // <--- ÚJ IMPORT
 
 // --- LUCIDE ICONS IMPORT ---
 import { 
@@ -15,7 +16,7 @@ import {
   Download, Lock, Pencil, Activity, RefreshCw, FileText, 
   ShieldCheck, Disc, Snowflake, Sun, Wallet, Banknote, 
   Sparkles, Lightbulb, Plus, Trash2, Gauge, History, 
-  ChevronRight, CarFront, Calendar
+  ChevronRight, CarFront
 } from 'lucide-react';
 
 // --- Típusdefiníciók ---
@@ -62,14 +63,15 @@ export default async function CarDetailsPage(props: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 1. Adatlekérések párhuzamosítása (JAVÍTVA: 6 elem a tömbben, 6 változó)
-  const [carRes, eventsRes, remindersRes, tiresRes, docsRes, vigRes] = await Promise.all([
+  // 1. Adatlekérések párhuzamosítása (Most már 7 db kérés fut egyszerre)
+  const [carRes, eventsRes, remindersRes, tiresRes, docsRes, vigRes, parkingRes] = await Promise.all([
     supabase.from('cars').select('*').eq('id', params.id).single(),
     supabase.from('events').select('*').eq('car_id', params.id).order('event_date', { ascending: false }),
     supabase.from('service_reminders').select('*').eq('car_id', params.id).order('due_date', { ascending: true }),
     supabase.from('tires').select('*').eq('car_id', params.id).order('is_mounted', { ascending: false }),
     supabase.from('car_documents').select('*').eq('car_id', params.id).order('created_at', { ascending: false }),
-    supabase.from('vignettes').select('*').eq('car_id', params.id) // <--- MATRICÁK LEKÉRÉSE
+    supabase.from('vignettes').select('*').eq('car_id', params.id),
+    supabase.from('parking_sessions').select('*').eq('car_id', params.id).maybeSingle() // <--- PARKOLÁS LEKÉRÉSE
   ])
 
   if (carRes.error || !carRes.data) return notFound()
@@ -79,7 +81,8 @@ export default async function CarDetailsPage(props: Props) {
   const safeReminders = remindersRes.data || []
   const safeTires = tiresRes.data || []
   const safeDocs = docsRes.data || []
-  const safeVignettes = vigRes.data || [] // <--- MATRICÁK VÁLTOZÓBA
+  const safeVignettes = vigRes.data || []
+  const activeParking = parkingRes.data || null // <--- AKTÍV PARKOLÁS ADAT
 
   // --- Előfizetés és Jogosultságok ---
   let plan: SubscriptionPlan = 'free';
@@ -165,6 +168,10 @@ export default async function CarDetailsPage(props: Props) {
 
           {/* 3. BAL OSZLOP (Status & Insights) */}
           <div className="space-y-6 md:space-y-8">
+             
+             {/* PARKOLÁS ASSZISZTENS (ÚJ!) - Legfelülre tesszük a bal oszlopban */}
+             <ParkingAssistant carId={car.id} activeSession={activeParking} />
+
              <HealthCard 
                 car={car} 
                 oilLife={oilLife} 
@@ -175,7 +182,6 @@ export default async function CarDetailsPage(props: Props) {
                 insuranceStatus={insuranceStatus}
              />
              
-             {/* MATRICA KEZELŐ WIDGET */}
              <VignetteManager carId={car.id} vignettes={safeVignettes} />
              
              <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={car.id} />
