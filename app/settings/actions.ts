@@ -72,33 +72,32 @@ export async function signOutAction() {
 export async function deleteAccountAction() {
   const supabase = await createClient()
 
-  // Lekérjük a jelenlegi felhasználót
+  // 1. Lekérjük a jelenlegi felhasználót az ID miatt
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   
   if (authError || !user) {
       return redirect('/login')
   }
 
-  // Admin kliens létrehozása a törléshez (Service Role Key szükséges!)
-  // Győződj meg róla, hogy ez a kulcs be van állítva az .env fájlban!
+  // 2. Admin kliens a törléshez
+  // FONTOS: Az .env fájlban legyen ott a SUPABASE_SERVICE_ROLE_KEY!
   const supabaseAdmin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Felhasználó törlése az Auth-ból
-  // Ha az adatbázis tábláknál beállítottad az "ON DELETE CASCADE"-ot, 
-  // minden adat (autók, események) automatikusan törlődik.
+  // 3. Először kijelentkeztetjük a klienst (hogy a sütik törlődjenek)
+  await supabase.auth.signOut()
+
+  // 4. Utána töröljük az adatbázisból (Admin joggal)
   const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id)
 
   if (error) {
     console.error('Delete Account Error:', error)
-    return redirect('/settings?error=Fiók törlése sikertelen. Próbáld újra később.')
+    // Ha hiba van, visszaküldjük a logint (mert már kijelentkeztettük), de hibaüzenettel
+    return redirect('/login?message=Hiba a törlésnél. Kérlek írj a supportnak.')
   }
 
-  // Kijelentkeztetés a biztonság kedvéért (bár a user már nem létezik)
-  await supabase.auth.signOut()
-
-  // Visszairányítás a login oldalra üzenettel
-  return redirect('/login?message=Fiók sikeresen törölve. Sajnáljuk, hogy elmégy.')
+  // 5. Siker
+  return redirect('/login?message=Fiók sikeresen törölve.')
 }
