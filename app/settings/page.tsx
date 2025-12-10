@@ -1,9 +1,11 @@
+// app/settings/page.tsx
 import { createClient } from '@/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { updateProfile, signOutAction } from './actions'
-import { PreferencesForm } from '@/components/SettingsForms'
-import DeleteAccountSection from '@/components/DeleteAccountSection'
+import { signOutAction } from './actions'
+import ProfileForm from '@/components/ProfileForm'         // <--- Kliens komponens
+import { PreferencesForm } from '@/components/SettingsForms' // <--- Kliens komponens
+import DeleteAccountSection from '@/components/DeleteAccountSection' // <--- Kliens komponens
 
 export default async function SettingsPage(props: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
   const searchParams = await props.searchParams
@@ -15,7 +17,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
 
   const meta = user.user_metadata || {}
   
-  // Alapértelmezett értékek kezelése
+  // Alapértelmezett beállítások
   const settings = meta.settings || { 
       notify_email: true, 
       notify_push: false, 
@@ -43,6 +45,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
 
         <div className="max-w-3xl mx-auto px-4 -mt-10 space-y-6 pb-20">
 
+            {/* Értesítések (Success/Error) */}
             {message && (
                 <div className={`p-4 rounded-xl shadow-sm border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 ${isError ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
                     <span className="text-xl">{isError ? '⚠️' : '✅'}</span>
@@ -50,56 +53,13 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                 </div>
             )}
 
-            {/* Profil Adatok */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
-                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
-                    <h2 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                        👤 Személyes Adatok
-                    </h2>
-                </div>
-                <form action={updateProfile} className="p-6 space-y-4">
-                    <div className="flex items-center gap-6 mb-4">
-                        <div className="w-20 h-20 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center text-2xl font-bold text-slate-500 dark:text-slate-300 border-4 border-white dark:border-slate-600 shadow-sm">
-                            {meta.full_name ? meta.full_name[0].toUpperCase() : user.email?.[0].toUpperCase()}
-                        </div>
-                        <div>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">{user.email}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Bejelentkezve</p>
-                        </div>
-                    </div>
+            {/* 1. Profil Űrlap (Kliens komponens) */}
+            <ProfileForm userEmail={user.email || ''} meta={meta} />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Teljes Név</label>
-                            <input 
-                                name="fullName" 
-                                defaultValue={meta.full_name || ''} 
-                                placeholder="Pl. Kiss János"
-                                className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white placeholder:text-slate-400"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Telefonszám</label>
-                            <input 
-                                name="phone" 
-                                defaultValue={meta.phone || ''} 
-                                placeholder="+36 30 123 4567"
-                                className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2.5 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white placeholder:text-slate-400"
-                            />
-                        </div>
-                    </div>
-                    <div className="pt-4 flex justify-end">
-                        <button type="submit" className="bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-900 px-6 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-md active:scale-95">
-                            Mentés
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            {/* PREFERENCIÁK FORM */}
+            {/* 2. Preferenciák Űrlap (Kliens komponens) */}
             <PreferencesForm settings={settings} />
 
-            {/* Kijelentkezés */}
+            {/* 3. Kijelentkezés Gomb */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
                  <div className="p-6">
                     <h3 className="font-bold text-slate-900 dark:text-white mb-4">Fiók műveletek</h3>
@@ -111,7 +71,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                  </div>
             </div>
 
-            {/* FIÓK TÖRLÉSE - VESZÉLYZÓNA */}
+            {/* 4. Fiók Törlése (Kliens komponens) */}
             <DeleteAccountSection />
 
             <div className="text-center text-xs text-slate-400 py-4">DriveSync v1.8.0</div>
