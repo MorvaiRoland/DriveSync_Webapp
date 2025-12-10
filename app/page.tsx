@@ -107,9 +107,34 @@ export default async function Home() {
                 .reduce((sum, e) => sum + (e.cost || 0), 0)
         }
 
-        // 8. Flotta egészség
-        const sickCars = cars.filter(c => c.status === 'service').length
-        fleetHealth = Math.round(((cars.length - sickCars) / cars.length) * 100)
+        // 8. Flotta egészség (Dinamikus számítás olajciklus alapján)
+        if (cars.length > 0) {
+            const totalHealthScore = cars.reduce((sum, car) => {
+                // Ha az autó manuálisan 'service' státuszban van (pl. lerobbant), akkor 0%-ot ér
+                if (car.status === 'service') return sum + 0;
+
+                const interval = car.service_interval_km || 15000; // Alapértelmezett 15e km
+                const lastService = car.last_service_mileage || 0;
+                
+                // Mennyit mentünk a legutóbbi szerviz óta?
+                // Ha nincs last_service adat, és az autóban van km, akkor feltételezzük, hogy a kezdetektől számít (ez ösztönöz az adatok pótlására)
+                const drivenSinceService = Math.max(0, car.mileage - lastService);
+                
+                // Kiszámoljuk a maradék élettartamot százalékban
+                // Pl: 15000 intervallum, mentünk 3000-et => (1 - 0.2) * 100 = 80%
+                let carHealth = (1 - (drivenSinceService / interval)) * 100;
+                
+                // Határok (0% és 100% között)
+                carHealth = Math.max(0, Math.min(100, carHealth));
+
+                return sum + carHealth;
+            }, 0);
+
+            // Az átlag kiszámítása
+            fleetHealth = Math.round(totalHealthScore / cars.length);
+        } else {
+            fleetHealth = 100;
+        }
 
         // 9. Gamification Logika
         const isHighMiler = cars.some(c => c.mileage >= 200000);

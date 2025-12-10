@@ -376,6 +376,28 @@ function DesktopActionGrid({ carId }: { carId: string }) {
 }
 
 function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaining, motStatus, insuranceStatus }: any) {
+    // Kördiagram konfiguráció
+    const radius = 36;
+    const circumference = 2 * Math.PI * radius;
+    // Biztosítjuk, hogy 0 és 100 között maradjon a vizuális megjelenítéshez
+    const safeOilLife = Math.min(100, Math.max(0, oilLife));
+    const offset = circumference - ((safeOilLife / 100) * circumference);
+
+    // Szín logika
+    let colorClass = 'text-emerald-500';
+    let strokeColor = '#10b981'; // emerald-500
+    let statusText = 'Kiváló';
+
+    if (safeOilLife < 20) {
+        colorClass = 'text-red-500';
+        strokeColor = '#ef4444'; // red-500
+        statusText = 'Kritikus';
+    } else if (safeOilLife < 50) {
+        colorClass = 'text-amber-500';
+        strokeColor = '#f59e0b'; // amber-500
+        statusText = 'Figyelj';
+    }
+
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
             <div className="flex justify-between items-center mb-6">
@@ -383,26 +405,69 @@ function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaini
                     <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     Jármű Egészség
                 </h3>
+                
+                {/* Gyors nullázó gomb */}
                 <form action={resetServiceCounter}>
                     <input type="hidden" name="car_id" value={car.id} />
-                    <button className="text-[10px] bg-slate-100 dark:bg-slate-700 hover:bg-amber-100 hover:text-amber-700 dark:hover:text-amber-400 text-slate-600 dark:text-slate-300 px-2 md:px-3 py-1.5 rounded-full font-bold transition-colors uppercase tracking-wider flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    <button className="text-[10px] bg-slate-100 dark:bg-slate-700 hover:bg-amber-100 hover:text-amber-700 dark:hover:text-amber-400 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full font-bold transition-colors uppercase tracking-wider flex items-center gap-1 group">
+                        <svg className="w-3 h-3 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                         Nullázás
                     </button>
                 </form>
             </div>
             
-            <div className="mb-6">
-                <div className="flex justify-between text-sm mb-2">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">Olaj élettartam</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{Math.round(oilLife)}%</span>
+            <div className="flex items-center gap-6 mb-8">
+                {/* KÖRDIAGRAM (Olaj alapú egészség) */}
+                <div className="relative w-24 h-24 flex-shrink-0">
+                    <svg className="w-full h-full transform -rotate-90">
+                        {/* Háttér kör */}
+                        <circle
+                            cx="50%"
+                            cy="50%"
+                            r={radius}
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            fill="transparent"
+                            className="text-slate-100 dark:text-slate-700"
+                        />
+                        {/* Progress kör */}
+                        <circle
+                            cx="50%"
+                            cy="50%"
+                            r={radius}
+                            stroke={strokeColor}
+                            strokeWidth="8"
+                            fill="transparent"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={offset}
+                            strokeLinecap="round"
+                            className="transition-all duration-1000 ease-out"
+                        />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className={`text-xl font-black ${colorClass}`}>{Math.round(safeOilLife)}%</span>
+                        <span className="text-[9px] uppercase font-bold text-slate-400">{statusText}</span>
+                    </div>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-1000 ${oilLife < 20 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${Math.max(0, oilLife)}%` }}></div>
-                </div>
-                <div className="flex justify-between mt-1">
-                    <p className="text-[10px] text-slate-400">Ciklus: {kmSinceService.toLocaleString()} / {serviceIntervalKm.toLocaleString()}</p>
-                    <p className={`text-[10px] font-bold ${kmRemaining <= 0 ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`}>Hátra: {Math.max(0, kmRemaining).toLocaleString()} km</p>
+
+                {/* ADATOK */}
+                <div className="flex-1 space-y-3">
+                    <div>
+                        <div className="flex justify-between items-baseline mb-1">
+                            <span className="text-xs font-bold text-slate-500 uppercase">Olajcsere</span>
+                            <span className={`text-xs font-bold ${kmRemaining <= 0 ? 'text-red-500 animate-pulse' : 'text-slate-800 dark:text-slate-200'}`}>
+                                {kmRemaining > 0 ? `${Math.round(kmRemaining).toLocaleString()} km múlva` : 'ESEDÉKES!'}
+                            </span>
+                        </div>
+                        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5">
+                            <div className={`h-1.5 rounded-full transition-all ${colorClass.replace('text-', 'bg-')}`} style={{ width: `${safeOilLife}%` }}></div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium pt-1 border-t border-slate-50 dark:border-slate-700/50">
+                        <span>Megtett: {kmSinceService.toLocaleString()} km</span>
+                        <span>Ciklus: {serviceIntervalKm.toLocaleString()} km</span>
+                    </div>
                 </div>
             </div>
 
