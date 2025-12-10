@@ -626,3 +626,40 @@ export async function updateDealerInfo(formData: FormData) {
   revalidatePath(`/verify/${id}`) // A publikus oldalt is frissítjük
   return { success: true }
 }
+export async function addVignette(formData: FormData) {
+  const supabase = await createClient()
+  
+  const car_id = String(formData.get('car_id'))
+  const type = String(formData.get('type'))
+  const region = formData.get('region') ? String(formData.get('region')) : null
+  const valid_from = String(formData.get('valid_from'))
+  const valid_to = String(formData.get('valid_to'))
+  const price = parseInt(String(formData.get('price'))) || 0
+
+  const { error } = await supabase.from('vignettes').insert({
+    car_id,
+    type,
+    region,
+    valid_from,
+    valid_to,
+    price
+  })
+
+  if (error) {
+    console.error('Hiba a matrica mentésekor:', error)
+    // Itt kezelheted a hibát (pl. throw)
+  }
+
+  revalidatePath(`/cars/${car_id}`)
+}
+
+// Matrica törlése
+export async function deleteVignette(formData: FormData) {
+  const supabase = await createClient()
+  const id = String(formData.get('id'))
+  const car_id = String(formData.get('car_id'))
+
+  await supabase.from('vignettes').delete().eq('id', id)
+  
+  revalidatePath(`/cars/${car_id}`)
+}

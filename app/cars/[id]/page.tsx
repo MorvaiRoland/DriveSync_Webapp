@@ -7,14 +7,15 @@ import DocumentManager from './DocumentManager'
 import ExportMenu from '@/components/ExportMenu'
 import LockedFeature from '@/components/LockedFeature'
 import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
+import VignetteManager from '@/components/VignetteManager'
 
 // --- LUCIDE ICONS IMPORT ---
 import { 
-  Fuel, Wrench, Bell, Map, Package, ChevronLeft, Warehouse, 
+  Fuel, Wrench, Bell, Map, Package, Warehouse, 
   Download, Lock, Pencil, Activity, RefreshCw, FileText, 
   ShieldCheck, Disc, Snowflake, Sun, Wallet, Banknote, 
   Sparkles, Lightbulb, Plus, Trash2, Gauge, History, 
-  ChevronRight, Calendar, MapPin, Info, CarFront
+  ChevronRight, CarFront, Calendar
 } from 'lucide-react';
 
 // --- Típusdefiníciók ---
@@ -61,13 +62,14 @@ export default async function CarDetailsPage(props: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 1. Adatlekérések párhuzamosítása
-  const [carRes, eventsRes, remindersRes, tiresRes, docsRes] = await Promise.all([
+  // 1. Adatlekérések párhuzamosítása (JAVÍTVA: 6 elem a tömbben, 6 változó)
+  const [carRes, eventsRes, remindersRes, tiresRes, docsRes, vigRes] = await Promise.all([
     supabase.from('cars').select('*').eq('id', params.id).single(),
     supabase.from('events').select('*').eq('car_id', params.id).order('event_date', { ascending: false }),
     supabase.from('service_reminders').select('*').eq('car_id', params.id).order('due_date', { ascending: true }),
     supabase.from('tires').select('*').eq('car_id', params.id).order('is_mounted', { ascending: false }),
-    supabase.from('car_documents').select('*').eq('car_id', params.id).order('created_at', { ascending: false })
+    supabase.from('car_documents').select('*').eq('car_id', params.id).order('created_at', { ascending: false }),
+    supabase.from('vignettes').select('*').eq('car_id', params.id) // <--- MATRICÁK LEKÉRÉSE
   ])
 
   if (carRes.error || !carRes.data) return notFound()
@@ -77,6 +79,7 @@ export default async function CarDetailsPage(props: Props) {
   const safeReminders = remindersRes.data || []
   const safeTires = tiresRes.data || []
   const safeDocs = docsRes.data || []
+  const safeVignettes = vigRes.data || [] // <--- MATRICÁK VÁLTOZÓBA
 
   // --- Előfizetés és Jogosultságok ---
   let plan: SubscriptionPlan = 'free';
@@ -171,6 +174,9 @@ export default async function CarDetailsPage(props: Props) {
                 motStatus={motStatus}
                 insuranceStatus={insuranceStatus}
              />
+             
+             {/* MATRICA KEZELŐ WIDGET */}
+             <VignetteManager carId={car.id} vignettes={safeVignettes} />
              
              <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={car.id} />
              
