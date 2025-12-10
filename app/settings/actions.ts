@@ -19,12 +19,15 @@ export async function updateProfile(formData: FormData) {
   })
 
   if (error) {
-    return redirect('/settings?error=Nem sikerült a profil frissítése')
+    // JAVÍTVA: encodeURIComponent
+    return redirect(`/settings?error=${encodeURIComponent('Nem sikerült a profil frissítése')}`)
   }
 
   revalidatePath('/settings')
   revalidatePath('/', 'layout')
-  return redirect('/settings?success=Profil sikeresen frissítve')
+  
+  // JAVÍTVA: encodeURIComponent
+  return redirect(`/settings?success=${encodeURIComponent('Profil sikeresen frissítve')}`)
 }
 
 // --- 2. BEÁLLÍTÁSOK FRISSÍTÉSE ---
@@ -45,11 +48,14 @@ export async function updatePreferences(formData: FormData) {
   })
 
   if (error) {
-    return redirect('/settings?error=Beállítások mentése sikertelen')
+    // JAVÍTVA: encodeURIComponent
+    return redirect(`/settings?error=${encodeURIComponent('Beállítások mentése sikertelen')}`)
   }
 
   revalidatePath('/settings')
-  return redirect('/settings?success=Beállítások elmentve')
+  
+  // JAVÍTVA: encodeURIComponent
+  return redirect(`/settings?success=${encodeURIComponent('Beállítások elmentve')}`)
 }
 
 // --- 3. KIJELENTKEZÉS ---
@@ -59,71 +65,61 @@ export async function signOutAction() {
     return redirect('/login')
 }
 
-// --- 4. FIÓK TÖRLÉSE (JAVÍTOTT & STABIL) ---
+// --- 4. FIÓK TÖRLÉSE ---
 export async function deleteAccountAction() {
   console.log("🔴 [DELETE] Fiók törlés indítása...")
   
   const supabase = await createClient()
 
-  // 1. User azonosítása (Még bejelentkezve)
+  // 1. User azonosítása
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   
   if (authError || !user) {
-      console.log("🔴 [DELETE] Nincs bejelentkezett user.")
       return redirect('/login')
   }
 
-  const userId = user.id // Elmentjük az ID-t, mert mindjárt kilépünk
-  console.log(`🟡 [DELETE] User ID mentve: ${userId}`)
+  const userId = user.id
 
   // 2. Admin kulcs ellenőrzése
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) {
-      console.error("🔴 [DELETE] KRITIKUS HIBA: Nincs SUPABASE_SERVICE_ROLE_KEY!")
-      return redirect('/settings?error=Szerver konfigurációs hiba.')
+      // JAVÍTVA: encodeURIComponent
+      return redirect(`/settings?error=${encodeURIComponent('Szerver konfigurációs hiba')}`)
   }
 
-  // 3. Admin kliens létrehozása (ez független a usertől)
+  // 3. Admin kliens
   const supabaseAdmin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceRoleKey
   )
 
-  // 4. KRITIKUS LÉPÉS: Kijelentkeztetés
-  // Előbb töröljük a sütiket, hogy a kliens oldal ne dobjon hibát (Application Error),
-  // amikor a user törlése után próbálna revalidálni.
+  // 4. Kijelentkeztetés
   await supabase.auth.signOut()
-  console.log("🟢 [DELETE] Kliens sikeresen kijelentkeztetve.")
 
   let deleteError = null;
 
   try {
-    // 5. Törlés végrehajtása az Admin API-val
-    // Mivel az ID-t elmentettük (userId), tudjuk törölni session nélkül is.
-    console.log(`🟡 [DELETE] Adatbázis törlés indítása (Admin)...`)
-    
+    // 5. Törlés végrehajtása
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
     
     if (error) {
         deleteError = error;
-        console.error("🔴 [DELETE] Hiba a deleteUser hívásnál:", error)
-    } else {
-        console.log("🟢 [DELETE] User és adatok sikeresen törölve.")
+        console.error("🔴 [DELETE] Hiba:", error)
     }
 
   } catch (err) {
       console.error("🔴 [DELETE] Váratlan hiba:", err)
-      // Itt már nem tudunk visszamenni a settings-be, mert ki vagyunk lépve
-      return redirect('/login?message=Hiba történt a törlés közben, de ki lettél léptetve.')
+      // JAVÍTVA: encodeURIComponent
+      return redirect(`/login?message=${encodeURIComponent('Hiba történt a törlés közben.')}`)
   }
 
-  // 6. Hibakezelés (ha az adatbázis törlés nem sikerült)
+  // 6. Hibakezelés
   if (deleteError) {
-      // Mivel már ki van jelentkezve, a login oldalra küldjük a hibával
-      return redirect(`/login?message=Fiók kijelentkeztetve, de a törlés nem sikerült (SQL hiba). Kérlek írj a supportnak.`)
+      // JAVÍTVA: encodeURIComponent
+      return redirect(`/login?message=${encodeURIComponent('Fiók kijelentkeztetve, de a törlés sikertelen. Írj a supportnak.')}`)
   }
 
   // 7. Siker
-  console.log("🟢 [DELETE] Folyamat kész. Átirányítás...")
-  return redirect('/login?message=A fiókod és minden adatod véglegesen törölve.')
+  // JAVÍTVA: encodeURIComponent
+  return redirect(`/login?message=${encodeURIComponent('A fiókod és minden adatod véglegesen törölve.')}`)
 }
