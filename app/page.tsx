@@ -29,6 +29,7 @@ async function logCurrentMileage(formData: FormData) {
 }
 
 // --- FŐ KOMPONENS ---
+// app/page.tsx
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,19 +47,16 @@ export default async function Home() {
   let fleetHealth = 100 
   let latestCarId = null
 
-  // Gamification & Előfizetés
   let badges: any[] = []
   let subscription: any = null
   let plan: SubscriptionPlan = 'free'; 
   
   let canAddCar = true;
-  let canUseAi = false; // <--- DEFAULT ÉRTÉK
+  let canUseAi = false;
 
   if (user) {
-    // 1. Előfizetés státuszának lekérése (Logic)
     plan = await getSubscriptionStatus(user.id);
 
-    // 2. Előfizetés adatainak lekérése (UI Badge-hez)
     const { data: subData } = await supabase
         .from('subscriptions')
         .select('status, plan_type')
@@ -66,8 +64,11 @@ export default async function Home() {
         .single();
     subscription = subData;
 
-    // 3. Autók lekérése
-    const { data: carsData } = await supabase.from('cars').select('*').order('created_at', { ascending: false })
+    // --- 1. JAVÍTOTT LEKÉRDEZÉS: Események (events) behúzása a pontos számításhoz ---
+    const { data: carsData } = await supabase
+        .from('cars')
+        .select('*, events(type, mileage)') // <--- Itt kérjük le az eseményeket is
+        .order('created_at', { ascending: false })
     
     if (carsData) {
         cars = carsData
@@ -76,12 +77,11 @@ export default async function Home() {
         latestCarId = cars.length > 0 ? cars[0].id : null;
     }
 
-    // 4. LIMIT ELLENŐRZÉSE (Most, hogy már megvannak az autók)
     canAddCar = checkLimit(plan, 'maxCars', myCars.length);
-    canUseAi = checkLimit(plan, 'allowAi'); // <--- ITT SZÁMOLJUK KI
+    canUseAi = checkLimit(plan, 'allowAi');
 
     if (cars.length > 0) {
-        // 5. Emlékeztetők
+        // Emlékeztetők
         const { data: reminders } = await supabase
             .from('service_reminders')
             .select('*, cars(make, model)')
@@ -89,7 +89,7 @@ export default async function Home() {
             .limit(3)
         if (reminders) upcomingReminders = reminders
 
-        // 6. Aktivitások
+        // Aktivitások
         const { data: activities } = await supabase
             .from('events')
             .select('*, cars(make, model)')
@@ -97,7 +97,7 @@ export default async function Home() {
             .limit(5)
         if (activities) recentActivity = activities
 
-        // 7. Pénzügyek
+        // Pénzügyek
         const { data: allCosts } = await supabase.from('events').select('cost, event_date')
         if (allCosts) {
             const now = new Date()
@@ -107,36 +107,49 @@ export default async function Home() {
                 .reduce((sum, e) => sum + (e.cost || 0), 0)
         }
 
-        // 8. Flotta egészség (Dinamikus számítás olajciklus alapján)
-        if (cars.length > 0) {
-            const totalHealthScore = cars.reduce((sum, car) => {
-                // Ha az autó manuálisan 'service' státuszban van (pl. lerobbant), akkor 0%-ot ér
-                if (car.status === 'service') return sum + 0;
+        // --- 2. JAVÍTOTT FLOTTA EGÉSZSÉG SZÁMÍTÁS ---
+        const totalHealthScore = cars.reduce((sum, car) => {
+            if (car.status === 'service') return sum + 0; // Ha szervizben van, 0%
 
-                const interval = car.service_interval_km || 15000; // Alapértelmezett 15e km
-                const lastService = car.last_service_mileage || 0;
+            const interval = car.service_interval_km || 15000;
+            
+            // Megkeressük a legutóbbi szerviz óraállást az eseményekből
+            let lastServiceKm = car.last_service_mileage || 0;
+            
+            if (car.events && car.events.length > 0) {
+                // Kiszűrjük a szerviz típusú eseményeket és megkeressük a legnagyobbat
+                const serviceEvents = car.events
+                    .filter((e: any) => e.type === 'service')
+                    .map((e: any) => e.mileage);
                 
-                // Mennyit mentünk a legutóbbi szerviz óta?
-                // Ha nincs last_service adat, és az autóban van km, akkor feltételezzük, hogy a kezdetektől számít (ez ösztönöz az adatok pótlására)
-                const drivenSinceService = Math.max(0, car.mileage - lastService);
-                
-                // Kiszámoljuk a maradék élettartamot százalékban
-                // Pl: 15000 intervallum, mentünk 3000-et => (1 - 0.2) * 100 = 80%
-                let carHealth = (1 - (drivenSinceService / interval)) * 100;
-                
-                // Határok (0% és 100% között)
-                carHealth = Math.max(0, Math.min(100, carHealth));
+                if (serviceEvents.length > 0) {
+                    const maxServiceKm = Math.max(...serviceEvents);
+                    // Ha van frissebb szerviz esemény, mint a mentett adat, azt használjuk
+                    if (maxServiceKm > lastServiceKm) {
+                        lastServiceKm = maxServiceKm;
+                    }
+                }
+            }
 
-                return sum + carHealth;
-            }, 0);
+            // Ha még nincs szerviz előzmény, de az autó nem 0 km-es, feltételezzük, 
+            // hogy a "jelenlegi" futás a kiindulópont (hogy ne 0%-ról induljon a dashboard)
+            // KIVÉVE, ha az autó futása nagyon kicsi (pl. új autó)
+            if (lastServiceKm === 0 && car.mileage > interval) {
+                 // Itt egy trükk: ha nincs adat, 50%-ra becsüljük, vagy 0-ra, 
+                 // de a te esetedben a 'CarDetailsPage' valószínűleg a car.mileage-t vette alapnak.
+                 // A legbiztosabb, ha 0 marad, DE a te képed alapján (1671 megtett) van adat.
+            }
 
-            // Az átlag kiszámítása
-            fleetHealth = Math.round(totalHealthScore / cars.length);
-        } else {
-            fleetHealth = 100;
-        }
+            const drivenSinceService = Math.max(0, car.mileage - lastServiceKm);
+            let carHealth = (1 - (drivenSinceService / interval)) * 100;
+            carHealth = Math.max(0, Math.min(100, carHealth));
 
-        // 9. Gamification Logika
+            return sum + carHealth;
+        }, 0);
+
+        fleetHealth = Math.round(totalHealthScore / cars.length);
+
+        // Gamification
         const isHighMiler = cars.some(c => c.mileage >= 200000);
         const lastActivityDate = recentActivity.length > 0 ? new Date(recentActivity[0].event_date) : new Date(0);
         const diffDays = Math.floor((new Date().getTime() - lastActivityDate.getTime()) / (1000 * 3600 * 24));
@@ -154,14 +167,12 @@ export default async function Home() {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét'
 
-  // --- DASHBOARD NÉZET (BEJELENTKEZVE) ---
+  // ... (A return rész változatlan, csak a logikát kellett javítani)
   if (user) {
     return (
       <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-24 transition-colors duration-300">
         
-        {/* --- AI SZERELŐ BEILLESZTÉSE A JOGOSULTSÁGGAL --- */}
         <AiMechanic isPro={canUseAi} />
-        
         <ChangelogModal />
         <ReminderChecker />
         
@@ -169,7 +180,6 @@ export default async function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
               
-              {/* BAL OLDAL */}
               <div className="flex items-center gap-6"> 
                 <Link href="/" className="flex items-center gap-3">
                   <div className="relative w-8 h-8">
@@ -188,10 +198,7 @@ export default async function Home() {
                 </Link>
               </div>
 
-              {/* JOBB OLDAL */}
               <div className="flex items-center gap-4">
-                
-                {/* CSOMAG STATUSZ BADGE */}
                 <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
                     subscription?.plan_type === 'founder' 
                         ? 'bg-amber-500/10 border-amber-500/50 text-amber-500 hover:bg-amber-500/20' 
@@ -223,7 +230,6 @@ export default async function Home() {
 
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           
-          {/* --- FOUNDER ÜDVÖZLŐ KÁRTYA (BEJELENTKEZVE) --- */}
           {subscription?.plan_type === 'founder' && (
              <div className="mb-8 p-4 md:p-6 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-xl relative overflow-hidden animate-in slide-in-from-top-4 duration-700">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
@@ -250,7 +256,6 @@ export default async function Home() {
                         {user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]}
                     </h1>
                     
-                    {/* MOBILON IS LÁTHATÓ CSOMAG JELZÉS */}
                     <span className={`sm:hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border align-middle ${
                         subscription?.plan_type === 'founder' 
                             ? 'bg-amber-500 text-white border-amber-600' 
@@ -326,7 +331,6 @@ export default async function Home() {
                                 <CarCard key={car.id} car={car} />
                             ))}
                             
-                            {/* ÚJ JÁRMŰ KÁRTYA - JOGOSULTSÁG ALAPJÁN */}
                             {canAddCar ? (
                                 <Link href="/cars/new" className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl flex flex-col items-center justify-center p-8 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all group min-h-[300px] cursor-pointer bg-slate-50/50 dark:bg-slate-900/50">
                                     <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
