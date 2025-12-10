@@ -16,7 +16,7 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
   const [isOpen, setIsOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Automatikus görgetés
+  // Scroll to bottom when messages update
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -24,8 +24,7 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
   }, [messages, isThinking, isOpen])
 
   const sendMessage = async (content: string) => {
-    // 1. Biztonsági ellenőrzés: Ha nincs PRO, ne engedjük a küldést
-    if (!isPro) return; 
+    if (!isPro) return;
     if (!content.trim()) return
 
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content }
@@ -37,13 +36,13 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })) 
+        body: JSON.stringify({
+          messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content }))
         }),
       })
 
-      if (!response.ok) throw new Error('Hiba a válaszban')
-      if (!response.body) throw new Error('Nincs válasz adat')
+      if (!response.ok) throw new Error('Response error')
+      if (!response.body) throw new Error('No response data')
 
       const aiMsgId = (Date.now() + 1).toString()
       setMessages(prev => [...prev, { id: aiMsgId, role: 'assistant', content: '' }])
@@ -58,20 +57,20 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
         done = doneReading
         const chunkValue = decoder.decode(value, { stream: true })
         fullText += chunkValue
-        
+
         setMessages(prev => {
-            const newMsgs = [...prev]
-            const lastMsg = newMsgs[newMsgs.length - 1]
-            if (lastMsg.role === 'assistant') {
-                lastMsg.content = fullText
-            }
-            return newMsgs
+          const newMsgs = [...prev]
+          const lastMsg = newMsgs[newMsgs.length - 1]
+          if (lastMsg.role === 'assistant') {
+            lastMsg.content = fullText
+          }
+          return newMsgs
         })
       }
 
     } catch (error) {
-      console.error("Hiba történt:", error)
-      setMessages(prev => [...prev, { id: 'error', role: 'assistant', content: 'Sajnos hiba történt. Próbáld újra!' }])
+      console.error("Error occurred:", error)
+      setMessages(prev => [...prev, { id: 'error', role: 'assistant', content: 'Sorry, an error occurred. Please try again!' }])
     } finally {
       setIsThinking(false)
     }
@@ -84,167 +83,219 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
 
   return (
     <>
-      {/* --- LEBEGŐ GOMB (FAB) --- */}
+      {/* --- FLOATING ACTION BUTTON (FAB) --- */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed z-[60] flex items-center justify-center transition-all duration-300 shadow-2xl border-2 border-white/20 hover:scale-105 active:scale-95
-          ${isOpen 
-            ? 'bottom-6 right-6 w-12 h-12 rounded-full bg-slate-800 text-white rotate-90' // Ha nyitva van: kisebb, sötét gomb X-szel, elforgatva
-            : 'bottom-6 right-6 md:bottom-10 md:right-10 w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white' // Ha zárva: nagy színes gomb
+        className={`fixed z-[60] flex items-center justify-center transition-all duration-500 shadow-2xl border border-white/20 backdrop-blur-md
+        ${isOpen
+            ? 'bottom-6 right-6 w-12 h-12 rounded-full bg-slate-900/80 text-white rotate-90 hover:bg-slate-800'
+            : 'bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 text-white hover:scale-105 hover:shadow-indigo-500/50 hover:-translate-y-1'
           }`}
-        title={isOpen ? "Bezárás" : "AI Szerelő megnyitása"}
       >
-        {isOpen ? (
-            // X ikon (bezárás - amikor nyitva van az ablak)
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-        ) : (
-            // Chat buborék + Csillag (AI - amikor zárva van)
-            <svg className="w-7 h-7 md:w-8 md:h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        <div className="relative flex items-center justify-center w-full h-full">
+          {isOpen ? (
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
-        )}
+          ) : (
+            <>
+              {/* Pulsing ring effect for attention */}
+              <span className="absolute inline-flex h-full w-full rounded-2xl bg-indigo-400 opacity-20 animate-ping"></span>
+              {/* Robot/AI Icon */}
+              <svg className="w-7 h-7 md:w-8 md:h-8 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </>
+          )}
+        </div>
       </button>
 
-      {/* --- SÖTÉTÍTETT HÁTTÉR (csak mobilon, ha nyitva) --- */}
+      {/* --- BACKDROP (Mobile) --- */}
       {isOpen && (
-        <div 
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-300"
-            onClick={() => setIsOpen(false)}
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden animate-in fade-in duration-300"
+          onClick={() => setIsOpen(false)}
         />
       )}
 
-      {/* --- CHAT ABLAK --- */}
+      {/* --- CHAT WINDOW --- */}
       {isOpen && (
         <div className={`
-            fixed z-50 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800
-            animate-in slide-in-from-bottom-10 duration-300
+            fixed z-50 flex flex-col overflow-hidden shadow-2xl border border-slate-200/50 dark:border-slate-700/50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl
+            animate-in slide-in-from-bottom-12 fade-in zoom-in-95 duration-300 ease-out
             
-            /* MOBIL NÉZET: Alulról felcsúszó fiók (Drawer), teljes szélesség, lekerekített tető */
-            bottom-0 left-0 right-0 w-full h-[85vh] rounded-t-[2rem] 
+            /* Mobile: Bottom Sheet */
+            bottom-0 left-0 right-0 w-full h-[85vh] rounded-t-[2.5rem]
             
-            /* ASZTALI NÉZET: Jobb alsó sarok, lebegő kártya */
-            md:bottom-28 md:right-10 md:w-[400px] md:h-[600px] md:rounded-3xl
+            /* Desktop: Floating Card */
+            md:bottom-28 md:right-8 md:w-[420px] md:h-[650px] md:rounded-[2rem]
         `}>
-          
-          {/* FEJLÉC */}
-          <div className="bg-slate-950 p-4 flex items-center justify-between border-b border-slate-800 shrink-0">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-10 h-10 shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg border border-white/10">
-                    {/* Robot ikon a fejlécben */}
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+
+          {/* --- HEADER --- */}
+          <div className="relative bg-gradient-to-r from-indigo-600 to-blue-600 p-0.5 shrink-0">
+            {/* Gradient border bottom effect */}
+            <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-white/10"></div>
+            
+            <div className="bg-slate-900/10 backdrop-blur-md p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3.5">
+                <div className="relative">
+                  <div className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center shadow-inner border border-white/20">
+                    <span className="text-2xl">🤖</span>
+                  </div>
+                  {/* Online status dot */}
+                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-indigo-600 rounded-full"></div>
                 </div>
-                <div className="min-w-0">
-                    <h3 className="text-white font-bold text-sm flex items-center gap-2 truncate">
-                        DriveSync Asszisztens
-                        <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded font-mono shrink-0">AI</span>
-                    </h3>
-                    <p className="text-slate-400 text-xs truncate">A flottád szakértője.</p>
+                
+                <div>
+                  <h3 className="text-white font-bold text-base flex items-center gap-2">
+                    AI Mechanic
+                    <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-bold text-white uppercase tracking-wider border border-white/10">
+                      Beta
+                    </span>
+                  </h3>
+                  <p className="text-indigo-100/80 text-xs font-medium">Always online • Instant answers</p>
                 </div>
               </div>
-              
-              {/* ZÁRÓJELZÉS HA NINCS PRO */}
-              {!isPro && (
-                  <div className="bg-slate-800 border border-slate-700 rounded px-2 py-1 flex items-center gap-1">
-                      <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wide">LOCKED</span>
-                  </div>
-              )}
 
-              <button onClick={() => setIsOpen(false)} className="md:hidden text-slate-500 hover:text-white p-2 ml-2">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-              </button>
+              {!isPro && (
+                 <div className="flex items-center gap-1.5 bg-slate-900/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                    <svg className="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    <span className="text-[10px] font-bold text-white tracking-wide">PRO ONLY</span>
+                 </div>
+              )}
+            </div>
           </div>
 
-          {/* ÜZENETEK VAGY TILTÁS */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950 scroll-smooth" ref={scrollRef}>
+          {/* --- MESSAGES AREA --- */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-6 scroll-smooth bg-slate-50/50 dark:bg-slate-950/50" ref={scrollRef}>
             
-            {/* HA VAN ELŐFIZETÉS (isPro === true) */}
             {isPro ? (
-                <>
-                    {messages.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 text-sm px-4 pb-10">
-                            <div className="w-16 h-16 bg-blue-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                                <svg className="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                            </div>
-                            <p className="font-medium text-slate-600 dark:text-slate-300 mb-6">Szia! Miben segíthetek ma?</p>
-                            <div className="grid grid-cols-1 gap-2 w-full max-w-xs">
-                                <button 
-                                    onClick={() => sendMessage('Mikor volt utoljára olajcsere?')}
-                                    className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-left hover:border-blue-400 transition shadow-sm flex items-center gap-2 group"
-                                >
-                                    <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform">🛢️</span> Mikor volt olajcsere?
-                                </button>
-                                <button 
-                                    onClick={() => sendMessage('Mennyit költöttem idén tankolásra?')}
-                                    className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-left hover:border-blue-400 transition shadow-sm flex items-center gap-2 group"
-                                >
-                                    <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform">⛽</span> Mennyit tankoltam idén?
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {messages.map((m, index) => (
-                      <div key={index} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm leading-relaxed ${
-                            m.role === 'user' 
-                            ? 'bg-blue-600 text-white rounded-br-none' 
-                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-none'
-                        }`}>
-                          <div className="whitespace-pre-wrap">{m.content}</div>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {isThinking && (
-                        <div className="flex justify-start">
-                            <div className="bg-white dark:bg-slate-800 px-4 py-3 rounded-2xl rounded-bl-none text-xs text-slate-400 border border-slate-200 dark:border-slate-700 flex gap-1 items-center">
-                                <span className="text-[10px] mr-2 font-bold uppercase tracking-wider">AI</span>
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-100"></span>
-                                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-200"></span>
-                            </div>
-                        </div>
-                    )}
-                </>
-            ) : (
-                // HA NINCS ELŐFIZETÉS (isPro === false)
-                <div className="h-full flex flex-col items-center justify-center text-center px-6 pb-20">
-                    <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                        <svg className="w-10 h-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              <>
+                {/* Welcome Message (Empty State) */}
+                {messages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full text-center px-4 py-8 animate-in fade-in zoom-in-95 duration-500">
+                    <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-white dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-xl flex items-center justify-center mb-6 rotate-3">
+                       <span className="text-4xl filter drop-shadow-sm">👋</span>
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Ez egy Pro funkció</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 max-w-xs leading-relaxed">
-                        Az AI Szerelő asszisztens segítségével azonnal választ kaphatsz kérdéseidre. Válts Pro vagy Founder csomagra a használathoz.
+                    <h4 className="font-bold text-slate-800 dark:text-white text-lg mb-2">Hello, Driver!</h4>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 max-w-[260px] leading-relaxed">
+                      I'm your AI car assistant. Ask me about maintenance, costs, or strange noises!
                     </p>
-                    <Link 
-                        href="/pricing" 
-                        className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-blue-500/25 hover:scale-105 transition-all active:scale-95"
-                    >
-                        Csomagok megtekintése
-                    </Link>
-                </div>
+                    
+                    {/* Suggestion Chips */}
+                    <div className="grid gap-2.5 w-full">
+                       {[
+                         { icon: '🔧', text: 'When is my next service due?' },
+                         { icon: '💰', text: 'How much did I spend on fuel?' },
+                         { icon: '🚗', text: 'Diagnose a check engine light' }
+                       ].map((suggestion, idx) => (
+                         <button 
+                           key={idx}
+                           onClick={() => sendMessage(suggestion.text)}
+                           className="flex items-center gap-3 p-3.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-left text-sm text-slate-600 dark:text-slate-300 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md transition-all group"
+                         >
+                            <span className="bg-slate-100 dark:bg-slate-700 p-1.5 rounded-lg text-lg group-hover:scale-110 transition-transform">{suggestion.icon}</span>
+                            <span className="font-medium">{suggestion.text}</span>
+                         </button>
+                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Message List */}
+                {messages.map((m, index) => (
+                  <div key={index} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
+                    
+                    {m.role === 'assistant' && (
+                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs shadow-md mr-2 mt-auto shrink-0">
+                          AI
+                       </div>
+                    )}
+
+                    <div className={`max-w-[80%] rounded-2xl px-5 py-3.5 text-sm shadow-sm leading-relaxed relative ${
+                      m.role === 'user'
+                        ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-none'
+                        : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-bl-none'
+                    }`}>
+                      <div className="whitespace-pre-wrap">{m.content}</div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Thinking Indicator */}
+                {isThinking && (
+                  <div className="flex justify-start items-end animate-in fade-in duration-300">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs shadow-md mr-2">
+                       <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 px-4 py-3 rounded-2xl rounded-bl-none border border-slate-100 dark:border-slate-700 shadow-sm flex gap-1.5 items-center">
+                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></span>
+                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-100"></span>
+                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce delay-200"></span>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* PRO LOCKED STATE */
+              <div className="h-full flex flex-col items-center justify-center text-center px-6">
+                 <div className="relative mb-8">
+                    <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-20 rounded-full"></div>
+                    <div className="relative w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-xl rotate-3">
+                       <span className="text-5xl grayscale opacity-50">🔒</span>
+                    </div>
+                    <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-lg shadow-lg border border-white/20">
+                       PRO
+                    </div>
+                 </div>
+                 
+                 <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Unlock AI Mechanic</h3>
+                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 max-w-xs leading-relaxed">
+                    Get instant car diagnostics, cost analysis, and personalized maintenance tips powered by advanced AI.
+                 </p>
+                 
+                 <Link
+                    href="/pricing"
+                    className="w-full bg-gradient-to-r from-slate-900 to-slate-800 dark:from-white dark:to-slate-200 text-white dark:text-slate-900 font-bold py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2"
+                 >
+                    <span>Upgrade to Pro</span>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                 </Link>
+              </div>
             )}
           </div>
 
-          {/* INPUT MEZŐ (Csak ha PRO) */}
+          {/* --- INPUT AREA --- */}
           {isPro && (
-              <form onSubmit={handleSubmit} className="p-3 md:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2 shrink-0 pb-6 md:pb-4">
-                <input
-                  className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Írj ide..."
-                  disabled={isThinking}
-                />
-                <button type="submit" disabled={isThinking || !inputValue} className="bg-blue-600 hover:bg-blue-500 text-white w-12 h-12 flex items-center justify-center rounded-xl disabled:opacity-50 transition-colors shadow-md disabled:cursor-not-allowed">
-                    <svg className="w-5 h-5 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                </button>
-              </form>
+            <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0">
+               <form 
+                  onSubmit={handleSubmit}
+                  className="relative flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-500 transition-all shadow-inner"
+               >
+                  <input
+                    className="flex-1 bg-transparent text-slate-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none placeholder:text-slate-400 font-medium"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="Type your question..."
+                    disabled={isThinking}
+                    autoFocus
+                  />
+                  <button 
+                     type="submit" 
+                     disabled={isThinking || !inputValue.trim()} 
+                     className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all active:scale-90"
+                  >
+                     <svg className="w-5 h-5 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                     </svg>
+                  </button>
+               </form>
+               <div className="text-center mt-2">
+                 <p className="text-[10px] text-slate-400 font-medium">AI can make mistakes. Verify important info.</p>
+               </div>
+            </div>
           )}
+
         </div>
       )}
     </>

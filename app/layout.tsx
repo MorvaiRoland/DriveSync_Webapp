@@ -31,13 +31,16 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "DriveSync",
   },
+  
+  // Ikonok (Fájlok helye: /public/icons/ mappában!)
   icons: {
     icon: [
       { url: '/icons/drivesync-logo.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/drivesync-logo.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: '/icons/apple-icon.png', sizes: '512x512', type: 'image.png' },
+      // JAVÍTVA: 'image.png' -> 'image/png'
+      { url: '/icons/apple-icon.png', sizes: '512x512', type: 'image/png' },
     ],
   },
 
@@ -51,7 +54,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: '/icons/drivesync-logo.png',
+        url: '/icons/drivesync-logo.png', // Tipp: Ide érdemesebb lenne egy 1200x630-as fekvő képet tenni a szebb megosztásért
         width: 512,
         height: 512,
         alt: 'DriveSync Hungary Logo',
@@ -90,7 +93,7 @@ export default function RootLayout({
             
             <Toaster position="top-center" richColors closeButton />
             
-            <CookieBanner /> {/* <--- IDE KERÜLT A SÜTI SÁV */}
+            <CookieBanner />
             
             <RegisterSW />
         </ThemeProvider>

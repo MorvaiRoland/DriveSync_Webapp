@@ -490,6 +490,7 @@ export default async function Home() {
                 </div>
 
                 {/* 4. JAVÍTOTT AKTIVITÁS (Event Log) */}
+               {/* 4. JAVÍTOTT AKTIVITÁS (Event Log) - FIX IKONOK */}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
                         <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -500,33 +501,39 @@ export default async function Home() {
                     <div className="divide-y divide-slate-100 dark:divide-slate-700">
                         {recentActivity.length > 0 ? (
                             recentActivity.map((act: any) => (
-                                <div key={act.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-3">
-                                    {/* Dátum & Ikon */}
-                                    <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-                                        <div className="text-center w-10">
-                                            <span className="block text-lg font-black text-slate-300 dark:text-slate-600 leading-none">{new Date(act.event_date).getDate()}</span>
-                                            <span className="block text-[9px] font-bold text-slate-400 uppercase">{new Date(act.event_date).toLocaleString('hu-HU', { month: 'short' }).replace('.','')}</span>
+                                <div key={act.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-4">
+                                    
+                                    {/* Dátum & Ikon Konténer */}
+                                    <div className="flex flex-col items-center justify-center w-12 flex-shrink-0 gap-1">
+                                        {/* Dátum */}
+                                        <div className="text-center leading-none">
+                                            <span className="block text-sm font-black text-slate-400 dark:text-slate-500 uppercase">{new Date(act.event_date).toLocaleString('hu-HU', { month: 'short' }).replace('.','')}</span>
+                                            <span className="block text-xl font-black text-slate-800 dark:text-slate-200">{new Date(act.event_date).getDate()}</span>
                                         </div>
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${act.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                                            {act.type === 'fuel' 
-                                                ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> 
-                                                : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                            }
-                                        </div>
+                                    </div>
+
+                                    {/* Ikon */}
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border-2 border-white dark:border-slate-700 shadow-sm ${act.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                                        {act.type === 'fuel' 
+                                            ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> 
+                                            : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                        }
                                     </div>
                                     
                                     {/* Szöveg */}
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{act.title}</p>
                                         <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 truncate">
-                                            <span>{act.cars?.make} {act.cars?.model}</span>
-                                            {act.mileage > 0 && <span>• {act.mileage.toLocaleString()} km</span>}
+                                            <span className="truncate">{act.cars?.make} {act.cars?.model}</span>
+                                            {act.mileage > 0 && <span className="flex-shrink-0">• {act.mileage.toLocaleString()} km</span>}
                                         </div>
                                     </div>
 
-                                    {/* Ár (Jobbra igazítva, nem csúszik rá) */}
+                                    {/* Ár (Jobbra igazítva) */}
                                     <div className="text-right flex-shrink-0">
-                                        <span className="block text-sm font-bold text-slate-900 dark:text-white">{act.cost > 0 ? `${act.cost.toLocaleString()} Ft` : '-'}</span>
+                                        <span className={`block text-sm font-bold ${act.cost > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                                            {act.cost > 0 ? `${act.cost.toLocaleString()} Ft` : '-'}
+                                        </span>
                                     </div>
                                 </div>
                             ))
