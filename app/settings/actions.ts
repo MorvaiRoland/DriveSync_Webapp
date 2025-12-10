@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/supabase/server' // Vagy a te helpered
+import { createClient } from '@/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -59,13 +59,13 @@ export async function signOutAction() {
     return redirect('/login')
 }
 
-// --- 4. FIÓK TÖRLÉSE (JAVÍTOTT) ---
+// --- 4. FIÓK TÖRLÉSE (JAVÍTOTT & STABIL) ---
 export async function deleteAccountAction() {
   console.log("🔴 [DELETE] Fiók törlés indítása...")
   
   const supabase = await createClient()
 
-  // 1. User azonosítása
+  // 1. User azonosítása (Még bejelentkezve)
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   
   if (authError || !user) {
@@ -73,50 +73,57 @@ export async function deleteAccountAction() {
       return redirect('/login')
   }
 
+  const userId = user.id // Elmentjük az ID-t, mert mindjárt kilépünk
+  console.log(`🟡 [DELETE] User ID mentve: ${userId}`)
+
   // 2. Admin kulcs ellenőrzése
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) {
-      console.error("🔴 [DELETE] HIBA: Nincs SUPABASE_SERVICE_ROLE_KEY!")
+      console.error("🔴 [DELETE] KRITIKUS HIBA: Nincs SUPABASE_SERVICE_ROLE_KEY!")
       return redirect('/settings?error=Szerver konfigurációs hiba.')
   }
 
-  // 3. Admin kliens
+  // 3. Admin kliens létrehozása (ez független a usertől)
   const supabaseAdmin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceRoleKey
   )
 
+  // 4. KRITIKUS LÉPÉS: Kijelentkeztetés
+  // Előbb töröljük a sütiket, hogy a kliens oldal ne dobjon hibát (Application Error),
+  // amikor a user törlése után próbálna revalidálni.
+  await supabase.auth.signOut()
+  console.log("🟢 [DELETE] Kliens sikeresen kijelentkeztetve.")
+
   let deleteError = null;
 
   try {
-    // 4. Törlés végrehajtása
-    console.log(`🟡 [DELETE] Törlés folyamatban: ${user.id}`)
+    // 5. Törlés végrehajtása az Admin API-val
+    // Mivel az ID-t elmentettük (userId), tudjuk törölni session nélkül is.
+    console.log(`🟡 [DELETE] Adatbázis törlés indítása (Admin)...`)
     
-    // Először töröljük az auth user-t. 
-    // Ha az SQL CASCADE be van állítva, ez viszi a többi adatot is.
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id)
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
     
     if (error) {
         deleteError = error;
         console.error("🔴 [DELETE] Hiba a deleteUser hívásnál:", error)
     } else {
-        console.log("🟢 [DELETE] User sikeresen törölve az adatbázisból.")
+        console.log("🟢 [DELETE] User és adatok sikeresen törölve.")
     }
 
   } catch (err) {
       console.error("🔴 [DELETE] Váratlan hiba:", err)
-      return redirect('/settings?error=Váratlan rendszerhiba.')
+      // Itt már nem tudunk visszamenni a settings-be, mert ki vagyunk lépve
+      return redirect('/login?message=Hiba történt a törlés közben, de ki lettél léptetve.')
   }
 
-  // 5. Hiba ellenőrzés a try-catch után
+  // 6. Hibakezelés (ha az adatbázis törlés nem sikerült)
   if (deleteError) {
-      return redirect(`/settings?error=Törlési hiba: ${deleteError.message}`)
+      // Mivel már ki van jelentkezve, a login oldalra küldjük a hibával
+      return redirect(`/login?message=Fiók kijelentkeztetve, de a törlés nem sikerült (SQL hiba). Kérlek írj a supportnak.`)
   }
 
-  // 6. Kijelentkeztetés és Átirányítás (Ha minden sikerült)
-  // Fontos: Itt már töröltük a usert, a signOut csak a sütiket takarítja
-  await supabase.auth.signOut()
-  
-  console.log("🟢 [DELETE] Kész. Átirányítás...")
-  return redirect('/login?message=Fiók sikeresen törölve.')
+  // 7. Siker
+  console.log("🟢 [DELETE] Folyamat kész. Átirányítás...")
+  return redirect('/login?message=A fiókod és minden adatod véglegesen törölve.')
 }
