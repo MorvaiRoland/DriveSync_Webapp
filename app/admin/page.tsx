@@ -27,7 +27,7 @@ async function updateSubscriptionPlan(formData: FormData) {
         user_id: userId, 
         plan_type: newPlan,
         status: 'active', // Ha módosítunk, aktiváljuk is
-        updated_at: new Date().toISOString()
+        
     }, { onConflict: 'user_id' })
 
   if (error) {
