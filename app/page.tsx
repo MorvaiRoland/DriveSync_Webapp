@@ -1,3 +1,4 @@
+// app/page.tsx
 import { createClient } from '@/supabase/server'
 import { signOut } from './login/action'
 import { deleteCar } from './cars/actions'
@@ -19,22 +20,25 @@ async function logCurrentMileage(formData: FormData) {
   const current_mileage = parseInt(String(formData.get('current_mileage')));
 
   if (!car_id || isNaN(current_mileage) || current_mileage <= 0) {
-    return redirect(`/?error=Hibás km állás.`);
+    return redirect(`/?error=${encodeURIComponent('Hibás km állás.')}`);
   }
 
   const supabase = await createClient();
+  
+  // Opcionális: Ellenőrizhetnénk, hogy az új km nagyobb-e a réginél, 
+  // de a gyors rögzítésnél feltételezzük, hogy a felhasználó tudja mit csinál.
   const { error } = await supabase.from('cars').update({ mileage: current_mileage }).eq('id', car_id);
+  
   if (error) console.error("Hiba:", error);
-  return redirect('/');
+  return redirect('/?success=Km+frissitve');
 }
 
 // --- FŐ KOMPONENS ---
-// app/page.tsx
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Adatok inicializálása
+  // --- VÁLTOZÓK DEKLARÁLÁSA (Scope hiba elkerülése végett) ---
   let cars: any[] = []
   let myCars: any[] = []      
   let sharedCars: any[] = []  
@@ -44,6 +48,9 @@ export default async function Home() {
   
   let totalSpentAllTime = 0
   let totalSpentThisMonth = 0
+  let spentLast30Days = 0; // Deklarálva itt
+  let spendingTrend = 0;   // Deklarálva itt
+  
   let fleetHealth = 100 
   let latestCarId = null
 
@@ -55,6 +62,7 @@ export default async function Home() {
   let canUseAi = false;
 
   if (user) {
+    // 1. Előfizetés
     plan = await getSubscriptionStatus(user.id);
 
     const { data: subData } = await supabase
@@ -64,24 +72,26 @@ export default async function Home() {
         .single();
     subscription = subData;
 
-    // --- 1. JAVÍTOTT LEKÉRDEZÉS: Események (events) behúzása a pontos számításhoz ---
+    // 2. Autók és Események lekérése
     const { data: carsData } = await supabase
         .from('cars')
-        .select('*, events(type, mileage)') // <--- Itt kérjük le az eseményeket is
+        .select('*, events(type, mileage)') 
         .order('created_at', { ascending: false })
     
     if (carsData) {
         cars = carsData
         myCars = carsData.filter(car => car.user_id === user.id)
         sharedCars = carsData.filter(car => car.user_id !== user.id)
-        latestCarId = cars.length > 0 ? cars[0].id : null;
+        // Alapértelmezett autó a listához (első saját autó)
+        latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
     }
 
+    // 3. Limitek
     canAddCar = checkLimit(plan, 'maxCars', myCars.length);
     canUseAi = checkLimit(plan, 'allowAi');
 
     if (cars.length > 0) {
-        // Emlékeztetők
+        // 4. Emlékeztetők
         const { data: reminders } = await supabase
             .from('service_reminders')
             .select('*, cars(make, model)')
@@ -89,7 +99,7 @@ export default async function Home() {
             .limit(3)
         if (reminders) upcomingReminders = reminders
 
-        // Aktivitások
+        // 5. Aktivitások
         const { data: activities } = await supabase
             .from('events')
             .select('*, cars(make, model)')
@@ -97,29 +107,52 @@ export default async function Home() {
             .limit(5)
         if (activities) recentActivity = activities
 
-        // Pénzügyek
+        // 6. Pénzügyek
         const { data: allCosts } = await supabase.from('events').select('cost, event_date')
+        
         if (allCosts) {
             const now = new Date()
+            const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000))
+            const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000))
+
             totalSpentAllTime = allCosts.reduce((sum, e) => sum + (e.cost || 0), 0)
+            
+            // Havi (naptári) kiadás
             totalSpentThisMonth = allCosts
                 .filter(e => new Date(e.event_date).getMonth() === now.getMonth() && new Date(e.event_date).getFullYear() === now.getFullYear())
                 .reduce((sum, e) => sum + (e.cost || 0), 0)
+
+            // Gördülő 30 napos kiadás
+            spentLast30Days = allCosts
+                .filter(e => new Date(e.event_date) >= thirtyDaysAgo)
+                .reduce((sum, e) => sum + (e.cost || 0), 0)
+
+            // Előző 30 nap (trendhez)
+            const spentPrev30Days = allCosts
+                .filter(e => {
+                    const d = new Date(e.event_date)
+                    return d >= sixtyDaysAgo && d < thirtyDaysAgo
+                })
+                .reduce((sum, e) => sum + (e.cost || 0), 0)
+
+            // Trend számítása
+            if (spentPrev30Days > 0) {
+                spendingTrend = Math.round(((spentLast30Days - spentPrev30Days) / spentPrev30Days) * 100)
+            } else if (spentLast30Days > 0) {
+                spendingTrend = 100
+            }
         }
 
-        // --- 2. JAVÍTOTT FLOTTA EGÉSZSÉG SZÁMÍTÁS ---
-       // 8. Flotta egészség (Javított: csak a saját autók átlaga)
-        const carsToCalc = myCars.length > 0 ? myCars : cars; // Csak a saját autókat számoljuk, ha vannak
+        // 7. Flotta egészség (Javított logika)
+        const carsToCalc = myCars.length > 0 ? myCars : cars; 
         
         if (carsToCalc.length > 0) {
             const totalHealthScore = carsToCalc.reduce((sum, car) => {
-                // Ha az autó "szerviz" státuszban van, az 0%-ot ér a flotta átlagban
                 if (car.status === 'service') return sum + 0;
 
                 const interval = car.service_interval_km || 15000;
                 let lastServiceKm = car.last_service_mileage || 0;
 
-                // Események ellenőrzése: Volt-e frissebb szerviz, mint ami az autó adatlapján van?
                 if (car.events && car.events.length > 0) {
                     const serviceEvents = car.events
                         .filter((e: any) => e.type === 'service')
@@ -133,24 +166,19 @@ export default async function Home() {
                     }
                 }
 
-                // Megtett út a legutóbbi szerviz óta
                 const drivenSinceService = Math.max(0, car.mileage - lastServiceKm);
-                
-                // Százalék számítás (pontosan ahogy a Donut chart csinálja)
                 let carHealth = (1 - (drivenSinceService / interval)) * 100;
-                
-                // Határok közé szorítjuk (0-100%)
                 carHealth = Math.max(0, Math.min(100, carHealth));
 
                 return sum + carHealth;
             }, 0);
 
-            // Átlagoljuk a 'carsToCalc' darabszámával (nem az összes 'cars'-szal)
             fleetHealth = Math.round(totalHealthScore / carsToCalc.length);
         } else {
             fleetHealth = 100;
         }
-        // Gamification
+
+        // 8. Gamification
         const isHighMiler = cars.some(c => c.mileage >= 200000);
         const lastActivityDate = recentActivity.length > 0 ? new Date(recentActivity[0].event_date) : new Date(0);
         const diffDays = Math.floor((new Date().getTime() - lastActivityDate.getTime()) / (1000 * 3600 * 24));
@@ -168,7 +196,7 @@ export default async function Home() {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét'
 
-  // ... (A return rész változatlan, csak a logikát kellett javítani)
+  // --- DASHBOARD NÉZET (BEJELENTKEZVE) ---
   if (user) {
     return (
       <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-24 transition-colors duration-300">
@@ -249,7 +277,10 @@ export default async function Home() {
              </div>
           )}
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+          {/* --- ÚJ DASHBOARD HEADER (Üdvözlés + Smart Metrics) --- */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-8 gap-6">
+              
+              {/* Bal oldal: Üdvözlés */}
               <div>
                 <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1">{greeting},</h2>
                 <div className="flex items-center gap-3">
@@ -268,17 +299,50 @@ export default async function Home() {
                     </span>
                 </div>
               </div>
+
+              {/* Jobb oldal: Metrics Kártya (Flotta Egészség + Kiadás) */}
               {cars.length > 0 && (
-                  <div className="flex items-center gap-4 bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                      <div className="text-right">
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Flotta Egészség</p>
-                        <p className={`text-lg font-black ${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'}`}>{fleetHealth}%</p>
+                  <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                      
+                      {/* Flotta Egészség */}
+                      <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-4">
+                          <div className="text-left sm:text-right">
+                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Flotta Egészség</p>
+                            <div className="flex items-center sm:justify-end gap-2">
+                                <p className={`text-2xl font-black ${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                                    {fleetHealth}%
+                                </p>
+                            </div>
+                          </div>
+                          {/* Mini Pie Chart Visual */}
+                          <div className="relative w-10 h-10 flex-shrink-0">
+                             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                <path className="text-slate-100 dark:text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                                <path className={`${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'} transition-all duration-1000`} strokeDasharray={`${fleetHealth}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                             </svg>
+                          </div>
                       </div>
-                      <div className="h-10 w-1 bg-slate-100 dark:bg-slate-700 rounded-full"></div>
-                      <div className="text-right">
-                        <p className="text-[10px] uppercase font-bold text-slate-400">E havi kiadás</p>
-                        <p className="text-lg font-black text-slate-900 dark:text-white">{totalSpentThisMonth.toLocaleString()} Ft</p>
+
+                      {/* 30 Napos Kiadás + Trend */}
+                      <div className="flex-1 flex items-center justify-between sm:justify-start gap-4 sm:pl-2">
+                          <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Elmúlt 30 nap</p>
+                            <div className="flex items-baseline gap-2">
+                                <p className="text-xl font-black text-slate-900 dark:text-white">
+                                    {spentLast30Days.toLocaleString()} Ft
+                                </p>
+                                {spendingTrend !== 0 && (
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center ${spendingTrend > 0 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                                        {spendingTrend > 0 ? '↑' : '↓'} {Math.abs(spendingTrend)}%
+                                    </span>
+                                )}
+                            </div>
+                          </div>
                       </div>
+
                   </div>
               )}
           </div>
@@ -288,8 +352,8 @@ export default async function Home() {
               {/* --- BAL OSZLOP: Autók --- */}
               <div className="lg:col-span-2 space-y-10">
                 
-                {/* 1. GYORS KM NAPLÓZÁS */}
-                {latestCarId && cars.length > 0 && (
+                {/* 1. GYORS KM NAPLÓZÁS (Választható autóval) */}
+                {myCars.length > 0 && (
                     <div className="p-5 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-lg flex flex-col md:flex-row justify-between items-center gap-4 text-white border border-slate-700">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-white/10 rounded-lg">
@@ -297,20 +361,29 @@ export default async function Home() {
                             </div>
                             <div>
                                 <p className="font-bold text-sm text-slate-300">Gyors Km Rögzítés</p>
-                                <p className="text-xs text-slate-400">{cars[0].make} {cars[0].model} • {cars[0].mileage.toLocaleString()} km</p>
+                                <p className="text-xs text-slate-400">Válaszd ki az autót és írd be az új állást.</p>
                             </div>
                         </div>
-                        <form action={logCurrentMileage} className="flex gap-2 w-full md:w-auto">
-                            <input type="hidden" name="car_id" value={latestCarId} />
+                        <form action={logCurrentMileage} className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                            <select 
+                                name="car_id" 
+                                className="px-4 py-2 border-0 rounded-xl bg-white/10 text-white focus:ring-2 focus:ring-amber-500 cursor-pointer text-sm font-medium"
+                                defaultValue={myCars[0].id}
+                            >
+                                {myCars.map((car) => (
+                                    <option key={car.id} value={car.id} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">
+                                        {car.make} {car.model} ({car.plate})
+                                    </option>
+                                ))}
+                            </select>
                             <input 
                                 type="number" 
                                 name="current_mileage" 
-                                placeholder="Új km óra állás..."
-                                className="px-4 py-2 border-0 rounded-xl w-full md:w-48 focus:ring-2 focus:ring-amber-500 bg-white/10 text-white placeholder-slate-400"
-                                min={cars[0].mileage}
+                                placeholder="Új km állás..."
+                                className="px-4 py-2 border-0 rounded-xl w-full sm:w-40 focus:ring-2 focus:ring-amber-500 bg-white/10 text-white placeholder-slate-400 text-sm"
                                 required
                             />
-                            <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-4 py-2 rounded-xl transition-colors shadow-lg">OK</button>
+                            <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-4 py-2 rounded-xl transition-colors shadow-lg text-sm">Mentés</button>
                         </form>
                     </div>
                 )}
@@ -534,82 +607,82 @@ export default async function Home() {
 // --- SEGÉD KOMPONENSEK ---
 
 function CarCard({ car, shared }: { car: any, shared?: boolean }) {
-  return (
-    <div className={`bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative flex flex-col h-full ${shared ? 'ring-2 ring-blue-500/20' : ''}`}>
-      <Link href={`/cars/${car.id}`} className="block h-full flex flex-col">
-        <div className="h-48 bg-slate-100 dark:bg-slate-900 relative flex items-center justify-center overflow-hidden">
-           {car.image_url ? (
-             <Image src={car.image_url} alt={`${car.make} ${car.model}`} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
-           ) : (
-             <div className="text-slate-300 dark:text-slate-700 font-bold text-4xl uppercase tracking-widest opacity-20">{car.make}</div>
-           )}
-           <div className={`absolute top-4 right-4 px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider shadow-sm z-20 ${car.status === 'active' ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-500'}`}>
-              {car.status === 'active' ? 'Aktív' : 'Szerviz'}
-           </div>
-           
-           {shared && (
-                <div className="absolute top-4 left-4 bg-blue-500 text-white p-1.5 rounded-full shadow-lg z-20" title="Megosztott autó">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                </div>
-           )}
-        </div>
-        <div className="p-6 flex-1 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-start mb-2">
-               <div>
-                 <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase tracking-tight">{car.make}</h3>
-                 <p className="font-medium text-slate-500 dark:text-slate-400">{car.model}</p>
-               </div>
-               <span className="text-xs font-mono font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">{car.plate}</span>
-            </div>
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 grid grid-cols-2 gap-4 text-sm">
-               <div><p className="text-slate-400 text-xs uppercase font-bold mb-1">Futás</p><p className="font-bold text-slate-800 dark:text-slate-200">{car.mileage.toLocaleString()} km</p></div>
-               <div><p className="text-slate-400 text-xs uppercase font-bold mb-1">Évjárat</p><p className="font-bold text-slate-800 dark:text-slate-200">{car.year}</p></div>
-            </div>
-          </div>
-        </div>
-      </Link>
-      <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-30">
-        {!shared ? (
-            <>
-                <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></Link>
-                <form action={deleteCar}><input type="hidden" name="id" value={car.id} /><button className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-red-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></form>
-            </>
-        ) : (
-            <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></Link>
-        )}
-      </div>
-    </div>
-  )
+  return (
+    <div className={`bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative flex flex-col h-full ${shared ? 'ring-2 ring-blue-500/20' : ''}`}>
+      <Link href={`/cars/${car.id}`} className="block h-full flex flex-col">
+        <div className="h-48 bg-slate-100 dark:bg-slate-900 relative flex items-center justify-center overflow-hidden">
+           {car.image_url ? (
+             <Image src={car.image_url} alt={`${car.make} ${car.model}`} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+           ) : (
+             <div className="text-slate-300 dark:text-slate-700 font-bold text-4xl uppercase tracking-widest opacity-20">{car.make}</div>
+           )}
+           <div className={`absolute top-4 right-4 px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-wider shadow-sm z-20 ${car.status === 'active' ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-500'}`}>
+              {car.status === 'active' ? 'Aktív' : 'Szerviz'}
+           </div>
+           
+           {shared && (
+                <div className="absolute top-4 left-4 bg-blue-500 text-white p-1.5 rounded-full shadow-lg z-20" title="Megosztott autó">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                </div>
+           )}
+        </div>
+        <div className="p-6 flex-1 flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-start mb-2">
+               <div>
+                 <h3 className="font-black text-slate-900 dark:text-white text-xl uppercase tracking-tight">{car.make}</h3>
+                 <p className="font-medium text-slate-500 dark:text-slate-400">{car.model}</p>
+               </div>
+               <span className="text-xs font-mono font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">{car.plate}</span>
+            </div>
+            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 grid grid-cols-2 gap-4 text-sm">
+               <div><p className="text-slate-400 text-xs uppercase font-bold mb-1">Futás</p><p className="font-bold text-slate-800 dark:text-slate-200">{car.mileage.toLocaleString()} km</p></div>
+               <div><p className="text-slate-400 text-xs uppercase font-bold mb-1">Évjárat</p><p className="font-bold text-slate-800 dark:text-slate-200">{car.year}</p></div>
+            </div>
+          </div>
+        </div>
+      </Link>
+      <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-30">
+        {!shared ? (
+            <>
+                <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></Link>
+                <form action={deleteCar}><input type="hidden" name="id" value={car.id} /><button className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-red-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></form>
+            </>
+        ) : (
+            <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-sm transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></Link>
+        )}
+      </div>
+      </div>
+  )
 }
 
 function StatCard({ label, value, subValue, icon, customColor, alert, highlight, number }: any) {
-  if (number) {
-      return (
-        <div className={`text-center p-4 rounded-xl hover:bg-white/5 transition-colors cursor-default`}>
-           <div className="text-3xl font-black text-white mb-1">{number}</div>
-           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</div>
-        </div>
-      )
-  }
-  return (
-    <div className={`bg-white dark:bg-slate-800 p-4 rounded-2xl border shadow-sm flex flex-col justify-between h-full border-slate-100 dark:border-slate-700 ${highlight ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
-       <div className="flex justify-between items-start mb-2">
-         <div className="text-slate-400">
-            {icon === 'total' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-            {icon === 'avg' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>}
-            {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
-            {icon === 'fuel' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
-         </div>
-       </div>
-       <div>
-         <p className="text-xs font-bold text-slate-400 uppercase">{label}</p>
-         <p className="text-xl font-black text-slate-900 dark:text-white">{value}</p>
-       </div>
-    </div>
-  )
+  if (number) {
+      return (
+        <div className={`text-center p-4 rounded-xl hover:bg-white/5 transition-colors cursor-default`}>
+           <div className="text-3xl font-black text-white mb-1">{number}</div>
+           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</div>
+        </div>
+      )
+  }
+  return (
+    <div className={`bg-white dark:bg-slate-800 p-4 rounded-2xl border shadow-sm flex flex-col justify-between h-full border-slate-100 dark:border-slate-700 ${highlight ? 'ring-2 ring-amber-400 ring-offset-2' : ''}`}>
+       <div className="flex justify-between items-start mb-2">
+         <div className="text-slate-400">
+            {icon === 'total' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+            {icon === 'avg' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>}
+            {icon === 'service' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+            {icon === 'fuel' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
+         </div>
+       </div>
+       <div>
+         <p className="text-xs font-bold text-slate-400 uppercase">{label}</p>
+         <p className="text-xl font-black text-slate-900 dark:text-white">{value}</p>
+       </div>
+    </div>
+  )
 }
 
 function Badge({ text }: { text: string }) {
-  return <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-slate-800 text-slate-400 text-xs font-bold">{text}</span>
+  return <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/50 border border-slate-800 text-slate-400 text-xs font-bold">{text}</span>
 }
