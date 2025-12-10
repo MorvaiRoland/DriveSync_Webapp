@@ -33,11 +33,10 @@ async function logCurrentMileage(formData: FormData) {
       return redirect(`/?error=${encodeURIComponent('Hiba történt.')}`);
   }
 
-  // 2. Opcionális: Esemény létrehozása, hogy nyoma legyen a naplóban
-  // Ez segít abban, hogy a CarDetailsPage-en is frissüljön minden számítás
+  // 2. Esemény létrehozása (hogy látszódjon az előzményekben és frissüljön minden számítás)
   await supabase.from('events').insert({
       car_id: car_id,
-      type: 'other', // Vagy egy új 'log' típus
+      type: 'other', 
       title: 'Futás rögzítése',
       event_date: new Date().toISOString(),
       mileage: current_mileage,
@@ -48,12 +47,12 @@ async function logCurrentMileage(formData: FormData) {
   return redirect('/?success=Km+frissitve');
 }
 
-// --- ÚJ ÜZEMANYAG WIDGET ---
+// --- JAVÍTOTT ÜZEMANYAG WIDGET ---
 function FuelWidget() {
   const fuelPrices = [
-    { type: '95', name: 'Benzin', price: 612, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { type: 'D', name: 'Gázolaj', price: 618, color: 'text-slate-900 dark:text-slate-100', bg: 'bg-slate-100 dark:bg-slate-700' },
-    { type: '100', name: 'Prémium', price: 655, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { type: '95', name: 'Benzin', price: 612, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-500/20' },
+    { type: 'D', name: 'Gázolaj', price: 618, color: 'text-slate-700 dark:text-slate-300', bg: 'bg-slate-200 dark:bg-slate-700' },
+    { type: '100', name: 'Prémium', price: 655, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-500/20' },
   ];
 
   return (
@@ -70,13 +69,16 @@ function FuelWidget() {
       <div className="p-4 flex-1 flex flex-col justify-center gap-3">
           {fuelPrices.map((fuel, idx) => (
               <div key={idx} className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${fuel.bg} ${fuel.color}`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-black text-xs ${fuel.bg} ${fuel.color}`}>
                           {fuel.type}
                       </div>
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{fuel.name}</span>
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-300 truncate">{fuel.name}</span>
                   </div>
-                  <span className="font-bold text-slate-900 dark:text-white">{fuel.price} Ft</span>
+                  <div className="text-right whitespace-nowrap">
+                    <span className="font-bold text-slate-900 dark:text-white">{fuel.price}</span>
+                    <span className="text-xs font-medium text-slate-400 ml-1">Ft</span>
+                  </div>
               </div>
           ))}
           <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 text-center">
@@ -158,7 +160,6 @@ export default async function Home() {
         }
 
         // 5. JAVÍTOTT FLOTTA EGÉSZSÉG SZÁMÍTÁS
-        // Mostantól ugyanazt a logikát használja, mint a részletes nézet
         if (myCars.length > 0) {
             const totalHealthScore = myCars.reduce((sum, car) => {
                 // Ha szervizben van, 0%
@@ -181,15 +182,10 @@ export default async function Home() {
                     }
                 }
 
-                // Ha még nincs szerviz, de az autó futása kicsi, akkor feltételezzük, hogy új/karbantartott
+                // Ha még nincs szerviz, de az autó futása kicsi, akkor feltételezzük, hogy új
                 if (lastServiceKm === 0 && car.mileage < interval) {
-                    lastServiceKm = 0; // Új autó effektus
+                    lastServiceKm = 0; 
                 } 
-                // Ha nincs szerviz, de sokat futott -> valószínűleg nem volt rögzítve -> 0% felé tart
-                else if (lastServiceKm === 0) {
-                     // Itt dönthetünk: vagy 0-nak vesszük, vagy megpróbáljuk becsülni
-                     // A legbiztosabb, ha a felhasználót adatrögzítésre ösztönözzük, így hagyjuk, hogy lecsökkenjen.
-                }
 
                 const drivenSinceService = Math.max(0, car.mileage - lastServiceKm);
                 
@@ -493,7 +489,7 @@ export default async function Home() {
                     </div>
                 </div>
 
-                {/* 4. AKTIVITÁS */}
+                {/* 4. JAVÍTOTT AKTIVITÁS (Event Log) */}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
                         <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -505,17 +501,33 @@ export default async function Home() {
                         {recentActivity.length > 0 ? (
                             recentActivity.map((act: any) => (
                                 <div key={act.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${act.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                                    {/* Dátum & Ikon */}
+                                    <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
+                                        <div className="text-center w-10">
+                                            <span className="block text-lg font-black text-slate-300 dark:text-slate-600 leading-none">{new Date(act.event_date).getDate()}</span>
+                                            <span className="block text-[9px] font-bold text-slate-400 uppercase">{new Date(act.event_date).toLocaleString('hu-HU', { month: 'short' }).replace('.','')}</span>
+                                        </div>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${act.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
                                             {act.type === 'fuel' 
                                                 ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg> 
                                                 : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                             }
+                                        </div>
                                     </div>
+                                    
+                                    {/* Szöveg */}
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{act.title}</p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{act.cars?.make} {act.cars?.model} • {act.cost.toLocaleString()} Ft</p>
+                                        <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 truncate">
+                                            <span>{act.cars?.make} {act.cars?.model}</span>
+                                            {act.mileage > 0 && <span>• {act.mileage.toLocaleString()} km</span>}
+                                        </div>
                                     </div>
-                                    <span className="text-[10px] text-slate-400 whitespace-nowrap">{new Date(act.event_date).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })}</span>
+
+                                    {/* Ár (Jobbra igazítva, nem csúszik rá) */}
+                                    <div className="text-right flex-shrink-0">
+                                        <span className="block text-sm font-bold text-slate-900 dark:text-white">{act.cost > 0 ? `${act.cost.toLocaleString()} Ft` : '-'}</span>
+                                    </div>
                                 </div>
                             ))
                         ) : (
@@ -622,10 +634,8 @@ function CarCard({ car, shared }: { car: any, shared?: boolean }) {
             </div>
          )}
          
-         {/* Gradiens overlay a szöveg olvashatóságáért */}
          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent"></div>
 
-         {/* Státusz Badge */}
          <div className={`absolute top-4 right-4 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full backdrop-blur-md shadow-lg border border-white/10 ${
              car.status === 'active' 
              ? 'bg-emerald-500/90 text-white' 
@@ -634,14 +644,12 @@ function CarCard({ car, shared }: { car: any, shared?: boolean }) {
              {car.status === 'active' ? 'Aktív' : 'Szerviz'}
          </div>
 
-         {/* Megosztott ikon */}
          {shared && (
              <div className="absolute top-4 left-4 bg-blue-600/90 backdrop-blur-md text-white p-2 rounded-full shadow-lg" title="Megosztott autó">
                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
              </div>
          )}
 
-         {/* Autó Név & Rendszám (Képen) */}
          <div className="absolute bottom-4 left-4 right-4">
              <h3 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-1 drop-shadow-md">
                  {car.make} <span className="font-light text-slate-300">{car.model}</span>
@@ -654,7 +662,6 @@ function CarCard({ car, shared }: { car: any, shared?: boolean }) {
          </div>
       </Link>
 
-      {/* Adatok Szekció */}
       <Link href={`/cars/${car.id}`} className="p-5 flex-1 flex flex-col justify-between gap-4">
          <div className="grid grid-cols-2 gap-4">
              <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 group-hover:border-amber-500/20 transition-colors">
@@ -668,7 +675,6 @@ function CarCard({ car, shared }: { car: any, shared?: boolean }) {
          </div>
       </Link>
 
-      {/* Lebegő Szerkesztés Gombok (Csak Hoverre) */}
       <div className="absolute top-4 left-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-[-10px] group-hover:translate-x-0">
          {!shared && (
              <Link href={`/cars/${car.id}/edit`} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-full text-slate-600 dark:text-slate-300 hover:text-amber-500 shadow-lg hover:scale-110 transition-all border border-slate-200 dark:border-slate-600" title="Szerkesztés">
@@ -694,7 +700,6 @@ function StatCard({ label, value, number, highlight, icon }: any) {
        <div className="flex justify-between items-start mb-2">
          <div className="text-slate-400">
             {icon === 'total' && <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-            {/* ... többi ikon logika maradhat, ha használod ... */}
          </div>
        </div>
        <div>
