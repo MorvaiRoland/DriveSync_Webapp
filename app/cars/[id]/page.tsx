@@ -9,9 +9,10 @@ import LockedFeature from '@/components/LockedFeature'
 import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
 import VignetteManager from '@/components/VignetteManager'
 import ParkingAssistant from '@/components/ParkingAssistant'
-import SalesWidget from '@/components/SalesWidget' // <--- ÚJ IMPORT
+import SalesWidget from '@/components/SalesWidget'
+import AnalyticsCharts from '@/components/AnalyticsCharts'
+import MobileTabContainer from '@/components/MobileTabContainer'
 
-// --- LUCIDE ICONS IMPORT ---
 import { 
   Fuel, Wrench, Bell, Map, Package, Warehouse, 
   Download, Lock, Pencil, Activity, RefreshCw, FileText, 
@@ -20,56 +21,34 @@ import {
   ChevronRight, CarFront
 } from 'lucide-react';
 
-// --- Típusdefiníciók ---
+// --- JAVÍTOTT TÍPUS (id: number) ---
 type Car = {
-  id: string
-  make: string
-  model: string
-  plate: string
-  year: number
-  mileage: number
-  image_url: string | null
-  mot_expiry: string | null
-  insurance_expiry: string | null
-  service_interval_km: number
-  last_service_mileage: number
-  fuel_type: string
-  color: string | null
-  vin: string | null
-  // Sales mode mezők (opcionális, mert lehet null)
-  share_token?: string | null
-  is_for_sale?: boolean | null
-  hide_prices?: boolean | null
-  hide_sensitive?: boolean | null
+  id: number; // JAVÍTVA: number, mert a DB-ben bigint
+  make: string; model: string; plate: string; year: number; mileage: number; 
+  image_url: string | null; mot_expiry: string | null; insurance_expiry: string | null; 
+  service_interval_km: number; last_service_mileage: number; fuel_type: string; 
+  color: string | null; vin: string | null; share_token?: string | null; 
+  is_for_sale?: boolean | null; hide_prices?: boolean | null; hide_sensitive?: boolean | null 
 }
-
-// --- Segédfüggvények ---
 
 const getExpiryStatus = (dateString: string | null) => {
   if (!dateString) return { label: 'Nincs adat', status: '-', alert: false, color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-100 dark:bg-slate-800' };
-  
   const today = new Date();
   const expiry = new Date(dateString);
   const diffTime = expiry.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
   if (diffDays < 0) return { label: 'Lejárt!', status: `${Math.abs(diffDays)} napja`, alert: true, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' };
   if (diffDays < 30) return { label: 'Lejáróban', status: `${diffDays} nap`, alert: true, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' };
   return { label: 'Érvényes', status: expiry.toLocaleDateString('hu-HU'), alert: false, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' };
 }
 
-// --- FŐ KOMPONENS ---
-
-type Props = {
-  params: Promise<{ id: string }>
-}
+type Props = { params: Promise<{ id: string }> }
 
 export default async function CarDetailsPage(props: Props) {
   const params = await props.params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 1. Adatlekérések párhuzamosítása
   const [carRes, eventsRes, remindersRes, tiresRes, docsRes, vigRes, parkingRes] = await Promise.all([
     supabase.from('cars').select('*').eq('id', params.id).single(),
     supabase.from('events').select('*').eq('car_id', params.id).order('event_date', { ascending: false }),
@@ -90,60 +69,41 @@ export default async function CarDetailsPage(props: Props) {
   const safeVignettes = vigRes.data || []
   const activeParking = parkingRes.data || null
 
-  // --- Előfizetés és Jogosultságok ---
   let plan: SubscriptionPlan = 'free';
-  if (user) {
-      plan = await getSubscriptionStatus(user.id);
-  }
+  if (user) plan = await getSubscriptionStatus(user.id);
   const isPro = plan === 'pro' || plan === 'founder';
 
-  // --- Üzleti Logika Számítások ---
-  
-  // Költségek
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)
   const serviceCost = safeEvents.filter(e => e.type === 'service').reduce((sum, e) => sum + (e.cost || 0), 0)
   const fuelCost = safeEvents.filter(e => e.type === 'fuel').reduce((sum, e) => sum + (e.cost || 0), 0)
   
-  // Fogyasztás
   const fuelEvents = safeEvents.filter(e => e.type === 'fuel' && e.mileage && e.liters).sort((a, b) => a.mileage - b.mileage)
   let avgConsumption = "Nincs adat"
   if (fuelEvents.length >= 2) {
     const totalLiters = fuelEvents.reduce((sum, e) => sum + (e.liters || 0), 0) - (fuelEvents[0].liters || 0)
     const distanceDelta = fuelEvents[fuelEvents.length - 1].mileage - fuelEvents[0].mileage
-    if (distanceDelta > 0) {
-      avgConsumption = `${((totalLiters / distanceDelta) * 100).toFixed(1)} L`
-    }
+    if (distanceDelta > 0) avgConsumption = `${((totalLiters / distanceDelta) * 100).toFixed(1)} L`
   }
 
-  // Szerviz intervallum
   const serviceIntervalKm = car.service_interval_km || 15000;
   let baseKm = car.last_service_mileage || 0;
-  
   const lastServiceEvent = safeEvents.find(e => e.type === 'service');
-  if (lastServiceEvent && lastServiceEvent.mileage > baseKm) {
-      baseKm = lastServiceEvent.mileage;
-  }
+  if (lastServiceEvent && lastServiceEvent.mileage > baseKm) baseKm = lastServiceEvent.mileage;
   if (baseKm === 0) baseKm = car.mileage; 
 
   const nextServiceKm = baseKm + serviceIntervalKm;
   const kmRemaining = nextServiceKm - car.mileage;
   const kmSinceService = car.mileage - baseKm;
 
-  // Állapot jelzők
   let healthStatus = { text: "Kiváló", color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", dot: "bg-emerald-500" };
-  if (kmRemaining <= 0) {
-      healthStatus = { text: "Szerviz Most!", color: "text-red-500 bg-red-500/10 border-red-500/20", dot: "bg-red-500 animate-pulse" };
-  } else if (kmRemaining < 2000) {
-      healthStatus = { text: "Hamarosan", color: "text-amber-500 bg-amber-500/10 border-amber-500/20", dot: "bg-amber-500" };
-  }
+  if (kmRemaining <= 0) healthStatus = { text: "Szerviz Most!", color: "text-red-500 bg-red-500/10 border-red-500/20", dot: "bg-red-500 animate-pulse" };
+  else if (kmRemaining < 2000) healthStatus = { text: "Hamarosan", color: "text-amber-500 bg-amber-500/10 border-amber-500/20", dot: "bg-amber-500" };
 
   const percentageUsed = Math.min(100, Math.max(0, (kmSinceService / serviceIntervalKm) * 100));
   const oilLife = 100 - percentageUsed;
-
   const motStatus = getExpiryStatus(car.mot_expiry);
   const insuranceStatus = getExpiryStatus(car.insurance_expiry);
 
-  // AI Tippek
   const smartTips = [];
   if (oilLife < 15) smartTips.push("Az olajcsere nagyon hamarosan esedékes.");
   if (car.mileage > 200000) smartTips.push("200e km felett érdemes ellenőrizni a vezérlést.");
@@ -151,107 +111,88 @@ export default async function CarDetailsPage(props: Props) {
   if (safeTires.length === 0) smartTips.push("Rögzítsd a téli/nyári gumikat a Gumihotelben.");
   if (smartTips.length === 0) smartTips.push("Minden rendszer rendben. Biztonságos utat!");
 
-  // --- RENDER ---
+  const healthProps = { car, oilLife, kmSinceService, serviceIntervalKm, kmRemaining, motStatus, insuranceStatus }
+  const techProps = { car, avgConsumption }
+  const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost }
+
+  // Fontos: Az ID-t stringgé alakítjuk a propokhoz
+  const carIdString = car.id.toString();
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
       
-      {/* 1. HEADER SZEKCIÓ */}
-      <HeaderSection 
-        car={car} 
-        healthStatus={healthStatus} 
-        nextServiceKm={nextServiceKm} 
-        kmRemaining={kmRemaining} 
-        safeEvents={safeEvents} 
-        isPro={isPro} 
-      />
+      <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={isPro} />
+      <DesktopActionGrid carId={carIdString} />
 
-      {/* 2. DESKTOP GYORS GOMBOK (Mobilon rejtve) */}
-      <DesktopActionGrid carId={car.id} />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-
-          {/* 3. BAL OSZLOP (Status & Insights) */}
-          <div className="space-y-6 md:space-y-8">
-             
-             {/* PARKOLÁS ASSZISZTENS */}
-             <ParkingAssistant carId={car.id} activeSession={activeParking} />
-
-             <HealthCard 
-                car={car} 
-                oilLife={oilLife} 
-                kmSinceService={kmSinceService} 
-                serviceIntervalKm={serviceIntervalKm} 
-                kmRemaining={kmRemaining}
-                motStatus={motStatus}
-                insuranceStatus={insuranceStatus}
-             />
-             
-             <VignetteManager carId={car.id} vignettes={safeVignettes} />
-             
-             <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={car.id} />
-             
-             <CostCard total={totalCost} fuel={fuelCost} service={serviceCost} />
-             
-             {/* OKOS TIPPEK & ELADÓSORBAN MÓD */}
-             {isPro ? (
-                <>
-                    <SmartTipsCard tips={smartTips} />
-                    <SalesWidget car={car} /> {/* <--- ELADÓSORBAN WIDGET (Pro) */}
-                </>
-             ) : (
-                <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl p-6 shadow-lg border border-indigo-500/30 relative overflow-hidden group hover:scale-[1.01] transition-transform">
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-                    <div className="relative z-10 flex flex-col items-center text-center">
-                        <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mb-3 text-indigo-400">
-                            <Sparkles className="w-6 h-6" />
-                        </div>
-                        <h3 className="font-bold text-white mb-1">AI Szerelő & Hirdetés</h3>
-                        <p className="text-sm text-indigo-200 mb-4">Személyre szabott tippek és autós hirdetési adatlap generálása.</p>
-                        <Link href="/pricing" className="bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2">
-                            <Lock className="w-3 h-3" /> Pro Funkció
-                        </Link>
-                    </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 relative z-20">
+        <MobileTabContainer 
+            tabOverview={
+                <div className="space-y-6">
+                    <ParkingAssistant carId={carIdString} activeSession={activeParking} />
+                    <HealthCard {...healthProps} />
+                    <CostCard {...costProps} />
+                    {isPro ? (
+                        <>
+                            <SmartTipsCard tips={smartTips} />
+                            <SalesWidget car={car} />
+                        </>
+                    ) : (
+                        <ProTeaser />
+                    )}
                 </div>
-             )}
-          </div>
-
-          {/* 4. JOBB OSZLOP (Timeline & Lists) */}
-          <div className="lg:col-span-2 space-y-6 md:space-y-8">
-             <RemindersList reminders={safeReminders} carId={car.id} />
-             
-             {/* DIGITÁLIS KESZTYŰTARTÓ */}
-             {isPro ? (
-                 <DocumentManager carId={car.id} documents={safeDocs} />
-             ) : (
-                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                     <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-slate-400" />
-                        Digitális Kesztyűtartó
-                     </h3>
-                     <LockedFeature label="dokumentum kezelés" />
-                 </div>
-             )}
-             
-             <TechnicalSpecs car={car} avgConsumption={avgConsumption} />
-             
-             <EventLog events={safeEvents} carId={car.id} />
-          </div>
-
-        </div>
+            }
+            tabServices={
+                <div className="space-y-6">
+                    <VignetteManager carId={carIdString} vignettes={safeVignettes} />
+                    <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />
+                    <TechnicalSpecs {...techProps} />
+                    {isPro ? (
+                        <DocumentManager carId={carIdString} documents={safeDocs} />
+                    ) : (
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-slate-400" />
+                                Digitális Kesztyűtartó
+                            </h3>
+                            <LockedFeature label="dokumentum kezelés" />
+                        </div>
+                    )}
+                </div>
+            }
+            tabLog={
+                <div className="space-y-6">
+                    <RemindersList reminders={safeReminders} carId={carIdString} />
+                    <AnalyticsCharts events={safeEvents} />
+                    <EventLog events={safeEvents} carId={carIdString} />
+                </div>
+            }
+        />
       </div>
 
-      {/* 5. MOBIL ALSÓ MENÜ (Sticky) */}
-      <MobileBottomNav carId={car.id} />
-      
+      <MobileBottomNav carId={carIdString} />
     </div>
   )
 }
 
-// ----------------------------------------------------------------------
-// ALKOMPONENSEK
-// ----------------------------------------------------------------------
+// --- SEGÉDKOMPONENSEK ---
+
+function ProTeaser() {
+    return (
+        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl p-6 shadow-lg border border-indigo-500/30 relative overflow-hidden group hover:scale-[1.01] transition-transform">
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+            <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mb-3 text-indigo-400">
+                    <Sparkles className="w-6 h-6" />
+                </div>
+                <h3 className="font-bold text-white mb-1">AI Szerelő & Hirdetés</h3>
+                <p className="text-sm text-indigo-200 mb-4">Személyre szabott tippek és autós hirdetési adatlap generálása.</p>
+                <Link href="/pricing" className="bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2">
+                    <Lock className="w-3 h-3" /> Pro Funkció
+                </Link>
+            </div>
+        </div>
+    )
+}
 
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
@@ -264,16 +205,12 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
             <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/90 to-slate-950 z-0" />
             
             <div className="absolute inset-0 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
-              {/* Top Nav */}
                 <div className="absolute top-4 md:top-6 left-4 right-4 flex justify-between items-center pt-4 md:pt-0 z-50">
                     <Link href="/" className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-3 md:px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:bg-white/10 h-[40px]">
                         <Warehouse className="w-4 h-4" />
                         <span className="hidden sm:inline">Garázs</span>
                     </Link>
-                    
                     <div className="flex gap-2 items-center">
-                        
-                        {/* --- EXPORT MENÜ (Feltételes megjelenítés) --- */}
                         <div className="scale-90 md:scale-100 origin-right">
                             {isPro ? (
                                 <ExportMenu car={car} events={safeEvents} />
@@ -285,8 +222,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                                 </Link>
                             )}
                         </div>
-                        
-                        {/* Szerkesztés Gomb */}
                         <Link href={`/cars/${car.id}/edit`} className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-3 md:px-4 py-2 rounded-full border border-white/10 hover:bg-white/10 h-[40px]">
                             <Pencil className="w-4 h-4" />
                             <span className="text-xs font-bold uppercase hidden md:inline">Szerk.</span>
@@ -321,11 +256,7 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
 
                         <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-4 pt-2">
                             <StatBadge label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
-                            <StatBadge 
-                                label="Következő Szerviz" 
-                                value={`${nextServiceKm.toLocaleString()} km`} 
-                                valueColor={kmRemaining <= 1000 ? 'text-red-400' : 'text-amber-400'} 
-                            />
+                            <StatBadge label="Következő Szerviz" value={`${nextServiceKm.toLocaleString()} km`} valueColor={kmRemaining <= 1000 ? 'text-red-400' : 'text-amber-400'} />
                         </div>
                     </div>
                 </div>
@@ -345,33 +276,23 @@ function StatBadge({ label, value, valueColor = "text-white" }: any) {
 
 function MobileBottomNav({ carId }: { carId: string }) {
     const btnBase = "flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-all active:scale-95";
-    
     return (
         <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_10px_rgba(0,0,0,0.1)] z-50 pb-[env(safe-area-inset-bottom)]">
             <div className="grid grid-cols-5 gap-1 px-2 py-2">
                 <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnBase} text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20`}>
-                    <Fuel className="w-6 h-6" />
-                    <span className="text-[10px] font-bold leading-none">Tankolás</span>
+                    <Fuel className="w-6 h-6" /><span className="text-[10px] font-bold leading-none">Tankolás</span>
                 </Link>
-
                 <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnBase} text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800`}>
-                    <Wrench className="w-6 h-6" />
-                    <span className="text-[10px] font-bold leading-none">Szerviz</span>
+                    <Wrench className="w-6 h-6" /><span className="text-[10px] font-bold leading-none">Szerviz</span>
                 </Link>
-
                 <Link href={`/cars/${carId}/reminders/new`} className={`${btnBase} text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800`}>
-                    <Bell className="w-6 h-6" />
-                    <span className="text-[10px] font-bold leading-none truncate max-w-full">Emlékez.</span>
+                    <Bell className="w-6 h-6" /><span className="text-[10px] font-bold leading-none truncate max-w-full">Emlékez.</span>
                 </Link>
-
                 <Link href={`/cars/${carId}/trips`} className={`${btnBase} text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20`}>
-                    <Map className="w-6 h-6" />
-                    <span className="text-[10px] font-bold leading-none">Utak</span>
+                    <Map className="w-6 h-6" /><span className="text-[10px] font-bold leading-none">Utak</span>
                 </Link>
-
                 <Link href={`/cars/${carId}/parts`} className={`${btnBase} text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20`}>
-                    <Package className="w-6 h-6" />
-                    <span className="text-[10px] font-bold leading-none">Alkatrész</span>
+                    <Package className="w-6 h-6" /><span className="text-[10px] font-bold leading-none">Alkatrész</span>
                 </Link>
             </div>
         </div>
@@ -380,129 +301,65 @@ function MobileBottomNav({ carId }: { carId: string }) {
 
 function DesktopActionGrid({ carId }: { carId: string }) {
     const btnClass = "p-4 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-transform hover:-translate-y-1 font-bold border border-transparent";
-    
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-3 lg:grid-cols-5 gap-4">
-             <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} bg-amber-500 hover:bg-amber-400 text-slate-900`}>
-                 <Fuel className="w-6 h-6" />
-                 Tankolás Rögzítése
-             </Link>
-             <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnClass} bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white`}>
-                 <Wrench className="w-6 h-6" />
-                 Szerviz Rögzítése
-             </Link>
-             <Link href={`/cars/${carId}/reminders/new`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}>
-                 <Bell className="w-6 h-6" />
-                 Emlékeztető
-             </Link>
-             <Link href={`/cars/${carId}/trips`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}>
-                <Map className="w-6 h-6 text-blue-500" />
-                Útnyilvántartás
-             </Link>
-             <Link href={`/cars/${carId}/parts`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}>
-                <Package className="w-6 h-6 text-emerald-500" />
-                Alkatrészek
-             </Link>
+             <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} bg-amber-500 hover:bg-amber-400 text-slate-900`}><Fuel className="w-6 h-6" />Tankolás Rögzítése</Link>
+             <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnClass} bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white`}><Wrench className="w-6 h-6" />Szerviz Rögzítése</Link>
+             <Link href={`/cars/${carId}/reminders/new`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}><Bell className="w-6 h-6" />Emlékeztető</Link>
+             <Link href={`/cars/${carId}/trips`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}><Map className="w-6 h-6 text-blue-500" />Útnyilvántartás</Link>
+             <Link href={`/cars/${carId}/parts`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}><Package className="w-6 h-6 text-emerald-500" />Alkatrészek</Link>
         </div>
     )
 }
 
 function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaining, motStatus, insuranceStatus }: any) {
-    // Kördiagram konfiguráció
     const radius = 36;
     const circumference = 2 * Math.PI * radius;
-    // Biztosítjuk, hogy 0 és 100 között maradjon a vizuális megjelenítéshez
     const safeOilLife = Math.min(100, Math.max(0, oilLife));
     const offset = circumference - ((safeOilLife / 100) * circumference);
-
-    // Szín logika
     let colorClass = 'text-emerald-500';
-    let strokeColor = '#10b981'; // emerald-500
+    let strokeColor = '#10b981';
     let statusText = 'Kiváló';
-
-    if (safeOilLife < 20) {
-        colorClass = 'text-red-500';
-        strokeColor = '#ef4444'; // red-500
-        statusText = 'Kritikus';
-    } else if (safeOilLife < 50) {
-        colorClass = 'text-amber-500';
-        strokeColor = '#f59e0b'; // amber-500
-        statusText = 'Figyelj';
-    }
+    if (safeOilLife < 20) { colorClass = 'text-red-500'; strokeColor = '#ef4444'; statusText = 'Kritikus'; } 
+    else if (safeOilLife < 50) { colorClass = 'text-amber-500'; strokeColor = '#f59e0b'; statusText = 'Figyelj'; }
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm md:text-base">
-                    <Activity className="w-5 h-5 text-slate-400" />
-                    Jármű Egészség
-                </h3>
-                
-                {/* Gyors nullázó gomb */}
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm md:text-base"><Activity className="w-5 h-5 text-slate-400" />Jármű Egészség</h3>
                 <form action={resetServiceCounter}>
-                    <input type="hidden" name="car_id" value={car.id} />
-                    <button className="text-[10px] bg-slate-100 dark:bg-slate-700 hover:bg-amber-100 hover:text-amber-700 dark:hover:text-amber-400 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full font-bold transition-colors uppercase tracking-wider flex items-center gap-1 group">
-                        <RefreshCw className="w-3 h-3 group-hover:rotate-180 transition-transform duration-500" />
-                        Nullázás
-                    </button>
+                    {/* JAVÍTVA: car.id konvertálása stringgé */}
+                    <input type="hidden" name="car_id" value={car.id.toString()} />
+                    <button className="text-[10px] bg-slate-100 dark:bg-slate-700 hover:bg-amber-100 hover:text-amber-700 dark:hover:text-amber-400 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full font-bold transition-colors uppercase tracking-wider flex items-center gap-1 group"><RefreshCw className="w-3 h-3 group-hover:rotate-180 transition-transform duration-500" />Nullázás</button>
                 </form>
             </div>
-            
             <div className="flex items-center gap-6 mb-8">
-                {/* KÖRDIAGRAM (Olaj alapú egészség) */}
                 <div className="relative w-24 h-24 flex-shrink-0">
                     <svg className="w-full h-full transform -rotate-90">
-                        {/* Háttér kör */}
-                        <circle
-                            cx="50%"
-                            cy="50%"
-                            r={radius}
-                            stroke="currentColor"
-                            strokeWidth="8"
-                            fill="transparent"
-                            className="text-slate-100 dark:text-slate-700"
-                        />
-                        {/* Progress kör */}
-                        <circle
-                            cx="50%"
-                            cy="50%"
-                            r={radius}
-                            stroke={strokeColor}
-                            strokeWidth="8"
-                            fill="transparent"
-                            strokeDasharray={circumference}
-                            strokeDashoffset={offset}
-                            strokeLinecap="round"
-                            className="transition-all duration-1000 ease-out"
-                        />
+                        <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100 dark:text-slate-700" />
+                        <circle cx="50%" cy="50%" r={radius} stroke={strokeColor} strokeWidth="8" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                         <span className={`text-xl font-black ${colorClass}`}>{Math.round(safeOilLife)}%</span>
                         <span className="text-[9px] uppercase font-bold text-slate-400">{statusText}</span>
                     </div>
                 </div>
-
-                {/* ADATOK */}
                 <div className="flex-1 space-y-3">
                     <div>
                         <div className="flex justify-between items-baseline mb-1">
                             <span className="text-xs font-bold text-slate-500 uppercase">Olajcsere</span>
-                            <span className={`text-xs font-bold ${kmRemaining <= 0 ? 'text-red-500 animate-pulse' : 'text-slate-800 dark:text-slate-200'}`}>
-                                {kmRemaining > 0 ? `${Math.round(kmRemaining).toLocaleString()} km múlva` : 'ESEDÉKES!'}
-                            </span>
+                            <span className={`text-xs font-bold ${kmRemaining <= 0 ? 'text-red-500 animate-pulse' : 'text-slate-800 dark:text-slate-200'}`}>{kmRemaining > 0 ? `${Math.round(kmRemaining).toLocaleString()} km múlva` : 'ESEDÉKES!'}</span>
                         </div>
                         <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5">
                             <div className={`h-1.5 rounded-full transition-all ${colorClass.replace('text-', 'bg-')}`} style={{ width: `${safeOilLife}%` }}></div>
                         </div>
                     </div>
-
                     <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium pt-1 border-t border-slate-50 dark:border-slate-700/50">
                         <span>Megtett: {kmSinceService.toLocaleString()} km</span>
                         <span>Ciklus: {serviceIntervalKm.toLocaleString()} km</span>
                     </div>
                 </div>
             </div>
-
             <div className="grid grid-cols-2 gap-3 md:gap-4">
                 <StatusItem label="Műszaki" data={motStatus} iconType="file" />
                 <StatusItem label="Biztosítás" data={insuranceStatus} iconType="shield" />
@@ -514,9 +371,7 @@ function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaini
 function StatusItem({ label, data, iconType }: any) {
     return (
         <div className={`flex items-center gap-2 md:gap-3 p-2.5 md:p-3 rounded-xl border ${data.bg} ${data.alert ? 'border-red-100 dark:border-red-800' : 'border-slate-100 dark:border-slate-700'}`}>
-            <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white dark:bg-slate-800 ${data.alert ? 'text-red-500' : 'text-slate-500'}`}>
-                {iconType === 'file' ? <FileText className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
-            </div>
+            <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white dark:bg-slate-800 ${data.alert ? 'text-red-500' : 'text-slate-500'}`}>{iconType === 'file' ? <FileText className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}</div>
             <div className="min-w-0">
                 <p className="text-[10px] uppercase font-bold text-slate-400">{label}</p>
                 <p className={`text-xs md:text-sm font-bold truncate ${data.color}`}>{data.status}</p>
@@ -529,25 +384,18 @@ function TireHotelCard({ tires, carMileage, carId }: any) {
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm md:text-base">
-                    <Disc className="w-5 h-5 text-slate-400" />
-                    Gumi Hotel
-                </h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm md:text-base"><Disc className="w-5 h-5 text-slate-400" />Gumi Hotel</h3>
                 <Link href={`/cars/${carId}/edit`} className="text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Kezelés</Link>
             </div>
             <div className="space-y-3">
                 {tires.length > 0 ? (
                     tires.slice(0,2).map((tire: any) => {
                         let currentDistance = tire.total_distance;
-                        if (tire.is_mounted) {
-                            currentDistance += (carMileage - (tire.mounted_at_mileage || carMileage));
-                        }
+                        if (tire.is_mounted) currentDistance += (carMileage - (tire.mounted_at_mileage || carMileage));
                         return (
                             <div key={tire.id} className={`flex items-center justify-between p-3 rounded-xl border ${tire.is_mounted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700'}`}>
                                 <div className="flex items-center gap-3">
-                                    <div className="text-xl">
-                                        {tire.type === 'winter' ? <Snowflake className="w-5 h-5 text-blue-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
-                                    </div>
+                                    <div className="text-xl">{tire.type === 'winter' ? <Snowflake className="w-5 h-5 text-blue-400" /> : <Sun className="w-5 h-5 text-amber-500" />}</div>
                                     <div>
                                         <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{tire.brand}</p>
                                         <p className="text-[10px] text-slate-500 font-mono">{currentDistance.toLocaleString()} km</p>
@@ -569,17 +417,12 @@ function CostCard({ total, fuel, service }: any) {
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm md:text-base flex items-center gap-2">
-                    <Wallet className="w-5 h-5 text-slate-400" />
-                    Költségek
-                </h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm md:text-base flex items-center gap-2"><Wallet className="w-5 h-5 text-slate-400" />Költségek</h3>
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">Összes</span>
             </div>
             <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500">
-                         <Banknote className="w-6 h-6" />
-                    </div>
+                    <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500"><Banknote className="w-6 h-6" /></div>
                     <div>
                         <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Eddigi ráfordítás</p>
                         <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">{total.toLocaleString()} Ft</p>
@@ -604,10 +447,7 @@ function SmartTipsCard({ tips }: { tips: string[] }) {
     return (
         <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-5 md:p-6 shadow-lg text-white relative overflow-hidden">
              <div className="absolute top-0 right-0 p-4 opacity-10"><Sparkles className="w-24 h-24" /></div>
-             <h3 className="font-bold text-base md:text-lg mb-3 flex items-center gap-2 relative z-10">
-                 <Lightbulb className="w-5 h-5 text-yellow-300" />
-                 Smart Tips
-             </h3>
+             <h3 className="font-bold text-base md:text-lg mb-3 flex items-center gap-2 relative z-10"><Lightbulb className="w-5 h-5 text-yellow-300" />Smart Tips</h3>
              <div className="space-y-3 text-xs md:text-sm text-indigo-100 relative z-10">
                  {tips.map((tip, i) => (
                      <div key={i} className="flex gap-3 items-start">
@@ -625,17 +465,10 @@ function RemindersList({ reminders, carId }: any) {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="px-5 md:px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
                 <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm md:text-base">
-                   <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                    </span>
-                   Következő Teendők
+                   <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>Következő Teendők
                 </h3>
-                <Link href={`/cars/${carId}/reminders/new`} className="text-xs font-bold bg-slate-900 dark:bg-slate-700 text-white px-2 md:px-3 py-1.5 rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Új
-                </Link>
+                <Link href={`/cars/${carId}/reminders/new`} className="text-xs font-bold bg-slate-900 dark:bg-slate-700 text-white px-2 md:px-3 py-1.5 rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors flex items-center gap-1"><Plus className="w-3 h-3" /> Új</Link>
             </div>
-            
             <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
                 {reminders.length > 0 ? (
                    reminders.map((rem: any) => (
@@ -651,9 +484,7 @@ function RemindersList({ reminders, carId }: any) {
                           <form action={deleteReminder}>
                               <input type="hidden" name="id" value={rem.id} />
                               <input type="hidden" name="car_id" value={carId} />
-                              <button className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 flex-shrink-0">
-                                 <Trash2 className="w-5 h-5" />
-                              </button>
+                              <button className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 flex-shrink-0"><Trash2 className="w-5 h-5" /></button>
                           </form>
                       </div>
                    ))
@@ -666,16 +497,15 @@ function RemindersList({ reminders, carId }: any) {
 }
 
 function TechnicalSpecs({ car, avgConsumption }: any) {
+    const fuelTranslations: Record<string, string> = { 'petrol': 'Benzin', 'diesel': 'Dízel', 'electric': 'Elektromos', 'hybrid': 'Hibrid', 'lpg': 'Gáz (LPG)', 'cng': 'Gáz (CNG)' };
+    const displayFuel = fuelTranslations[car.fuel_type.toLowerCase()] || car.fuel_type;
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 text-xs md:text-sm uppercase tracking-wider text-opacity-70 flex items-center gap-2">
-                <Gauge className="w-4 h-4 text-slate-400" />
-                Jármű Adatok
-            </h3>
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 text-xs md:text-sm uppercase tracking-wider text-opacity-70 flex items-center gap-2"><Gauge className="w-4 h-4 text-slate-400" />Jármű Adatok</h3>
             <div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
                 <DataPoint label="Futás" value={`${car.mileage.toLocaleString()} km`} />
                 <DataPoint label="Évjárat" value={car.year} />
-                <DataPoint label="Üzemanyag" value={car.fuel_type} capitalize />
+                <DataPoint label="Üzemanyag" value={displayFuel} capitalize />
                 <DataPoint label="Szín" value={car.color || '-'} />
                 <DataPoint label="Átlagfogy." value={avgConsumption === 'N/A' ? '-' : `${avgConsumption}`} highlight />
                 <DataPoint label="VIN" value={car.vin || 'N/A'} mono />
@@ -688,9 +518,7 @@ function DataPoint({ label, value, mono, capitalize, highlight }: any) {
     return (
         <div>
             <p className="text-[10px] md:text-xs text-slate-400 font-bold uppercase">{label}</p>
-            <p className={`text-xs md:text-sm font-bold ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''} ${highlight ? 'text-amber-600 dark:text-amber-500' : 'text-slate-900 dark:text-slate-100'}`}>
-                {value}
-            </p>
+            <p className={`text-xs md:text-sm font-bold ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''} ${highlight ? 'text-amber-600 dark:text-amber-500' : 'text-slate-900 dark:text-slate-100'}`}>{value}</p>
         </div>
     )
 }
@@ -699,34 +527,21 @@ function EventLog({ events, carId }: any) {
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-white dark:border-slate-700 overflow-hidden">
             <div className="px-5 md:px-6 py-4 md:py-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
-                <h3 className="font-bold text-base md:text-lg text-slate-900 dark:text-white flex items-center gap-2">
-                    <History className="w-5 h-5 text-slate-400" />
-                    Eseménynapló
-                </h3>
+                <h3 className="font-bold text-base md:text-lg text-slate-900 dark:text-white flex items-center gap-2"><History className="w-5 h-5 text-slate-400" />Eseménynapló</h3>
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">{events.length} bejegyzés</span>
             </div>
-            
             <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
                 {events.length > 0 ? (
                     events.map((event: any) => (
                         <div key={event.id} className="relative p-3 md:p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-all group flex gap-3 md:gap-4 items-start">
-                            
                             <Link href={`/cars/${carId}/events/${event.id}/edit`} className="flex-1 flex gap-3 md:gap-4 items-start cursor-pointer min-w-0">
-                                
-                                {/* Dátum */}
                                 <div className="flex-shrink-0 w-10 md:w-12 text-center pt-1">
                                     <span className="block text-base md:text-lg font-black text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors leading-none">{new Date(event.event_date).getDate()}</span>
                                     <span className="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">{new Date(event.event_date).toLocaleDateString('hu-HU', { month: 'short' }).replace('.', '')}</span>
                                 </div>
-                                
-                                {/* Ikon */}
                                 <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white dark:border-slate-700 ${event.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                                    {event.type === 'fuel' 
-                                      ? <Fuel className="w-4 md:w-5 h-4 md:h-5" />
-                                      : <Wrench className="w-4 md:w-5 h-4 md:h-5" />
-                                    }
+                                    {event.type === 'fuel' ? <Fuel className="w-4 md:w-5 h-4 md:h-5" /> : <Wrench className="w-4 md:w-5 h-4 md:h-5" />}
                                 </div>
-
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start gap-2">
                                         <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-amber-600 dark:group-hover:text-amber-500 transition-colors text-sm md:text-base">{event.title}</h4>
@@ -738,18 +553,13 @@ function EventLog({ events, carId }: any) {
                                         {event.location && <span className="truncate hidden sm:inline">• {event.location}</span>}
                                     </div>
                                 </div>
-
-                                <div className="self-center text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors hidden md:block">
-                                    <ChevronRight className="w-5 h-5" />
-                                </div>
+                                <div className="self-center text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors hidden md:block"><ChevronRight className="w-5 h-5" /></div>
                             </Link>
-                            
                             <form action={deleteEvent} className="absolute top-3 right-3 md:top-4 md:right-4 z-20 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
                                 <input type="hidden" name="event_id" value={event.id} />
+                                {/* JAVÍTVA: carId változót használjuk car.id helyett, mert a car itt nem létezik */}
                                 <input type="hidden" name="car_id" value={carId} />
-                                <button className="p-1.5 md:p-2 bg-white dark:bg-slate-800 rounded-full shadow-md text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-colors border border-slate-100 dark:border-slate-700" title="Törlés">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                                <button className="p-1.5 md:p-2 bg-white dark:bg-slate-800 rounded-full shadow-md text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-colors border border-slate-100 dark:border-slate-700" title="Törlés"><Trash2 className="w-4 h-4" /></button>
                             </form>
                         </div>
                     ))
