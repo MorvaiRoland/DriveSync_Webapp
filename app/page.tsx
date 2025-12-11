@@ -9,6 +9,7 @@ import ReminderChecker from '@/components/ReminderChecker'
 import AiMechanic from '@/components/AiMechanic'
 import GamificationWidget from '@/components/GamificationWidget'
 import PromoBanner from '@/components/PromoBanner'
+import PromoModal from '@/components/PromoModal' // <--- ÚJ IMPORT
 import SubscribeForm from '@/components/SubscribeForm'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
 import { History, Fuel, Wrench, Lock, Plus, Warehouse, Pencil } from 'lucide-react';
@@ -65,10 +66,14 @@ async function logCurrentMileage(formData: FormData) {
   return redirect(`/?dev=${DEV_SECRET_KEY}&success=Km+frissitve`);
 }
 
-// --- COMING SOON LANDING PAGE ---
-function ComingSoonPage() {
+// --- COMING SOON LANDING PAGE (Módosítva: Promo fogadása) ---
+function ComingSoonPage({ promo }: { promo?: any }) {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col relative overflow-hidden font-sans selection:bg-amber-500/30">
+      
+      {/* --- PROMÓCIÓ MEGJELENÍTÉSE (Ha van) --- */}
+      {promo && <PromoModal promo={promo} />}
+
       <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
           <div className="absolute top-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse"></div>
           <div className="absolute bottom-[-10%] left-[-20%] w-[50vw] h-[50vw] bg-blue-900/10 rounded-full blur-[100px]"></div>
@@ -339,7 +344,7 @@ async function DashboardComponent() {
                       : subscription?.plan_type === 'pro'
                       ? 'bg-blue-500 text-white border-blue-600 shadow-lg shadow-blue-500/20'
                       : 'bg-slate-700 text-slate-300 border-slate-600'
-                  }`}>
+                    }`}>
                       {
                         subscription?.plan_type === 'founder' ? 'Founder 🚀' : 
                         subscription?.plan_type === 'lifetime' ? 'Lifetime 🚀' :
@@ -505,7 +510,7 @@ async function DashboardComponent() {
               {/* HA MINDEN ÜRES ÉS A HOZZÁADÁS IS KI VAN KAPCSOLVA (Ritka eset) */}
               {cars.length === 0 && !FEATURES.addCar && (
                   <div className="bg-white dark:bg-slate-800 p-16 rounded-3xl border border-slate-200 dark:border-slate-700 text-center shadow-lg">
-                       <p className="text-slate-500">Nincs megjeleníthető autó.</p>
+                        <p className="text-slate-500">Nincs megjeleníthető autó.</p>
                   </div>
               )}
 
@@ -678,14 +683,33 @@ export default async function Page({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
+  const supabase = await createClient()
+  
+  // 1. Megnézzük, van-e bejelentkezett felhasználó
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // 2. HA VAN USER -> Irány a Dashboard (Promóció itt NEM kell, mert már regisztrált)
+  if (user) {
+    return <DashboardComponent />
+  }
+
+  // 3. HA NINCS USER (Vendég) -> Lekérjük az aktív promóciót
+  // maybeSingle() biztosítja, hogy ne dobjon hibát, ha nincs adat
+  const { data: activePromo } = await supabase
+    .from('promotions')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  // 4. Fejlesztői mód ellenőrzése
   const params = await searchParams
   const secret = params.dev
-
   if (secret === DEV_SECRET_KEY) {
     return <DashboardComponent />
   }
 
-  // Ha kész az oldal, cseréld le ezt a ComingSoonPage helyett a DashboardComponent-re
-  // return <DashboardComponent /> 
-  return <DashboardComponent /> 
+  // 5. Megjelenítjük a Landing Page-et a promócióval
+  return <ComingSoonPage promo={activePromo} />
 }
