@@ -11,7 +11,7 @@ import GamificationWidget from '@/components/GamificationWidget'
 import PromoModal from '@/components/PromoModal'
 import SubscribeForm from '@/components/SubscribeForm'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
-import { History, Fuel, Wrench, Lock, Plus, Pencil, ArrowRight, Sparkles, Calendar, CheckCircle2 } from 'lucide-react';
+import { History, Fuel, Wrench, Lock, Plus, Pencil, ArrowRight, Sparkles, Calendar, CheckCircle2, Users } from 'lucide-react';
 import FuelWidget from '@/components/FuelWidget';
 
 // --- KONFIGURÁCIÓ ---
@@ -107,16 +107,16 @@ function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600">digitális agya.</span>
             </h1>
             <div className="max-w-2xl mx-auto space-y-6 my-8">
-    <p className="text-lg sm:text-xl text-slate-400 leading-relaxed font-light">
-        Lépj ki a <span className="text-slate-200 font-medium">papíralapú múltból</span>. 
-        Az autód modern, a nyilvántartásod miért ne lenne az?
-    </p>
-    <p className="text-lg sm:text-xl text-slate-400 leading-relaxed font-light">
-        Cseréld le a füzetet egy <span className="text-amber-400 font-bold">profi rendszerre</span>, 
-        ahol minden adatod <span className="text-slate-200 font-medium">biztonságban van</span>, 
-        és mindig kéznél, amikor szükséged van rá.
-    </p>
-</div>
+              <p className="text-lg sm:text-xl text-slate-400 leading-relaxed font-light">
+                  Lépj ki a <span className="text-slate-200 font-medium">papíralapú múltból</span>. 
+                  Az autód modern, a nyilvántartásod miért ne lenne az?
+              </p>
+              <p className="text-lg sm:text-xl text-slate-400 leading-relaxed font-light">
+                  Cseréld le a füzetet egy <span className="text-amber-400 font-bold">profi rendszerre</span>, 
+                  ahol minden adatod <span className="text-slate-200 font-medium">biztonságban van</span>, 
+                  és mindig kéznél, amikor szükséged van rá.
+              </p>
+            </div>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                 <Link href="/login" className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-lg font-bold px-8 py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:-translate-y-1 flex items-center justify-center gap-2">
@@ -182,7 +182,7 @@ function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
                     /* Ha nincs adatbázis adat, statikus placeholder */
                     <div className="relative pl-10">
                         <div className="absolute -left-[5px] top-2 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-amber-500 shadow-[0_0_10px_#f59e0b]"></div>
-                        <h3 className="text-lg font-bold text-white mb-1">DriveSync 1.8  🚀</h3>
+                        <h3 className="text-lg font-bold text-white mb-1">DriveSync 1.8  🚀</h3>
                         <p className="text-slate-400 text-sm">Az alkalmazás hivatalosan elindult! AI funkciók, felhő szinkronizáció és modern design.</p>
                     </div>
                 )}
@@ -194,8 +194,8 @@ function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
                         <CheckCircle2 className="w-4 h-4" /> Hamarosan...
                     </h3>
                     <ul className="text-xs text-slate-500 list-disc list-inside">
-                        <li></li>
-                        <li></li>
+                        <li>OBDII Bluetooth integráció</li>
+                        <li>Exportálás PDF-be</li>
                     </ul>
                 </div>
             </div>
@@ -243,6 +243,9 @@ async function DashboardComponent() {
   plan = await getSubscriptionStatus(user.id);
   const { data: subData } = await supabase.from('subscriptions').select('status, plan_type').eq('user_id', user.id).single();
   subscription = subData;
+
+  // --- ÚJ: ELLENŐRIZZÜK A PREMIUM STÁTUSZT ---
+  const isPremium = subscription?.plan_type === 'pro' || subscription?.plan_type === 'lifetime' || subscription?.plan_type === 'founder';
 
   const { data: carsData } = await supabase
       .from('cars')
@@ -338,7 +341,7 @@ async function DashboardComponent() {
                   Drive<span className="text-amber-500">Sync</span>
                 </span>
               </Link>
-              
+              <Link href="/pricing" className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors">Csomagok</Link>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
@@ -552,6 +555,50 @@ async function DashboardComponent() {
             </div>
 
             <div className="lg:col-span-4 space-y-8">
+              
+              {/* --- ÚJ: KÖZÖSSÉG WIDGET (CSAK PRO/LIFETIME) --- */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900 to-slate-900 border border-blue-800 p-6 shadow-xl group">
+                  <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/30 transition-all"></div>
+                  <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-20 h-20 bg-purple-500/20 rounded-full blur-2xl"></div>
+                  
+                  <div className="relative z-10">
+                      <div className="flex justify-between items-start mb-4">
+                          <div className="p-3 bg-blue-600/20 border border-blue-500/30 rounded-xl text-blue-400">
+                              <Users className="w-6 h-6" />
+                          </div>
+                          {isPremium ? (
+                              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded border border-emerald-500/30 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> AKTÍV
+                              </span>
+                          ) : (
+                              <span className="bg-amber-500/20 text-amber-400 text-[10px] font-bold px-2 py-1 rounded border border-amber-500/30 flex items-center gap-1">
+                                  <Lock className="w-3 h-3" /> PRO
+                              </span>
+                          )}
+                      </div>
+
+                      <h3 className="text-xl font-bold text-white mb-1">DriveSync Klub</h3>
+                      <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+                          Csatlakozz a márkaklubokhoz, beszélgess szerelőkkel és add el felesleges alkatrészeidet a piactéren!
+                      </p>
+
+                      <Link 
+                          href={isPremium ? "/community" : "/pricing"} 
+                          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-95 ${
+                              isPremium 
+                              ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/20' 
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                          }`}
+                      >
+                          {isPremium ? (
+                              <>Belépés a Chatbe <ArrowRight className="w-4 h-4" /></>
+                          ) : (
+                              <>Feloldás (Csomagváltás) <Lock className="w-3 h-3" /></>
+                          )}
+                      </Link>
+                  </div>
+              </div>
+
               {FEATURES.gamification && <GamificationWidget badges={badges} />}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                   {FEATURES.weather && <WeatherWidget />}
@@ -710,17 +757,16 @@ export default async function Page({
 }) {
   const supabase = await createClient()
   
-  // 1. Check Auth
+  // 1. Megnézzük, van-e bejelentkezett felhasználó
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 2. HA VAN USER -> Irány a Dashboard
+  // 2. HA VAN USER -> Irány a Dashboard (Promóció itt NEM kell, mert már regisztrált)
   if (user) {
     return <DashboardComponent />
   }
 
-  // 3. HA NINCS USER -> Adatok a Landing Page-hez
-  
-  // A: Aktív Promóció
+  // 3. HA NINCS USER (Vendég) -> Lekérjük az aktív promóciót
+  // maybeSingle() biztosítja, hogy ne dobjon hibát, ha nincs adat
   const { data: activePromo } = await supabase
     .from('promotions')
     .select('*')
@@ -729,21 +775,20 @@ export default async function Page({
     .limit(1)
     .maybeSingle()
 
-  // B: Frissítési Napló (Changelog) - ha nincs tábla, üres tömb lesz
-  // Feltételezzük, hogy van 'release_notes' tábla. Ha nincs, ez a rész nem omlik össze, csak hiba esetén üres lesz.
+  // 4. Frissítési Napló (Changelog) - ha nincs tábla, üres tömb lesz
   const { data: updates } = await supabase
     .from('release_notes')
     .select('*')
     .order('release_date', { ascending: false })
     .limit(5);
 
-  // 4. Fejlesztői mód ellenőrzése
+  // 5. Fejlesztői mód ellenőrzése
   const params = await searchParams
   const secret = params.dev
   if (secret === DEV_SECRET_KEY) {
     return <DashboardComponent />
   }
 
-  // 5. Megjelenítjük a Landing Page-et
+  // 6. Megjelenítjük a Landing Page-et a promócióval
   return <LandingPage promo={activePromo} updates={updates || []} />
 }
