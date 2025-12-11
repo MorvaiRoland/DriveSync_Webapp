@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 
+// --- STRIPE PRICING ID-K ---
 const PRICES = {
-  monthly: 'price_1Sd8zXRbHGQdHUF4vMQbDKjt', 
-  yearly: 'price_1Sd8zyRbHGQdHUF4mutCgwbV',  
-  lifetime: 'price_1Sd90LRbHGQdHUF4SWmp0rJM' 
+  monthly: 'price_1SdCk0RbHGQdHUF43GXUsPsO', 
+  yearly: 'price_1SdCjkRbHGQdHUF4NnDKAbB1',  
+  lifetime: 'price_1SdCjORbHGQdHUF41kwudj8m' 
 }
 
 export default function PricingClient({ initialPlan }: { initialPlan: string }) {
@@ -62,13 +63,15 @@ export default function PricingClient({ initialPlan }: { initialPlan: string }) 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-amber-500/30 pb-32 relative overflow-hidden">
       
-      {/* ... Háttér és Navigáció (Marad változatlan) ... */}
+      {/* Háttér effektek */}
       <div className="fixed inset-0 pointer-events-none">
           <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-amber-500/10 rounded-full blur-[120px] animate-pulse-slow"></div>
           <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[100px]"></div>
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
       </div>
-      <nav className="relative z-50 p-6 flex justify-between items-center max-w-7xl mx-auto">
+
+      {/* Navigáció */}
+      <nav className="relative z-50 p-6 flex justify-between items-center max-w-7xl mx-auto border-b border-white/5 bg-slate-900/50 backdrop-blur-md sticky top-0">
         <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-bold text-sm group bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/5 backdrop-blur-md">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 
             <span>Vissza a garázshoz</span>
@@ -83,21 +86,47 @@ export default function PricingClient({ initialPlan }: { initialPlan: string }) 
         
         {/* Fejléc */}
         <div className="text-center max-w-3xl mx-auto mb-20 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          {/* ... (Fejléc tartalom) ... */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-widest mb-8 shadow-lg shadow-amber-500/5 backdrop-blur-sm">
              <Sparkles className="w-3 h-3" /> Prémium Tagság
           </div>
+          
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-6 tracking-tight leading-[1.1]">
             Válassz csomagot, <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-500 to-orange-500">növeld az autód értékét.</span>
           </h1>
           
-          <div className="inline-flex bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 shadow-2xl relative backdrop-blur-md">
-            <button onClick={() => setBillingCycle('monthly')} className={`px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 relative z-10 ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>Havi</button>
-            <button onClick={() => setBillingCycle('yearly')} className={`px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 relative z-10 ${billingCycle === 'yearly' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}>
-                Éves <span className="ml-1.5 text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase tracking-wide">-20%</span>
-            </button>
-            <div className={`absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-slate-700/80 rounded-xl transition-all duration-300 shadow-sm border border-white/5 ${billingCycle === 'monthly' ? 'left-1.5' : 'left-[calc(50%+3px)]'}`}></div>
+          <p className="text-slate-400 mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-light">
+            A DriveSync Pro nem csak kényelem, hanem befektetés. Egy pontosan vezetett digitális szervizkönyv milliókkal növelheti az eladási árat.
+          </p>
+          
+          {/* JAVÍTOTT BILLING TOGGLE */}
+          <div className="flex justify-center">
+            <div className="bg-slate-900 p-1.5 rounded-2xl border border-slate-800 shadow-2xl relative inline-flex">
+                {/* A mozgó háttér */}
+                <div 
+                    className={`absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-slate-700/80 rounded-xl shadow-sm border border-white/5 transition-all duration-300 ease-in-out z-0`}
+                    style={{ 
+                        left: billingCycle === 'monthly' ? '6px' : 'calc(50%)',
+                        width: 'calc(50% - 6px)'
+                    }}
+                ></div>
+                
+                <button 
+                    onClick={() => setBillingCycle('monthly')} 
+                    className={`relative z-10 px-8 py-3 rounded-xl text-sm font-bold transition-colors duration-300 min-w-[140px] ${billingCycle === 'monthly' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    Havi
+                </button>
+                <button 
+                    onClick={() => setBillingCycle('yearly')} 
+                    className={`relative z-10 px-8 py-3 rounded-xl text-sm font-bold transition-colors duration-300 min-w-[140px] flex items-center justify-center gap-2 ${billingCycle === 'yearly' ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                    Éves 
+                    <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase tracking-wide leading-none">
+                        -20%
+                    </span>
+                </button>
+            </div>
           </div>
         </div>
 
@@ -123,11 +152,10 @@ export default function PricingClient({ initialPlan }: { initialPlan: string }) 
             highlight
             features={['Korlátlan autó', 'AI Szerelő (GPT-4o) 🤖', 'Digitális Kesztyűtartó 📂', 'Részletes statisztikák 📊', 'Excel & PDF Exportálás']}
             buttonText={isActive('pro') ? "Jelenlegi csomag" : "Kipróbálom"}
-            disabled={isActive('pro')} // Ha aktív, akkor a fő gomb inaktív
+            disabled={isActive('pro')} 
             isCurrent={isActive('pro')}
             isLoading={loadingId === (billingCycle === 'monthly' ? PRICES.monthly : PRICES.yearly)}
             onClick={() => handleCheckout(billingCycle === 'monthly' ? PRICES.monthly : PRICES.yearly, 'subscription')}
-            // JAVÍTÁS: Átadjuk a lemondás függvényt a kártyának
             onManage={manageSubscription} 
             loadingManage={loadingPortal}
             delay={200}
@@ -138,7 +166,8 @@ export default function PricingClient({ initialPlan }: { initialPlan: string }) 
             price="14.999 Ft" 
             desc="Egyszeri befektetés. Nincs több havidíj soha."
             period=""
-            features={['Minden Pro funkció örökre', 'Örökös frissítések', 'Nincs havidíj soha', 'VIP Támogatás', 'Egyedi "Founder" jelvény 🚀']}
+            // JAVÍTVA: Founder helyett Lifetime jelvény
+            features={['Minden Pro funkció örökre', 'Örökös frissítések', 'Nincs havidíj soha', 'VIP Támogatás', 'Egyedi "Lifetime" jelvény 🚀']}
             buttonText={isActive('lifetime') ? "Megvásárolva ✅" : "Megveszem örökre"}
             disabled={isActive('lifetime')}
             isCurrent={isActive('lifetime')}
@@ -151,8 +180,22 @@ export default function PricingClient({ initialPlan }: { initialPlan: string }) 
           />
         </div>
         
-        {/* Footer Info */}
-        {/* ... (Marad változatlan) ... */}
+        <div className="mt-24 text-center border-t border-white/5 pt-12 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
+            <div className="flex justify-center gap-6 mb-6 opacity-50 grayscale hover:grayscale-0 hover:opacity-80 transition-all duration-500">
+                <div className="h-8 w-12 bg-white/10 rounded border border-white/10 flex items-center justify-center text-[8px] font-bold">VISA</div>
+                <div className="h-8 w-12 bg-white/10 rounded border border-white/10 flex items-center justify-center text-[8px] font-bold">MC</div>
+                <div className="h-8 w-12 bg-white/10 rounded border border-white/10 flex items-center justify-center text-[8px] font-bold">AMEX</div>
+            </div>
+            <p className="text-slate-500 text-xs leading-relaxed flex flex-col items-center gap-2">
+                <span className="flex items-center gap-1.5 text-slate-400 font-medium">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    Biztonságos fizetés a Stripe rendszerén keresztül.
+                </span>
+                A DriveSync szerverei semmilyen bankkártyaadatot nem tárolnak. <br/>
+                Az előfizetés bármikor, egy kattintással lemondható a beállításokban.
+                A feltüntetett árak tartalmazzák az ÁFÁ-t.
+            </p>
+        </div>
       </div>
     </div>
   )
@@ -173,7 +216,23 @@ function PricingCard({ title, price, period, desc, features, highlight, buttonTe
         `}
         style={{ animationDelay: `${delay}ms` }}
     >
-      {/* ... (Badgek maradnak) ... */}
+      {highlight && !isCurrent && (
+        <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-600 text-slate-900 text-xs font-black px-6 py-2 rounded-full uppercase tracking-wider shadow-lg shadow-amber-500/20 whitespace-nowrap flex items-center gap-1.5">
+            <Zap className="w-3 h-3 fill-slate-900" /> Legnépszerűbb
+        </div>
+      )}
+
+      {specialBorder && !isCurrent && (
+        <div className="absolute -top-3 right-8 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+            Best Value
+        </div>
+      )}
+      
+      {isCurrent && (
+         <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-900 text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg shadow-emerald-500/20 whitespace-nowrap flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 stroke-[3px]" /> Aktív Csomag
+         </div>
+      )}
       
       <div className="mb-8">
           <h3 className={`text-xl font-bold mb-3 tracking-tight ${highlight ? 'text-white' : 'text-slate-200'}`}>{title}</h3>
@@ -203,19 +262,18 @@ function PricingCard({ title, price, period, desc, features, highlight, buttonTe
         {buttonText}
       </button>
 
-      {/* JAVÍTÁS: Külön Lemondás/Kezelés gomb az aktív kártyán */}
+      {/* Külön Lemondás/Kezelés gomb az aktív kártyán */}
       {isCurrent && onManage && (
           <button 
             onClick={onManage}
             disabled={loadingManage}
-            className="w-full py-2 mb-6 text-xs font-bold text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2 hover:bg-white/5 rounded-xl"
+            className="w-full py-2 mb-6 text-xs font-bold text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-2 hover:bg-white/5 rounded-xl border border-white/5"
           >
              {loadingManage ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
              Előfizetés kezelése / Lemondás
           </button>
       )}
       
-      {/* ... (Features lista marad) ... */}
       <div className="space-y-4 flex-1">
         {features.map((f: string, i: number) => (
           <div key={i} className="flex items-start gap-3 text-sm group">
