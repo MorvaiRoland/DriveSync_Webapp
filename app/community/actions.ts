@@ -101,13 +101,31 @@ export async function startDMAction(formData: FormData) {
 
     const email = formData.get('email') as string
     
-    // User keresése
-    const { data: users } = await supabase.rpc('get_user_id_by_email', { email_input: email })
-    if (!users || users.length === 0) return { error: 'Nem található felhasználó.' }
-    
-    const partnerId = users[0].id
-    if (partnerId === user.id) return { error: 'Magadnak nem írhatsz.' }
+    // 1. User keresése az új RPC függvénnyel
+    // Ez most már működni fog, mert a szerver oldali SQL függvénynek van joga olvasni
+    const { data: foundUsers, error } = await supabase.rpc('get_user_by_email', { 
+        email_input: email.trim() 
+    })
 
-    // Átirányítás a DM felületre (URL paraméterrel)
+    if (error) {
+        console.error('RPC Hiba:', error)
+        return { error: 'Hiba történt a keresés közben.' }
+    }
+
+    if (!foundUsers || foundUsers.length === 0) {
+        return { error: 'Nem található felhasználó ezzel az email címmel.' }
+    }
+    
+    const partnerId = foundUsers[0].id
+
+    // 2. Ellenőrzés: Ne írhass magadnak
+    if (partnerId === user.id) {
+        return { error: 'Magadnak nem küldhetsz üzenetet.' }
+    }
+
+    // 3. Ellenőrzés: Létezik-e már beszélgetés? (Opcionális, de szép)
+    // Megnézzük, váltottatok-e már üzenetet, hogy ne navigáljunk üresre feleslegesen,
+    // de a jelenlegi logikánk szerint a chat ablak úgyis betölti az üreset, szóval ez mehet tovább.
+
     return { success: true, partnerId: partnerId }
 }
