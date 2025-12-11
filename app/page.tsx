@@ -376,9 +376,10 @@ async function DashboardComponent() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
             {/* --- BAL OSZLOP (8/12) --- */}
+           {/* --- BAL OSZLOP (8/12) --- */}
             <div className="lg:col-span-8 space-y-10">
               
-              {/* 1. GYORS KM NAPLÓZÁS (Feature Flag + Van autó) */}
+              {/* 1. GYORS KM NAPLÓZÁS (Csak ha van saját autó) */}
               {FEATURES.mileageLog && myCars.length > 0 && (
                   <div className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 text-white border border-slate-700 relative overflow-hidden group">
                       <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none group-hover:bg-white/10 transition-colors duration-500"></div>
@@ -418,8 +419,9 @@ async function DashboardComponent() {
                   </div>
               )}
 
-             {/* --- 2. SAJÁT AUTÓK LISTÁJA --- */}
-              {myCars.length > 0 && (
+              {/* --- 2. SAJÁT AUTÓK LISTÁJA (JAVÍTVA) --- */}
+              {/* Akkor is megjelenítjük, ha nincs saját autó, de a hozzáadás engedélyezve van, VAGY ha van megosztott autó (hogy ne legyen üres a tér) */}
+              {(myCars.length > 0 || FEATURES.addCar || sharedCars.length > 0) && (
                   <div className="space-y-4">
                       <div className="flex justify-between items-end px-1">
                           <h3 className="font-bold text-slate-900 dark:text-white text-xl flex items-center gap-2">
@@ -432,11 +434,12 @@ async function DashboardComponent() {
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Saját autók listázása */}
                           {myCars.map((car) => (
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {/* JAVÍTÁS: Mindig megjelenítjük a kártyát, ha a feature be van kapcsolva */}
+                          {/* ÚJ AUTÓ KÁRTYA (JAVÍTVA: Mindig látszik, ha a feature be van kapcsolva) */}
                           {FEATURES.addCar && (
                              <Link 
                                href={canAddCar ? "/cars/new" : "/pricing"} 
@@ -485,17 +488,10 @@ async function DashboardComponent() {
                   </div>
               )}
 
-              {/* HA MINDEN ÜRES */}
-              {cars.length === 0 && (
+              {/* HA MINDEN ÜRES ÉS A HOZZÁADÁS IS KI VAN KAPCSOLVA (Ritka eset) */}
+              {cars.length === 0 && !FEATURES.addCar && (
                   <div className="bg-white dark:bg-slate-800 p-16 rounded-3xl border border-slate-200 dark:border-slate-700 text-center shadow-lg">
-                      <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center mx-auto mb-6 text-amber-500">
-                          <Warehouse className="w-10 h-10" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">A garázsod még üres</h3>
-                      <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">Adj hozzá egy autót, hogy elkezdhesd követni a költségeket, a fogyasztást és a szerviz intervallumokat.</p>
-                      <Link href="/cars/new" className="inline-flex items-center gap-2 bg-amber-500 text-slate-900 px-8 py-3 rounded-xl font-bold hover:bg-amber-400 transition-all shadow-lg hover:shadow-amber-500/25 transform hover:-translate-y-1">
-                          Első autó felvétele
-                      </Link>
+                       <p className="text-slate-500">Nincs megjeleníthető autó.</p>
                   </div>
               )}
 
