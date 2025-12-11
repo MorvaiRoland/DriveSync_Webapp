@@ -4,6 +4,7 @@ import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner"; 
 import CookieBanner from '@/components/CookieBanner'
+import InstallPrompt from '@/components/InstallPrompt' // Import hozzáadva
 
 export const viewport: Viewport = {
   themeColor: "#0f172a",
@@ -14,7 +15,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  // FONTOS: Ez kell, hogy a '/icons/...' útvonalak teljes URL-ek legyenek (pl. https://drivesync-hungary.hu/icons/...)
+  // FONTOS: Ez kell, hogy a '/icons/...' útvonalak teljes URL-ek legyenek
   metadataBase: new URL('https://drivesync-hungary.hu'),
   
   title: {
@@ -34,7 +35,6 @@ export const metadata: Metadata = {
   },
   
   icons: {
-    // A favicon.ico-t mindig a gyökérbe keresik a böngészők, ne tedd az icons mappába, hagyd a public mappában!
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
       { url: '/icons/icon-512.png', type: 'image/png' },
@@ -61,7 +61,6 @@ export const metadata: Metadata = {
     ],
   },
   
-  // Twitter kártya beállítások
   twitter: {
     card: 'summary_large_image',
     title: "DriveSync - Prémium Garázsmenedzsment",
@@ -70,6 +69,7 @@ export const metadata: Metadata = {
   },
 };
 
+// CSAK EGY RootLayout függvény maradt, amiben minden benne van:
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -84,9 +84,15 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            {/* A fő tartalom */}
             {children}
+            
+            {/* UI Komponensek */}
             <Toaster position="top-center" richColors closeButton />
             <CookieBanner />
+            <InstallPrompt /> {/* ITT VAN: A telepítés ablak */}
+            
+            {/* Technikai komponensek */}
             <RegisterSW />
         </ThemeProvider>
       </body>
