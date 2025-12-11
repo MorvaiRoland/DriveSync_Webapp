@@ -267,7 +267,7 @@ async function DashboardComponent() {
 
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-32 transition-colors duration-300 selection:bg-amber-500/30">
-      <SuccessModal />
+      
       {/* Feature Flag: AI Szerelő (csak Pro/Founder csomagban) */}
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       
@@ -287,10 +287,10 @@ async function DashboardComponent() {
                   Drive<span className="text-amber-500">Sync</span>
                 </span>
               </Link>
-             
+              <Link href="/pricing" className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors">Csomagok</Link>
             </div>
             <div className="flex items-center gap-4">
-              {/* JAVÍTOTT Előfizetés Badge - Most már kezeli a Lifetime-ot is */}
+              {/* Előfizetés Badge (Desktop) */}
               <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
                   subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime' 
                     ? 'bg-amber-500/10 border-amber-500/50 text-amber-500 hover:bg-amber-500/20' 
@@ -305,7 +305,6 @@ async function DashboardComponent() {
                     subscription?.plan_type === 'pro' ? 'Pro' : 'Starter'
                   }
               </Link>
-              
               <Link href="/settings" className="rounded-full bg-white/10 text-white p-2 hover:bg-white/20 transition-colors" title="Beállítások">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
               </Link>
@@ -329,19 +328,27 @@ async function DashboardComponent() {
                   <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">
                       {user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]}
                   </h1>
+                  {/* JAVÍTOTT MOBIL BADGE - Minden csomagot lekezel */}
                   <span className={`sm:hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border align-middle ${
-                      subscription?.plan_type === 'founder' ? 'bg-amber-500 text-white border-amber-600' : 'bg-slate-700 text-slate-300 border-slate-600'
+                      subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime' 
+                      ? 'bg-amber-500 text-white border-amber-600' 
+                      : subscription?.plan_type === 'pro'
+                      ? 'bg-blue-500 text-white border-blue-600'
+                      : 'bg-slate-700 text-slate-300 border-slate-600'
                   }`}>
-                      {subscription?.plan_type === 'founder' ? 'Founder' : 'Free'}
+                      {
+                        subscription?.plan_type === 'founder' ? 'Founder' : 
+                        subscription?.plan_type === 'lifetime' ? 'Lifetime' :
+                        subscription?.plan_type === 'pro' ? 'Pro' : 'Starter'
+                      }
                   </span>
               </div>
             </div>
 
-            {/* Jobb oldal: Metrics Kártya */}
+            {/* ... (Többi rész változatlan) ... */}
             {cars.length > 0 && (
                 <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-6 bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700">
-                    
-                    {/* Flotta Egészség */}
+                    {/* ... (Metrics tartalom változatlan) ... */}
                     <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-6">
                         <div className="text-left sm:text-right">
                           <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Flotta Egészség</p>
@@ -356,8 +363,6 @@ async function DashboardComponent() {
                            </svg>
                         </div>
                     </div>
-
-                    {/* 30 Napos Kiadás + Trend */}
                     <div className="flex-1 flex items-center justify-between sm:justify-start gap-4 sm:pl-2">
                         <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -384,10 +389,9 @@ async function DashboardComponent() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
             {/* --- BAL OSZLOP (8/12) --- */}
-           {/* --- BAL OSZLOP (8/12) --- */}
             <div className="lg:col-span-8 space-y-10">
               
-              {/* 1. GYORS KM NAPLÓZÁS (Csak ha van saját autó) */}
+              {/* 1. GYORS KM NAPLÓZÁS */}
               {FEATURES.mileageLog && myCars.length > 0 && (
                   <div className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 text-white border border-slate-700 relative overflow-hidden group">
                       <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none group-hover:bg-white/10 transition-colors duration-500"></div>
@@ -427,8 +431,7 @@ async function DashboardComponent() {
                   </div>
               )}
 
-              {/* --- 2. SAJÁT AUTÓK LISTÁJA (JAVÍTVA) --- */}
-              {/* Akkor is megjelenítjük, ha nincs saját autó, de a hozzáadás engedélyezve van, VAGY ha van megosztott autó (hogy ne legyen üres a tér) */}
+              {/* --- 2. SAJÁT AUTÓK LISTÁJA --- */}
               {(myCars.length > 0 || FEATURES.addCar || sharedCars.length > 0) && (
                   <div className="space-y-4">
                       <div className="flex justify-between items-end px-1">
@@ -442,12 +445,11 @@ async function DashboardComponent() {
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Saját autók listázása */}
                           {myCars.map((car) => (
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {/* ÚJ AUTÓ KÁRTYA (JAVÍTVA: Mindig látszik, ha a feature be van kapcsolva) */}
+                          {/* ÚJ AUTÓ KÁRTYA */}
                           {FEATURES.addCar && (
                              <Link 
                                href={canAddCar ? "/cars/new" : "/pricing"} 
@@ -604,7 +606,6 @@ async function DashboardComponent() {
                     </div>
                 </div>
               )}
-
             </div>
         </div>
       </div>
