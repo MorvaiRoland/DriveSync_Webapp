@@ -46,12 +46,15 @@ export async function POST(req: Request) {
           quantity: 1,
         },
       ],
-      mode: mode,
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?success=true`,
+      mode: mode, // 'subscription' vagy 'payment'
+      
+      // JAVÍTÁS: Itt már az új /payment-success oldalra irányítunk!
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment-success`,
+      
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/pricing?canceled=true`,
       customer_email: user.email,
       metadata: {
-        userId: user.id,
+        userId: user.id, // FONTOS: Ez alapján azonosítjuk a felhasználót a webhookban
       },
     })
 

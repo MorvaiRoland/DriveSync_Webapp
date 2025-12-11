@@ -1,28 +1,37 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import confetti from 'canvas-confetti'
 import { Check, X, Rocket, Sparkles } from 'lucide-react'
 
-export default function SuccessModal() {
+// Külön komponens a logikához (hogy a Suspense működjön)
+function SuccessContent() {
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
-    // Ellenőrizzük, hogy sikeres fizetés után vagyunk-e
-    if (searchParams.get('success') === 'true') {
+    // Ha a success paraméter true, VAGY ha a /payment-success oldalon vagyunk
+    if (searchParams.get('success') === 'true' || pathname === '/payment-success') {
       setIsOpen(true)
       triggerConfetti()
+      
+      // Ha query paraméter volt, tisztítsuk meg az URL-t, hogy ne maradjon ott
+      if (searchParams.get('success')) {
+        const newUrl = window.location.pathname
+        window.history.replaceState({}, '', newUrl)
+      }
     }
-  }, [searchParams])
+  }, [searchParams, pathname])
 
   const handleClose = () => {
     setIsOpen(false)
-    // Eltávolítjuk a query paramétert az URL-ből újratöltés nélkül
-    const newUrl = window.location.pathname
-    window.history.replaceState({}, '', newUrl)
+    // Ha a payment-success oldalon vagyunk, vigyük vissza a főoldalra
+    if (pathname === '/payment-success') {
+        router.push('/')
+    }
   }
 
   const triggerConfetti = () => {
@@ -41,7 +50,6 @@ export default function SuccessModal() {
 
       const particleCount = 50 * (timeLeft / duration)
       
-      // Konfetti két oldalról
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } })
       confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } })
     }, 250)
@@ -50,33 +58,36 @@ export default function SuccessModal() {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
       {/* Sötét háttér elmosással */}
       <div 
-        className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" 
+        className="absolute inset-0 bg-slate-950/90 backdrop-blur-md transition-opacity" 
         onClick={handleClose}
       />
 
       {/* Modal Ablak */}
-      <div className="relative w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.2)] overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-md bg-slate-900 border-2 border-amber-500/30 rounded-[2rem] shadow-[0_0_80px_rgba(245,158,11,0.3)] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
         
         {/* Dekorációs háttér fény */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-gradient-to-b from-amber-500/20 to-transparent blur-2xl pointer-events-none"></div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-48 bg-gradient-to-b from-amber-500/20 to-transparent blur-3xl pointer-events-none"></div>
 
-        <div className="relative p-8 text-center">
+        <div className="relative p-8 text-center flex flex-col items-center">
             
             {/* Ikon */}
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-amber-500/20">
-                <Rocket className="w-10 h-10 text-white animate-pulse" />
+            <div className="w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center mb-6 shadow-xl shadow-amber-500/30 border-4 border-slate-900 z-10 relative">
+                <Rocket className="w-12 h-12 text-white animate-bounce-slow" strokeWidth={2.5} />
+                <div className="absolute -top-2 -right-2 bg-white text-slate-900 p-1.5 rounded-full shadow-lg animate-pulse">
+                    <Sparkles className="w-4 h-4 fill-current" />
+                </div>
             </div>
 
-            <h2 className="text-3xl font-black text-white mb-2">Gratulálunk! 🚀</h2>
-            <p className="text-slate-400 mb-8">
-              Sikeresen aktiváltad a prémium tagságodat. A garázsod mostantól szuperképességekkel rendelkezik.
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">Gratulálunk! <span className="text-amber-500">🚀</span></h2>
+            <p className="text-slate-400 mb-8 font-medium leading-relaxed">
+              Sikeresen aktiváltad a prémium tagságodat.<br/> A garázsod mostantól szuperképességekkel rendelkezik.
             </p>
 
             {/* Funkciók lista */}
-            <div className="bg-slate-950/50 rounded-2xl p-5 mb-8 border border-white/5 text-left space-y-3">
+            <div className="w-full bg-slate-950/60 rounded-2xl p-6 mb-8 border border-white/5 text-left space-y-3.5 backdrop-blur-sm">
                 <FeatureItem text="Korlátlan számú autó kezelése" />
                 <FeatureItem text="AI Szerelő asszisztens (GPT-4o)" />
                 <FeatureItem text="Digitális okmánytár" />
@@ -85,7 +96,7 @@ export default function SuccessModal() {
 
             <button 
                 onClick={handleClose}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-900 font-bold text-lg shadow-lg shadow-amber-500/20 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-900 font-black text-lg shadow-lg shadow-amber-500/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] uppercase tracking-wide"
             >
                 Király, indulás!
             </button>
@@ -94,9 +105,9 @@ export default function SuccessModal() {
         {/* Bezáró X gomb */}
         <button 
             onClick={handleClose}
-            className="absolute top-4 right-4 p-2 text-slate-500 hover:text-white transition-colors"
+            className="absolute top-4 right-4 p-2 text-slate-500 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-full backdrop-blur-md"
         >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
         </button>
       </div>
     </div>
@@ -105,11 +116,20 @@ export default function SuccessModal() {
 
 function FeatureItem({ text }: { text: string }) {
     return (
-        <div className="flex items-start gap-3">
-            <div className="mt-0.5 w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                <Check className="w-3 h-3 text-emerald-500" strokeWidth={3} />
+        <div className="flex items-center gap-3 group">
+            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/30 transition-colors">
+                <Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={4} />
             </div>
-            <span className="text-slate-300 text-sm font-medium">{text}</span>
+            <span className="text-slate-300 text-sm font-semibold group-hover:text-white transition-colors">{text}</span>
         </div>
+    )
+}
+
+// Fő export (Suspense-be csomagolva a biztonság kedvéért)
+export default function SuccessModal() {
+    return (
+        <Suspense fallback={null}>
+            <SuccessContent />
+        </Suspense>
     )
 }
