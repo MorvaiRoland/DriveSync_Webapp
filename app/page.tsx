@@ -13,6 +13,7 @@ import SubscribeForm from '@/components/SubscribeForm'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
 import { History, Fuel, Wrench, Lock, Plus, Warehouse, Pencil } from 'lucide-react';
 import FuelWidget from '@/components/FuelWidget';
+import SuccessModal from '@/components/SuccessModal'
 
 // --- KONFIGURÁCIÓ ---
 const DEV_SECRET_KEY = "admin"; 
@@ -266,7 +267,7 @@ async function DashboardComponent() {
 
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-32 transition-colors duration-300 selection:bg-amber-500/30">
-      
+      <SuccessModal />
       {/* Feature Flag: AI Szerelő (csak Pro/Founder csomagban) */}
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       
