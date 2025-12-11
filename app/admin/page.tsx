@@ -17,34 +17,30 @@ async function updateSubscriptionPlan(formData: FormData) {
 
   if (!userId || !newPlan) return;
 
-  // Admin kliens létrehozása (írni is tud)
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Előfizetés frissítése
   const { error } = await supabaseAdmin
     .from('subscriptions')
     .upsert({ 
         user_id: userId, 
         plan_type: newPlan,
         status: 'active',
-        // updated_at: new Date().toISOString() // Opcionális, ha van ilyen oszlopod
+        // updated_at: new Date().toISOString() 
     }, { onConflict: 'user_id' })
 
   if (error) {
       console.error("Admin update error:", error)
   }
 
-  // FONTOS: Ez utasítja a Next.js-t, hogy frissítse az oldalt
   revalidatePath('/admin') 
 }
 
 // --- FŐ KOMPONENS ---
 export default async function AdminDashboard() {
   
-  // 1. Biztonsági ellenőrzés (Be van-e lépve és admin-e?)
   const authSupabase = await createAuthClient()
   const { data: { user } } = await authSupabase.auth.getUser()
 
@@ -52,10 +48,9 @@ export default async function AdminDashboard() {
   const allowedEmails = allowedEmailsEnv.split(',').map(email => email.trim());
 
   if (!user || !user.email || !allowedEmails.includes(user.email)) {
-    return notFound() // Ha nem admin, 404-et kap
+    return notFound() 
   }
 
-  // 2. Adatok lekérése (Admin joggal)
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -73,7 +68,6 @@ export default async function AdminDashboard() {
   const subscriptions = subsRes.data || []
   const allUsers = usersRes.data.users || []
 
-  // 3. Adatok összefésülése (User + Subscription)
   const userList = allUsers.map(u => {
       const sub = subscriptions.find(s => s.user_id === u.id);
       return {
@@ -85,13 +79,13 @@ export default async function AdminDashboard() {
       }
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  // 4. Statisztikák számolása
   const totalRegisteredUsers = userList.length
   const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0)
   
-  const founderCount = userList.filter(u => u.plan === 'founder').length
+  // JAVÍTÁS: founder -> lifetime
+  const lifetimeCount = userList.filter(u => u.plan === 'lifetime').length
   const proCount = userList.filter(u => u.plan === 'pro').length
-  const proRate = totalRegisteredUsers > 0 ? Math.round(((founderCount + proCount) / totalRegisteredUsers) * 100) : 0
+  const proRate = totalRegisteredUsers > 0 ? Math.round(((lifetimeCount + proCount) / totalRegisteredUsers) * 100) : 0
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans p-4 md:p-8">
@@ -125,7 +119,7 @@ export default async function AdminDashboard() {
             </div>
             <div className="flex justify-between items-end">
                <div className="flex gap-2">
-                  <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20 font-bold">{founderCount} 🚀</span>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20 font-bold">{lifetimeCount} 🚀</span>
                   <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20 font-bold">{proCount} PRO</span>
                </div>
                <p className="text-xs text-slate-500 font-medium">{proRate}% Prémium</p>
@@ -163,11 +157,11 @@ export default async function AdminDashboard() {
                               </td>
                               <td className="px-6 py-4 text-center">
                                   <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold border ${
-                                      u.plan === 'founder' ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' :
+                                      u.plan === 'lifetime' ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' :
                                       u.plan === 'pro' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' :
                                       'bg-slate-800 border-slate-700 text-slate-400'
                                   }`}>
-                                      {u.plan === 'founder' && '🚀 '}
+                                      {u.plan === 'lifetime' && '🚀 '}
                                       {u.plan.toUpperCase()}
                                   </span>
                               </td>
@@ -181,7 +175,7 @@ export default async function AdminDashboard() {
                                       >
                                           <option value="free">Free</option>
                                           <option value="pro">Pro</option>
-                                          <option value="founder">Founder</option>
+                                          <option value="lifetime">Lifetime</option>
                                       </select>
                                       <button type="submit" className="bg-white text-slate-900 hover:bg-amber-400 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
                                           Mentés
