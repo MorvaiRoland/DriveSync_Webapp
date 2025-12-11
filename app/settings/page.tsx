@@ -11,10 +11,19 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
+  // Előfizetés lekérdezése
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('plan_type, status, stripe_customer_id')
+    .eq('user_id', user.id)
+    .single()
+
   const meta = user.user_metadata || {}
   const settings = meta.settings || { notify_email: true, notify_push: false, theme: 'system' }
   const message = searchParams.success || searchParams.error
   const isError = !!searchParams.error
+
+  const currentPlan = subscription?.plan_type || 'free';
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300 pb-20">
@@ -28,10 +37,10 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
 
             <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6">
                 <div className="flex items-center justify-between mb-8">
-                     <Link href="/" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors text-sm font-bold uppercase tracking-wider">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                        Vissza a garázsba
-                    </Link>
+                      <Link href="/" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors text-sm font-bold uppercase tracking-wider">
+                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                         Vissza a garázsba
+                     </Link>
                     <form action={signOutAction}>
                         <button className="text-white/70 hover:text-white text-sm font-bold transition-colors">
                             Kijelentkezés
@@ -40,7 +49,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                 </div>
                 
                 <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">Fiókbeállítások</h1>
-                <p className="text-slate-400 max-w-xl">Kezeld a profilodat, a megjelenést és a biztonsági beállításokat egy helyen.</p>
+                <p className="text-slate-400 max-w-xl">Kezeld a profilodat, az előfizetést és a biztonsági beállításokat egy helyen.</p>
             </div>
         </div>
 
@@ -53,10 +62,23 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                 </div>
             )}
 
-            <SettingsDashboard user={user} meta={meta} settings={settings} />
+            <SettingsDashboard 
+                user={user} 
+                meta={meta} 
+                settings={settings} 
+                subscription={subscription} 
+            />
 
-            <div className="text-center mt-8 text-slate-400 text-xs font-mono">
-                DriveSync ID: {user.id.split('-')[0]}... • v2.0 Pro
+            {/* JOGI LINKEK A LÁBLÉCBEN */}
+            <div className="mt-12 border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col items-center gap-4">
+                <div className="flex gap-6 text-xs text-slate-500 font-medium">
+                    <Link href="/impressum" className="hover:text-slate-900 dark:hover:text-slate-300 transition-colors">Impresszum</Link>
+                    <Link href="/terms" className="hover:text-slate-900 dark:hover:text-slate-300 transition-colors">ÁSZF</Link>
+                    <Link href="/privacy" className="hover:text-slate-900 dark:hover:text-slate-300 transition-colors">Adatvédelem</Link>
+                </div>
+                <div className="text-slate-400 text-[10px] font-mono">
+                    DriveSync ID: {user.id.split('-')[0]}... • Plan: {currentPlan.toUpperCase()}
+                </div>
             </div>
         </div>
     </div>
