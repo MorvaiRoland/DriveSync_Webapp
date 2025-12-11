@@ -51,7 +51,7 @@ async function createPromotion(formData: FormData) {
         title,
         description,
         cta_text,
-        is_active: false // Alapból inaktív, majd te bekapcsolod
+        is_active: false // Alapból inaktív
     })
 
     revalidatePath(`/admin?key=${adminKey}`)
@@ -68,8 +68,6 @@ async function togglePromotion(formData: FormData) {
 
     const supabase = getAdminClient()
     
-    // Ha bekapcsoljuk ezt, érdemes lehet az összes többit kikapcsolni, 
-    // hogy egyszerre csak 1 promó fusson (opcionális, most nem tettem bele)
     await supabase.from('promotions').update({ is_active: !currentStatus }).eq('id', id)
 
     revalidatePath(`/admin?key=${adminKey}`)
@@ -96,18 +94,21 @@ async function deletePromotion(formData: FormData) {
 export default async function AdminDashboard({
   searchParams,
 }: {
-  searchParams: { key?: string };
+  searchParams: Promise<{ key?: string }>; // <--- JAVÍTVA: Promise típus
 }) {
   
   // --- BIZTONSÁG ---
-  const secretKey = searchParams?.key;
+  // A Promise feloldása (await)
+  const resolvedParams = await searchParams;
+  const secretKey = resolvedParams?.key;
+
   if (!secretKey || secretKey !== process.env.ADMIN_ACCESS_KEY) {
     return notFound();
   }
 
   const supabaseAdmin = getAdminClient()
 
-  // --- ADATLEKÉRÉS (Most már a promóciókat is lekérjük) ---
+  // --- ADATLEKÉRÉS ---
   const [carsRes, eventsRes, subsRes, usersRes, promosRes] = await Promise.all([
     supabaseAdmin.from('cars').select('id'),
     supabaseAdmin.from('events').select('id, type, cost, car_id'),
@@ -159,7 +160,6 @@ export default async function AdminDashboard({
 
       {/* KPI GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-         {/* ... (KPI kártyák változatlanok, csak a helytakarékosság miatt rövidítem itt) ... */}
          <KPICard title="Összes Tag" value={totalRegisteredUsers} subtitle={`${proRate}% Prémium`} color="blue" icon={<span className="text-2xl">👥</span>} />
          <KPICard title="Autók száma" value={cars.length} subtitle="Rögzített jármű" color="amber" icon={<span className="text-2xl">🚗</span>} />
          <KPICard title="Adatok" value={events.length} subtitle="Esemény sor" color="purple" icon={<span className="text-2xl">📊</span>} />
