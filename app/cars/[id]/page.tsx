@@ -71,7 +71,7 @@ export default async function CarDetailsPage(props: Props) {
 
   let plan: SubscriptionPlan = 'free';
   if (user) plan = await getSubscriptionStatus(user.id);
-  const isPro = plan === 'pro' || plan === 'founder';
+  const isPro = plan === 'pro' || plan === 'lifetime';
 
   // --- Calculations ---
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)

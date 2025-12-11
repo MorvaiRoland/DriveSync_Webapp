@@ -1,7 +1,7 @@
 import { createClient } from '@/supabase/server'
 
 // 1. Csomag típusok
-export type SubscriptionPlan = 'free' | 'pro' | 'founder';
+export type SubscriptionPlan = 'free' | 'pro' | 'lifetime';
 
 // 2. Beállítások interface
 interface PlanConfig {
@@ -28,7 +28,7 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanConfig> = {
     allowAi: true, // Pro csomagban engedélyezve
     allowReminders: true,
   },
-  founder: {
+  lifetime: {
     maxCars: 999,
     allowDocuments: true,
     allowExport: true,
@@ -48,7 +48,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   const isActive = data?.status === 'active' || data?.status === 'trialing';
   const planType = data?.plan_type as SubscriptionPlan;
 
-  if (isActive && (planType === 'pro' || planType === 'founder')) {
+  if (isActive && (planType === 'pro' || planType === 'lifetime')) {
       return planType;
   }
 
