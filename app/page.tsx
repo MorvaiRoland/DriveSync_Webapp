@@ -322,26 +322,30 @@ async function DashboardComponent() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             
             {/* Bal oldal: Üdvözlés */}
+           {/* Bal oldal: Üdvözlés */}
             <div>
               <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1">{greeting},</h2>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">
                       {user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]}
                   </h1>
-                  {/* JAVÍTOTT MOBIL BADGE - Minden csomagot lekezel */}
-                  <span className={`sm:hidden px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border align-middle ${
+                  
+                  {/* MOBIL BADGE - Mostmár kattintható LINK */}
+                  <Link 
+                    href="/pricing"
+                    className={`sm:hidden px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border align-middle flex items-center gap-1 transition-transform active:scale-95 ${
                       subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime' 
-                      ? 'bg-amber-500 text-white border-amber-600' 
+                      ? 'bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-500/20' 
                       : subscription?.plan_type === 'pro'
-                      ? 'bg-blue-500 text-white border-blue-600'
+                      ? 'bg-blue-500 text-white border-blue-600 shadow-lg shadow-blue-500/20'
                       : 'bg-slate-700 text-slate-300 border-slate-600'
                   }`}>
                       {
-                        subscription?.plan_type === 'founder' ? 'Founder' : 
-                        subscription?.plan_type === 'lifetime' ? 'Lifetime' :
-                        subscription?.plan_type === 'pro' ? 'Pro' : 'Starter'
+                        subscription?.plan_type === 'founder' ? 'Founder 🚀' : 
+                        subscription?.plan_type === 'lifetime' ? 'Lifetime 🚀' :
+                        subscription?.plan_type === 'pro' ? 'Pro ⚡' : 'Free'
                       }
-                  </span>
+                  </Link>
               </div>
             </div>
 
