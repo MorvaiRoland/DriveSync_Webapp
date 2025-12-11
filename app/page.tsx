@@ -175,7 +175,7 @@ function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
                     /* Ha nincs adatbázis adat, statikus placeholder */
                     <div className="relative pl-10">
                         <div className="absolute -left-[5px] top-2 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-amber-500 shadow-[0_0_10px_#f59e0b]"></div>
-                        <h3 className="text-lg font-bold text-white mb-1">DriveSync 1.0 Indulás 🚀</h3>
+                        <h3 className="text-lg font-bold text-white mb-1">DriveSync 1.8  🚀</h3>
                         <p className="text-slate-400 text-sm">Az alkalmazás hivatalosan elindult! AI funkciók, felhő szinkronizáció és modern design.</p>
                     </div>
                 )}
@@ -187,8 +187,8 @@ function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
                         <CheckCircle2 className="w-4 h-4" /> Hamarosan...
                     </h3>
                     <ul className="text-xs text-slate-500 list-disc list-inside">
-                        <li>OBDII Bluetooth integráció</li>
-                        <li>Exportálás PDF-be</li>
+                        <li></li>
+                        <li></li>
                     </ul>
                 </div>
             </div>
