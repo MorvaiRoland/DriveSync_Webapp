@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/supabase/client'
-import { Send, MoreVertical, Image as ImageIcon, Trash2, Smile, Loader2, ArrowLeft, Heart, UserPlus, Check } from 'lucide-react'
+import { Send, MoreVertical, Image as ImageIcon, Trash2, Smile, Loader2, ArrowLeft, Heart } from 'lucide-react'
 import Link from 'next/link'
-import { addFriendByIdAction } from '@/app/community/friend-actions'
 
-// Dátum formázó segédfüggvény
 const formatMessageDate = (dateString: string) => {
   const date = new Date(dateString)
   const now = new Date()
@@ -28,29 +26,27 @@ export default function ChatWindow({
   const [newMessage, setNewMessage] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [typingUsers, setTypingUsers] = useState<any[]>([])
-  const [friendStatus, setFriendStatus] = useState<'none' | 'sent'>('none') // Jelölés állapota
   
   const supabase = createClient()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const channelRef = useRef<any>(null)
 
-  // Görgetés az aljára
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" })
   }
 
-  // --- 1. ÜZENETEK BETÖLTÉSE ÉS REALTIME ---
+  // --- 1. ÜZENETEK BETÖLTÉSE & REALTIME ---
   useEffect(() => {
     setMessages([]) 
 
+    // A. Régi üzenetek lekérése
     const fetchMessages = async () => {
       let query = supabase.from(type === 'group' ? 'group_messages' : 'direct_messages').select('*')
       
       if (type === 'group') {
           query = query.eq('group_id', id)
       } else {
-          // DM: Én küldtem NEKI vagy Ő küldött NEKEM
           query = query.or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${id}),and(sender_id.eq.${id},receiver_id.eq.${currentUser.id})`)
       }
 
@@ -63,29 +59,37 @@ export default function ChatWindow({
     }
     fetchMessages()
 
-    // Realtime feliratkozás
-    const channel = supabase.channel(`chat_${id}`, {
-      config: { presence: { key: currentUser.id } }
-    })
+    // B. Realtime Beállítás
+    // Fontos: DM esetén nem szűrünk ID-ra a szerveren, mert bonyolult az OR logika,
+    // helyette minden bejövő DM-et megvizsgálunk kliens oldalon.
+    const tableName = type === 'group' ? 'group_messages' : 'direct_messages'
+    const filterConfig = type === 'group' ? `group_id=eq.${id}` : undefined
 
+    const channel = supabase.channel(`chat_${type}_${id}`)
+    
     channel
       .on('postgres_changes', 
         { 
             event: 'INSERT', 
             schema: 'public', 
-            table: type === 'group' ? 'group_messages' : 'direct_messages',
-            // Csoportnál szűrünk ID-ra, DM-nél kliens oldalon (l. lentebb)
-            filter: type === 'group' ? `group_id=eq.${id}` : undefined 
+            table: tableName,
+            filter: filterConfig // Csak csoportnál van szerver oldali szűrő
         }, 
         (payload) => {
-            // DM SZŰRÉS: Csak akkor adjuk hozzá, ha ehhez a beszélgetéshez tartozik
+            const msg = payload.new
+            
+            // DM ESETÉN: Kliens oldali szűrés
+            // Csak akkor adjuk hozzá, ha ez az üzenet ehhez a beszélgetéshez tartozik
             if (type === 'dm') {
-                const msg = payload.new
-                const isRelevant = (msg.sender_id === id && msg.receiver_id === currentUser.id) || (msg.sender_id === currentUser.id && msg.receiver_id === id)
+                const isRelevant = 
+                    (msg.sender_id === id && msg.receiver_id === currentUser.id) || // Ő küldte nekem
+                    (msg.sender_id === currentUser.id && msg.receiver_id === id)    // Én küldtem neki (másik tabon)
+                
                 if (!isRelevant) return
             }
-            // HOZZÁADJUK A LISTÁHOZ (Így marad meg realtime-ban!)
-            setMessages((prev) => [...prev, payload.new])
+
+            console.log("Realtime üzenet érkezett:", msg)
+            setMessages((prev) => [...prev, msg])
             scrollToBottom()
         }
       )
@@ -93,11 +97,17 @@ export default function ChatWindow({
         { 
             event: 'UPDATE', 
             schema: 'public', 
-            table: type === 'group' ? 'group_messages' : 'direct_messages',
-            filter: type === 'group' ? `group_id=eq.${id}` : undefined 
+            table: tableName,
+            filter: filterConfig 
         }, 
         (payload) => {
-            setMessages((prev) => prev.map(msg => msg.id === payload.new.id ? payload.new : msg))
+            const msg = payload.new
+            // Update esetén is szűrni kell DM-nél
+            if (type === 'dm') {
+                 const isRelevant = (msg.sender_id === id && msg.receiver_id === currentUser.id) || (msg.sender_id === currentUser.id && msg.receiver_id === id)
+                 if (!isRelevant) return
+            }
+            setMessages((prev) => prev.map(m => m.id === msg.id ? msg : m))
         }
       )
       .on('presence', { event: 'sync' }, () => {
@@ -127,16 +137,6 @@ export default function ChatWindow({
     setTimeout(() => { channelRef.current?.track({ isTyping: false }) }, 2000)
   }
 
-  // --- BARÁTNAK JELÖLÉS ---
-  const handleAddFriend = async () => {
-      const res = await addFriendByIdAction(id)
-      if (res?.success) {
-          setFriendStatus('sent')
-      } else {
-          alert(res?.error || 'Hiba történt')
-      }
-  }
-
   // --- ÜZENET KÜLDÉSE ---
   const sendMessage = async (e?: React.FormEvent, imageUrl?: string) => {
     if (e) e.preventDefault()
@@ -144,8 +144,7 @@ export default function ChatWindow({
 
     const msgContent = newMessage
     setNewMessage('')
-    // Azonnali görgetés az UI élményért
-    scrollToBottom()
+    scrollToBottom() // Optimista görgetés
 
     try {
         let error;
@@ -210,7 +209,7 @@ export default function ChatWindow({
   return (
     <div className="flex flex-col h-[calc(100dvh-80px)] sm:h-[calc(100vh-140px)] bg-slate-950 sm:bg-slate-900 rounded-none sm:rounded-2xl overflow-hidden border-0 sm:border border-slate-700 shadow-none sm:shadow-2xl relative">
       
-      {/* 1. HEADER (MOST MÁR BARÁT GOMBBAL) */}
+      {/* HEADER */}
       <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/95 backdrop-blur flex justify-between items-center shrink-0 z-10 sticky top-0">
         <div className="flex items-center gap-3">
             <Link href="/community" className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-white">
@@ -233,26 +232,12 @@ export default function ChatWindow({
                 )}
             </div>
         </div>
-
-        {/* MŰVELETEK (BARÁT HOZZÁADÁSA) */}
-        <div className="flex items-center gap-1">
-            {type === 'dm' && (
-                <button 
-                    onClick={handleAddFriend}
-                    disabled={friendStatus === 'sent'}
-                    className={`p-2 rounded-full transition-colors ${friendStatus === 'sent' ? 'bg-emerald-500/20 text-emerald-500' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-                    title="Barátnak jelölés"
-                >
-                    {friendStatus === 'sent' ? <Check className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
-                </button>
-            )}
-            <button className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors">
-                <MoreVertical className="w-5 h-5" />
-            </button>
-        </div>
+        <button className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors">
+            <MoreVertical className="w-5 h-5" />
+        </button>
       </div>
 
-      {/* 2. ÜZENETEK */}
+      {/* ÜZENETEK */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950 sm:bg-slate-900 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
         {messages.map((msg, idx) => {
             const senderId = type === 'group' ? msg.user_id : msg.sender_id
@@ -303,7 +288,7 @@ export default function ChatWindow({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. INPUT */}
+      {/* INPUT */}
       <form onSubmit={sendMessage} className="p-3 bg-slate-900 border-t border-slate-800 flex items-end gap-2 shrink-0 pb-safe">
         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
         <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-400 hover:text-blue-400 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors active:scale-95">
