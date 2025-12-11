@@ -1,134 +1,242 @@
 'use client'
 
-import { useState } from 'react'
-import { User, Settings, ShieldAlert, Camera } from 'lucide-react'
-import Image from 'next/image'
-import { updateProfile } from '@/app/settings/actions'
-import { PreferencesForm } from '@/components/SettingsForms'
-import DeleteAccountSection from '@/components/DeleteAccountSection'
+import { useState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
+import { updateProfile, updatePreferences } from '@/app/settings/actions'
+import Image from 'next/image'
+import { User, Bell, CreditCard, Loader2, LogOut, Moon, Sun, CheckCircle } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { createClient } from '@/supabase/client'
+import { useRouter } from 'next/navigation'
 
-function SubmitButton() {
+// --- SEGÉDKOMPONENSEK ---
+
+function SubmitButton({ label = 'Mentés' }) {
   const { pending } = useFormStatus()
   return (
-    <button type="submit" disabled={pending} className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50 flex items-center gap-2">
-      {pending ? 'Mentés...' : 'Változtatások mentése'}
+    <button type="submit" disabled={pending} className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-2.5 px-6 rounded-xl font-bold hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm shadow-lg shadow-slate-900/10">
+      {pending && <Loader2 className="w-4 h-4 animate-spin" />}
+      {pending ? 'Mentés...' : label}
     </button>
   )
 }
 
-export default function SettingsDashboard({ user, meta, settings }: any) {
-  const [activeTab, setActiveTab] = useState('profile')
-  const [previewUrl, setPreviewUrl] = useState(meta.avatar_url || null)
+// --- FŐ KOMPONENS ---
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) setPreviewUrl(URL.createObjectURL(file))
+export default function SettingsDashboard({ user, meta, settings, subscription }: any) {
+  const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'billing'>('profile')
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const [loadingPortal, setLoadingPortal] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => setMounted(true), [])
+
+  // --- Előfizetés kezelés (Portal) ---
+  const manageSubscription = async () => {
+    setLoadingPortal(true)
+    try {
+      const res = await fetch('/api/stripe/portal', { method: 'POST' })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else alert(data.error || 'Hiba történt.')
+    } catch (error) {
+      alert('Hálózati hiba.')
+    } finally {
+      setLoadingPortal(false)
+    }
   }
 
-  const tabs = [
-    { id: 'profile', label: 'Profil szerkesztése', icon: User },
-    { id: 'preferences', label: 'Megjelenés & Értesítés', icon: Settings },
-    { id: 'account', label: 'Fiók biztonság', icon: ShieldAlert },
-  ]
+  // --- Kijelentkezés ---
+  const handleSignOut = async () => {
+      await supabase.auth.signOut()
+      router.push('/login')
+  }
+
+  if (!mounted) return null
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl overflow-hidden border border-slate-200 dark:border-slate-800 min-h-[600px] flex flex-col md:flex-row">
-      
-      {/* SIDEBAR */}
-      <div className="w-full md:w-72 bg-slate-50 dark:bg-slate-950/50 border-r border-slate-100 dark:border-slate-800 p-6 flex flex-col gap-2">
-        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-3">Beállítások</h2>
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                activeTab === tab.id
-                  ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-500 shadow-md ring-1 ring-slate-200 dark:ring-slate-700'
-                  : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              {tab.label}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* CONTENT */}
-      <div className="flex-1 p-8 overflow-y-auto">
+    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col md:flex-row min-h-[600px]">
         
-        {/* 1. PROFIL */}
-        {activeTab === 'profile' && (
-          <div className="max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Profil adatok</h2>
-            <p className="text-slate-500 mb-8">Itt módosíthatod a nyilvános profilod és a fényképed.</p>
+        {/* --- BAL OLDALI MENÜ --- */}
+        <div className="w-full md:w-64 bg-slate-50/50 dark:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800 p-6 flex flex-col justify-between">
+            <div className="space-y-2">
+                <button onClick={() => setActiveTab('profile')} className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'profile' ? 'bg-white dark:bg-slate-700 shadow-sm text-amber-500' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50'}`}>
+                    <User className="w-4 h-4" /> Profil
+                </button>
+                <button onClick={() => setActiveTab('preferences')} className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'preferences' ? 'bg-white dark:bg-slate-700 shadow-sm text-amber-500' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50'}`}>
+                    <Bell className="w-4 h-4" /> Beállítások
+                </button>
+                <button onClick={() => setActiveTab('billing')} className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'billing' ? 'bg-white dark:bg-slate-700 shadow-sm text-amber-500' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50'}`}>
+                    <CreditCard className="w-4 h-4" /> Előfizetés
+                </button>
+            </div>
 
-            <form action={updateProfile} className="space-y-8">
-              <div className="flex items-center gap-6">
-                <div className="relative group w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-700 shadow-lg">
-                  {previewUrl ? (
-                    <Image src={previewUrl} alt="Avatar" fill className="object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300"><User className="w-10 h-10" /></div>
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                    <Camera className="w-8 h-8 text-white" />
-                  </div>
-                  <input type="file" name="avatar" accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white">Profilkép</h3>
-                  <p className="text-xs text-slate-500">JPG, PNG (max. 2MB)</p>
-                  <label className="mt-2 inline-block text-xs font-bold text-amber-600 cursor-pointer hover:underline">
-                    Feltöltés <input type="file" name="avatar" accept="image/*" onChange={handleImageChange} className="hidden" />
-                  </label>
-                </div>
-              </div>
+            <button onClick={handleSignOut} className="w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors mt-8">
+                <LogOut className="w-4 h-4" /> Kijelentkezés
+            </button>
+        </div>
 
-              <div className="grid gap-5">
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email cím</label>
-                    <input type="text" value={user.email} disabled className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-500 cursor-not-allowed" />
-                </div>
-                <div className="grid md:grid-cols-2 gap-5">
+        {/* --- JOBB OLDALI TARTALOM --- */}
+        <div className="flex-1 p-8 md:p-12 overflow-y-auto">
+            
+            {/* 1. PROFIL SZERKESZTÉS */}
+            {activeTab === 'profile' && (
+                <div className="max-w-lg space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Teljes név</label>
-                        <input name="fullName" type="text" defaultValue={meta.full_name || ''} placeholder="Név" className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-amber-500 outline-none" />
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Személyes Adataim</h2>
+                        <p className="text-slate-500 text-sm">Itt módosíthatod a profilképedet és a nevedet.</p>
                     </div>
+
+                    <form action={updateProfile} className="space-y-6">
+                        <div className="flex items-center gap-6">
+                            <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white dark:border-slate-800 shadow-lg bg-slate-100">
+                                {meta.avatar_url ? (
+                                    <Image src={meta.avatar_url} alt="Avatar" fill className="object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-200 dark:bg-slate-700">
+                                        <User className="w-10 h-10" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Profilkép URL</label>
+                                <input type="url" name="avatar_url" defaultValue={meta.avatar_url} placeholder="https://..." className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Teljes Név</label>
+                                <input type="text" name="full_name" defaultValue={meta.full_name} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Email Cím</label>
+                                <input type="email" disabled value={user.email} className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-400 text-sm font-medium cursor-not-allowed" />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-4">
+                            <SubmitButton label="Profil Mentése" />
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* 2. BEÁLLÍTÁSOK (Téma, Értesítés) */}
+            {activeTab === 'preferences' && (
+                <div className="max-w-lg space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                     <div>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Testreszabás</h2>
+                        <p className="text-slate-500 text-sm">Hogyan jelenjen meg az alkalmazás.</p>
+                    </div>
+
+                    <form action={updatePreferences} className="space-y-8">
+                        <div className="space-y-4">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Téma</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                {['light', 'dark'].map((t) => (
+                                    <label key={t} className="relative cursor-pointer group">
+                                        <input 
+                                            type="radio" name="theme" value={t} 
+                                            checked={theme === t} onChange={() => setTheme(t)}
+                                            className="peer sr-only" 
+                                        />
+                                        <div className="p-4 rounded-2xl border-2 border-slate-100 dark:border-slate-700 hover:border-amber-500 peer-checked:border-amber-500 peer-checked:bg-amber-50 dark:peer-checked:bg-amber-900/10 transition-all text-center flex flex-col items-center gap-2">
+                                            {t === 'light' ? <Sun className="w-6 h-6 text-amber-500" /> : <Moon className="w-6 h-6 text-indigo-400" />}
+                                            <span className="font-bold text-sm text-slate-700 dark:text-slate-300 capitalize">{t === 'light' ? 'Világos' : 'Sötét'}</span>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                             <label className="text-xs font-bold text-slate-500 uppercase">Értesítések</label>
+                             {['notify_email', 'notify_push'].map((key) => (
+                                <div key={key} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                                    <label htmlFor={key} className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer">
+                                        {key === 'notify_email' ? 'Email értesítések' : 'Push értesítések'}
+                                    </label>
+                                    <div className="relative inline-block w-12 align-middle select-none">
+                                        <input 
+                                            type="checkbox" name={key} id={key} 
+                                            defaultChecked={settings?.[key]}
+                                            className="peer absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 right-6 checked:border-amber-500 transition-all duration-300"
+                                        />
+                                        <label htmlFor={key} className="block overflow-hidden h-6 rounded-full bg-slate-300 dark:bg-slate-600 peer-checked:bg-amber-500 transition-colors cursor-pointer"></label>
+                                    </div>
+                                </div>
+                             ))}
+                        </div>
+
+                        <div className="flex justify-end pt-4">
+                            <SubmitButton label="Beállítások Mentése" />
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* 3. SZÁMLÁZÁS (ÚJ!) */}
+            {activeTab === 'billing' && (
+                <div className="max-w-lg space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Telefon</label>
-                        <input name="phone" type="tel" defaultValue={meta.phone || ''} placeholder="+36..." className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-amber-500 outline-none" />
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Előfizetés</h2>
+                        <p className="text-slate-500 text-sm">A csomagod állapota és számlázás.</p>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
+                         <div className="flex items-center justify-between mb-4">
+                             <div>
+                                 <p className="text-xs font-bold text-slate-400 uppercase mb-1">Jelenlegi Csomag</p>
+                                 <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                     {subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime' ? 'Lifetime 🚀' : 
+                                      subscription?.plan_type === 'pro' ? 'Pro ⚡' : 'Starter'}
+                                     <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${subscription?.status === 'active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-slate-200 text-slate-600'}`}>
+                                         {subscription?.status || 'Active'}
+                                     </span>
+                                 </h3>
+                             </div>
+                             {/* Ikon a sarokban */}
+                             <div className="p-3 bg-white dark:bg-slate-700 rounded-xl shadow-sm">
+                                 <CreditCard className="w-6 h-6 text-amber-500" />
+                             </div>
+                         </div>
+
+                         {/* Ha van előfizetés (Pro vagy Lifetime), mutassuk a kezelés gombot */}
+                         {(subscription?.plan_type === 'pro' || subscription?.plan_type === 'lifetime' || subscription?.plan_type === 'founder') ? (
+                             <div className="space-y-3">
+                                 <div className="flex gap-2 text-xs text-slate-500">
+                                     <CheckCircle className="w-4 h-4 text-emerald-500" /> 
+                                     <span>Minden funkció elérhető</span>
+                                 </div>
+                                 <div className="border-t border-slate-200 dark:border-slate-700 my-4"></div>
+                                 <button 
+                                    onClick={manageSubscription}
+                                    disabled={loadingPortal}
+                                    className="w-full py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                                 >
+                                     {loadingPortal && <Loader2 className="w-4 h-4 animate-spin" />}
+                                     {subscription?.plan_type === 'pro' ? 'Előfizetés Kezelése / Lemondás' : 'Számlák Megtekintése'}
+                                 </button>
+                             </div>
+                         ) : (
+                             <div className="space-y-4">
+                                 <p className="text-sm text-slate-500">Jelenleg az ingyenes csomagot használod. Válts nagyobbra a több funkcióért!</p>
+                                 <button 
+                                    onClick={() => router.push('/pricing')}
+                                    className="w-full py-2.5 bg-amber-500 text-slate-900 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors"
+                                 >
+                                     Csomagok Megtekintése
+                                 </button>
+                             </div>
+                         )}
                     </div>
                 </div>
-              </div>
+            )}
 
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                <SubmitButton />
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* 2. PREFERENCIÁK */}
-        {activeTab === 'preferences' && (
-          <div className="max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Testreszabás</h2>
-             <PreferencesForm settings={settings} />
-          </div>
-        )}
-
-        {/* 3. FIÓK */}
-        {activeTab === 'account' && (
-          <div className="max-w-xl animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Fiók biztonság</h2>
-            <DeleteAccountSection />
-          </div>
-        )}
-
-      </div>
+        </div>
     </div>
   )
 }
