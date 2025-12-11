@@ -26,13 +26,13 @@ export default async function CommunityPage({
   const activeDmId = params.dm 
   const activeTab = params.tab || 'chat'
 
-  // --- 1. ADATOK LEKÉRÉSE (Párhuzamosan a gyorsaságért) ---
+  // --- 1. ADATOK LEKÉRÉSE ---
   const [myGroupsRes, publicGroupsRes, myDmsRes] = await Promise.all([
     // Saját csoportok
     supabase.from('group_members').select('group_id, groups(id, name, type, image_url)').eq('user_id', user.id),
-    // Publikus csoportok (amikben NEM vagyok benne) - Ezt kliens oldalon szűrjük inkább egyszerűsítés miatt
+    // Publikus csoportok
     supabase.from('groups').select('*').eq('type', 'public').limit(10),
-    // DM partnerek (kicsit trükkös, egyszerűsített query: lekérjük az utolsó 10 üzenetváltást)
+    // DM partnerek (utolsó 20 üzenetváltás alapján)
     supabase.from('direct_messages')
       .select('sender_id, receiver_id, created_at')
       .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
@@ -45,19 +45,28 @@ export default async function CommunityPage({
   
   // DM partnerek egyedi ID-jának kinyerése
   const dmPartnerIds = new Set<string>()
-  myDmsRes.data?.forEach(msg => {
-      const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id
-      dmPartnerIds.add(partnerId)
-  })
+  // Biztonságos ellenőrzés: csak akkor iterálunk, ha van adat
+  if (myDmsRes.data) {
+      myDmsRes.data.forEach(msg => {
+          const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id
+          dmPartnerIds.add(partnerId)
+      })
+  }
   
-  // Ha vannak partnerek, lekérjük a nevüket (emailjüket) a public_profiles view-ból (ha létezik)
-  // Vagy ha nincs view, akkor csak ID-t mutatunk (MVP verzió)
-  // Itt feltételezzük, hogy van 'public_profiles' view vagy RPC. Ha nincs, üres lesz.
+  // Partnerek adatainak lekérése
   let dmPartners: any[] = []
   if (dmPartnerIds.size > 0) {
-      // Ez csak akkor működik, ha létrehoztad a view-t. Ha nem, hagyd ki vagy használj RPC-t.
+      // Megpróbáljuk lekérni az email címeket. 
+      // Ha nincs 'public_profiles' view, akkor ez a lekérdezés hibát dobhat vagy üreset ad.
+      // Ebben az esetben a UI-n 'Ismeretlen' jelenik majd meg, de az oldal működik.
       const { data: profiles } = await supabase.from('public_profiles').select('id, email').in('id', Array.from(dmPartnerIds))
-      dmPartners = profiles || []
+      
+      // Ha nem sikerült lekérni (pl. nincs view), akkor generálunk egy listát az ID-kból
+      if (!profiles) {
+          dmPartners = Array.from(dmPartnerIds).map(id => ({ id, email: 'Ismeretlen Felhasználó' }))
+      } else {
+          dmPartners = profiles
+      }
   }
 
   // --- 2. AKTÍV TARTALOM ADATAI ---
@@ -81,7 +90,6 @@ export default async function CommunityPage({
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans flex pt-16 overflow-hidden">
       
       {/* ==================== BAL OLDALSÁV (LISTÁK) ==================== */}
-      {/* Mobilon eltűnik (`hidden`), ha van kiválasztva valami (`activeGroupId` vagy `activeDmId`) */}
       <div className={`
         w-full lg:w-80 border-r border-slate-800 flex-col bg-slate-900/50 backdrop-blur-sm h-[calc(100vh-64px)] fixed lg:static z-20 transition-transform duration-300
         ${(activeGroupId || activeDmId) ? 'hidden lg:flex' : 'flex'}
@@ -93,7 +101,6 @@ export default async function CommunityPage({
                 <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
                     <Users className="text-blue-500 w-6 h-6" /> Közösség
                 </h2>
-                {/* Mobilon menü ikon csak dísznek */}
                 <button className="lg:hidden text-slate-400"><Menu className="w-6 h-6" /></button>
             </div>
             
@@ -121,12 +128,12 @@ export default async function CommunityPage({
                             href={`/community?dm=${partner.id}`}
                             className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors group ${activeDmId === partner.id ? 'bg-purple-600/20 border border-purple-500/50' : 'hover:bg-slate-800/50'}`}
                         >
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-xs text-white border border-white/10">
-                                {partner.email.charAt(0).toUpperCase()}
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-xs text-white border border-white/10 shrink-0">
+                                {partner.email ? partner.email.charAt(0).toUpperCase() : '?'}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <span className={`font-bold text-sm truncate block ${activeDmId === partner.id ? 'text-white' : 'text-slate-300'}`}>
-                                    {partner.email.split('@')[0]}
+                                    {partner.email ? partner.email.split('@')[0] : 'Ismeretlen'}
                                 </span>
                             </div>
                         </Link>
@@ -157,7 +164,7 @@ export default async function CommunityPage({
                 </div>
             </div>
 
-            {/* 3. Felfedezés (Csak azok, amikben NEM vagyok benne) */}
+            {/* 3. Felfedezés */}
             <div className="pt-4 border-t border-slate-800">
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 px-2">Ajánlott Közösségek</h3>
                 <div className="space-y-2">
@@ -168,7 +175,7 @@ export default async function CommunityPage({
                                 <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5"><Globe className="w-3 h-3" /> Nyilvános</div>
                             </div>
                             
-                            {/* CSATLAKOZÁS GOMB (Server Action) */}
+                            {/* CSATLAKOZÁS GOMB */}
                             <form action={joinGroupAction.bind(null, group.id)}>
                                 <button type="submit" className="text-xs bg-slate-800 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-lg text-slate-300 font-bold transition-colors">
                                     Csatlakozás
@@ -183,19 +190,16 @@ export default async function CommunityPage({
       </div>
 
       {/* ==================== JOBB OLDAL (CHAT / PIACTÉR) ==================== */}
-      {/* Mobilon csak akkor látszik, ha van aktív selection (`flex`), amúgy `hidden`. Desktopon mindig `flex`. */}
       <div className={`
         flex-1 flex-col h-[calc(100vh-64px)] relative bg-slate-950 w-full lg:w-auto
         ${(activeGroupId || activeDmId) ? 'flex' : 'hidden lg:flex'}
       `}>
         
-        {/* A. HA VAN KIVÁLASZTVA CSOPORT */}
+        {/* A. CSOPORT NÉZET */}
         {activeGroupId && activeGroupData ? (
             <>
-                {/* Fejléc */}
                 <div className="h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur flex items-center justify-between px-4 sm:px-6 shrink-0 z-10 sticky top-0">
                     <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
-                        {/* Mobil Vissza Gomb */}
                         <Link href="/community" className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
                         
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white text-lg shadow-lg shrink-0">
@@ -211,7 +215,6 @@ export default async function CommunityPage({
                     </div>
                     
                     <div className="flex items-center gap-2">
-                        {/* Kilépés Gomb (Csak ha tag) */}
                         {isMember && (
                             <form action={leaveGroupAction.bind(null, activeGroupId)}>
                                 <button type="submit" className="p-2 text-slate-500 hover:text-red-500 transition-colors" title="Kilépés">
@@ -220,7 +223,6 @@ export default async function CommunityPage({
                             </form>
                         )}
                         
-                        {/* Tabok (Chat / Piactér) */}
                         <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800 shrink-0">
                             <Link href={`/community?group=${activeGroupId}&tab=chat`} className={`p-2 sm:px-4 sm:py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'chat' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}>
                                 <MessageCircle className="w-4 h-4" /> <span className="hidden sm:inline">Chat</span>
@@ -230,7 +232,6 @@ export default async function CommunityPage({
                             </Link>
                         </div>
 
-                        {/* Invite Gomb (Csak ha privát) */}
                         {activeGroupData.type === 'private' && (
                             <div className="hidden sm:block">
                                 <InviteMemberModal groupId={activeGroupId} />
@@ -239,7 +240,6 @@ export default async function CommunityPage({
                     </div>
                 </div>
 
-                {/* Tartalom */}
                 <div className="flex-1 p-0 sm:p-4 overflow-hidden bg-slate-950">
                     {activeTab === 'chat' ? (
                         <ChatWindow type="group" id={activeGroupId} currentUser={user} />
@@ -250,12 +250,12 @@ export default async function CommunityPage({
             </>
         ) : activeDmId ? (
             
-            // B. HA VAN KIVÁLASZTVA PRIVÁT CHAT (DM)
+            // B. PRIVÁT CHAT (DM) NÉZET
             <>
                <div className="h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur flex items-center justify-between px-4 sticky top-0 z-10">
                    <div className="flex items-center gap-3">
                        <Link href="/community" className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
-                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-bold text-white text-xs">DM</div>
+                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-bold text-white text-xs shrink-0">DM</div>
                        <div>
                            <h1 className="font-bold text-white text-base">Privát Beszélgetés</h1>
                            <p className="text-[10px] text-slate-500">Titkosítva</p>
@@ -268,7 +268,7 @@ export default async function CommunityPage({
             </>
         ) : (
             
-            // C. ÜRES ÁLLAPOT (Nincs semmi kiválasztva)
+            // C. ÜRES ÁLLAPOT (HOME)
             <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 text-center bg-slate-950">
                 <div className="w-24 h-24 bg-slate-900 rounded-full flex items-center justify-center mb-6 border border-slate-800 shadow-2xl animate-in zoom-in duration-500">
                     <Users className="w-12 h-12 text-slate-700" />
