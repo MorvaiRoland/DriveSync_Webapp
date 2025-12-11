@@ -1,11 +1,10 @@
-// app/admin/page.tsx
 import { createClient } from '@supabase/supabase-js'
 import { createClient as createAuthClient } from '@/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { revalidatePath } from 'next/cache' // FONTOS IMPORT
+import { revalidatePath } from 'next/cache'
 
-// --- FONTOS: Cache kikapcsolása ---
+// --- FONTOS: Cache kikapcsolása, hogy mindig friss legyen ---
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -18,6 +17,7 @@ async function updateSubscriptionPlan(formData: FormData) {
 
   if (!userId || !newPlan) return;
 
+  // Admin kliens létrehozása (írni is tud)
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -30,22 +30,21 @@ async function updateSubscriptionPlan(formData: FormData) {
         user_id: userId, 
         plan_type: newPlan,
         status: 'active',
-        // updated_at: new Date().toISOString() // Ha nincs az oszlop, vedd ki!
+        // updated_at: new Date().toISOString() // Opcionális, ha van ilyen oszlopod
     }, { onConflict: 'user_id' })
 
   if (error) {
       console.error("Admin update error:", error)
   }
 
-  // FONTOS: Ez utasítja a Next.js-t, hogy töltse újra az admin oldalt
-  revalidatePath('/admin', 'page') 
+  // FONTOS: Ez utasítja a Next.js-t, hogy frissítse az oldalt
+  revalidatePath('/admin') 
 }
 
 // --- FŐ KOMPONENS ---
 export default async function AdminDashboard() {
-  // ... (A komponens többi része változatlan marad, másold be a lenti kódot)
   
-  // 1. Biztonsági ellenőrzés
+  // 1. Biztonsági ellenőrzés (Be van-e lépve és admin-e?)
   const authSupabase = await createAuthClient()
   const { data: { user } } = await authSupabase.auth.getUser()
 
@@ -53,16 +52,17 @@ export default async function AdminDashboard() {
   const allowedEmails = allowedEmailsEnv.split(',').map(email => email.trim());
 
   if (!user || !user.email || !allowedEmails.includes(user.email)) {
-    return notFound()
+    return notFound() // Ha nem admin, 404-et kap
   }
 
+  // 2. Adatok lekérése (Admin joggal)
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
   const [carsRes, eventsRes, subsRes, usersRes] = await Promise.all([
-    supabaseAdmin.from('cars').select('id'), // Elég az ID a darabszámhoz
+    supabaseAdmin.from('cars').select('id'),
     supabaseAdmin.from('events').select('id, type, cost, car_id'),
     supabaseAdmin.from('subscriptions').select('user_id, status, plan_type'),
     supabaseAdmin.auth.admin.listUsers()
@@ -73,7 +73,7 @@ export default async function AdminDashboard() {
   const subscriptions = subsRes.data || []
   const allUsers = usersRes.data.users || []
 
-  // Összefésülés
+  // 3. Adatok összefésülése (User + Subscription)
   const userList = allUsers.map(u => {
       const sub = subscriptions.find(s => s.user_id === u.id);
       return {
@@ -85,12 +85,12 @@ export default async function AdminDashboard() {
       }
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+  // 4. Statisztikák számolása
   const totalRegisteredUsers = userList.length
   const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0)
   
-  // Számolás a FRISS subscriptions listából
-  const founderCount = subscriptions.filter(s => s.plan_type === 'founder' && s.status === 'active').length
-  const proCount = subscriptions.filter(s => s.plan_type === 'pro' && s.status === 'active').length
+  const founderCount = userList.filter(u => u.plan === 'founder').length
+  const proCount = userList.filter(u => u.plan === 'pro').length
   const proRate = totalRegisteredUsers > 0 ? Math.round(((founderCount + proCount) / totalRegisteredUsers) * 100) : 0
 
   return (
