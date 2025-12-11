@@ -338,7 +338,7 @@ async function DashboardComponent() {
                   Drive<span className="text-amber-500">Sync</span>
                 </span>
               </Link>
-              <Link href="/pricing" className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors">Csomagok</Link>
+              
             </div>
             <div className="flex items-center gap-4">
               <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
