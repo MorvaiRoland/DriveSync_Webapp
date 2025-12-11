@@ -120,7 +120,7 @@ export default function PricingClient({ initialPlan }: { initialPlan: string }) 
           {/* PRO */}
           <PricingCard 
             title="Pro" 
-            price={billingCycle === 'monthly' ? '1.490 Ft' : '14.900 Ft'} 
+            price={billingCycle === 'monthly' ? '1.490 Ft' : '8.999 Ft'} 
             period={billingCycle === 'monthly' ? '/ hó' : '/ év'}
             desc="Komoly tulajdonosoknak, akik mindent látni akarnak."
             highlight
@@ -143,7 +143,7 @@ export default function PricingClient({ initialPlan }: { initialPlan: string }) 
           {/* LIFETIME */}
           <PricingCard 
             title="Lifetime" 
-            price="39.990 Ft" 
+            price="14.999 Ft" 
             desc="Egyszeri befektetés. Nincs több havidíj soha."
             period=""
             features={[
