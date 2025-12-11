@@ -296,9 +296,10 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
 
 function StatBadge({ label, value, valueColor = "text-white" }: any) {
     return (
-        <div className="bg-black/20 px-4 py-2 rounded-xl border border-white/5 backdrop-blur-md hover:bg-white/5 transition-colors cursor-default">
-            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">{label}</p>
-            <p className={`font-mono font-bold text-sm md:text-base ${valueColor}`}>{value}</p>
+        // Módosított design: Sötétebb háttér (slate-900/80) és világosabb címke (slate-300)
+        <div className="bg-slate-900/80 px-4 py-3 rounded-xl border border-white/10 backdrop-blur-md shadow-lg flex flex-col items-center justify-center min-w-[100px]">
+            <p className="text-[10px] text-slate-300 uppercase font-bold tracking-widest mb-1 opacity-90 text-center">{label}</p>
+            <p className={`font-mono font-bold text-base md:text-lg ${valueColor} drop-shadow-md`}>{value}</p>
         </div>
     )
 }
