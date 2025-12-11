@@ -5,12 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 
-// --- STRIPE AZONOSÍTÓK ---
-// FONTOS: Ha a fizetésnél hibát kapsz, cseréld le ezeket a 'price_...' kezdetű kódokra a Stripe Dashboardról!
+// --- STRIPE PRICING ID-K (Beillesztve) ---
 const PRICES = {
-  monthly: 'prod_TaJcNmkmFpUFZa', // Pro Havi (prohavi)
-  yearly: 'prod_TaJddg8AjxU4EK',  // Pro Éves (proéves)
-  lifetime: 'prod_TaJdQ9XXvQrx2U' // Lifetime (lifetime)
+  monthly: 'price_1Sd8zXRbHGQdHUF4vMQbDKjt', // Pro Havi
+  yearly: 'price_1Sd8zyRbHGQdHUF4mutCgwbV',  // Pro Éves
+  lifetime: 'price_1Sd90LRbHGQdHUF4SWmp0rJM' // Lifetime
 }
 
 export default function PricingComponent() {
@@ -112,7 +111,7 @@ export default function PricingComponent() {
           {/* 2. PRO (Kiemelt) - Itt használjuk a Havi/Éves ID-t */}
           <PricingCard 
             title="Pro" 
-            price={billingCycle === 'monthly' ? '1.490 Ft' : '8.999 Ft'} 
+            price={billingCycle === 'monthly' ? '1.490 Ft' : '14.900 Ft'} 
             period={billingCycle === 'monthly' ? '/ hó' : '/ év'}
             desc="Komoly tulajdonosoknak, akik mindent látni akarnak."
             highlight
@@ -135,7 +134,7 @@ export default function PricingComponent() {
           {/* 3. LIFETIME (Egyszeri) - Itt használjuk a Lifetime ID-t */}
           <PricingCard 
             title="Lifetime" 
-            price="14.999 Ft" 
+            price="39.990 Ft" 
             desc="Egyszeri befektetés. Nincs több havidíj soha."
             period=""
             features={[
