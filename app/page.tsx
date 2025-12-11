@@ -682,5 +682,5 @@ export default async function Page({
 
   // Ha kész az oldal, cseréld le ezt a ComingSoonPage helyett a DashboardComponent-re
   // return <DashboardComponent /> 
-  return <ComingSoonPage /> 
+  return <DashboardComponent /> 
 }
