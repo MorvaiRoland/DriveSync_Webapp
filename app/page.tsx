@@ -418,7 +418,7 @@ async function DashboardComponent() {
                   </div>
               )}
 
-              {/* --- 2. SAJÁT AUTÓK LISTÁJA --- */}
+             {/* --- 2. SAJÁT AUTÓK LISTÁJA --- */}
               {myCars.length > 0 && (
                   <div className="space-y-4">
                       <div className="flex justify-between items-end px-1">
@@ -436,26 +436,35 @@ async function DashboardComponent() {
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {/* ÚJ AUTÓ KÁRTYA (Feature Flag: addCar + Csomag limit ellenőrzés) */}
+                          {/* JAVÍTÁS: Mindig megjelenítjük a kártyát, ha a feature be van kapcsolva */}
                           {FEATURES.addCar && (
-                            canAddCar ? (
-                              <Link href="/cars/new" className="group relative flex flex-col items-center justify-center min-h-[320px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden">
-                                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/0 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                  <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                                      <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" />
-                                  </div>
-                                  <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
-                                  <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat</span>
-                              </Link>
-                            ) : (
-                              <Link href="/pricing" className="group relative flex flex-col items-center justify-center min-h-[320px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all duration-300 cursor-pointer">
-                                  <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-amber-500 shadow-sm">
-                                      <Lock className="w-8 h-8" />
-                                  </div>
-                                  <span className="font-bold text-slate-500 text-lg mb-1">Garázs megtelt</span>
-                                  <span className="text-xs font-bold text-amber-500 uppercase tracking-wide bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Válts Pro csomagra</span>
-                              </Link>
-                            )
+                             <Link 
+                               href={canAddCar ? "/cars/new" : "/pricing"} 
+                               className={`group relative flex flex-col items-center justify-center min-h-[320px] rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer overflow-hidden ${
+                                 canAddCar 
+                                   ? 'border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 hover:bg-white dark:hover:bg-slate-800 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl'
+                                   : 'border-slate-300 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-900/10 hover:bg-slate-200 dark:hover:bg-slate-800/30'
+                               }`}
+                             >
+                                  {canAddCar ? (
+                                    <>
+                                      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/0 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                      <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                          <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" />
+                                      </div>
+                                      <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
+                                      <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-amber-500/50 group-hover:text-amber-500 transition-colors shadow-sm">
+                                          <Lock className="w-8 h-8" />
+                                      </div>
+                                      <span className="font-bold text-slate-400 text-lg mb-1">Garázs megtelt</span>
+                                      <span className="text-xs font-bold text-amber-500 uppercase tracking-wide bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full group-hover:bg-amber-500 group-hover:text-white transition-colors">Válts Pro csomagra</span>
+                                    </>
+                                  )}
+                             </Link>
                           )}
                       </div>
                   </div>
