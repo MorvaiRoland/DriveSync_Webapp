@@ -2,39 +2,38 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'DriveSync',
+    name: 'DriveSync Hungary',
     short_name: 'DriveSync',
-    description: 'Saját autók és szervizkönyv kezelése',
+    description: 'Prémium Garázsmenedzsment - Szervizkönyv és költségek kezelése egy helyen.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0f172a',
-    theme_color: '#f59e0b',
-    orientation: 'portrait', // Megakadályozza, hogy betöltéskor elforduljon
-    id: '/', // Egyedi azonosító a PWA követéshez
+    background_color: '#0f172a', // Sötétkék háttér betöltéskor (a layout.tsx-ben is ez van)
+    theme_color: '#0f172a',       // FONTOS: Ez szebbé teszi a telefon státuszbárját (beleolvad az appba)
+    orientation: 'portrait',      // Megakadályozza, hogy betöltéskor elforduljon
+    id: '/',                      // Egyedi azonosító a PWA követéshez
     
     icons: [
       {
-        src: '/icons/drivesync-icon.png',
+        src: '/icons/icon-192.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'any', // Ez a "sima" ikon (pl. iOS, Windows)
+        purpose: 'any', // Ez jelenik meg sima ikonként (pl. Windows tálca)
       },
       {
-        src: '/icons/apple-icon.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: '/icons/drivesync-icon.png',
+        src: '/icons/icon-512.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable', // FONTOS! Ez kell Androidra (hogy kitöltse a kört/négyzetet)
       },
+      {
+        src: '/icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any', // Nagy felbontású ikon egyéb helyekre (pl. telepítési képernyő)
+      },
     ],
     
-    // Opcionális: Ha szeretnéd, hogy a telepítéskor látványos "Store-szerű" előnézet legyen
-    // Ehhez képernyőképeket kell tenned a /public mappába
+    // Opcionális: Később, ha teszel be képernyőképeket a /public/screenshots mappába, vedd ki a kommentet!
     /*
     screenshots: [
       {

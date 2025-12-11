@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 import CookieBanner from '@/components/CookieBanner'
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a", // Ez a sötétkék háttérszín, passzoljon az ikon hátteréhez
+  themeColor: "#0f172a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -14,6 +14,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  // FONTOS: Ez kell, hogy a '/icons/...' útvonalak teljes URL-ek legyenek (pl. https://drivesync-hungary.hu/icons/...)
   metadataBase: new URL('https://drivesync-hungary.hu'),
   
   title: {
@@ -24,35 +25,25 @@ export const metadata: Metadata = {
   keywords: ["drivesync", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
   authors: [{ name: "DriveSync Technologies" }],
   
-  // PWA Beállítások
   manifest: "/manifest.webmanifest",
+  
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "DriveSync",
   },
   
-  // Ikonok (Feltételezve, hogy megcsináltad az új PNG-ket)
   icons: {
-    // A favicon a böngészőfülhöz
+    // A favicon.ico-t mindig a gyökérbe keresik a böngészők, ne tedd az icons mappába, hagyd a public mappában!
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
-      { url: '/icons/icon-512.png', type: 'image/png' }, // Nagy felbontású ikon
+      { url: '/icons/icon-512.png', type: 'image/png' },
     ],
-    // Ez kell az iPhone-nak, hogy szép legyen a főképernyőn
     apple: [
       { url: '/icons/apple-icon.png', sizes: '180x180', type: 'image/png' },
     ],
-    // Egyéb shortcut ikonok
-    other: [
-      {
-        rel: 'apple-touch-icon-precomposed',
-        url: '/icons/apple-icon.png',
-      },
-    ],
   },
 
-  // Social Media & Google Search (EZ KELL A GOOGLE KÉPHEZ)
   openGraph: {
     title: "DriveSync - Az autód digitális garázsa",
     description: "Felejtsd el a papírokat. Kezeld a szervizkönyvet és a költségeket egyetlen prémium felületen.",
@@ -62,29 +53,20 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: '/icons/opengraph-image.png', // Ezt a fájlt hozd létre 1200x630 méretben!
+        url: '/icons/opengraph-image.png',
         width: 1200,
         height: 630,
         alt: 'DriveSync Hungary Dashboard Preview',
       },
     ],
   },
+  
+  // Twitter kártya beállítások
   twitter: {
     card: 'summary_large_image',
     title: "DriveSync - Prémium Garázsmenedzsment",
     description: "Kezeld a szerviztörténetet és költségeket egy helyen.",
-    images: ['/icons/opengraph-image.png'], // Ugyanaz a nagy kép mehet ide is
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
+    images: ['/icons/opengraph-image.png'],
   },
 };
 
@@ -96,7 +78,6 @@ export default function RootLayout({
   return (
     <html lang="hu" suppressHydrationWarning>
       <body className="antialiased bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-        
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -108,7 +89,6 @@ export default function RootLayout({
             <CookieBanner />
             <RegisterSW />
         </ThemeProvider>
-
       </body>
     </html>
   );

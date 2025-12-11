@@ -238,8 +238,8 @@ function ProTeaser() {
 
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
-        // JAVÍTÁS: h-auto min-h-[...] használata, hogy ha sok a szöveg, megnyúljon a doboz
-        <div className="relative bg-slate-900 w-full overflow-hidden shadow-2xl shrink-0 group min-h-[22rem] md:min-h-[26rem]">
+        // JAVÍTÁS: PC-n fix magasságot (h-[28rem]) adtam vissza, hogy legyen elég hely a tartalomnak
+        <div className="relative bg-slate-900 w-full overflow-hidden shadow-2xl shrink-0 group min-h-[22rem] md:h-[28rem]">
             {car.image_url && (
                 <div className="absolute inset-0 z-0">
                     <Image src={car.image_url} alt="Background" fill className="object-cover opacity-50 blur-xl scale-110" priority />
@@ -247,7 +247,9 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                 </div>
             )}
             
-            <div className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-end pb-8 pt-20 md:pt-0 md:justify-center">
+            {/* JAVÍTÁS: md:justify-center visszakerült PC-re, hogy vertikálisan középen legyen */}
+            {/* Mobilon (alapértelmezett) marad a justify-end és pb-8, ahogy kérted */}
+            <div className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-end pb-8 pt-20 md:pt-0 md:pb-0 md:justify-center">
                 
                 {/* Top Nav */}
                 <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-center z-30">
@@ -295,8 +297,7 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                             <p className="text-slate-300/80 font-mono text-lg md:text-xl tracking-widest">{car.plate}</p>
                         </div>
 
-                        {/* Badge-ek (Futásteljesítmény, Szerviz) */}
-                        {/* JAVÍTÁS: flex-wrap és justify-center mobilon, hogy biztosan elférjenek */}
+                        {/* Badge-ek - Mobilon középen, PC-n balra igazítva */}
                         <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-1 w-full">
                             <StatBadge label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
                             <StatBadge label="Szervizig" value={`${kmRemaining.toLocaleString()} km`} valueColor={kmRemaining <= 1000 ? 'text-red-400' : 'text-emerald-400'} />
@@ -346,7 +347,11 @@ function MobileBottomNav({ carId }: { carId: string }) {
 function DesktopActionGrid({ carId }: { carId: string }) {
     const btnClass = "group h-16 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all hover:-translate-y-1 font-bold border border-transparent overflow-hidden relative";
     const shine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer";
+    
     return (
+        // JAVÍTÁS: A -mt-8 (negatív margin) miatt lógnak bele a gombok a képbe.
+        // Ez PC-n szép design elem ("floating cards"), de ha neked ez "felcsúszásnak" tűnik,
+        // akkor itt állíthatod. Most hagytam -mt-8-on, de biztosítottam a z-indexet (z-30).
         <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-5 gap-4">
              <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} bg-amber-500 hover:bg-amber-400 text-slate-900`}>
                 <div className={shine} />
