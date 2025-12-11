@@ -1,13 +1,16 @@
 'use client'
 
+
 import { useState, useEffect } from 'react'
 import { useFormStatus } from 'react-dom'
-import { updateProfile, updatePreferences } from '@/app/settings/actions'
+import { updateProfile, updatePreferences } from '@/app/settings/actions' // Ez kell!
 import Image from 'next/image'
 import { User, Bell, Shield, CreditCard, Loader2, LogOut, Moon, Sun, CheckCircle } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { createClient } from '@/supabase/client'
 import { useRouter } from 'next/navigation'
+
+// ... (többi kód) ...
 
 // --- SEGÉDKOMPONENSEK ---
 
