@@ -49,3 +49,26 @@ export async function removeFriendAction(friendshipId: string) {
     await supabase.from('friendships').delete().eq('id', friendshipId)
     revalidatePath('/community')
 }
+
+export async function addFriendByIdAction(friendId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Jelentkezz be!' }
+
+  if (friendId === user.id) return { error: 'Magadat nem jelölheted be.' }
+
+  // Jelölés beszúrása
+  const { error } = await supabase.from('friendships').insert({
+    user_id: user.id,
+    friend_id: friendId,
+    status: 'pending'
+  })
+
+  if (error) {
+      if (error.code === '23505') return { error: 'Már bejelöltétek egymást.' }
+      return { error: 'Hiba történt a jelöléskor.' }
+  }
+
+  revalidatePath('/community')
+  return { success: 'Jelölés elküldve!' }
+}

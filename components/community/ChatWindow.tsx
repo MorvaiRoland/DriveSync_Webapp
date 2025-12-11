@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/supabase/client'
-import { Send, MoreVertical, Image as ImageIcon, Trash2, Smile, Loader2, ArrowLeft, Heart } from 'lucide-react'
+import { Send, MoreVertical, Image as ImageIcon, Trash2, Smile, Loader2, ArrowLeft, Heart, UserPlus, Check } from 'lucide-react'
 import Link from 'next/link'
+import { addFriendByIdAction } from '@/app/community/friend-actions'
 
 // Dátum formázó segédfüggvény
 const formatMessageDate = (dateString: string) => {
@@ -27,6 +28,7 @@ export default function ChatWindow({
   const [newMessage, setNewMessage] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [typingUsers, setTypingUsers] = useState<any[]>([])
+  const [friendStatus, setFriendStatus] = useState<'none' | 'sent'>('none') // Jelölés állapota
   
   const supabase = createClient()
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -40,16 +42,15 @@ export default function ChatWindow({
 
   // --- 1. ÜZENETEK BETÖLTÉSE ÉS REALTIME ---
   useEffect(() => {
-    setMessages([]) // Váltáskor ürítjük a listát
+    setMessages([]) 
 
     const fetchMessages = async () => {
       let query = supabase.from(type === 'group' ? 'group_messages' : 'direct_messages').select('*')
       
       if (type === 'group') {
-          // Csoportos chat: Egyszerű szűrés ID-ra
           query = query.eq('group_id', id)
       } else {
-          // Privát chat (DM): Én küldtem neked VAGY te küldtél nekem
+          // DM: Én küldtem NEKI vagy Ő küldött NEKEM
           query = query.or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${id}),and(sender_id.eq.${id},receiver_id.eq.${currentUser.id})`)
       }
 
@@ -73,7 +74,7 @@ export default function ChatWindow({
             event: 'INSERT', 
             schema: 'public', 
             table: type === 'group' ? 'group_messages' : 'direct_messages',
-            // Csoportnál szűrünk ID-ra szerver oldalon, DM-nél kliens oldalon szűrünk lentebb
+            // Csoportnál szűrünk ID-ra, DM-nél kliens oldalon (l. lentebb)
             filter: type === 'group' ? `group_id=eq.${id}` : undefined 
         }, 
         (payload) => {
@@ -83,6 +84,7 @@ export default function ChatWindow({
                 const isRelevant = (msg.sender_id === id && msg.receiver_id === currentUser.id) || (msg.sender_id === currentUser.id && msg.receiver_id === id)
                 if (!isRelevant) return
             }
+            // HOZZÁADJUK A LISTÁHOZ (Így marad meg realtime-ban!)
             setMessages((prev) => [...prev, payload.new])
             scrollToBottom()
         }
@@ -95,11 +97,9 @@ export default function ChatWindow({
             filter: type === 'group' ? `group_id=eq.${id}` : undefined 
         }, 
         (payload) => {
-            // Reakció vagy törlés frissítése a listában
             setMessages((prev) => prev.map(msg => msg.id === payload.new.id ? payload.new : msg))
         }
       )
-      // Gépelés indikátor (Presence)
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
         const typing = []
@@ -124,11 +124,17 @@ export default function ChatWindow({
   const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value)
     channelRef.current?.track({ isTyping: true, email: currentUser.email })
-    
-    // Debounce: ha megáll az írással, levesszük a jelzést
-    setTimeout(() => {
-        channelRef.current?.track({ isTyping: false })
-    }, 2000)
+    setTimeout(() => { channelRef.current?.track({ isTyping: false }) }, 2000)
+  }
+
+  // --- BARÁTNAK JELÖLÉS ---
+  const handleAddFriend = async () => {
+      const res = await addFriendByIdAction(id)
+      if (res?.success) {
+          setFriendStatus('sent')
+      } else {
+          alert(res?.error || 'Hiba történt')
+      }
   }
 
   // --- ÜZENET KÜLDÉSE ---
@@ -138,11 +144,11 @@ export default function ChatWindow({
 
     const msgContent = newMessage
     setNewMessage('')
+    // Azonnali görgetés az UI élményért
     scrollToBottom()
 
     try {
         let error;
-        
         if (type === 'group') {
             const res = await supabase.from('group_messages').insert({
                 group_id: id,
@@ -152,20 +158,16 @@ export default function ChatWindow({
             })
             error = res.error
         } else {
-            // DM küldés
             const res = await supabase.from('direct_messages').insert({
                 sender_id: currentUser.id,
-                receiver_id: id, // Itt az ID a partner ID-ja
+                receiver_id: id,
                 content: msgContent || (imageUrl ? 'Kép csatolmány' : ''),
                 image_url: imageUrl || null
             })
             error = res.error
         }
 
-        if (error) {
-            console.error("Hiba küldéskor:", error)
-            alert("Nem sikerült elküldeni.")
-        }
+        if (error) console.error("Hiba küldéskor:", error)
     } catch (err) {
         console.error("Váratlan hiba:", err)
     }
@@ -177,56 +179,40 @@ export default function ChatWindow({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     setIsUploading(true)
     const fileExt = file.name.split('.').pop()
     const fileName = `${Math.random()}.${fileExt}`
     const filePath = `chat/${fileName}`
-
     const { error } = await supabase.storage.from('chat-images').upload(filePath, file)
-
-    if (error) {
-        alert('Hiba a feltöltéskor')
-        setIsUploading(false)
-        return
+    if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from('chat-images').getPublicUrl(filePath)
+        await sendMessage(undefined, publicUrl)
     }
-
-    const { data: { publicUrl } } = supabase.storage.from('chat-images').getPublicUrl(filePath)
-    await sendMessage(undefined, publicUrl)
     setIsUploading(false)
   }
 
-  // --- REAKCIÓK (SZÍVECSKE) ---
+  // --- REAKCIÓK & TÖRLÉS ---
   const toggleReaction = async (msgId: string, currentReactions: any) => {
     const reactions = currentReactions || {}
     const userId = currentUser.id
-    
-    if (reactions[userId]) {
-        delete reactions[userId]
-    } else {
-        reactions[userId] = '❤️'
-    }
-
+    if (reactions[userId]) delete reactions[userId]
+    else reactions[userId] = '❤️'
     const table = type === 'group' ? 'group_messages' : 'direct_messages'
     await supabase.from(table).update({ reactions: reactions }).eq('id', msgId)
   }
 
-  // --- ÜZENET TÖRLÉSE ---
   const deleteMessage = async (msgId: string) => {
     if (!confirm('Biztosan törlöd?')) return
     const table = type === 'group' ? 'group_messages' : 'direct_messages'
-    // Soft delete: nem töröljük a sort, csak a tartalmát rejtjük el
     await supabase.from(table).update({ is_deleted: true, content: '🚫 Az üzenetet törölték.', image_url: null }).eq('id', msgId)
   }
 
   return (
-    // Mobilon 100dvh a billentyűzet és címsor miatt
     <div className="flex flex-col h-[calc(100dvh-80px)] sm:h-[calc(100vh-140px)] bg-slate-950 sm:bg-slate-900 rounded-none sm:rounded-2xl overflow-hidden border-0 sm:border border-slate-700 shadow-none sm:shadow-2xl relative">
       
-      {/* 1. HEADER */}
+      {/* 1. HEADER (MOST MÁR BARÁT GOMBBAL) */}
       <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/95 backdrop-blur flex justify-between items-center shrink-0 z-10 sticky top-0">
         <div className="flex items-center gap-3">
-            {/* Mobil Vissza Gomb */}
             <Link href="/community" className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-white">
                 <ArrowLeft className="w-5 h-5" />
             </Link>
@@ -247,36 +233,43 @@ export default function ChatWindow({
                 )}
             </div>
         </div>
-        <button className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors">
-            <MoreVertical className="w-5 h-5" />
-        </button>
+
+        {/* MŰVELETEK (BARÁT HOZZÁADÁSA) */}
+        <div className="flex items-center gap-1">
+            {type === 'dm' && (
+                <button 
+                    onClick={handleAddFriend}
+                    disabled={friendStatus === 'sent'}
+                    className={`p-2 rounded-full transition-colors ${friendStatus === 'sent' ? 'bg-emerald-500/20 text-emerald-500' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                    title="Barátnak jelölés"
+                >
+                    {friendStatus === 'sent' ? <Check className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                </button>
+            )}
+            <button className="text-slate-400 hover:text-white p-2 rounded-full hover:bg-slate-800 transition-colors">
+                <MoreVertical className="w-5 h-5" />
+            </button>
+        </div>
       </div>
 
-      {/* 2. ÜZENETEK LISTA */}
+      {/* 2. ÜZENETEK */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950 sm:bg-slate-900 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
         {messages.map((msg, idx) => {
-            // Ellenőrizzük, ki küldte (csoportnál user_id, dm-nél sender_id)
             const senderId = type === 'group' ? msg.user_id : msg.sender_id
             const isMe = senderId === currentUser.id
-            
             const reactionCount = msg.reactions ? Object.keys(msg.reactions).length : 0
             const userReacted = msg.reactions && msg.reactions[currentUser.id]
 
-            if (msg.is_deleted && !isMe) return null; // Opcionális: mások elől elrejtjük a töröltet teljesen
+            if (msg.is_deleted && !isMe) return null;
 
             return (
                 <div key={msg.id || idx} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} group animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                    
                     <div className={`relative max-w-[85%] sm:max-w-[60%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                        
-                        {/* Kép */}
                         {msg.image_url && (
                             <div className="mb-1 rounded-2xl overflow-hidden border border-slate-700/50 shadow-md max-w-full cursor-pointer">
                                 <img src={msg.image_url} alt="Feltöltés" className="w-full h-auto object-cover max-h-64" loading="lazy" />
                             </div>
                         )}
-
-                        {/* Szöveg */}
                         {(msg.content) && (
                             <div className={`px-3.5 py-2.5 rounded-2xl shadow-sm text-[13px] sm:text-sm leading-relaxed relative break-words ${
                                 msg.is_deleted 
@@ -288,23 +281,14 @@ export default function ChatWindow({
                                 {msg.content}
                             </div>
                         )}
-
-                        {/* Meta: Dátum + Interakciók */}
                         <div className="flex items-center gap-2 mt-1 px-1 min-h-[20px]">
                             <span className="text-[10px] text-slate-500 font-medium">{formatMessageDate(msg.created_at)}</span>
-                            
-                            {/* Reakció gomb */}
                             {!msg.is_deleted && (
-                                <button 
-                                    onClick={() => toggleReaction(msg.id, msg.reactions)}
-                                    className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border transition-all active:scale-95 ${userReacted ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:bg-slate-800'}`}
-                                >
+                                <button onClick={() => toggleReaction(msg.id, msg.reactions)} className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border transition-all active:scale-95 ${userReacted ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:bg-slate-800'}`}>
                                     <Heart className={`w-3 h-3 ${userReacted ? 'fill-red-400' : ''}`} />
                                     {reactionCount > 0 && <span className="font-bold">{reactionCount}</span>}
                                 </button>
                             )}
-
-                            {/* Törlés gomb */}
                             {isMe && !msg.is_deleted && (
                                 <button onClick={() => deleteMessage(msg.id)} className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-slate-500 hover:text-red-400 p-1">
                                     <Trash2 className="w-3 h-3" />
@@ -315,59 +299,21 @@ export default function ChatWindow({
                 </div>
             )
         })}
-        
-        {isUploading && (
-            <div className="flex justify-end animate-pulse">
-                <div className="bg-slate-800 rounded-2xl p-2.5 flex items-center gap-2 text-xs text-slate-400">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" /> Kép küldése...
-                </div>
-            </div>
-        )}
+        {isUploading && <div className="flex justify-end animate-pulse"><div className="bg-slate-800 rounded-2xl p-2.5 flex items-center gap-2 text-xs text-slate-400"><Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" /> Kép küldése...</div></div>}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. INPUT MEZŐ */}
+      {/* 3. INPUT */}
       <form onSubmit={sendMessage} className="p-3 bg-slate-900 border-t border-slate-800 flex items-end gap-2 shrink-0 pb-safe">
-        <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            accept="image/*" 
-            onChange={handleFileUpload}
-        />
-        <button 
-            type="button" 
-            onClick={() => fileInputRef.current?.click()}
-            className="p-3 text-slate-400 hover:text-blue-400 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors active:scale-95"
-        >
+        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-slate-400 hover:text-blue-400 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors active:scale-95">
             <ImageIcon className="w-5 h-5" />
         </button>
-
         <div className="flex-1 bg-slate-800 border border-slate-700 rounded-3xl flex items-center px-4 py-2.5 focus-within:border-blue-500 transition-all">
-            <input 
-                type="text" 
-                value={newMessage}
-                onChange={handleTyping}
-                placeholder="Írj üzenetet..." 
-                className="w-full bg-transparent text-white placeholder-slate-500 focus:outline-none text-sm"
-                style={{ fontSize: '16px' }} // iOS zoom fix
-            />
-            <button type="button" className="text-slate-500 hover:text-yellow-400 ml-1 p-1">
-                <Smile className="w-5 h-5" />
-            </button>
+            <input type="text" value={newMessage} onChange={handleTyping} placeholder="Írj üzenetet..." className="w-full bg-transparent text-white placeholder-slate-500 focus:outline-none text-sm" style={{ fontSize: '16px' }} />
+            <button type="button" className="text-slate-500 hover:text-yellow-400 ml-1 p-1"><Smile className="w-5 h-5" /></button>
         </div>
-
-        <button 
-            type="submit" 
-            disabled={!newMessage.trim() && !isUploading}
-            className={`p-3 rounded-full transition-all active:scale-95 ${
-                newMessage.trim() 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                : 'bg-slate-800 text-slate-600'
-            }`}
-        >
-            <Send className="w-5 h-5" />
-        </button>
+        <button type="submit" disabled={!newMessage.trim() && !isUploading} className="p-3 rounded-full bg-blue-600 text-white shadow-lg disabled:bg-slate-800 disabled:text-slate-600"><Send className="w-5 h-5" /></button>
       </form>
     </div>
   )
