@@ -55,9 +55,10 @@ async function createPromotion(formData: FormData) {
     })
 
     revalidatePath(`/admin?key=${adminKey}`)
+    revalidatePath('/') // Főoldal frissítése
 }
 
-// 3. Promóció Státusz Váltása (Aktív/Inaktív)
+// 3. Promóció Státusz Váltása
 async function togglePromotion(formData: FormData) {
     'use server'
     const id = formData.get('id') as string
@@ -67,10 +68,10 @@ async function togglePromotion(formData: FormData) {
     if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
 
     const supabase = getAdminClient()
-    
     await supabase.from('promotions').update({ is_active: !currentStatus }).eq('id', id)
 
     revalidatePath(`/admin?key=${adminKey}`)
+    revalidatePath('/') 
 }
 
 // 4. Promóció Törlése
@@ -85,6 +86,46 @@ async function deletePromotion(formData: FormData) {
     await supabase.from('promotions').delete().eq('id', id)
 
     revalidatePath(`/admin?key=${adminKey}`)
+    revalidatePath('/')
+}
+
+// 5. ÚJ: Frissítési Napló Bejegyzés Létrehozása
+async function createReleaseNote(formData: FormData) {
+    'use server'
+    const version = formData.get('version') as string
+    const title = formData.get('title') as string
+    const description = formData.get('description') as string
+    const date = formData.get('date') as string
+    const adminKey = formData.get('adminKey') as string
+
+    if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
+    if (!version || !title) return;
+
+    const supabase = getAdminClient()
+    await supabase.from('release_notes').insert({
+        version,
+        title,
+        description,
+        release_date: date || new Date().toISOString()
+    })
+
+    revalidatePath(`/admin?key=${adminKey}`)
+    revalidatePath('/') // Főoldal azonnali frissítése!
+}
+
+// 6. ÚJ: Frissítési Napló Törlése
+async function deleteReleaseNote(formData: FormData) {
+    'use server'
+    const id = formData.get('id') as string
+    const adminKey = formData.get('adminKey') as string
+
+    if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
+
+    const supabase = getAdminClient()
+    await supabase.from('release_notes').delete().eq('id', id)
+
+    revalidatePath(`/admin?key=${adminKey}`)
+    revalidatePath('/')
 }
 
 
@@ -94,11 +135,10 @@ async function deletePromotion(formData: FormData) {
 export default async function AdminDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ key?: string }>; // <--- JAVÍTVA: Promise típus
+  searchParams: Promise<{ key?: string }>;
 }) {
   
   // --- BIZTONSÁG ---
-  // A Promise feloldása (await)
   const resolvedParams = await searchParams;
   const secretKey = resolvedParams?.key;
 
@@ -109,12 +149,13 @@ export default async function AdminDashboard({
   const supabaseAdmin = getAdminClient()
 
   // --- ADATLEKÉRÉS ---
-  const [carsRes, eventsRes, subsRes, usersRes, promosRes] = await Promise.all([
+  const [carsRes, eventsRes, subsRes, usersRes, promosRes, releaseRes] = await Promise.all([
     supabaseAdmin.from('cars').select('id'),
     supabaseAdmin.from('events').select('id, type, cost, car_id'),
     supabaseAdmin.from('subscriptions').select('user_id, status, plan_type'),
     supabaseAdmin.auth.admin.listUsers(),
-    supabaseAdmin.from('promotions').select('*').order('created_at', { ascending: false })
+    supabaseAdmin.from('promotions').select('*').order('created_at', { ascending: false }),
+    supabaseAdmin.from('release_notes').select('*').order('release_date', { ascending: false }) // ÚJ LEKÉRÉS
   ])
 
   const cars = carsRes.data || []
@@ -122,6 +163,7 @@ export default async function AdminDashboard({
   const subscriptions = subsRes.data || []
   const allUsers = usersRes.data.users || []
   const promotions = promosRes.data || []
+  const releaseNotes = releaseRes.data || []
 
   // --- STATISZTIKÁK SZÁMOLÁSA ---
   const userList = allUsers.map(u => {
@@ -167,116 +209,134 @@ export default async function AdminDashboard({
       </div>
 
       {/* ===================================================================================== */}
-      {/* ÚJ SZEKCIÓ: PROMÓCIÓ KEZELŐ */}
+      {/* SZEKCIÓ 1: PROMÓCIÓ KEZELŐ */}
       {/* ===================================================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         
-        {/* 1. BAL OLDAL: ÚJ HOZZÁADÁSA */}
+        {/* BAL: ÚJ PROMÓ */}
         <div className="lg:col-span-1 bg-gradient-to-br from-slate-900 to-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-            
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2 relative z-10">
                 <span className="bg-purple-500/20 text-purple-400 p-1.5 rounded-lg">🎁</span>
-                Új Promóció Indítása
+                Új Promóció
             </h3>
-            
             <form action={createPromotion} className="space-y-4 relative z-10">
                 <input type="hidden" name="adminKey" value={secretKey} />
-                
-                <div>
-                    <label className="text-xs uppercase font-bold text-slate-500 mb-1 block">Főcím (Pl. Karácsonyi Akció)</label>
-                    <input type="text" name="title" required placeholder="Nagy Cím" className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all" />
-                </div>
-                
-                <div>
-                    <label className="text-xs uppercase font-bold text-slate-500 mb-1 block">Leírás (Mit kap a user?)</label>
-                    <textarea name="description" rows={3} placeholder="Regisztrálj és..." className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all" />
-                </div>
-
-                <div>
-                    <label className="text-xs uppercase font-bold text-slate-500 mb-1 block">Gomb Szöveg</label>
-                    <input type="text" name="cta_text" placeholder="Kérem az ajándékot!" className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none" />
-                </div>
-
-                <button type="submit" className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-purple-900/20 active:scale-95">
-                    Hozzáadás +
-                </button>
+                <input type="text" name="title" required placeholder="Főcím (pl. Akció)" className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none" />
+                <textarea name="description" rows={3} placeholder="Leírás..." className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-purple-500 outline-none" />
+                <input type="text" name="cta_text" placeholder="Gomb szöveg" className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white outline-none" />
+                <button type="submit" className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition-all">Hozzáadás +</button>
             </form>
         </div>
 
-        {/* 2. JOBB OLDAL: LISTA */}
+        {/* JOBB: PROMÓ LISTA */}
         <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center">
-                <h3 className="font-bold text-white">Létrehozott Kampányok</h3>
+                <h3 className="font-bold text-white">Promóciók</h3>
                 <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">{promotions.length} db</span>
             </div>
-            
             <div className="overflow-y-auto max-h-[400px] flex-1">
-                {promotions.length === 0 ? (
-                    <div className="p-10 text-center text-slate-500">Még nincs promóció. Hozz létre egyet bal oldalt! 👈</div>
-                ) : (
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-950 text-slate-400 text-xs uppercase sticky top-0">
-                            <tr>
-                                <th className="px-5 py-3">Kampány</th>
-                                <th className="px-5 py-3 text-center">Státusz</th>
-                                <th className="px-5 py-3 text-right">Művelet</th>
+                <table className="w-full text-left text-sm">
+                    <tbody className="divide-y divide-slate-800">
+                        {promotions.map((promo: any) => (
+                            <tr key={promo.id} className="hover:bg-slate-800/40">
+                                <td className="px-5 py-4">
+                                    <div className="font-bold text-white">{promo.title}</div>
+                                    <div className="text-slate-400 text-xs mt-1">{promo.description}</div>
+                                </td>
+                                <td className="px-5 py-4 text-center">
+                                    {promo.is_active ? <span className="text-emerald-400 text-xs font-bold">LIVE ●</span> : <span className="text-slate-500 text-xs">INAKTÍV</span>}
+                                </td>
+                                <td className="px-5 py-4 text-right">
+                                    <div className="flex justify-end gap-2">
+                                        <form action={togglePromotion}>
+                                            <input type="hidden" name="id" value={promo.id} />
+                                            <input type="hidden" name="currentStatus" value={String(promo.is_active)} />
+                                            <input type="hidden" name="adminKey" value={secretKey} />
+                                            <button type="submit" className="text-xs font-bold underline text-slate-400 hover:text-white">{promo.is_active ? 'Leállítás' : 'Indítás'}</button>
+                                        </form>
+                                        <form action={deletePromotion}>
+                                            <input type="hidden" name="id" value={promo.id} />
+                                            <input type="hidden" name="adminKey" value={secretKey} />
+                                            <button type="submit" className="text-xs font-bold text-red-500 hover:text-red-400 ml-2">Törlés</button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800">
-                            {promotions.map((promo: any) => (
-                                <tr key={promo.id} className="hover:bg-slate-800/40 transition-colors">
-                                    <td className="px-5 py-4">
-                                        <div className="font-bold text-white text-base">{promo.title}</div>
-                                        <div className="text-slate-400 text-xs mt-1">{promo.description}</div>
-                                        <div className="text-purple-400 text-[10px] mt-1 font-mono bg-purple-900/20 inline-block px-1.5 rounded">CTA: {promo.cta_text || '-'}</div>
-                                    </td>
-                                    <td className="px-5 py-4 text-center">
-                                        {promo.is_active ? (
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-xs animate-pulse">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> LIVE
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 font-bold text-xs">
-                                                INAKTÍV
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-5 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-3">
-                                            {/* KAPCSOLÓ (Toggle) */}
-                                            <form action={togglePromotion}>
-                                                <input type="hidden" name="id" value={promo.id} />
-                                                <input type="hidden" name="currentStatus" value={String(promo.is_active)} />
-                                                <input type="hidden" name="adminKey" value={secretKey} />
-                                                <button type="submit" className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                                                    promo.is_active 
-                                                    ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' 
-                                                    : 'bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-500'
-                                                }`}>
-                                                    {promo.is_active ? 'Leállítás' : 'Indítás 🚀'}
-                                                </button>
-                                            </form>
-
-                                            {/* TÖRLÉS */}
-                                            <form action={deletePromotion}>
-                                                <input type="hidden" name="id" value={promo.id} />
-                                                <input type="hidden" name="adminKey" value={secretKey} />
-                                                <button type="submit" className="text-slate-500 hover:text-red-400 p-2 transition-colors">
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
       </div>
+
       {/* ===================================================================================== */}
+      {/* SZEKCIÓ 2: FRISSÍTÉSI NAPLÓ (CHANGELOG) - ÚJ RÉSZ */}
+      {/* ===================================================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        
+        {/* BAL: ÚJ FRISSÍTÉS */}
+        <div className="lg:col-span-1 bg-gradient-to-br from-slate-900 to-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2 relative z-10">
+                <span className="bg-blue-500/20 text-blue-400 p-1.5 rounded-lg">📅</span>
+                Frissítési Napló
+            </h3>
+            <form action={createReleaseNote} className="space-y-4 relative z-10">
+                <input type="hidden" name="adminKey" value={secretKey} />
+                <div className="flex gap-4">
+                    <input type="text" name="version" required placeholder="Verzió (v1.0)" className="w-1/3 bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none" />
+                    <input type="date" name="date" required className="w-2/3 bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none" />
+                </div>
+                <input type="text" name="title" required placeholder="Frissítés címe" className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none" />
+                <textarea name="description" rows={3} placeholder="Mit fejlesztettél?" className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none" />
+                
+                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all">Közzététel 🚀</button>
+            </form>
+        </div>
+
+        {/* JOBB: FRISSÍTÉS LISTA */}
+        <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center">
+                <h3 className="font-bold text-white">Eddigi Kiadások</h3>
+                <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">{releaseNotes.length} db</span>
+            </div>
+            <div className="overflow-y-auto max-h-[400px] flex-1">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-950 text-slate-400 text-xs uppercase sticky top-0">
+                        <tr>
+                            <th className="px-5 py-3">Verzió</th>
+                            <th className="px-5 py-3">Tartalom</th>
+                            <th className="px-5 py-3 text-right">Művelet</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                        {releaseNotes.map((note: any) => (
+                            <tr key={note.id} className="hover:bg-slate-800/40">
+                                <td className="px-5 py-4 whitespace-nowrap">
+                                    <div className="font-mono font-bold text-blue-400">{note.version}</div>
+                                    <div className="text-slate-500 text-[10px]">{new Date(note.release_date).toLocaleDateString('hu-HU')}</div>
+                                </td>
+                                <td className="px-5 py-4">
+                                    <div className="font-bold text-white">{note.title}</div>
+                                    <div className="text-slate-400 text-xs mt-1 line-clamp-2">{note.description}</div>
+                                </td>
+                                <td className="px-5 py-4 text-right">
+                                    <form action={deleteReleaseNote}>
+                                        <input type="hidden" name="id" value={note.id} />
+                                        <input type="hidden" name="adminKey" value={secretKey} />
+                                        <button type="submit" className="text-slate-500 hover:text-red-400 p-2">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+      </div>
 
       {/* --- FELHASZNÁLÓK TÁBLÁZAT --- */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8">
