@@ -120,7 +120,6 @@ export default async function CarDetailsPage(props: Props) {
   const carIdString = car.id.toString();
 
   // --- WIDGET DEFINITIONS ---
-  // Előre definiáljuk a widgeteket, hogy mindkét nézethez (Mobil/PC) felhasználhassuk őket
   const WidgetParking = <ParkingAssistant carId={carIdString} activeSession={activeParking} />;
   const WidgetHealth = <HealthCard {...healthProps} />;
   const WidgetCost = <CostCard {...costProps} />;
@@ -141,13 +140,17 @@ export default async function CarDetailsPage(props: Props) {
   );
   const WidgetTips = isPro ? <SmartTipsCard tips={smartTips} /> : null;
   const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
+  
+  // Itt van a grafikon widget definiálása
   const WidgetCharts = <AnalyticsCharts events={safeEvents} />;
+  
   const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
 
   // --- MOBILE TABS CONTENT ---
   const mobileTabs = {
     overview: <div className="space-y-6">{WidgetParking}{WidgetHealth}{WidgetCost}{WidgetSales}</div>,
     services: <div className="space-y-6">{WidgetSpecs}{WidgetVignette}{WidgetTires}{WidgetDocs}</div>,
+    // Itt van a grafikon a mobilos Napló fülben
     log: <div className="space-y-6">{WidgetTips}{WidgetReminders}{WidgetCharts}{WidgetLog}</div>
   };
 
@@ -165,7 +168,7 @@ export default async function CarDetailsPage(props: Props) {
                  </div>
             </div>
 
-            {/* Grafikonok */}
+            {/* Itt van a grafikon a desktop nézetben */}
             {WidgetCharts}
 
             {/* Napló teljes szélességben */}
@@ -192,7 +195,7 @@ export default async function CarDetailsPage(props: Props) {
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
       
-      {/* HEADER SECTION */}
+      {/* HEADER SECTION - Javított dizájnnal */}
       <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={isPro} />
       
       {/* ACTION GRID (Desktop Only) */}
@@ -235,7 +238,6 @@ function ProTeaser() {
 
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
-        // JAVÍTÁS: A magasságot kicsit csökkentettem mobilon (22rem -> 20rem), hogy kompaktabb legyen
         <div className="relative bg-slate-900 h-[20rem] md:h-[26rem] overflow-hidden shadow-2xl shrink-0 group">
             {car.image_url && (
                 <div className="absolute inset-0 z-0">
@@ -244,11 +246,8 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                 </div>
             )}
             
-            {/* JAVÍTÁS: justify-center HELYETT pt-20 (mobilon) és md:justify-center (PC-n) */}
-            {/* Így mobilon fixen fentről kezdődik a tartalom, nem csúszik le középre */}
             <div className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col pt-20 md:pt-0 md:justify-center">
                 
-                {/* Top Nav (Garázs gomb, stb.) */}
                 <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-center z-30">
                     <Link href="/" className="flex items-center gap-2 text-white/80 hover:text-white bg-black/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-all hover:bg-white/10">
                         <Warehouse className="w-4 h-4" />
@@ -268,10 +267,7 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                     </div>
                 </div>
 
-                {/* Tartalom (Autó kép + Infók) */}
-                {/* JAVÍTÁS: mt-10 helyett mt-4 mobilon, hogy feljebb legyen */}
                 <div className="flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-10 mt-4 md:mt-0">
-                    {/* Autó Kép */}
                     <div className="w-28 h-28 md:w-52 md:h-52 rounded-[1.5rem] md:rounded-[2rem] border-4 border-white/10 shadow-2xl overflow-hidden relative flex-shrink-0 bg-slate-800 group-hover:scale-105 transition-transform duration-500 ease-out">
                         {car.image_url ? (
                             <Image src={car.image_url} alt="Car" fill className="object-cover" />
@@ -282,7 +278,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                         )}
                     </div>
                     
-                    {/* Szöveges Infók */}
                     <div className="text-center md:text-left flex-1 space-y-1 md:space-y-2 pb-2">
                          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] md:text-xs font-bold uppercase tracking-widest ${healthStatus.color} backdrop-blur-md`}>
                             <span className={`w-2 h-2 rounded-full ${healthStatus.dot}`}></span>
@@ -296,7 +291,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                             <p className="text-slate-300/80 font-mono text-lg md:text-xl tracking-widest">{car.plate}</p>
                         </div>
 
-                        {/* Badge-ek (Futásteljesítmény, Szerviz) */}
                         <div className="flex flex-wrap justify-center md:justify-start gap-2 md:gap-4 pt-2 md:pt-3">
                             <StatBadge label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
                             <StatBadge label="Szervizig" value={`${kmRemaining.toLocaleString()} km`} valueColor={kmRemaining <= 1000 ? 'text-red-400' : 'text-emerald-400'} />
@@ -310,7 +304,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
 
 function StatBadge({ label, value, valueColor = "text-white" }: any) {
     return (
-        // JAVÍTÁS: Sötét háttér (bg-slate-900/90) és világos szöveg (text-slate-300), hogy olvasható legyen a képen
         <div className="bg-slate-900/90 px-4 py-2 md:py-3 rounded-xl border border-slate-700/50 backdrop-blur-md shadow-lg flex flex-col items-center justify-center min-w-[110px]">
             <p className="text-[9px] md:text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-0.5 md:mb-1">{label}</p>
             <p className={`font-mono font-bold text-sm md:text-lg ${valueColor} drop-shadow-sm`}>{value}</p>
