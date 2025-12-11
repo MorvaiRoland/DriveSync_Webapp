@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react' // Hozzáadva a useRef
+import { useState, useEffect, useRef } from 'react'
 import { useFormStatus } from 'react-dom'
 import { updateProfile, updatePreferences } from '@/app/settings/actions'
 import Image from 'next/image'
-import { User, Bell, CreditCard, Loader2, LogOut, Moon, Sun, CheckCircle, Upload, Camera } from 'lucide-react' // Hozzáadva a Camera, Upload
+import { User, Bell, CreditCard, Loader2, LogOut, Moon, Sun, CheckCircle, Upload, Camera } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { createClient } from '@/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -30,8 +30,8 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
   const [loadingPortal, setLoadingPortal] = useState(false)
   const router = useRouter()
   const supabase = createClient()
-  const fileInputRef = useRef<HTMLInputElement>(null) // Ref a fájl inputhoz
-  const formRef = useRef<HTMLFormElement>(null) // Ref a formhoz
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => setMounted(true), [])
 
@@ -58,20 +58,16 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
   
   // --- Képkezelő segédfüggvény ---
   const handleFileChangeAndSubmit = () => {
-    // Fájl kiválasztása után automatikusan elküldjük a formot
     if (formRef.current) {
-        // Át kell hidalnunk, hogy a form Data-ban legyen a file
         formRef.current.dispatchEvent(new Event('submit', { bubbles: true }))
     }
   }
   
   // --- Kép törlése ---
   const handleDeleteAvatar = () => {
-      // Beállítjuk a delete jelzőt és elküldjük a formot
       if (formRef.current) {
           const formData = new FormData(formRef.current)
-          formData.set('delete_avatar', 'true') // Jelezzük a Server Actionnek
-          // Mivel a `updateProfile` Action-t használjuk actionként, újra kell hívni:
+          formData.set('delete_avatar', 'true')
           updateProfile(formData)
       }
   }
@@ -103,7 +99,7 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
         {/* --- JOBB OLDALI TARTALOM --- */}
         <div className="flex-1 p-8 md:p-12 overflow-y-auto">
             
-            {/* 1. PROFIL SZERKESZTÉS (JAVÍTOTT: Képkezeléssel) */}
+            {/* 1. PROFIL SZERKESZTÉS */}
             {activeTab === 'profile' && (
                 <div className="max-w-lg space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                     <div>
@@ -111,27 +107,24 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                         <p className="text-slate-500 text-sm">Itt módosíthatod a profilképedet és a nevedet.</p>
                     </div>
 
-                    {/* Fő Form - most már mindent ez küld el */}
                     <form action={updateProfile} ref={formRef} className="space-y-6">
                         
-                        {/* Rejtett inputok és Fájlkezelés */}
                         <input type="hidden" name="current_avatar_url" value={user.user_metadata?.avatar_url || ''} />
                         <input type="hidden" name="delete_avatar" value="false" id="delete_avatar_flag" />
                         <input 
                             type="file" 
-                            name="avatar_file" // EZT KÜLDI EL a Server Action
+                            name="avatar_file"
                             ref={fileInputRef} 
                             className="hidden" 
                             accept="image/*"
                             onChange={handleFileChangeAndSubmit}
                         />
                         
-                        {/* Képnézet és Gombok */}
                         <div className="flex items-center gap-6">
-                            {/* Avatar Kép */}
+                            {/* Avatar Kép - Itt a javítás: shrink-0 hozzáadva */}
                             <div 
                                 onClick={() => fileInputRef.current?.click()}
-                                className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white dark:border-slate-800 shadow-lg bg-slate-100 group cursor-pointer"
+                                className="relative w-24 h-24 shrink-0 rounded-full overflow-hidden border-4 border-white dark:border-slate-800 shadow-lg bg-slate-100 group cursor-pointer"
                             >
                                 {user.user_metadata?.avatar_url ? (
                                     <Image src={user.user_metadata.avatar_url} alt="Avatar" fill className="object-cover" priority />
@@ -141,10 +134,7 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                                     </div>
                                 )}
                                 
-                                {/* Overlay a kattintáshoz */}
-                                <div 
-                                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Camera className="w-6 h-6 text-white" />
                                 </div>
                             </div>
@@ -152,7 +142,7 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                             {/* Gombok */}
                             <div className="flex-1 space-y-2">
                                 <label className="block text-xs font-bold text-slate-500 uppercase">Profilkép</label>
-                                <div className="flex gap-3">
+                                <div className="flex gap-3 flex-wrap">
                                     <button 
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}
@@ -166,11 +156,12 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                                             onClick={handleDeleteAvatar}
                                             className="px-4 py-2 text-red-500 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors shadow-sm"
                                          >
-                                             Törlés
+                                              Törlés
                                          </button>
                                     )}
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-2">Max 2MB. A kiválasztás után automatikusan mentődik.</p>
+                                {/* Szöveg frissítve 10MB-ra */}
+                                <p className="text-[10px] text-slate-400 mt-2">Max 10MB. A kiválasztás után automatikusan mentődik.</p>
                             </div>
                         </div>
 
@@ -193,10 +184,9 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                 </div>
             )}
 
-            {/* 2. BEÁLLÍTÁSOK (Téma, Értesítés) */}
+            {/* 2. BEÁLLÍTÁSOK */}
             {activeTab === 'preferences' && (
                 <div className="max-w-lg space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                    {/* ... (Preferences form marad) ... */}
                     <div>
                         <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Testreszabás</h2>
                         <p className="text-slate-500 text-sm">Hogyan jelenjen meg az alkalmazás.</p>
@@ -248,7 +238,7 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                 </div>
             )}
 
-            {/* 3. SZÁMLÁZÁS (ÚJ!) */}
+            {/* 3. SZÁMLÁZÁS */}
             {activeTab === 'billing' && (
                 <div className="max-w-lg space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
                     <div>
@@ -268,13 +258,11 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                                      </span>
                                  </h3>
                              </div>
-                             {/* Ikon a sarokban */}
                              <div className="p-3 bg-white dark:bg-slate-700 rounded-xl shadow-sm">
                                  <CreditCard className="w-6 h-6 text-amber-500" />
                              </div>
                          </div>
 
-                         {/* Ha van előfizetés (Pro vagy Lifetime), mutassuk a kezelés gombot */}
                          {(subscription?.plan_type === 'pro' || subscription?.plan_type === 'lifetime' || subscription?.plan_type === 'founder') ? (
                              <div className="space-y-3">
                                  <div className="flex gap-2 text-xs text-slate-500">
@@ -283,9 +271,9 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                                  </div>
                                  <div className="border-t border-slate-200 dark:border-slate-700 my-4"></div>
                                  <button 
-                                    onClick={manageSubscription}
-                                    disabled={loadingPortal}
-                                    className="w-full py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                                     onClick={manageSubscription}
+                                     disabled={loadingPortal}
+                                     className="w-full py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                                  >
                                      {loadingPortal && <Loader2 className="w-4 h-4 animate-spin" />}
                                      {subscription?.plan_type === 'pro' ? 'Előfizetés Kezelése / Lemondás' : 'Számlák Megtekintése'}
@@ -295,8 +283,8 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                              <div className="space-y-4">
                                  <p className="text-sm text-slate-500">Jelenleg az ingyenes csomagot használod. Válts nagyobbra a több funkcióért!</p>
                                  <button 
-                                    onClick={() => router.push('/pricing')}
-                                    className="w-full py-2.5 bg-amber-500 text-slate-900 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors"
+                                     onClick={() => router.push('/pricing')}
+                                     className="w-full py-2.5 bg-amber-500 text-slate-900 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors"
                                  >
                                      Csomagok Megtekintése
                                  </button>
