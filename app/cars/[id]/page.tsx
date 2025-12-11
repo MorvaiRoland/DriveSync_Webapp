@@ -11,14 +11,14 @@ import VignetteManager from '@/components/VignetteManager'
 import ParkingAssistant from '@/components/ParkingAssistant'
 import SalesWidget from '@/components/SalesWidget'
 import AnalyticsCharts from '@/components/AnalyticsCharts'
-import MobileTabContainer from '@/components/MobileTabContainer'
+import ResponsiveDashboard from '@/components/ResponsiveDashboard'
 
 import { 
   Fuel, Wrench, Bell, Map, Package, Warehouse, 
-  Download, Lock, Pencil, Activity, RefreshCw, FileText, 
+  Lock, Pencil, Activity, FileText, 
   ShieldCheck, Disc, Snowflake, Sun, Wallet, Banknote, 
   Sparkles, Lightbulb, Plus, Trash2, Gauge, History, 
-  ChevronRight, CarFront, Zap
+  ChevronRight, CarFront
 } from 'lucide-react';
 
 // --- TÍPUSOK ---
@@ -73,7 +73,7 @@ export default async function CarDetailsPage(props: Props) {
   if (user) plan = await getSubscriptionStatus(user.id);
   const isPro = plan === 'pro' || plan === 'founder';
 
-  // Calculations
+  // --- Calculations ---
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)
   const serviceCost = safeEvents.filter(e => e.type === 'service').reduce((sum, e) => sum + (e.cost || 0), 0)
   const fuelCost = safeEvents.filter(e => e.type === 'fuel').reduce((sum, e) => sum + (e.cost || 0), 0)
@@ -86,7 +86,7 @@ export default async function CarDetailsPage(props: Props) {
     if (distanceDelta > 0) avgConsumption = `${((totalLiters / distanceDelta) * 100).toFixed(1)} L`
   }
 
-  // Service Logic
+  // --- Service Logic ---
   const serviceIntervalKm = car.service_interval_km || 15000;
   let baseKm = car.last_service_mileage || 0;
   const lastServiceEvent = safeEvents.find(e => e.type === 'service');
@@ -106,7 +106,7 @@ export default async function CarDetailsPage(props: Props) {
   const motStatus = getExpiryStatus(car.mot_expiry);
   const insuranceStatus = getExpiryStatus(car.insurance_expiry);
 
-  // Smart Tips logic
+  // --- Smart Tips ---
   const smartTips = [];
   if (oilLife < 15) smartTips.push("Az olajcsere nagyon hamarosan esedékes.");
   if (car.mileage > 200000) smartTips.push("200e km felett érdemes ellenőrizni a vezérlést.");
@@ -119,48 +119,74 @@ export default async function CarDetailsPage(props: Props) {
   const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost }
   const carIdString = car.id.toString();
 
-  // --- SLOT CONTENT PREPARATION ---
-  
-  // 1. Oszlop: Áttekintés (Overview)
-  const OverviewSlot = (
-    <>
-      <ParkingAssistant carId={carIdString} activeSession={activeParking} />
-      <HealthCard {...healthProps} />
-      <CostCard {...costProps} />
-      {isPro ? <SalesWidget car={car} /> : <ProTeaser />}
-    </>
-  );
-
-  // 2. Oszlop: Szolgáltatások (Services)
-  const ServicesSlot = (
-    <>
-      <TechnicalSpecs {...techProps} />
-      <VignetteManager carId={carIdString} vignettes={safeVignettes} />
-      <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />
-      {isPro ? (
-        <DocumentManager carId={carIdString} documents={safeDocs} />
-      ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 relative overflow-hidden">
-             <div className="flex justify-between items-center mb-4">
-                 <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-slate-400" /> Digitális Kesztyűtartó
-                 </h3>
-                 <Lock className="w-4 h-4 text-amber-500" />
-             </div>
-             <LockedFeature label="dokumentum kezelés" />
+  // --- WIDGET DEFINITIONS ---
+  // Előre definiáljuk a widgeteket, hogy mindkét nézethez (Mobil/PC) felhasználhassuk őket
+  const WidgetParking = <ParkingAssistant carId={carIdString} activeSession={activeParking} />;
+  const WidgetHealth = <HealthCard {...healthProps} />;
+  const WidgetCost = <CostCard {...costProps} />;
+  const WidgetSales = isPro ? <SalesWidget car={car} /> : <ProTeaser />;
+  const WidgetSpecs = <TechnicalSpecs {...techProps} />;
+  const WidgetVignette = <VignetteManager carId={carIdString} vignettes={safeVignettes} />;
+  const WidgetTires = <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />;
+  const WidgetDocs = isPro ? <DocumentManager carId={carIdString} documents={safeDocs} /> : (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
+        <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-slate-400" /> Digitális Kesztyűtartó
+            </h3>
+            <Lock className="w-4 h-4 text-amber-500" />
         </div>
-      )}
-    </>
+        <LockedFeature label="dokumentum kezelés" />
+    </div>
   );
+  const WidgetTips = isPro ? <SmartTipsCard tips={smartTips} /> : null;
+  const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
+  const WidgetCharts = <AnalyticsCharts events={safeEvents} />;
+  const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
 
-  // 3. Oszlop: Napló (Log)
-  const LogSlot = (
-    <>
-      {isPro && <SmartTipsCard tips={smartTips} />}
-      <RemindersList reminders={safeReminders} carId={carIdString} />
-      <AnalyticsCharts events={safeEvents} />
-      <EventLog events={safeEvents} carId={carIdString} />
-    </>
+  // --- MOBILE TABS CONTENT ---
+  const mobileTabs = {
+    overview: <div className="space-y-6">{WidgetParking}{WidgetHealth}{WidgetCost}{WidgetSales}</div>,
+    services: <div className="space-y-6">{WidgetSpecs}{WidgetVignette}{WidgetTires}{WidgetDocs}</div>,
+    log: <div className="space-y-6">{WidgetTips}{WidgetReminders}{WidgetCharts}{WidgetLog}</div>
+  };
+
+  // --- DESKTOP BENTO GRID CONTENT ---
+  const DesktopLayout = (
+    <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
+        {/* BAL OSZLOP (Fő tartalom) - 8 egység széles */}
+        <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
+            {/* Statisztikai Sor */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                 {WidgetHealth}
+                 <div className="space-y-6">
+                    {WidgetParking}
+                    {WidgetCost}
+                 </div>
+            </div>
+
+            {/* Grafikonok */}
+            {WidgetCharts}
+
+            {/* Napló teljes szélességben */}
+            {WidgetLog}
+        </div>
+
+        {/* JOBB OSZLOP (Sidebar) - 4 egység széles, Sticky */}
+        <div className="col-span-12 lg:col-span-4 space-y-6 sticky top-24">
+             {WidgetSales}
+             {WidgetTips}
+             {WidgetReminders}
+             
+             {/* Kisebb widgetek csoportosítva egy konténerbe */}
+             <div className="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
+                 <div className="px-2 pt-2">{WidgetSpecs}</div>
+                 <div className="px-2">{WidgetVignette}</div>
+                 <div className="px-2">{WidgetTires}</div>
+                 <div className="p-2">{WidgetDocs}</div>
+             </div>
+        </div>
+    </div>
   );
 
   return (
@@ -173,11 +199,10 @@ export default async function CarDetailsPage(props: Props) {
       <DesktopActionGrid carId={carIdString} />
 
       {/* MAIN CONTENT AREA */}
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 mt-6 relative z-20">
-        <MobileTabContainer 
-            tabOverview={OverviewSlot}
-            tabServices={ServicesSlot}
-            tabLog={LogSlot}
+      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
+        <ResponsiveDashboard 
+            mobileTabs={mobileTabs}
+            desktopContent={DesktopLayout}
         />
       </div>
 
@@ -187,23 +212,19 @@ export default async function CarDetailsPage(props: Props) {
   )
 }
 
-// --- JAVÍTOTT ÉS SZÉPÍTETT AL-KOMPONENSEK ---
+// --- SUB-COMPONENTS (UI Elemek) ---
 
-// Pro Teaser Modern
 function ProTeaser() {
     return (
         <div className="relative group overflow-hidden rounded-2xl border border-indigo-500/30 bg-slate-900 shadow-xl">
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 opacity-100 transition-opacity group-hover:opacity-80"></div>
             <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/30 rounded-full blur-3xl"></div>
-            
             <div className="relative p-6 flex flex-col items-center text-center z-10">
                 <div className="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30 text-white transform group-hover:scale-110 transition-transform duration-300">
                     <Sparkles className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-1">AI Asszisztens & Hirdetés</h3>
-                <p className="text-sm text-indigo-200/80 mb-5 leading-relaxed">
-                    Generálj eladási adatlapot egy kattintással és kapj személyre szabott szerviz tippeket.
-                </p>
+                <h3 className="text-lg font-bold text-white mb-1">AI Asszisztens</h3>
+                <p className="text-sm text-indigo-200/80 mb-5 leading-relaxed">Generálj eladási adatlapot és kapj személyre szabott tippeket.</p>
                 <Link href="/pricing" className="inline-flex items-center gap-2 bg-white text-indigo-900 hover:bg-indigo-50 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5">
                     <Lock className="w-4 h-4" /> Előfizetés
                 </Link>
@@ -214,17 +235,14 @@ function ProTeaser() {
 
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
-        <div className="relative bg-slate-900 h-[24rem] md:h-[26rem] overflow-hidden shadow-2xl shrink-0 group">
+        <div className="relative bg-slate-900 h-[22rem] md:h-[24rem] overflow-hidden shadow-2xl shrink-0 group">
             {car.image_url && (
                 <div className="absolute inset-0 z-0">
                     <Image src={car.image_url} alt="Background" fill className="object-cover opacity-50 blur-xl scale-110" priority />
                     <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-slate-900/80 to-slate-50 dark:to-slate-950 z-10" />
                 </div>
             )}
-            
             <div className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center">
-                
-                {/* Top Nav */}
                 <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-center z-30">
                     <Link href="/" className="flex items-center gap-2 text-white/80 hover:text-white bg-black/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-all hover:bg-white/10">
                         <Warehouse className="w-4 h-4" />
@@ -245,7 +263,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                 </div>
 
                 <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-10 mt-10">
-                    {/* Car Image Card */}
                     <div className="w-32 h-32 md:w-52 md:h-52 rounded-[2rem] border-4 border-white/10 shadow-2xl overflow-hidden relative flex-shrink-0 bg-slate-800 group-hover:scale-105 transition-transform duration-500 ease-out">
                         {car.image_url ? (
                             <Image src={car.image_url} alt="Car" fill className="object-cover" />
@@ -255,21 +272,17 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                             </div>
                         )}
                     </div>
-                    
-                    {/* Car Info */}
                     <div className="text-center md:text-left flex-1 space-y-2 pb-2">
                          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] md:text-xs font-bold uppercase tracking-widest ${healthStatus.color} backdrop-blur-md`}>
                             <span className={`w-2 h-2 rounded-full ${healthStatus.dot}`}></span>
                             {healthStatus.text}
                         </div>
-                        
                         <div>
                             <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none mb-1">
                                 {car.make} <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500">{car.model}</span>
                             </h1>
                             <p className="text-slate-300/80 font-mono text-lg md:text-xl tracking-widest">{car.plate}</p>
                         </div>
-
                         <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-4 pt-3">
                             <StatBadge label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
                             <StatBadge label="Szervizig" value={`${kmRemaining.toLocaleString()} km`} valueColor={kmRemaining <= 1000 ? 'text-red-400' : 'text-emerald-400'} />
@@ -318,9 +331,8 @@ function MobileBottomNav({ carId }: { carId: string }) {
 function DesktopActionGrid({ carId }: { carId: string }) {
     const btnClass = "group h-16 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all hover:-translate-y-1 font-bold border border-transparent overflow-hidden relative";
     const shine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer";
-    
     return (
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-5 gap-4">
+        <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-5 gap-4">
              <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} bg-amber-500 hover:bg-amber-400 text-slate-900`}>
                 <div className={shine} />
                 <Fuel className="w-5 h-5" />Tankolás
@@ -358,9 +370,7 @@ function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaini
                     <button className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 px-3 py-1.5 rounded-lg uppercase tracking-wider transition-colors">Nullázás</button>
                 </form>
             </div>
-            
             <div className="flex items-center gap-6 mb-8">
-                 {/* Kördiagram helyett modern progress bar stack */}
                 <div className="flex-1 space-y-4">
                     <div>
                         <div className="flex justify-between items-end mb-2">
@@ -371,7 +381,6 @@ function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaini
                             <div className={`h-full rounded-full transition-all duration-1000 ${trackColor}`} style={{ width: `${safeOilLife}%` }}></div>
                         </div>
                     </div>
-                    
                     <div className="grid grid-cols-2 gap-4 pt-2">
                          <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                              <p className="text-[10px] text-slate-400 uppercase font-bold">Még megtehető</p>
@@ -384,7 +393,6 @@ function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaini
                     </div>
                 </div>
             </div>
-            
             <div className="grid grid-cols-1 gap-3">
                 <StatusItem label="Műszaki Vizsga" data={motStatus} iconType="file" />
                 <StatusItem label="Biztosítás" data={insuranceStatus} iconType="shield" />
@@ -592,8 +600,6 @@ function EventLog({ events, carId }: any) {
                                 </div>
                                 <ChevronRight className="w-4 h-4 text-slate-300 self-center" />
                             </Link>
-                            
-                            {/* Törlés gomb csak hover-re, abszolút pozícionálva, hogy ne zavarja a linket */}
                             <form action={deleteEvent} className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <input type="hidden" name="event_id" value={event.id} />
                                 <input type="hidden" name="car_id" value={carId} />
