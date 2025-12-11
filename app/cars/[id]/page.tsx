@@ -18,12 +18,12 @@ import {
   Download, Lock, Pencil, Activity, RefreshCw, FileText, 
   ShieldCheck, Disc, Snowflake, Sun, Wallet, Banknote, 
   Sparkles, Lightbulb, Plus, Trash2, Gauge, History, 
-  ChevronRight, CarFront
+  ChevronRight, CarFront, Zap
 } from 'lucide-react';
 
-// --- JAVÍTOTT TÍPUS (id: number) ---
+// --- TÍPUSOK ---
 type Car = {
-  id: number; // JAVÍTVA: number, mert a DB-ben bigint
+  id: number;
   make: string; model: string; plate: string; year: number; mileage: number; 
   image_url: string | null; mot_expiry: string | null; insurance_expiry: string | null; 
   service_interval_km: number; last_service_mileage: number; fuel_type: string; 
@@ -73,6 +73,7 @@ export default async function CarDetailsPage(props: Props) {
   if (user) plan = await getSubscriptionStatus(user.id);
   const isPro = plan === 'pro' || plan === 'founder';
 
+  // Calculations
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)
   const serviceCost = safeEvents.filter(e => e.type === 'service').reduce((sum, e) => sum + (e.cost || 0), 0)
   const fuelCost = safeEvents.filter(e => e.type === 'fuel').reduce((sum, e) => sum + (e.cost || 0), 0)
@@ -85,6 +86,7 @@ export default async function CarDetailsPage(props: Props) {
     if (distanceDelta > 0) avgConsumption = `${((totalLiters / distanceDelta) * 100).toFixed(1)} L`
   }
 
+  // Service Logic
   const serviceIntervalKm = car.service_interval_km || 15000;
   let baseKm = car.last_service_mileage || 0;
   const lastServiceEvent = safeEvents.find(e => e.type === 'service');
@@ -104,6 +106,7 @@ export default async function CarDetailsPage(props: Props) {
   const motStatus = getExpiryStatus(car.mot_expiry);
   const insuranceStatus = getExpiryStatus(car.insurance_expiry);
 
+  // Smart Tips logic
   const smartTips = [];
   if (oilLife < 15) smartTips.push("Az olajcsere nagyon hamarosan esedékes.");
   if (car.mileage > 200000) smartTips.push("200e km felett érdemes ellenőrizni a vezérlést.");
@@ -114,80 +117,95 @@ export default async function CarDetailsPage(props: Props) {
   const healthProps = { car, oilLife, kmSinceService, serviceIntervalKm, kmRemaining, motStatus, insuranceStatus }
   const techProps = { car, avgConsumption }
   const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost }
-
-  // Fontos: Az ID-t stringgé alakítjuk a propokhoz
   const carIdString = car.id.toString();
+
+  // --- SLOT CONTENT PREPARATION ---
+  
+  // 1. Oszlop: Áttekintés (Overview)
+  const OverviewSlot = (
+    <>
+      <ParkingAssistant carId={carIdString} activeSession={activeParking} />
+      <HealthCard {...healthProps} />
+      <CostCard {...costProps} />
+      {isPro ? <SalesWidget car={car} /> : <ProTeaser />}
+    </>
+  );
+
+  // 2. Oszlop: Szolgáltatások (Services)
+  const ServicesSlot = (
+    <>
+      <TechnicalSpecs {...techProps} />
+      <VignetteManager carId={carIdString} vignettes={safeVignettes} />
+      <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />
+      {isPro ? (
+        <DocumentManager carId={carIdString} documents={safeDocs} />
+      ) : (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 relative overflow-hidden">
+             <div className="flex justify-between items-center mb-4">
+                 <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-slate-400" /> Digitális Kesztyűtartó
+                 </h3>
+                 <Lock className="w-4 h-4 text-amber-500" />
+             </div>
+             <LockedFeature label="dokumentum kezelés" />
+        </div>
+      )}
+    </>
+  );
+
+  // 3. Oszlop: Napló (Log)
+  const LogSlot = (
+    <>
+      {isPro && <SmartTipsCard tips={smartTips} />}
+      <RemindersList reminders={safeReminders} carId={carIdString} />
+      <AnalyticsCharts events={safeEvents} />
+      <EventLog events={safeEvents} carId={carIdString} />
+    </>
+  );
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
       
+      {/* HEADER SECTION */}
       <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={isPro} />
+      
+      {/* ACTION GRID (Desktop Only) */}
       <DesktopActionGrid carId={carIdString} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 relative z-20">
+      {/* MAIN CONTENT AREA */}
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 mt-6 relative z-20">
         <MobileTabContainer 
-            tabOverview={
-                <div className="space-y-6">
-                    <ParkingAssistant carId={carIdString} activeSession={activeParking} />
-                    <HealthCard {...healthProps} />
-                    <CostCard {...costProps} />
-                    {isPro ? (
-                        <>
-                            <SmartTipsCard tips={smartTips} />
-                            <SalesWidget car={car} />
-                        </>
-                    ) : (
-                        <ProTeaser />
-                    )}
-                </div>
-            }
-            tabServices={
-                <div className="space-y-6">
-                    <VignetteManager carId={carIdString} vignettes={safeVignettes} />
-                    <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />
-                    <TechnicalSpecs {...techProps} />
-                    {isPro ? (
-                        <DocumentManager carId={carIdString} documents={safeDocs} />
-                    ) : (
-                        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-                            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
-                                <FileText className="w-5 h-5 text-slate-400" />
-                                Digitális Kesztyűtartó
-                            </h3>
-                            <LockedFeature label="dokumentum kezelés" />
-                        </div>
-                    )}
-                </div>
-            }
-            tabLog={
-                <div className="space-y-6">
-                    <RemindersList reminders={safeReminders} carId={carIdString} />
-                    <AnalyticsCharts events={safeEvents} />
-                    <EventLog events={safeEvents} carId={carIdString} />
-                </div>
-            }
+            tabOverview={OverviewSlot}
+            tabServices={ServicesSlot}
+            tabLog={LogSlot}
         />
       </div>
 
+      {/* MOBILE FLOATING NAV */}
       <MobileBottomNav carId={carIdString} />
     </div>
   )
 }
 
-// --- SEGÉDKOMPONENSEK ---
+// --- JAVÍTOTT ÉS SZÉPÍTETT AL-KOMPONENSEK ---
 
+// Pro Teaser Modern
 function ProTeaser() {
     return (
-        <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl p-6 shadow-lg border border-indigo-500/30 relative overflow-hidden group hover:scale-[1.01] transition-transform">
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-            <div className="relative z-10 flex flex-col items-center text-center">
-                <div className="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mb-3 text-indigo-400">
+        <div className="relative group overflow-hidden rounded-2xl border border-indigo-500/30 bg-slate-900 shadow-xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 opacity-100 transition-opacity group-hover:opacity-80"></div>
+            <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/30 rounded-full blur-3xl"></div>
+            
+            <div className="relative p-6 flex flex-col items-center text-center z-10">
+                <div className="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30 text-white transform group-hover:scale-110 transition-transform duration-300">
                     <Sparkles className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-white mb-1">AI Szerelő & Hirdetés</h3>
-                <p className="text-sm text-indigo-200 mb-4">Személyre szabott tippek és autós hirdetési adatlap generálása.</p>
-                <Link href="/pricing" className="bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2">
-                    <Lock className="w-3 h-3" /> Pro Funkció
+                <h3 className="text-lg font-bold text-white mb-1">AI Asszisztens & Hirdetés</h3>
+                <p className="text-sm text-indigo-200/80 mb-5 leading-relaxed">
+                    Generálj eladási adatlapot egy kattintással és kapj személyre szabott szerviz tippeket.
+                </p>
+                <Link href="/pricing" className="inline-flex items-center gap-2 bg-white text-indigo-900 hover:bg-indigo-50 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5">
+                    <Lock className="w-4 h-4" /> Előfizetés
                 </Link>
             </div>
         </div>
@@ -196,67 +214,65 @@ function ProTeaser() {
 
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
-        <div className="relative bg-slate-900 h-[22rem] md:h-[28rem] overflow-hidden shadow-2xl shrink-0 group">
+        <div className="relative bg-slate-900 h-[24rem] md:h-[26rem] overflow-hidden shadow-2xl shrink-0 group">
             {car.image_url && (
-                <div className="absolute inset-0 z-0 opacity-40 blur-xl scale-110">
-                    <Image src={car.image_url} alt="Background" fill className="object-cover" priority />
+                <div className="absolute inset-0 z-0">
+                    <Image src={car.image_url} alt="Background" fill className="object-cover opacity-50 blur-xl scale-110" priority />
+                    <div className="absolute inset-0 bg-gradient-to-b from-slate-900/40 via-slate-900/80 to-slate-50 dark:to-slate-950 z-10" />
                 </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/90 to-slate-950 z-0" />
             
-            <div className="absolute inset-0 flex flex-col justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
-                <div className="absolute top-4 md:top-6 left-4 right-4 flex justify-between items-center pt-4 md:pt-0 z-50">
-                    <Link href="/" className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-3 md:px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 hover:bg-white/10 h-[40px]">
+            <div className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center">
+                
+                {/* Top Nav */}
+                <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-center z-30">
+                    <Link href="/" className="flex items-center gap-2 text-white/80 hover:text-white bg-black/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-all hover:bg-white/10">
                         <Warehouse className="w-4 h-4" />
-                        <span className="hidden sm:inline">Garázs</span>
+                        <span className="hidden sm:inline font-bold text-sm">Garázs</span>
                     </Link>
-                    <div className="flex gap-2 items-center">
-                        <div className="scale-90 md:scale-100 origin-right">
-                            {isPro ? (
-                                <ExportMenu car={car} events={safeEvents} />
-                            ) : (
-                                <Link href="/pricing" className="inline-flex items-center gap-2 text-slate-400 bg-black/20 px-3 py-2 rounded-full border border-white/5 hover:bg-white/5 transition-colors h-[40px]" title="Pro funkció">
-                                     <Download className="w-4 h-4" />
-                                     <span className="text-xs font-bold uppercase hidden md:inline">Export</span>
-                                     <Lock className="w-3 h-3 text-amber-500" />
-                                </Link>
-                            )}
-                        </div>
-                        <Link href={`/cars/${car.id}/edit`} className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-3 md:px-4 py-2 rounded-full border border-white/10 hover:bg-white/10 h-[40px]">
+                    <div className="flex items-center gap-3">
+                        {isPro ? (
+                             <ExportMenu car={car} events={safeEvents} />
+                        ) : (
+                            <Link href="/pricing" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-950/40 border border-amber-500/30 px-3 py-2 rounded-full hover:bg-amber-900/50 transition-colors">
+                                <Lock className="w-3 h-3" /> Pro
+                            </Link>
+                        )}
+                        <Link href={`/cars/${car.id}/edit`} className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md transition-colors border border-white/10">
                             <Pencil className="w-4 h-4" />
-                            <span className="text-xs font-bold uppercase hidden md:inline">Szerk.</span>
                         </Link>
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 pb-4 mt-12 md:mt-8">
-                    <div className="w-32 h-32 md:w-56 md:h-56 rounded-3xl border-[6px] border-slate-800 shadow-2xl overflow-hidden relative flex-shrink-0 bg-slate-900">
+                <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-10 mt-10">
+                    {/* Car Image Card */}
+                    <div className="w-32 h-32 md:w-52 md:h-52 rounded-[2rem] border-4 border-white/10 shadow-2xl overflow-hidden relative flex-shrink-0 bg-slate-800 group-hover:scale-105 transition-transform duration-500 ease-out">
                         {car.image_url ? (
                             <Image src={car.image_url} alt="Car" fill className="object-cover" />
                         ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-700">
+                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-800">
                                 <CarFront className="w-12 h-12 mb-2 opacity-50" />
-                                <span className="font-bold text-xs">NO IMAGE</span>
                             </div>
                         )}
                     </div>
                     
-                    <div className="text-center md:text-left flex-1 space-y-2">
-                        <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${healthStatus.color}`}>
+                    {/* Car Info */}
+                    <div className="text-center md:text-left flex-1 space-y-2 pb-2">
+                         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] md:text-xs font-bold uppercase tracking-widest ${healthStatus.color} backdrop-blur-md`}>
                             <span className={`w-2 h-2 rounded-full ${healthStatus.dot}`}></span>
                             {healthStatus.text}
                         </div>
                         
                         <div>
-                            <h1 className="text-3xl md:text-6xl font-black text-white tracking-tighter leading-none">
-                                {car.make} <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">{car.model}</span>
+                            <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none mb-1">
+                                {car.make} <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500">{car.model}</span>
                             </h1>
-                            <p className="text-slate-400 font-mono text-lg md:text-xl tracking-wider mt-1">{car.plate}</p>
+                            <p className="text-slate-300/80 font-mono text-lg md:text-xl tracking-widest">{car.plate}</p>
                         </div>
 
-                        <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-4 pt-2">
+                        <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-4 pt-3">
                             <StatBadge label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
-                            <StatBadge label="Következő Szerviz" value={`${nextServiceKm.toLocaleString()} km`} valueColor={kmRemaining <= 1000 ? 'text-red-400' : 'text-amber-400'} />
+                            <StatBadge label="Szervizig" value={`${kmRemaining.toLocaleString()} km`} valueColor={kmRemaining <= 1000 ? 'text-red-400' : 'text-emerald-400'} />
                         </div>
                     </div>
                 </div>
@@ -267,32 +283,32 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
 
 function StatBadge({ label, value, valueColor = "text-white" }: any) {
     return (
-        <div className="bg-white/5 px-3 md:px-4 py-2 rounded-lg border border-white/10 backdrop-blur-sm">
-            <p className="text-[10px] text-slate-400 uppercase font-bold">{label}</p>
+        <div className="bg-black/20 px-4 py-2 rounded-xl border border-white/5 backdrop-blur-md hover:bg-white/5 transition-colors cursor-default">
+            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">{label}</p>
             <p className={`font-mono font-bold text-sm md:text-base ${valueColor}`}>{value}</p>
         </div>
     )
 }
 
 function MobileBottomNav({ carId }: { carId: string }) {
-    const btnBase = "flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-all active:scale-95";
+    const btnBase = "flex flex-col items-center justify-center gap-1.5 py-2 rounded-2xl transition-all active:scale-95";
     return (
-        <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_10px_rgba(0,0,0,0.1)] z-50 pb-[env(safe-area-inset-bottom)]">
-            <div className="grid grid-cols-5 gap-1 px-2 py-2">
-                <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnBase} text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20`}>
-                    <Fuel className="w-6 h-6" /><span className="text-[10px] font-bold leading-none">Tankolás</span>
+        <div className="md:hidden fixed bottom-6 left-4 right-4 bg-slate-900/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl z-50">
+            <div className="grid grid-cols-5 gap-1 p-2">
+                <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnBase} text-amber-500 hover:bg-white/5`}>
+                    <Fuel className="w-5 h-5" /><span className="text-[9px] font-bold">Tankol</span>
                 </Link>
-                <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnBase} text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800`}>
-                    <Wrench className="w-6 h-6" /><span className="text-[10px] font-bold leading-none">Szerviz</span>
+                <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnBase} text-slate-300 hover:bg-white/5`}>
+                    <Wrench className="w-5 h-5" /><span className="text-[9px] font-bold">Szerviz</span>
                 </Link>
-                <Link href={`/cars/${carId}/reminders/new`} className={`${btnBase} text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800`}>
-                    <Bell className="w-6 h-6" /><span className="text-[10px] font-bold leading-none truncate max-w-full">Emlékez.</span>
+                <Link href={`/cars/${carId}/reminders/new`} className={`${btnBase} text-indigo-400 hover:bg-white/5`}>
+                    <Bell className="w-5 h-5" /><span className="text-[9px] font-bold">Emlék.</span>
                 </Link>
-                <Link href={`/cars/${carId}/trips`} className={`${btnBase} text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20`}>
-                    <Map className="w-6 h-6" /><span className="text-[10px] font-bold leading-none">Utak</span>
+                <Link href={`/cars/${carId}/trips`} className={`${btnBase} text-blue-400 hover:bg-white/5`}>
+                    <Map className="w-5 h-5" /><span className="text-[9px] font-bold">Utak</span>
                 </Link>
-                <Link href={`/cars/${carId}/parts`} className={`${btnBase} text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20`}>
-                    <Package className="w-6 h-6" /><span className="text-[10px] font-bold leading-none">Alkatrész</span>
+                <Link href={`/cars/${carId}/parts`} className={`${btnBase} text-emerald-400 hover:bg-white/5`}>
+                    <Package className="w-5 h-5" /><span className="text-[9px] font-bold">Alkatr.</span>
                 </Link>
             </div>
         </div>
@@ -300,68 +316,77 @@ function MobileBottomNav({ carId }: { carId: string }) {
 }
 
 function DesktopActionGrid({ carId }: { carId: string }) {
-    const btnClass = "p-4 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-transform hover:-translate-y-1 font-bold border border-transparent";
+    const btnClass = "group h-16 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all hover:-translate-y-1 font-bold border border-transparent overflow-hidden relative";
+    const shine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer";
+    
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-3 lg:grid-cols-5 gap-4">
-             <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} bg-amber-500 hover:bg-amber-400 text-slate-900`}><Fuel className="w-6 h-6" />Tankolás Rögzítése</Link>
-             <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnClass} bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white`}><Wrench className="w-6 h-6" />Szerviz Rögzítése</Link>
-             <Link href={`/cars/${carId}/reminders/new`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}><Bell className="w-6 h-6" />Emlékeztető</Link>
-             <Link href={`/cars/${carId}/trips`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}><Map className="w-6 h-6 text-blue-500" />Útnyilvántartás</Link>
-             <Link href={`/cars/${carId}/parts`} className={`${btnClass} bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700`}><Package className="w-6 h-6 text-emerald-500" />Alkatrészek</Link>
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-5 gap-4">
+             <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} bg-amber-500 hover:bg-amber-400 text-slate-900`}>
+                <div className={shine} />
+                <Fuel className="w-5 h-5" />Tankolás
+             </Link>
+             <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnClass} bg-slate-800 hover:bg-slate-700 text-white`}>
+                <div className={shine} />
+                <Wrench className="w-5 h-5" />Szerviz
+             </Link>
+             <Link href={`/cars/${carId}/reminders/new`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border-slate-200 dark:border-slate-700`}>
+                <Bell className="w-5 h-5" />Emlékeztető
+             </Link>
+             <Link href={`/cars/${carId}/trips`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 border-slate-200 dark:border-slate-700`}>
+                <Map className="w-5 h-5" />Útnyilvántartás
+             </Link>
+             <Link href={`/cars/${carId}/parts`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 border-slate-200 dark:border-slate-700`}>
+                <Package className="w-5 h-5" />Alkatrészek
+             </Link>
         </div>
     )
 }
 
 function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaining, motStatus, insuranceStatus }: any) {
-    const radius = 36;
-    const circumference = 2 * Math.PI * radius;
     const safeOilLife = Math.min(100, Math.max(0, oilLife));
-    const offset = circumference - ((safeOilLife / 100) * circumference);
     let colorClass = 'text-emerald-500';
-    let strokeColor = '#10b981';
-    let statusText = 'Kiváló';
-    if (safeOilLife < 20) { colorClass = 'text-red-500'; strokeColor = '#ef4444'; statusText = 'Kritikus'; } 
-    else if (safeOilLife < 50) { colorClass = 'text-amber-500'; strokeColor = '#f59e0b'; statusText = 'Figyelj'; }
+    let trackColor = 'bg-emerald-500';
+    if (safeOilLife < 20) { colorClass = 'text-red-500'; trackColor = 'bg-red-500'; } 
+    else if (safeOilLife < 50) { colorClass = 'text-amber-500'; trackColor = 'bg-amber-500'; }
 
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm md:text-base"><Activity className="w-5 h-5 text-slate-400" />Jármű Egészség</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Activity className="w-5 h-5 text-slate-400" />Állapot</h3>
                 <form action={resetServiceCounter}>
-                    {/* JAVÍTVA: car.id konvertálása stringgé */}
                     <input type="hidden" name="car_id" value={car.id.toString()} />
-                    <button className="text-[10px] bg-slate-100 dark:bg-slate-700 hover:bg-amber-100 hover:text-amber-700 dark:hover:text-amber-400 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-full font-bold transition-colors uppercase tracking-wider flex items-center gap-1 group"><RefreshCw className="w-3 h-3 group-hover:rotate-180 transition-transform duration-500" />Nullázás</button>
+                    <button className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 px-3 py-1.5 rounded-lg uppercase tracking-wider transition-colors">Nullázás</button>
                 </form>
             </div>
+            
             <div className="flex items-center gap-6 mb-8">
-                <div className="relative w-24 h-24 flex-shrink-0">
-                    <svg className="w-full h-full transform -rotate-90">
-                        <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100 dark:text-slate-700" />
-                        <circle cx="50%" cy="50%" r={radius} stroke={strokeColor} strokeWidth="8" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className={`text-xl font-black ${colorClass}`}>{Math.round(safeOilLife)}%</span>
-                        <span className="text-[9px] uppercase font-bold text-slate-400">{statusText}</span>
-                    </div>
-                </div>
-                <div className="flex-1 space-y-3">
+                 {/* Kördiagram helyett modern progress bar stack */}
+                <div className="flex-1 space-y-4">
                     <div>
-                        <div className="flex justify-between items-baseline mb-1">
-                            <span className="text-xs font-bold text-slate-500 uppercase">Olajcsere</span>
-                            <span className={`text-xs font-bold ${kmRemaining <= 0 ? 'text-red-500 animate-pulse' : 'text-slate-800 dark:text-slate-200'}`}>{kmRemaining > 0 ? `${Math.round(kmRemaining).toLocaleString()} km múlva` : 'ESEDÉKES!'}</span>
+                        <div className="flex justify-between items-end mb-2">
+                             <span className="text-xs font-bold text-slate-400 uppercase">Olaj Élettartam</span>
+                             <span className={`text-xl font-black ${colorClass}`}>{Math.round(safeOilLife)}%</span>
                         </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5">
-                            <div className={`h-1.5 rounded-full transition-all ${colorClass.replace('text-', 'bg-')}`} style={{ width: `${safeOilLife}%` }}></div>
+                        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-1000 ${trackColor}`} style={{ width: `${safeOilLife}%` }}></div>
                         </div>
                     </div>
-                    <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium pt-1 border-t border-slate-50 dark:border-slate-700/50">
-                        <span>Megtett: {kmSinceService.toLocaleString()} km</span>
-                        <span>Ciklus: {serviceIntervalKm.toLocaleString()} km</span>
+                    
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                         <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                             <p className="text-[10px] text-slate-400 uppercase font-bold">Még megtehető</p>
+                             <p className="font-bold text-slate-800 dark:text-slate-200">{kmRemaining > 0 ? `${Math.round(kmRemaining).toLocaleString()} km` : 'Túlfutás!'}</p>
+                         </div>
+                         <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                             <p className="text-[10px] text-slate-400 uppercase font-bold">Ciklus</p>
+                             <p className="font-bold text-slate-800 dark:text-slate-200">{serviceIntervalKm.toLocaleString()} km</p>
+                         </div>
                     </div>
                 </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <StatusItem label="Műszaki" data={motStatus} iconType="file" />
+            
+            <div className="grid grid-cols-1 gap-3">
+                <StatusItem label="Műszaki Vizsga" data={motStatus} iconType="file" />
                 <StatusItem label="Biztosítás" data={insuranceStatus} iconType="shield" />
             </div>
         </div>
@@ -370,22 +395,27 @@ function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaini
 
 function StatusItem({ label, data, iconType }: any) {
     return (
-        <div className={`flex items-center gap-2 md:gap-3 p-2.5 md:p-3 rounded-xl border ${data.bg} ${data.alert ? 'border-red-100 dark:border-red-800' : 'border-slate-100 dark:border-slate-700'}`}>
-            <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white dark:bg-slate-800 ${data.alert ? 'text-red-500' : 'text-slate-500'}`}>{iconType === 'file' ? <FileText className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}</div>
-            <div className="min-w-0">
-                <p className="text-[10px] uppercase font-bold text-slate-400">{label}</p>
-                <p className={`text-xs md:text-sm font-bold truncate ${data.color}`}>{data.status}</p>
+        <div className={`flex items-center justify-between p-3 rounded-xl border ${data.bg} ${data.alert ? 'border-red-200 dark:border-red-900/50' : 'border-slate-100 dark:border-slate-800'}`}>
+            <div className="flex items-center gap-3">
+                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${data.alert ? 'bg-red-100 text-red-600 dark:bg-red-900/30' : 'bg-white dark:bg-slate-800 text-emerald-500'}`}>
+                    {iconType === 'file' ? <FileText className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                 </div>
+                 <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">{label}</p>
+                    <p className={`text-sm font-bold ${data.color}`}>{data.status}</p>
+                 </div>
             </div>
+            {data.alert && <span className="text-xs">⚠️</span>}
         </div>
     )
 }
 
 function TireHotelCard({ tires, carMileage, carId }: any) {
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
             <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm md:text-base"><Disc className="w-5 h-5 text-slate-400" />Gumi Hotel</h3>
-                <Link href={`/cars/${carId}/edit`} className="text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Kezelés</Link>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Disc className="w-5 h-5 text-slate-400" />Gumi Hotel</h3>
+                <Link href={`/cars/${carId}/edit`} className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-1 rounded hover:bg-slate-200 transition-colors">Kezelés</Link>
             </div>
             <div className="space-y-3">
                 {tires.length > 0 ? (
@@ -393,7 +423,7 @@ function TireHotelCard({ tires, carMileage, carId }: any) {
                         let currentDistance = tire.total_distance;
                         if (tire.is_mounted) currentDistance += (carMileage - (tire.mounted_at_mileage || carMileage));
                         return (
-                            <div key={tire.id} className={`flex items-center justify-between p-3 rounded-xl border ${tire.is_mounted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700'}`}>
+                            <div key={tire.id} className={`flex items-center justify-between p-3 rounded-xl border ${tire.is_mounted ? 'bg-indigo-50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'}`}>
                                 <div className="flex items-center gap-3">
                                     <div className="text-xl">{tire.type === 'winter' ? <Snowflake className="w-5 h-5 text-blue-400" /> : <Sun className="w-5 h-5 text-amber-500" />}</div>
                                     <div>
@@ -401,12 +431,12 @@ function TireHotelCard({ tires, carMileage, carId }: any) {
                                         <p className="text-[10px] text-slate-500 font-mono">{currentDistance.toLocaleString()} km</p>
                                     </div>
                                 </div>
-                                {tire.is_mounted && <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-full shadow-sm">Fent</span>}
+                                {tire.is_mounted && <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-indigo-950 px-2 py-0.5 rounded shadow-sm">Aktív</span>}
                             </div>
                         )
                     })
                 ) : (
-                    <p className="text-xs text-slate-400 text-center py-2">Nincs rögzített abroncs.</p>
+                    <p className="text-xs text-slate-400 text-center py-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">Nincs rögzített abroncs.</p>
                 )}
             </div>
         </div>
@@ -415,44 +445,50 @@ function TireHotelCard({ tires, carMileage, carId }: any) {
 
 function CostCard({ total, fuel, service }: any) {
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm md:text-base flex items-center gap-2"><Wallet className="w-5 h-5 text-slate-400" />Költségek</h3>
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">Összes</span>
-            </div>
-            <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500"><Banknote className="w-6 h-6" /></div>
-                    <div>
-                        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Eddigi ráfordítás</p>
-                        <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">{total.toLocaleString()} Ft</p>
-                    </div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-6"><Wallet className="w-5 h-5 text-slate-400" />Költségek</h3>
+            <div className="flex items-center gap-5 mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-500 shadow-inner">
+                    <Banknote className="w-7 h-7" />
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
-                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Üzemanyag</p>
-                        <p className="font-bold text-slate-800 dark:text-slate-200 text-sm md:text-base">{fuel.toLocaleString()} Ft</p>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
-                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Szerviz</p>
-                        <p className="font-bold text-slate-800 dark:text-slate-200 text-sm md:text-base">{service.toLocaleString()} Ft</p>
-                    </div>
+                <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase">Eddigi Összes</p>
+                    <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{total.toLocaleString()} Ft</p>
                 </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+                 <CostItem label="Üzemanyag" value={fuel} icon={<Fuel className="w-3 h-3" />} />
+                 <CostItem label="Szerviz" value={service} icon={<Wrench className="w-3 h-3" />} />
+            </div>
+        </div>
+    )
+}
+
+function CostItem({ label, value, icon }: any) {
+    return (
+        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-1.5 mb-1 text-slate-400">
+                {icon}
+                <span className="text-[10px] uppercase font-bold">{label}</span>
+            </div>
+            <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{value.toLocaleString()} Ft</p>
         </div>
     )
 }
 
 function SmartTipsCard({ tips }: { tips: string[] }) {
     return (
-        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-5 md:p-6 shadow-lg text-white relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-4 opacity-10"><Sparkles className="w-24 h-24" /></div>
-             <h3 className="font-bold text-base md:text-lg mb-3 flex items-center gap-2 relative z-10"><Lightbulb className="w-5 h-5 text-yellow-300" />Smart Tips</h3>
-             <div className="space-y-3 text-xs md:text-sm text-indigo-100 relative z-10">
+        <div className="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-2xl p-6 shadow-xl text-white relative overflow-hidden group">
+             <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
+             <div className="flex items-center gap-2 mb-4 relative z-10">
+                 <div className="p-1.5 bg-yellow-400/20 rounded-lg"><Lightbulb className="w-4 h-4 text-yellow-300" /></div>
+                 <h3 className="font-bold text-sm">AI Szerelő Tippek</h3>
+             </div>
+             <div className="space-y-3 relative z-10">
                  {tips.map((tip, i) => (
-                     <div key={i} className="flex gap-3 items-start">
-                         <span className="mt-1.5 w-1.5 h-1.5 bg-yellow-400 rounded-full flex-shrink-0"></span>
-                         <p className="leading-relaxed">{tip}</p>
+                     <div key={i} className="flex gap-3 items-start text-xs md:text-sm text-indigo-100/90 bg-black/10 p-2 rounded-lg border border-white/5">
+                         <span className="mt-1 w-1.5 h-1.5 bg-yellow-400 rounded-full flex-shrink-0 shadow-[0_0_8px_rgba(250,204,21,0.6)]"></span>
+                         <p className="leading-snug">{tip}</p>
                      </div>
                  ))}
              </div>
@@ -462,34 +498,38 @@ function SmartTipsCard({ tips }: { tips: string[] }) {
 
 function RemindersList({ reminders, carId }: any) {
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div className="px-5 md:px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm md:text-base">
-                   <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>Következő Teendők
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                   <div className="relative flex h-2.5 w-2.5">
+                      {reminders.length > 0 && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>}
+                      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${reminders.length > 0 ? 'bg-red-500' : 'bg-slate-300'}`}></span>
+                   </div>
+                   Teendők
                 </h3>
-                <Link href={`/cars/${carId}/reminders/new`} className="text-xs font-bold bg-slate-900 dark:bg-slate-700 text-white px-2 md:px-3 py-1.5 rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors flex items-center gap-1"><Plus className="w-3 h-3" /> Új</Link>
+                <Link href={`/cars/${carId}/reminders/new`} className="text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1 shadow-sm"><Plus className="w-3 h-3" /> Új</Link>
             </div>
-            <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
+            <div className="divide-y divide-slate-50 dark:divide-slate-800">
                 {reminders.length > 0 ? (
                    reminders.map((rem: any) => (
-                      <div key={rem.id} className="p-4 flex items-center gap-3 md:gap-4 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors group">
-                          <div className="w-11 h-11 md:w-12 md:h-12 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-500 rounded-xl flex flex-col items-center justify-center shadow-sm border border-amber-200 dark:border-amber-800/50 flex-shrink-0">
-                              <span className="text-xs font-bold uppercase">{new Date(rem.due_date).toLocaleString('hu-HU', { month: 'short' }).replace('.', '')}</span>
+                      <div key={rem.id} className="p-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                          <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex flex-col items-center justify-center border border-indigo-100 dark:border-indigo-900/30 flex-shrink-0">
+                              <span className="text-[10px] font-bold uppercase">{new Date(rem.due_date).toLocaleString('hu-HU', { month: 'short' }).replace('.', '')}</span>
                               <span className="text-lg font-black leading-none">{new Date(rem.due_date).getDate()}</span>
                           </div>
                           <div className="flex-1 min-w-0">
-                              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm md:text-base truncate">{rem.service_type}</p>
-                              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 truncate">{rem.note || 'Nincs megjegyzés'}</p>
+                              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{rem.service_type}</p>
+                              <p className="text-xs text-slate-500 truncate">{rem.note || 'Nincs megjegyzés'}</p>
                           </div>
                           <form action={deleteReminder}>
                               <input type="hidden" name="id" value={rem.id} />
                               <input type="hidden" name="car_id" value={carId} />
-                              <button className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 flex-shrink-0"><Trash2 className="w-5 h-5" /></button>
+                              <button className="p-2 text-slate-300 hover:text-red-500 transition-colors md:opacity-0 group-hover:opacity-100"><Trash2 className="w-4 h-4" /></button>
                           </form>
                       </div>
                    ))
                 ) : (
-                   <div className="p-8 text-center text-slate-400 text-xs md:text-sm">Nincs közelgő karbantartás.</div>
+                   <div className="p-8 text-center text-slate-400 text-sm italic">Minden teendő elvégezve.</div>
                 )}
             </div>
         </div>
@@ -500,15 +540,15 @@ function TechnicalSpecs({ car, avgConsumption }: any) {
     const fuelTranslations: Record<string, string> = { 'petrol': 'Benzin', 'diesel': 'Dízel', 'electric': 'Elektromos', 'hybrid': 'Hibrid', 'lpg': 'Gáz (LPG)', 'cng': 'Gáz (CNG)' };
     const displayFuel = fuelTranslations[car.fuel_type.toLowerCase()] || car.fuel_type;
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 md:p-6">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4 text-xs md:text-sm uppercase tracking-wider text-opacity-70 flex items-center gap-2"><Gauge className="w-4 h-4 text-slate-400" />Jármű Adatok</h3>
-            <div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2"><Gauge className="w-5 h-5 text-slate-400" />Specifikációk</h3>
+            <div className="grid grid-cols-2 gap-4">
                 <DataPoint label="Futás" value={`${car.mileage.toLocaleString()} km`} />
                 <DataPoint label="Évjárat" value={car.year} />
                 <DataPoint label="Üzemanyag" value={displayFuel} capitalize />
                 <DataPoint label="Szín" value={car.color || '-'} />
-                <DataPoint label="Átlagfogy." value={avgConsumption === 'N/A' ? '-' : `${avgConsumption}`} highlight />
-                <DataPoint label="VIN" value={car.vin || 'N/A'} mono />
+                <DataPoint label="Fogyasztás" value={avgConsumption === 'N/A' ? '-' : `${avgConsumption}`} highlight />
+                <DataPoint label="VIN / Alvázszám" value={car.vin || 'N/A'} mono />
             </div>
         </div>
     )
@@ -516,55 +556,53 @@ function TechnicalSpecs({ car, avgConsumption }: any) {
 
 function DataPoint({ label, value, mono, capitalize, highlight }: any) {
     return (
-        <div>
-            <p className="text-[10px] md:text-xs text-slate-400 font-bold uppercase">{label}</p>
-            <p className={`text-xs md:text-sm font-bold ${mono ? 'font-mono' : ''} ${capitalize ? 'capitalize' : ''} ${highlight ? 'text-amber-600 dark:text-amber-500' : 'text-slate-900 dark:text-slate-100'}`}>{value}</p>
+        <div className="flex flex-col">
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">{label}</span>
+            <span className={`text-sm font-bold ${mono ? 'font-mono text-xs' : ''} ${capitalize ? 'capitalize' : ''} ${highlight ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-900 dark:text-slate-200'}`}>{value}</span>
         </div>
     )
 }
 
 function EventLog({ events, carId }: any) {
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-white dark:border-slate-700 overflow-hidden">
-            <div className="px-5 md:px-6 py-4 md:py-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
-                <h3 className="font-bold text-base md:text-lg text-slate-900 dark:text-white flex items-center gap-2"><History className="w-5 h-5 text-slate-400" />Eseménynapló</h3>
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">{events.length} bejegyzés</span>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2"><History className="w-5 h-5 text-slate-400" />Események</h3>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{events.length} bejegyzés</span>
             </div>
-            <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
+            <div className="divide-y divide-slate-50 dark:divide-slate-800 max-h-[500px] overflow-y-auto custom-scrollbar">
                 {events.length > 0 ? (
                     events.map((event: any) => (
-                        <div key={event.id} className="relative p-3 md:p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-all group flex gap-3 md:gap-4 items-start">
-                            <Link href={`/cars/${carId}/events/${event.id}/edit`} className="flex-1 flex gap-3 md:gap-4 items-start cursor-pointer min-w-0">
-                                <div className="flex-shrink-0 w-10 md:w-12 text-center pt-1">
-                                    <span className="block text-base md:text-lg font-black text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors leading-none">{new Date(event.event_date).getDate()}</span>
-                                    <span className="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">{new Date(event.event_date).toLocaleDateString('hu-HU', { month: 'short' }).replace('.', '')}</span>
+                        <div key={event.id} className="relative p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group">
+                            <Link href={`/cars/${carId}/events/${event.id}/edit`} className="flex gap-4 items-start">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border ${event.type === 'fuel' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 text-amber-600' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600'}`}>
+                                    {event.type === 'fuel' ? <Fuel className="w-4 h-4" /> : <Wrench className="w-4 h-4" />}
                                 </div>
-                                <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm border-2 border-white dark:border-slate-700 ${event.type === 'fuel' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                                    {event.type === 'fuel' ? <Fuel className="w-4 md:w-5 h-4 md:h-5" /> : <Wrench className="w-4 md:w-5 h-4 md:h-5" />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-start gap-2">
-                                        <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-amber-600 dark:group-hover:text-amber-500 transition-colors text-sm md:text-base">{event.title}</h4>
-                                        <span className="font-black text-slate-900 dark:text-slate-100 whitespace-nowrap text-xs md:text-base flex-shrink-0">-{event.cost.toLocaleString()} Ft</span>
+                                <div className="flex-1 min-w-0 pt-0.5">
+                                    <div className="flex justify-between items-baseline mb-1">
+                                        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{event.title}</h4>
+                                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs flex-shrink-0">-{event.cost.toLocaleString()} Ft</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-[10px] md:text-xs text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
-                                        <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300 font-medium">{event.mileage.toLocaleString()} km</span>
-                                        {event.type === 'fuel' && <span className="text-amber-600 dark:text-amber-500 font-medium">• {event.liters}L</span>}
-                                        {event.location && <span className="truncate hidden sm:inline">• {event.location}</span>}
+                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                        <span>{new Date(event.event_date).toLocaleDateString('hu-HU')}</span>
+                                        <span>•</span>
+                                        <span>{event.mileage.toLocaleString()} km</span>
+                                        {event.liters && <span className="text-amber-600 dark:text-amber-500">• {event.liters}L</span>}
                                     </div>
                                 </div>
-                                <div className="self-center text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors hidden md:block"><ChevronRight className="w-5 h-5" /></div>
+                                <ChevronRight className="w-4 h-4 text-slate-300 self-center" />
                             </Link>
-                            <form action={deleteEvent} className="absolute top-3 right-3 md:top-4 md:right-4 z-20 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
+                            
+                            {/* Törlés gomb csak hover-re, abszolút pozícionálva, hogy ne zavarja a linket */}
+                            <form action={deleteEvent} className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <input type="hidden" name="event_id" value={event.id} />
-                                {/* JAVÍTVA: carId változót használjuk car.id helyett, mert a car itt nem létezik */}
                                 <input type="hidden" name="car_id" value={carId} />
-                                <button className="p-1.5 md:p-2 bg-white dark:bg-slate-800 rounded-full shadow-md text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-colors border border-slate-100 dark:border-slate-700" title="Törlés"><Trash2 className="w-4 h-4" /></button>
+                                <button className="p-1.5 bg-white dark:bg-slate-800 rounded-full shadow-md border border-slate-100 dark:border-slate-700 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                             </form>
                         </div>
                     ))
                 ) : (
-                    <div className="py-16 md:py-20 text-center text-slate-400 italic text-sm">Még nincsenek adatok.</div>
+                    <div className="py-12 text-center text-slate-400 text-sm italic">Nincs rögzített esemény.</div>
                 )}
             </div>
         </div>
