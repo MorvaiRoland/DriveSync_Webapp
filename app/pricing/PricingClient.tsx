@@ -151,7 +151,7 @@ export default function PricingClient({ initialPlan }: { initialPlan: string }) 
                 'Örökös frissítések', 
                 'Nincs havidíj soha', 
                 'VIP Támogatás', 
-                'Egyedi "Founder" jelvény 🚀'
+                'Egyedi "Lifetime" jelvény 🚀'
             ]}
             buttonText={isCurrent('lifetime') ? "Megvásárolva ✅" : "Megveszem örökre"}
             disabled={isCurrent('lifetime')}

@@ -2,38 +2,42 @@ import { createClient } from '@/supabase/server'
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
-// Ellenőrizzük, hogy van-e titkos kulcs
+// 1. Biztonsági ellenőrzés: Megvan-e a kulcs?
 if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is missing from environment variables')
+  console.error('CRITICAL ERROR: STRIPE_SECRET_KEY is missing from env variables!')
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   typescript: true,
 })
 
 export async function POST(req: Request) {
   try {
-    // 1. Felhasználó ellenőrzése
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // 2. Környezeti változók ellenőrzése futásidőben
+    if (!process.env.STRIPE_SECRET_KEY) {
+        return NextResponse.json({ error: 'Szerver konfigurációs hiba: Hiányzó Stripe Kulcs' }, { status: 500 })
+    }
+    if (!process.env.NEXT_PUBLIC_BASE_URL) {
+        return NextResponse.json({ error: 'Szerver konfigurációs hiba: Hiányzó BASE_URL' }, { status: 500 })
+    }
 
-    if (authError || !user) {
-      console.error('Auth error:', authError)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
       return NextResponse.json({ error: 'Nincs bejelentkezve' }, { status: 401 })
     }
 
-    // 2. Adatok kiolvasása a kérésből
     const body = await req.json()
     const { priceId, mode } = body
 
-    if (!priceId || !mode) {
-      console.error('Hiányzó paraméterek:', body)
-      return NextResponse.json({ error: 'Hiányzó ár vagy mód.' }, { status: 400 })
+    if (!priceId) {
+        return NextResponse.json({ error: 'Hiányzó Price ID' }, { status: 400 })
     }
 
-    console.log(`Checkout indítása: User=${user.id}, Price=${priceId}, Mode=${mode}`)
+    console.log(`Checkout indítása: ${user.email}, Price: ${priceId}`)
 
-    // 3. Stripe Session létrehozása
+    // 3. Session létrehozása
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -42,10 +46,9 @@ export async function POST(req: Request) {
           quantity: 1,
         },
       ],
-      mode: mode, // 'subscription' vagy 'payment'
-      // FONTOS: A BASE_URL-nek be kell lennie állítva!
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/pricing?canceled=true`,
+      mode: mode,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/pricing?canceled=true`,
       customer_email: user.email,
       metadata: {
         userId: user.id,
@@ -55,11 +58,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url })
 
   } catch (err: any) {
-    console.error('Stripe Checkout API Critical Error:', err)
-    // Biztosítjuk, hogy mindig JSON választ adjunk, még hiba esetén is
+    console.error('STRIPE API HIBA:', err)
+    
+    // FONTOS: Mindig JSON-t adunk vissza, még hiba esetén is!
     return NextResponse.json(
-      { error: err.message || 'Belső szerverhiba történt.' }, 
-      { status: 500 }
+        { error: err.message || 'Ismeretlen szerver hiba' }, 
+        { status: 500 }
     )
   }
 }
