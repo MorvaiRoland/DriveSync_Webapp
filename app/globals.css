@@ -272,3 +272,11 @@ body {
     scrollbar-width: none;
   }
 }
+@layer components {
+  .form-input, .form-select {
+    @apply block w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm 
+    focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 
+    bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white 
+    placeholder-slate-400 dark:placeholder-slate-500 transition-all appearance-none;
+  }
+}
