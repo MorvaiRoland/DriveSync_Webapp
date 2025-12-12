@@ -32,7 +32,13 @@ type Car = {
 }
 
 const getExpiryStatus = (dateString: string | null) => {
-  if (!dateString) return { label: 'Nincs adat', status: '-', alert: false, color: 'text-slate-500 dark:text-slate-400', bg: 'bg-slate-100 dark:bg-slate-800' };
+  if (!dateString) return { 
+      label: 'Nincs megadva', 
+      status: 'Kitöltés...', // Ez jelzi, hogy hiányzik
+      alert: false, // Ne legyen piros, csak semleges
+      color: 'text-slate-400', 
+      bg: 'bg-slate-50 dark:bg-slate-800/50 border-dashed' // Szaggatott keret jelzi a hiányt
+  };
   const today = new Date();
   const expiry = new Date(dateString);
   const diffTime = expiry.getTime() - today.getTime();
@@ -414,9 +420,14 @@ function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaini
                 </div>
             </div>
             <div className="grid grid-cols-1 gap-3">
-                <StatusItem label="Műszaki Vizsga" data={motStatus} iconType="file" />
-                <StatusItem label="Biztosítás" data={insuranceStatus} iconType="shield" />
-            </div>
+    {/* Linket teszünk köré, hogy szerkeszthető legyen */}
+    <Link href={`/cars/${car.id}/edit`}>
+        <StatusItem label="Műszaki Vizsga" data={motStatus} iconType="file" />
+    </Link>
+    <Link href={`/cars/${car.id}/edit`}>
+        <StatusItem label="Biztosítás" data={insuranceStatus} iconType="shield" />
+    </Link>
+</div>
         </div>
     )
 }
@@ -565,18 +576,66 @@ function RemindersList({ reminders, carId }: any) {
 }
 
 function TechnicalSpecs({ car, avgConsumption }: any) {
-    const fuelTranslations: Record<string, string> = { 'petrol': 'Benzin', 'diesel': 'Dízel', 'electric': 'Elektromos', 'hybrid': 'Hibrid', 'lpg': 'Gáz (LPG)', 'cng': 'Gáz (CNG)' };
-    const displayFuel = fuelTranslations[car.fuel_type.toLowerCase()] || car.fuel_type;
+    // Üzemanyag fordítás
+    const fuelTranslations: Record<string, string> = { 
+        'petrol': 'Benzin', 
+        'diesel': 'Dízel', 
+        'electric': 'Elektromos', 
+        'hybrid': 'Hibrid', 
+        'plug-in hybrid': 'Plug-in Hybrid',
+        'lpg': 'Gáz (LPG)', 
+        'cng': 'Gáz (CNG)' 
+    };
+
+    // Váltó fordítás
+    const transmissionTranslations: Record<string, string> = {
+        'manual': 'Manuális',
+        'automatic': 'Automata',
+        'cvt': 'Fokozatmentes',
+        'robotized': 'Robotizált'
+    };
+
+    const displayFuel = fuelTranslations[car.fuel_type?.toLowerCase()] || car.fuel_type || '-';
+    const displayTransmission = transmissionTranslations[car.transmission?.toLowerCase()] || car.transmission || '-';
+
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2"><Gauge className="w-5 h-5 text-slate-400" />Specifikációk</h3>
-            <div className="grid grid-cols-2 gap-4">
-                <DataPoint label="Futás" value={`${car.mileage.toLocaleString()} km`} />
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
+                <Gauge className="w-5 h-5 text-slate-400" />
+                Specifikációk
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+                {/* 1. Alapadatok */}
+                <DataPoint label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
                 <DataPoint label="Évjárat" value={car.year} />
+
+                {/* 2. Motor és Teljesítmény (ÚJ) */}
+                <DataPoint 
+                    label="Motor (ccm)" 
+                    value={car.engine_size ? `${car.engine_size} cm³` : '-'} 
+                />
+                <DataPoint 
+                    label="Teljesítmény" 
+                    value={car.power_hp ? `${car.power_hp} LE` : '-'} 
+                />
+
+                {/* 3. Hajtáslánc (ÚJ) */}
+                <DataPoint label="Sebességváltó" value={displayTransmission} />
                 <DataPoint label="Üzemanyag" value={displayFuel} capitalize />
+
+                {/* 4. Egyéb */}
                 <DataPoint label="Szín" value={car.color || '-'} />
-                <DataPoint label="Fogyasztás" value={avgConsumption === 'N/A' ? '-' : `${avgConsumption}`} highlight />
-                <DataPoint label="VIN / Alvázszám" value={car.vin || 'N/A'} mono />
+                <DataPoint 
+                    label="Átlagfogyasztás" 
+                    value={avgConsumption === 'Nincs adat' ? '-' : avgConsumption} 
+                    highlight 
+                />
+
+                {/* 5. Azonosító (Teljes szélességben mobilon, ha kell) */}
+                <div className="col-span-2 border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
+                    <DataPoint label="VIN / Alvázszám" value={car.vin || 'Nincs rögzítve'} mono />
+                </div>
             </div>
         </div>
     )
