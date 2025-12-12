@@ -1,10 +1,21 @@
 'use server'
 
-import { createClient } from 'supabase/server'
+import { createClient } from '@/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-// --- ÚJ AUTÓ LÉTREHOZÁSA (MEGLÉVŐ) ---
+// Segédfüggvény: Üres string kezelése (számoknál és dátumoknál fontos)
+const parseNullableInt = (val: FormDataEntryValue | null) => {
+  const str = String(val);
+  return str && str !== '' ? parseInt(str) : null;
+}
+
+const parseNullableString = (val: FormDataEntryValue | null) => {
+  const str = String(val);
+  return str && str !== '' ? str : null;
+}
+
+// --- ÚJ AUTÓ LÉTREHOZÁSA ---
 export async function addCar(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -13,7 +24,7 @@ export async function addCar(formData: FormData) {
   const imageFile = formData.get('image') as File;
   let image_url = null;
 
-  // Képfeltöltés logika
+  // Képfeltöltés
   if (imageFile && imageFile.size > 0) {
     const fileName = `${user.id}/${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
     const { error: uploadError } = await supabase.storage.from('car-images').upload(fileName, imageFile);
@@ -25,51 +36,69 @@ export async function addCar(formData: FormData) {
 
   const { error } = await supabase.from('cars').insert({
     user_id: user.id,
+    // Alapadatok
     make: String(formData.get('make')),
     model: String(formData.get('model')),
-    plate: String(formData.get('plate')).toUpperCase().replace(/\s/g, ''),
+    plate: String(formData.get('plate')).toUpperCase().replace(/\s/g, ''), // Formázás
+    vin: String(formData.get('vin')) || null,
     year: parseInt(String(formData.get('year'))),
-    mileage: parseInt(String(formData.get('mileage'))),
-    vin: String(formData.get('vin')),
     color: String(formData.get('color')),
-    fuel_type: String(formData.get('fuel_type')),
     status: String(formData.get('status')),
-    image_url: image_url
+    image_url: image_url,
+    
+    // Műszaki adatok (ÚJ)
+    mileage: parseInt(String(formData.get('mileage'))),
+    fuel_type: String(formData.get('fuel_type')), // Most már magyarul jön
+    transmission: String(formData.get('transmission')),
+    power_hp: parseNullableInt(formData.get('power_hp')),
+    engine_size: parseNullableInt(formData.get('engine_size')),
+
+    // Dátumok (ÚJ)
+    mot_expiry: parseNullableString(formData.get('mot_expiry')),
+    insurance_expiry: parseNullableString(formData.get('insurance_expiry')),
   })
 
-  if (error) return redirect('/cars/new?error=Hiba történt')
+  if (error) {
+    console.error('Hiba a mentéskor:', error)
+    return redirect('/cars/new?error=Sikertelen mentés. Ellenőrizd az adatokat.')
+  }
   
   revalidatePath('/')
   redirect('/')
 }
 
-// --- AUTÓ MÓDOSÍTÁSA & KÉP FELTÖLTÉS (ÚJ) ---
+// --- AUTÓ MÓDOSÍTÁSA ---
 export async function updateCar(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
-  const carId = String(formData.get('car_id')) // Figyelem: itt 'car_id'-t várunk a formból
+  const carId = String(formData.get('car_id'))
   const imageFile = formData.get('image') as File;
   
-  // Alapadatok
   const updateData: any = {
     make: String(formData.get('make')),
     model: String(formData.get('model')),
     plate: String(formData.get('plate')).toUpperCase().replace(/\s/g, ''),
     year: parseInt(String(formData.get('year'))),
     mileage: parseInt(String(formData.get('mileage'))),
-    vin: String(formData.get('vin')),
+    vin: String(formData.get('vin')) || null,
     color: String(formData.get('color')),
     fuel_type: String(formData.get('fuel_type')),
     status: String(formData.get('status')),
+    
+    // Új mezők frissítése
+    transmission: String(formData.get('transmission')),
+    power_hp: parseNullableInt(formData.get('power_hp')),
+    engine_size: parseNullableInt(formData.get('engine_size')),
+    mot_expiry: parseNullableString(formData.get('mot_expiry')),
+    insurance_expiry: parseNullableString(formData.get('insurance_expiry')),
   }
 
-  // Ha van új kép, feltöltjük és frissítjük az URL-t
+  // Képcsere logika
   if (imageFile && imageFile.size > 0) {
     const fileName = `${user.id}/${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
     const { error: uploadError } = await supabase.storage.from('car-images').upload(fileName, imageFile);
-    
     if (!uploadError) {
       const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
       updateData.image_url = data.publicUrl;
@@ -80,89 +109,31 @@ export async function updateCar(formData: FormData) {
     .from('cars')
     .update(updateData)
     .eq('id', carId)
-    .eq('user_id', user.id) // Biztonsági ellenőrzés
+    .eq('user_id', user.id)
 
   if (error) {
-    console.error('Update error:', error)
-    return redirect(`/cars/${carId}/edit?error=Sikertelen frissítés`)
+    return redirect(`/cars/${carId}/edit?error=Hiba a frissítéskor`)
   }
 
   revalidatePath('/')
   revalidatePath(`/cars/${carId}`)
-  redirect(`/cars/${carId}`) // Vissza a részletekhez
+  redirect(`/cars/${carId}`)
 }
 
-// --- AUTÓ TÖRLÉSE (EZ HIÁNYZOTT NEKED) ---
+// --- TÖRLÉS ---
 export async function deleteCar(formData: FormData) {
   const supabase = await createClient()
-  // Figyelem: A Főoldalon 'id' néven küldjük, a részletes oldalon 'car_id'-ként. 
-  // Itt mindkettőt megpróbáljuk kiolvasni.
   const carId = String(formData.get('id') || formData.get('car_id'))
   
-  // Először töröljük a kapcsolódó adatokat
+  // Kapcsolódó adatok törlése (Cascade helyett manuálisan biztonságosabb)
   await supabase.from('events').delete().eq('car_id', carId)
   await supabase.from('service_reminders').delete().eq('car_id', carId)
+  await supabase.from('trips').delete().eq('car_id', carId)
 
-  const { error } = await supabase
-    .from('cars')
-    .delete()
-    .eq('id', carId)
+  const { error } = await supabase.from('cars').delete().eq('id', carId)
 
   if (error) console.error('Delete error:', error)
 
   revalidatePath('/')
-  // Ha a részletes oldalról törlünk, akkor a redirect fontos, ha a listából, akkor nem árt
   redirect('/') 
-}
-// --- ÚTNYILVÁNTARTÁS (TRIP LOGGER) ---
-
-export async function addTrip(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return redirect('/login')
-
-  const car_id = String(formData.get('car_id'))
-  
-  // Koordináták kinyerése a formból
-  const start_lat = formData.get('start_lat')
-  const start_lng = formData.get('start_lng')
-  const end_lat = formData.get('end_lat')
-  const end_lng = formData.get('end_lng')
-
-  // Segédfüggvény a koordináták átalakításához (hogy ne "null" string, hanem valódi null legyen)
-  const parseCoord = (val: any) => (val && val !== '' ? parseFloat(val) : null)
-
-  const tripData = {
-    user_id: user.id,
-    car_id: car_id,
-    start_location: String(formData.get('start_location')),
-    end_location: String(formData.get('end_location')),
-    distance: parseInt(String(formData.get('distance'))),
-    purpose: String(formData.get('purpose')),
-    trip_date: String(formData.get('trip_date')),
-    // Itt mentjük el a térképhez szükséges koordinátákat
-    start_lat: parseCoord(start_lat),
-    start_lng: parseCoord(start_lng),
-    end_lat: parseCoord(end_lat),
-    end_lng: parseCoord(end_lng),
-  }
-
-  const { error } = await supabase.from('trips').insert(tripData)
-
-  if (error) {
-    console.error('Út mentési hiba:', error)
-    return { error: 'Hiba történt a mentéskor' }
-  }
-  
-  revalidatePath(`/cars/${car_id}/trips`)
-}
-
-export async function deleteTrip(formData: FormData) {
-  const supabase = await createClient()
-  const tripId = String(formData.get('trip_id'))
-  const carId = String(formData.get('car_id'))
-  
-  await supabase.from('trips').delete().eq('id', tripId)
-  
-  revalidatePath(`/cars/${carId}/trips`)
 }
