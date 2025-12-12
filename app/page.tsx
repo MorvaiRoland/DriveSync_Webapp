@@ -261,6 +261,8 @@ async function DashboardComponent() {
 
   canAddCar = checkLimit(plan, 'maxCars', myCars.length);
   canUseAi = checkLimit(plan, 'allowAi');
+  // Ezt illeszd be a fleetHealth számítás után:
+const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
   if (cars.length > 0) {
       const { data: reminders } = await supabase.from('service_reminders').select('*, cars(make, model)').order('due_date', { ascending: true }).limit(3);
@@ -399,41 +401,65 @@ async function DashboardComponent() {
             </div>
 
             {cars.length > 0 && (
-                <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-6 bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700">
-                    <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-6">
-                        <div className="text-left sm:text-right">
-                          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Flotta Egészség</p>
-                          <p className={`text-3xl font-black ${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'}`}>
-                              {fleetHealth}%
-                          </p>
-                        </div>
-                        <div className="relative w-12 h-12 flex-shrink-0">
-                           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                              <path className="text-slate-100 dark:text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
-                              <path className={`${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeDasharray={`${fleetHealth}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                           </svg>
-                        </div>
-                    </div>
-                    <div className="flex-1 flex items-center justify-between sm:justify-start gap-4 sm:pl-2">
-                        <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 flex-shrink-0">
-                           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Elmúlt 30 nap</p>
-                          <div className="flex items-baseline gap-2">
-                              <p className="text-2xl font-black text-slate-900 dark:text-white">
-                                  {spentLast30Days.toLocaleString()} <span className="text-sm font-bold text-slate-400">Ft</span>
-                              </p>
-                              {spendingTrend !== 0 && (
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center ${spendingTrend > 0 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
-                                      {spendingTrend > 0 ? '↑' : '↓'} {Math.abs(spendingTrend)}%
-                                  </span>
-                              )}
-                          </div>
-                        </div>
-                    </div>
+    <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-6 bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700">
+        
+        {/* --- BAL OLDAL: FLOTTA EGÉSZSÉG --- */}
+        <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-6">
+            
+            {/* FELTÉTEL: Cseréld a '!hasServices'-t a saját változódra (pl. services.length === 0) */}
+            {!hasServices ? (
+                // --- HA NINCS ADAT: TÁJÉKOZTATÁS ---
+                <div className="w-full flex flex-col items-start sm:items-end justify-center h-12">
+                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Flotta Egészség</p>
+                     <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                        <span className="text-xs font-medium text-right leading-tight">
+                            Rögzítsen szervizt<br className="hidden sm:block"/> a számításhoz
+                        </span>
+                        <svg className="w-5 h-5 opacity-60 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                     </div>
                 </div>
+            ) : (
+                // --- HA VAN ADAT: EREDETI DIAGRAM ---
+                <>
+                    <div className="text-left sm:text-right">
+                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Flotta Egészség</p>
+                        <p className={`text-3xl font-black ${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                            {fleetHealth}%
+                        </p>
+                    </div>
+                    <div className="relative w-12 h-12 flex-shrink-0">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                            <path className="text-slate-100 dark:text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                            <path className={`${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeDasharray={`${fleetHealth}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                        </svg>
+                    </div>
+                </>
             )}
+        </div>
+
+        {/* --- JOBB OLDAL: KÖLTSÉGEK (VÁLTOZATLAN) --- */}
+        <div className="flex-1 flex items-center justify-between sm:justify-start gap-4 sm:pl-2">
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <div>
+                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Elmúlt 30 nap</p>
+                <div className="flex items-baseline gap-2">
+                    <p className="text-2xl font-black text-slate-900 dark:text-white">
+                        {spentLast30Days.toLocaleString()} <span className="text-sm font-bold text-slate-400">Ft</span>
+                    </p>
+                    {spendingTrend !== 0 && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center ${spendingTrend > 0 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                            {spendingTrend > 0 ? '↑' : '↓'} {Math.abs(spendingTrend)}%
+                        </span>
+                    )}
+                </div>
+            </div>
+        </div>
+    </div>
+)}
         </div>
 
         {/* FŐ TARTALOM GRID */}
