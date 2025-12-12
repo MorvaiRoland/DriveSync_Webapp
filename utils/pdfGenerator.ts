@@ -66,7 +66,7 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         const distanceDriven = mileages.length > 1 ? (Math.max(...mileages) - Math.min(...mileages)) : 0;
 
         // 3. LOGÓ BETÖLTÉSE (Feltételezve, hogy a public mappában van)
-        const logoData = await loadImage('/public/icons/icon-512.png'); // Cseréld le a sajátodra ha más a neve
+        const logoData = await loadImage('icons/icon-512.png'); // Cseréld le a sajátodra ha más a neve
 
         // --- PDF RAJZOLÁS ---
 
@@ -237,7 +237,7 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
                 doc.setFontSize(8);
                 doc.setTextColor(150);
                 
-                const footerText = "Készült a DriveSync alkalmazással - drivesync.hu";
+                const footerText = "Készült a DriveSync alkalmazással - https://www.drivesync-hungary.hu/";
                 doc.text(footerText, 14, pageHeight - 10);
                 
                 const pageNumber = `Oldal ${doc.getNumberOfPages()}`;
