@@ -3,20 +3,40 @@ import autoTable from 'jspdf-autotable'
 
 // --- SEGÉDFÜGGVÉNYEK ---
 
-// Kép betöltése URL-ből és Base64 konvertálás
-const loadImage = async (url: string): Promise<string> => {
+// Kép betöltése URL-ből és Base64 konvertálás (Javított verzió)
+const loadImage = async (url: string): Promise<{ data: string, format: string } | null> => {
     try {
         const response = await fetch(url);
+        
+        if (!response.ok) {
+            console.warn(`Kép betöltési hiba (${response.status}): ${url}`);
+            return null;
+        }
+
         const blob = await response.blob();
+        
+        // Ellenőrizzük, hogy tényleg kép-e
+        if (!blob.type.startsWith('image/')) {
+            console.warn(`A letöltött fájl nem kép: ${url} (${blob.type})`);
+            return null;
+        }
+
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
+            reader.onloadend = () => {
+                const base64data = reader.result as string;
+                let format = 'PNG';
+                if (base64data.includes('image/jpeg') || base64data.includes('image/jpg')) {
+                    format = 'JPEG';
+                }
+                resolve({ data: base64data, format });
+            };
             reader.onerror = reject;
             reader.readAsDataURL(blob);
         });
     } catch (e) {
-        console.warn("Logo betöltése sikertelen, kihagyjuk.", e);
-        return "";
+        console.warn("Logo betöltése sikertelen:", e);
+        return null;
     }
 }
 
@@ -45,8 +65,7 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         const pageWidth = doc.internal.pageSize.width;
         const pageHeight = doc.internal.pageSize.height;
 
-        // 1. FONTOK BETÖLTÉSE (Roboto Regular és Bold a magyar karakterekhez)
-        // Megjegyzés: Élesben érdemes ezeket a fontokat a saját projektedben tárolni és importálni base64-ként a gyorsaság miatt.
+        // 1. FONTOK BETÖLTÉSE
         const fontRegular = await loadFont('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf');
         const fontBold = await loadFont('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf');
 
@@ -58,15 +77,13 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
 
         // 2. ADATOK ELŐKÉSZÍTÉSE
         const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0);
-        const serviceCount = events.filter(e => e.type === 'service' || e.type === 'repair').length;
-        const fuelCount = events.filter(e => e.type === 'fuel').length;
         
-        // Futásteljesítmény számítása (max - min, vagy 0 ha nincs elég adat)
         const mileages = events.map(e => e.mileage).filter(m => m > 0);
         const distanceDriven = mileages.length > 1 ? (Math.max(...mileages) - Math.min(...mileages)) : 0;
 
-        // 3. LOGÓ BETÖLTÉSE (Feltételezve, hogy a public mappában van)
-        const logoData = await loadImage('icons/icon-512.png'); // Cseréld le a sajátodra ha más a neve
+        // 3. LOGÓ BETÖLTÉSE - JAVÍTOTT ÚTVONAL
+        // A public mappa tartalmát a gyökérről érjük el!
+        const logoObj = await loadImage('/icons/icon-512.png'); 
 
         // --- PDF RAJZOLÁS ---
 
@@ -75,9 +92,9 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         doc.rect(0, 0, pageWidth, 45, 'F');
 
         // Logó (ha sikerült betölteni)
-        if (logoData) {
-            // x, y, w, h
-            doc.addImage(logoData, 'PNG', 14, 8, 28, 28);
+        if (logoObj) {
+            // @ts-ignore
+            doc.addImage(logoObj.data, logoObj.format, 14, 8, 28, 28);
         }
 
         // Cím és Alcím
@@ -99,7 +116,9 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         doc.setFontSize(9);
         doc.setTextColor(255, 255, 255);
         doc.text(`Generálva: ${new Date().toLocaleDateString('hu-HU')}`, pageWidth - 14, 28, { align: 'right' });
-        doc.text(`Azonosító: #${Math.floor(Math.random() * 100000)}`, pageWidth - 14, 33, { align: 'right' });
+        // Véletlenszerű ID helyett generálhatunk egyet a dátumból vagy autóból
+        const reportId = `${car.id}-${Date.now().toString().slice(-6)}`;
+        doc.text(`Azonosító: #${reportId}`, pageWidth - 14, 33, { align: 'right' });
 
 
         // >>> JÁRMŰ ADATLAP (Vehicle Info Box)
@@ -123,7 +142,6 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
 
         doc.setFontSize(10);
         
-        // Segédfüggvény sorok írásához
         const printRow = (label: string, value: string, x: number, y: number) => {
             doc.setFont('Roboto', 'normal');
             doc.setTextColor(100, 116, 139); // Label color
@@ -206,9 +224,9 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
             startY: yPos,
             head: [['Dátum', 'Típus', 'Leírás', 'Km Állás', 'Költség']],
             body: tableData,
-            theme: 'striped', // Csíkos design
+            theme: 'striped', 
             headStyles: { 
-                fillColor: [15, 23, 42], // Slate-900
+                fillColor: [15, 23, 42], 
                 textColor: [255, 255, 255],
                 fontStyle: 'bold',
                 font: 'Roboto',
@@ -216,20 +234,20 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
             },
             bodyStyles: { 
                 font: 'Roboto',
-                textColor: [51, 65, 85], // Slate-700
+                textColor: [51, 65, 85],
                 cellPadding: 3
             },
             columnStyles: {
-                0: { cellWidth: 30 }, // Dátum
-                1: { cellWidth: 25, fontStyle: 'bold' }, // Típus
-                2: { cellWidth: 'auto' }, // Leírás (flexibilis)
-                3: { cellWidth: 35, halign: 'right', font: 'Roboto' }, // Km (számok jobbra)
-                4: { cellWidth: 35, halign: 'right', font: 'Roboto' }  // Költség (számok jobbra)
+                0: { cellWidth: 30 },
+                1: { cellWidth: 25, fontStyle: 'bold' },
+                2: { cellWidth: 'auto' },
+                3: { cellWidth: 35, halign: 'right', font: 'Roboto' },
+                4: { cellWidth: 35, halign: 'right', font: 'Roboto' }
             },
             alternateRowStyles: {
-                fillColor: [241, 245, 249] // Slate-100
+                fillColor: [241, 245, 249]
             },
-            // Lábléc minden oldalra (Page number)
+            // Lábléc minden oldalra
             didDrawPage: function (data) {
                 const pageSize = doc.internal.pageSize;
                 const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
