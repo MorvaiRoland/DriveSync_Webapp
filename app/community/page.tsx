@@ -6,10 +6,12 @@ import Marketplace from '@/components/community/Marketplace'
 import CreateGroupModal from '@/components/community/CreateGroupModal'
 import InviteMemberModal from '@/components/community/InviteMemberModal'
 import StartDMModal from '@/components/community/StartDMModal'
+// !!! ÚJ IMPORT ITT:
+import DeleteDMButton from '@/components/community/DeleteDMButton' 
+
 import { Users, Search, Lock, Globe, MessageCircle, ShoppingBag, ArrowLeft, Menu, LogOut, Phone, Video, MoreVertical } from 'lucide-react'
 import { joinGroupAction, leaveGroupAction } from './actions'
 
-// Ez biztosítja, hogy mindig friss adatokat láss (ne cache-eljen be ragadósan)
 export const dynamic = 'force-dynamic'
 
 export default async function CommunityPage({
@@ -32,20 +34,10 @@ export default async function CommunityPage({
   // Mobilon vagyunk-e aktív chat nézetben?
   const isMobileViewActive = !!(activeGroupId || activeDmId)
 
-  // 3. Párhuzamos adatlekérés (Performance boost)
+  // 3. Párhuzamos adatlekérés
   const [myGroupsRes, publicGroupsRes, myDmsRes] = await Promise.all([
-    // Saját csoportok
-    supabase.from('group_members')
-      .select('group_id, groups(id, name, type, image_url)')
-      .eq('user_id', user.id),
-    
-    // Ajánlott nyilvános csoportok
-    supabase.from('groups')
-      .select('*')
-      .eq('type', 'public')
-      .limit(10),
-
-    // Legutóbbi DM beszélgetések (Sender vagy Receiver vagyok)
+    supabase.from('group_members').select('group_id, groups(id, name, type, image_url)').eq('user_id', user.id),
+    supabase.from('groups').select('*').eq('type', 'public').limit(10),
     supabase.from('direct_messages')
       .select('sender_id, receiver_id, created_at, content')
       .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
@@ -57,28 +49,25 @@ export default async function CommunityPage({
   const publicGroups = publicGroupsRes.data || []
   const messages = myDmsRes.data || []
 
-  // 4. DM Partnerek feldolgozása (Egyedi ID-k kigyűjtése)
+  // 4. DM Partnerek feldolgozása
   const dmPartnerIds = new Set<string>()
   messages.forEach(msg => {
      const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id
      dmPartnerIds.add(partnerId)
   })
 
-  // Ha van aktív DM, de még nincs a listában (pl. új chat), adjuk hozzá a listához, hogy le tudjuk kérni az adatait
   if (activeDmId) dmPartnerIds.add(activeDmId)
 
   let dmPartners: any[] = []
   
   if (dmPartnerIds.size > 0) {
-      // PROFILES tábla lekérdezése (Feltételezzük: id, full_name, avatar_url, email)
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, email, last_seen') // last_seen opcionális
+        .select('id, full_name, avatar_url, email, last_seen')
         .in('id', Array.from(dmPartnerIds))
       
       dmPartners = Array.from(dmPartnerIds).map(id => {
           const profile = profiles?.find((p: any) => p.id === id)
-          // Fallback, ha valamiért nincs profil adat (pl. törölt user)
           return profile || { 
             id, 
             email: 'Ismeretlen', 
@@ -88,10 +77,9 @@ export default async function CommunityPage({
       })
   }
 
-  // Aktív DM partner adatainak kikeresése a fejléc számára
   const activeDmPartner = activeDmId ? dmPartners.find(p => p.id === activeDmId) : null
 
-  // 5. Aktív csoport adatok lekérése
+  // 5. Aktív csoport adatok
   let activeGroupData = null
   let marketItems: any[] = []
   
@@ -99,7 +87,6 @@ export default async function CommunityPage({
     const { data } = await supabase.from('groups').select('*').eq('id', activeGroupId).single()
     activeGroupData = data
     
-    // Ha a piactér fülön vagyunk
     if (activeTab === 'market') {
         const { data: items } = await supabase
             .from('group_listings')
@@ -112,12 +99,10 @@ export default async function CommunityPage({
 
   const isMember = activeGroupId ? myGroups.some((g: any) => g.group_id === activeGroupId) : false;
 
-  // --- UI RENDERELÉS ---
   return (
-    // 100dvh = Dynamic Viewport Height (Kezeli a mobil böngésző címsor mozgását)
     <div className="h-[100dvh] bg-slate-950 text-slate-200 font-sans flex overflow-hidden pt-0 sm:pt-0">
       
-      {/* ==================== BAL OLDALSÁV (SIDEBAR) ==================== */}
+      {/* ==================== BAL OLDALSÁV ==================== */}
       <div className={`
         w-full lg:w-80 flex-col bg-slate-900/50 backdrop-blur-xl border-r border-slate-800 transition-all duration-300
         ${isMobileViewActive ? 'hidden lg:flex' : 'flex'}
@@ -133,31 +118,24 @@ export default async function CommunityPage({
                     Közösség
                 </h2>
                 <div className="flex gap-2">
-                    {/* Új Csoport Gomb */}
                     <CreateGroupModal />
                 </div>
             </div>
             
             <div className="relative group">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
-                <input 
-                    type="text" 
-                    placeholder="Keresés..." 
-                    className="w-full bg-slate-950/50 border border-slate-800 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-slate-600" 
-                />
+                <input type="text" placeholder="Keresés..." className="w-full bg-slate-950/50 border border-slate-800 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 outline-none transition-all placeholder:text-slate-600" />
             </div>
         </div>
 
-        {/* Listák (Scroll area) */}
+        {/* Listák */}
         <div className="flex-1 overflow-y-auto p-2 space-y-6 scrollbar-thin scrollbar-thumb-slate-800 hover:scrollbar-thumb-slate-700">
-            
-            {/* 1. Privát Üzenetek Lista */}
+            {/* DM Lista */}
             <div>
                 <div className="flex items-center justify-between px-3 mb-2 mt-2">
                      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Beszélgetések</h3>
                      <StartDMModal />
                 </div>
-                
                 <div className="space-y-1">
                     {dmPartners.length > 0 ? dmPartners.map((partner) => (
                         <Link 
@@ -167,12 +145,9 @@ export default async function CommunityPage({
                                 ${activeDmId === partner.id 
                                     ? 'bg-blue-600/10 border border-blue-500/20 shadow-lg shadow-blue-900/10' 
                                     : 'hover:bg-slate-800/50 border border-transparent hover:border-slate-800'
-                                }
-                            `}
+                                }`}
                         >
-                            {/* Aktív indikátor csík */}
                             {activeDmId === partner.id && <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-blue-500"></div>}
-
                             <div className="relative shrink-0">
                                 {partner.avatar_url ? (
                                     <img src={partner.avatar_url} className="w-11 h-11 rounded-full object-cover border-2 border-slate-800 bg-slate-800" alt={partner.full_name} />
@@ -181,17 +156,13 @@ export default async function CommunityPage({
                                         {(partner.full_name || partner.email)?.charAt(0).toUpperCase()}
                                     </div>
                                 )}
-                                {/* Online pötty (statikus, de pro kinézet) */}
                                 <div className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-900"></div>
                             </div>
-                            
                             <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-baseline mb-0.5">
                                     <span className={`font-semibold text-sm truncate ${activeDmId === partner.id ? 'text-white' : 'text-slate-200 group-hover:text-white'}`}>
                                         {partner.full_name || partner.email?.split('@')[0]}
                                     </span>
-                                    {/* Időbélyeg helye (opcionális) */}
-                                    {/* <span className="text-[10px] text-slate-500">12:30</span> */}
                                 </div>
                                 <span className="text-xs text-slate-500 truncate block group-hover:text-slate-400">
                                     {activeDmId === partner.id ? 'Éppen írsz...' : 'Kattints a megnyitáshoz'}
@@ -207,7 +178,7 @@ export default async function CommunityPage({
                 </div>
             </div>
 
-            {/* 2. Csoportok Lista */}
+            {/* Csoportok Lista */}
             <div>
                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">Csoportjaim</h3>
                 <div className="space-y-1">
@@ -231,7 +202,7 @@ export default async function CommunityPage({
                 </div>
             </div>
 
-            {/* 3. Felfedezés */}
+            {/* Felfedezés */}
             <div className="pt-4 border-t border-slate-800/50">
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-3 mb-3">Ajánlott Csoportok</h3>
                 <div className="space-y-3 px-1">
@@ -253,25 +224,21 @@ export default async function CommunityPage({
         </div>
       </div>
 
-      {/* ==================== JOBB OLDAL (CHAT CONTENT) ==================== */}
+      {/* ==================== JOBB OLDAL (CONTENT) ==================== */}
       <div className={`
         flex-1 flex-col h-[100dvh] relative bg-slate-950 w-full lg:w-auto overflow-hidden
         ${isMobileViewActive ? 'flex fixed inset-0 z-50 lg:static' : 'hidden lg:flex'}
       `}>
-        
-        {/* HÁTTÉR MINTÁZAT (Opcionális vizuális tuning) */}
         <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]"></div>
 
-        {/* A. CSOPORT NÉZET */}
         {activeGroupId && activeGroupData ? (
+            // A. CSOPORT NÉZET
             <>
-                {/* Csoport Header */}
                 <div className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md flex items-center justify-between px-4 shrink-0 z-20 shadow-sm">
                     <div className="flex items-center gap-3 overflow-hidden">
                         <Link href="/community" className="lg:hidden p-2 -ml-2 text-slate-400 hover:text-white rounded-full active:bg-slate-800 transition-colors">
                             <ArrowLeft className="w-6 h-6" />
                         </Link>
-                        
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center font-bold text-white shadow-lg shrink-0">
                             {activeGroupData.name.charAt(0).toUpperCase()}
                         </div>
@@ -287,7 +254,6 @@ export default async function CommunityPage({
                     </div>
                     
                     <div className="flex items-center gap-2">
-                        {/* Tab váltó */}
                         <div className="flex bg-slate-950 rounded-lg p-1 border border-slate-800/50">
                             <Link href={`/community?group=${activeGroupId}&tab=chat`} className={`p-1.5 rounded-md transition-all ${activeTab === 'chat' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>
                                 <MessageCircle className="w-5 h-5" />
@@ -296,8 +262,6 @@ export default async function CommunityPage({
                                 <ShoppingBag className="w-5 h-5" />
                             </Link>
                         </div>
-                        
-                        {/* Menü / Kilépés */}
                         <div className="flex items-center">
                             {activeGroupData.type === 'private' && (
                                 <div className="hidden sm:block"><InviteMemberModal groupId={activeGroupId} /></div>
@@ -322,8 +286,7 @@ export default async function CommunityPage({
                 </div>
             </>
         ) : activeDmId ? (
-            
-            // B. DM NÉZET (Fullos profil betöltéssel)
+            // B. DM NÉZET
             <>
                <div className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md flex items-center justify-between px-4 shrink-0 z-20">
                     <div className="flex items-center gap-3">
@@ -331,7 +294,6 @@ export default async function CommunityPage({
                             <ArrowLeft className="w-6 h-6" />
                         </Link>
                         
-                        {/* Aktív Partner Avatar */}
                         <div className="relative">
                             {activeDmPartner?.avatar_url ? (
                                 <img src={activeDmPartner.avatar_url} className="w-10 h-10 rounded-full object-cover border border-slate-700" alt="" />
@@ -354,7 +316,11 @@ export default async function CommunityPage({
                     </div>
 
                     <div className="flex items-center gap-3 text-slate-400">
-                         {/* Dísz gombok (App-like feel) */}
+                         {/* --- ITT JELENIK MEG A TÖRLÉS GOMB --- */}
+                         <DeleteDMButton partnerId={activeDmId} />
+                         
+                         <div className="w-px h-6 bg-slate-800 mx-1 hidden sm:block"></div>
+
                          <button className="p-2 hover:bg-slate-800 rounded-full transition-colors hidden sm:block"><Phone className="w-5 h-5" /></button>
                          <button className="p-2 hover:bg-slate-800 rounded-full transition-colors hidden sm:block"><Video className="w-5 h-5" /></button>
                          <button className="p-2 hover:bg-slate-800 rounded-full transition-colors"><MoreVertical className="w-5 h-5" /></button>
@@ -366,7 +332,7 @@ export default async function CommunityPage({
                </div>
             </>
         ) : (
-            // C. ÜRES NÉZET (Desktop only)
+            // C. ÜRES NÉZET
             <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 bg-slate-950">
                 <div className="relative">
                     <div className="absolute -inset-4 bg-blue-500/20 rounded-full blur-xl animate-pulse"></div>

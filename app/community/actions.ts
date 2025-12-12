@@ -129,3 +129,18 @@ export async function startDMAction(formData: FormData) {
 
     return { success: true, partnerId: partnerId }
 }
+export async function deleteDMAction(partnerId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return
+
+  // Töröljük az összes üzenetet, ahol ÉN vagyok a küldő ÉS Ő a fogadó, VAGY fordítva.
+  // Ez a szintaxis a Supabase összetett szűrését használja.
+  await supabase.from('direct_messages')
+    .delete()
+    .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
+
+  // Visszairányítás a főoldalra, hogy frissüljön a lista
+  redirect('/community')
+}
