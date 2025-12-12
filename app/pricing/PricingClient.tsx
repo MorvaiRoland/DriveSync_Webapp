@@ -7,9 +7,9 @@ import Image from 'next/image'
 
 // --- STRIPE PRICING ID-K ---
 const PRICES = {
-  monthly: 'price_1SdCk0RbHGQdHUF43GXUsPsO', 
-  yearly: 'price_1SdCjkRbHGQdHUF4NnDKAbB1',  
-  lifetime: 'price_1SdCjORbHGQdHUF41kwudj8m' 
+  monthly: 'price_1Sd8zXRbHGQdHUF4vMQbDKjt', 
+  yearly: 'price_1Sd8zyRbHGQdHUF4mutCgwbV',  
+  lifetime: 'price_1Sd90LRbHGQdHUF4SWmp0rJM' 
 }
 
 export default function PricingClient({ initialPlan }: { initialPlan: string }) {
