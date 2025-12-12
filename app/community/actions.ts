@@ -153,26 +153,50 @@ export async function deleteDMAction(partnerId: string) {
 }
 
 export async function createListingAction(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  console.log("--- Hirdetés feladása indítása ---") // Debug info
 
+  const supabase = await createClient()
+  
+  // Ellenőrizzük a felhasználót
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+      console.error("Hiba: Nincs bejelentkezve", authError)
+      return { error: 'Nincs bejelentkezve' }
+  }
+
+  // Adatok kinyerése
   const groupId = formData.get('groupId') as string
   const title = formData.get('title') as string
   const price = formData.get('price')
   const description = formData.get('description') as string
   const imageUrl = formData.get('imageUrl') as string
 
-  await supabase.from('group_listings').insert({
+  console.log("Adatok:", { groupId, title, price, description }) // Debug info
+
+  // Validáció
+  if (!groupId || !title || !price) {
+      console.error("Hiba: Hiányzó kötelező adatok")
+      return { error: 'Hiányzó adatok' }
+  }
+
+  // Beszúrás az adatbázisba
+  const { data, error: dbError } = await supabase.from('group_listings').insert({
     group_id: groupId,
     user_id: user.id,
     title,
     price: Number(price),
     description,
-    image_url: imageUrl || 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2671&auto=format&fit=crop' // Alapértelmezett kép
-  })
+    image_url: imageUrl || 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2671&auto=format&fit=crop'
+  }).select() // A select() fontos, hogy lássuk, visszajön-e az adat
 
+  if (dbError) {
+      console.error("ADATBÁZIS HIBA:", dbError) // <--- ITT FOGJUK LÁTNI A BAJT
+      return { error: dbError.message }
+  }
+
+  console.log("Sikeres mentés!")
   revalidatePath('/community')
+  return { success: true }
 }
 
 // ÚJ: Kapcsolatfelvétel (DM indítása az eladóval)
