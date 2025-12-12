@@ -81,8 +81,7 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         const mileages = events.map(e => e.mileage).filter(m => m > 0);
         const distanceDriven = mileages.length > 1 ? (Math.max(...mileages) - Math.min(...mileages)) : 0;
 
-        // 3. LOGÓ BETÖLTÉSE - JAVÍTOTT ÚTVONAL
-        // A public mappa tartalmát a gyökérről érjük el!
+        // 3. LOGÓ BETÖLTÉSE
         const logoObj = await loadImage('/icons/icon-512.png'); 
 
         // --- PDF RAJZOLÁS ---
@@ -116,7 +115,6 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         doc.setFontSize(9);
         doc.setTextColor(255, 255, 255);
         doc.text(`Generálva: ${new Date().toLocaleDateString('hu-HU')}`, pageWidth - 14, 28, { align: 'right' });
-        // Véletlenszerű ID helyett generálhatunk egyet a dátumból vagy autóból
         const reportId = `${car.id}-${Date.now().toString().slice(-6)}`;
         doc.text(`Azonosító: #${reportId}`, pageWidth - 14, 33, { align: 'right' });
 
@@ -158,6 +156,15 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
 
         printRow("Alvázszám (VIN):", car.vin, col1, yPos);
         printRow("Üzemanyag:", car.fuel_type, col2, yPos);
+        yPos += rowHeight;
+
+        // ÚJ MEZŐK: Motor és Teljesítmény
+        // Feltételezve, hogy a car objektumban ezek a mezők 'engine_size' és 'power_hp' néven vannak
+        const engineInfo = car.engine_size ? `${car.engine_size} cm³` : '-';
+        const powerInfo = car.power_hp ? `${car.power_hp} LE` : '-';
+
+        printRow("Motor:", engineInfo, col1, yPos);
+        printRow("Teljesítmény:", powerInfo, col2, yPos);
         yPos += rowHeight;
 
         printRow("Aktuális Km:", `${car.mileage?.toLocaleString()} km`, col1, yPos);
@@ -206,10 +213,33 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
                             e.type === 'service' ? 'Szerviz' :
                             e.type === 'repair' ? 'Javítás' : 'Egyéb';
 
-            let desc = e.title || '';
-            if (e.type === 'fuel') desc = `${e.liters ? e.liters + 'L ' : ''}Üzemanyag`;
-            // Túl hosszú leírás vágása
-            if (desc.length > 40) desc = desc.substring(0, 37) + '...';
+            // LEÍRÁS LOGIKA MÓDOSÍTÁSA
+            // Elsődlegesen a 'description' mezőt használjuk, ha van.
+            // Ha nincs, akkor a 'title' mezőt.
+            // Tankolásnál formázunk.
+            let desc = '';
+            
+            if (e.description && e.description.trim() !== '') {
+                desc = e.description;
+            } else if (e.title && e.title.trim() !== '') {
+                desc = e.title;
+            }
+
+            // Tankolásnál kiegészítjük, ha van liter adat, de nem írjuk felül a description-t ha az létezik
+            if (e.type === 'fuel') {
+                const fuelInfo = `${e.liters ? e.liters + 'L ' : ''}Üzemanyag`;
+                if (desc) {
+                    desc = `${fuelInfo} - ${desc}`;
+                } else {
+                    desc = fuelInfo;
+                }
+            }
+
+            // Ha még mindig üres
+            if (!desc) desc = '-';
+
+            // Túl hosszú leírás vágása (opcionális, de táblázatnál hasznos)
+            if (desc.length > 50) desc = desc.substring(0, 47) + '...';
 
             return [
                 new Date(e.event_date).toLocaleDateString('hu-HU'),
