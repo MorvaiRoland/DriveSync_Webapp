@@ -281,7 +281,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         
         doc.setTextColor(245, 158, 11);
         doc.setFont('Roboto', 'bold');
-        doc.text("drivesync.hu", textX, textYStart + 20);
+        doc.text("https://www.drivesync-hungary.hu/", textX, textYStart + 20);
 
         doc.save(`${car.make}_${car.model}_Adatlap.pdf`)
         onClose()
