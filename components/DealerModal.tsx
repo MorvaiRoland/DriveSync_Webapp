@@ -84,7 +84,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
     }
 
     try {
-        const doc = new jsPDF()
+        const doc = new jsPDF() // Alapértelmezett A4
         
         // 1. ERŐFORRÁSOK BETÖLTÉSE
         const fontRegularUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf';
@@ -105,98 +105,95 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
         doc.setFont('Roboto');
 
-        // Logó (ellenőrzéssel)
+        // Logó
         let logoBase64 = null;
         if (logoRes.ok) {
             logoBase64 = arrayBufferToBase64(await logoRes.arrayBuffer());
         }
 
         // --- PDF RAJZOLÁS ---
-        const pageWidth = doc.internal.pageSize.width;
-        const pageHeight = doc.internal.pageSize.height;
+        const pageWidth = doc.internal.pageSize.width; // 210mm
+        const pageHeight = doc.internal.pageSize.height; // 297mm
         
-        // 1. FEJLÉC (Modern Sötétkék)
+        // 1. FEJLÉC (Kompaktabb, 40mm magas)
         doc.setFillColor(15, 23, 42) // Slate-900
-        doc.rect(0, 0, pageWidth, 50, 'F') 
+        doc.rect(0, 0, pageWidth, 40, 'F') 
         
         if (logoBase64) {
-            try { doc.addImage(logoBase64, 'PNG', 14, 10, 30, 30); } catch (e) {}
+            try { doc.addImage(logoBase64, 'PNG', 14, 6, 28, 28); } catch (e) {}
         }
 
-        // Cím
+        // Autó Név
         doc.setTextColor(255, 255, 255)
-        doc.setFontSize(26)
+        doc.setFontSize(22)
         doc.setFont('Roboto', 'bold')
-        doc.text(`${car.make} ${car.model}`, 50, 25)
+        doc.text(`${car.make} ${car.model}`, 50, 20)
         
-        doc.setFontSize(12)
+        // Rendszám
+        doc.setFontSize(10)
         doc.setFont('Roboto', 'normal')
         doc.setTextColor(148, 163, 184) // Slate-400
-        doc.text(car.plate, 50, 32)
+        doc.text(car.plate, 50, 26)
 
         // Ár (Jobb oldal)
         const priceVal = formData.get('price') as string
         if (priceVal) {
             const price = parseInt(priceVal).toLocaleString()
-            doc.setFontSize(32)
+            doc.setFontSize(28)
             doc.setTextColor(245, 158, 11) // Amber-500
             doc.setFont('Roboto', 'bold')
-            doc.text(`${price} Ft`, pageWidth - 14, 30, { align: 'right' })
+            doc.text(`${price} Ft`, pageWidth - 14, 25, { align: 'right' })
         }
 
-        // 2. FŐ ADATOK (Grid elrendezés)
-        let yPos = 70;
+        // 2. FŐ ADATOK (Kompakt Grid)
+        let yPos = 55;
         const col1 = 14;
         const col2 = 80;
-        const col3 = 140;
+        const col3 = 145;
+        const rowHeight = 12; // Kisebb sorköz
 
-        const drawDataBlock = (label: string, value: string, x: number) => {
-            doc.setFontSize(9);
-            doc.setTextColor(100, 116, 139); // Label szürke
+        const drawDataBlock = (label: string, value: string, x: number, y: number) => {
+            doc.setFontSize(8); // Kisebb label
+            doc.setTextColor(100, 116, 139); 
             doc.setFont('Roboto', 'normal');
-            doc.text(label.toUpperCase(), x, yPos);
+            doc.text(label.toUpperCase(), x, y);
             
-            doc.setFontSize(12);
-            doc.setTextColor(15, 23, 42); // Value sötét
+            doc.setFontSize(11); // Adat méret
+            doc.setTextColor(15, 23, 42);
             doc.setFont('Roboto', 'bold');
-            doc.text(value || '-', x, yPos + 6);
+            doc.text(value || '-', x, y + 5);
         }
-
-        drawDataBlock("Évjárat", `${car.year}`, col1);
-        drawDataBlock("Futásteljesítmény", `${car.mileage.toLocaleString()} km`, col2);
-        drawDataBlock("Üzemanyag", car.fuel_type, col3);
-        
-        yPos += 20;
 
         const engineDetails = formData.get('engine_details') as string;
         const performance = formData.get('performance_hp') as string;
         const transmission = formData.get('transmission') as string;
 
-        drawDataBlock("Motor", engineDetails, col1);
-        drawDataBlock("Teljesítmény", performance ? `${performance} LE` : '-', col2);
-        drawDataBlock("Váltó", transmission, col3);
+        // Sor 1
+        drawDataBlock("Évjárat", `${car.year}`, col1, yPos);
+        drawDataBlock("Futásteljesítmény", `${car.mileage.toLocaleString()} km`, col2, yPos);
+        drawDataBlock("Üzemanyag", car.fuel_type, col3, yPos);
+        
+        yPos += rowHeight;
 
-        yPos += 25;
+        // Sor 2
+        drawDataBlock("Motor", engineDetails, col1, yPos);
+        drawDataBlock("Teljesítmény", performance ? `${performance} LE` : '-', col2, yPos);
+        drawDataBlock("Váltó", transmission, col3, yPos);
+
+        yPos += 15; // Kis térköz a vonal előtt
 
         // Vízszintes elválasztó
         doc.setDrawColor(226, 232, 240); // Slate-200
         doc.line(14, yPos, pageWidth - 14, yPos);
-        yPos += 15;
-
-        // 3. FELSZERELTSÉG (Kategóriákra bontva)
-        doc.setFontSize(16);
-        doc.setTextColor(15, 23, 42);
-        doc.text("Kiemelt Felszereltség", 14, yPos);
         yPos += 10;
 
-        // Kategóriák kirajzolása (2 oszlopos elrendezés a kategóriáknak)
-        const leftColX = 14;
-        const rightColX = 110;
-        let isLeft = true;
-        let currentY = yPos;
-        let maxY = yPos; // Hogy tudjuk hol folytassuk ha vége
+        // 3. FELSZERELTSÉG (Tömörített elrendezés)
+        doc.setFontSize(14);
+        doc.setTextColor(15, 23, 42);
+        doc.text("Kiemelt Felszereltség", 14, yPos);
+        yPos += 8;
 
-        // Csoportosítjuk a kiválasztott extrákat kategóriákba
+        // Csoportosítás
         const groupedFeatures: Record<string, string[]> = {};
         const otherFeatures: string[] = [];
 
@@ -212,128 +209,79 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
             }
             if (!found) otherFeatures.push(feat);
         });
+        if (otherFeatures.length > 0) groupedFeatures['Egyéb Extrák'] = otherFeatures;
 
-        // "Egyéb" kategória hozzáadása ha van
-        if (otherFeatures.length > 0) {
-            groupedFeatures['Egyéb Extrák'] = otherFeatures;
-        }
-
-        // Kirajzolás
+        // Kirajzolás (Kategóriánként, 3 oszlopos gridben a tételek)
         Object.entries(groupedFeatures).forEach(([category, feats]) => {
-            // Ha nem fér ki az oldalra, új oldal
-            if (currentY > pageHeight - 60) {
-                doc.addPage();
-                currentY = 20;
-                maxY = 20;
-            }
-
-            const x = isLeft ? leftColX : rightColX;
-            const startY = isLeft ? currentY : (currentY === yPos ? yPos : currentY); // Jobb oszlop igazítása
-
             // Kategória Cím
-            doc.setFontSize(11);
+            doc.setFontSize(10);
             doc.setTextColor(245, 158, 11); // Amber
             doc.setFont('Roboto', 'bold');
-            doc.text(category.toUpperCase(), x, currentY);
-            
-            currentY += 6;
+            doc.text(category.toUpperCase(), 14, yPos);
+            yPos += 5;
 
-            // Elemek felsorolása
-            doc.setFontSize(10);
+            // Tételek 3 oszlopban
+            doc.setFontSize(9);
             doc.setTextColor(51, 65, 85); // Slate-700
             doc.setFont('Roboto', 'normal');
 
-            feats.forEach(feat => {
-                doc.text(`• ${feat}`, x, currentY);
-                currentY += 5;
-            });
-
-            currentY += 8; // Térköz a kategóriák között
+            let colIndex = 0;
+            let startY = yPos;
             
-            // Oszlop váltás logika
-            if (currentY > maxY) maxY = currentY;
-            
-            // Ha a bal oszlopban voltunk, most nézzük meg, hogy váltsunk-e
-            // Egyszerűsített logika: Sorban haladunk, ha betelik a bal, megyünk jobbra? 
-            // Vagy inkább Z alakban? Most maradjunk a Z alaknál (Bal-Jobb-Bal-Jobb)
-            if (isLeft) {
-                isLeft = false;
-                // A jobb oszlop "tetőpontja" az előző bal oszlop kezdete legyen? 
-                // Nem, egyszerűbb ha folytonos. 
-                // Visszaállítjuk a Y-t a jobb oszlopnak az előző blokk tetejére?
-                // Korrekció: Egyszerűsítsük le 1 oszloposra ha túl bonyolult, de a 2 oszlop szebb.
-                // Megoldás: Minden kategória után váltunk oldalt (X-et), de Y-t csak minden második után növeljük.
-                currentY = maxY - (feats.length * 5) - 14; // Visszaugrás (hack) -> Nem jó.
+            feats.forEach((feat, index) => {
+                // Oszlop pozíciók: 14mm, 80mm, 145mm
+                const x = colIndex === 0 ? 14 : colIndex === 1 ? 80 : 145;
                 
-                // Helyesebb megközelítés:
-                // Tároljuk a LeftY és RightY értékeket külön.
-            }
-        });
-        
-        // ÚJRAÍRT KATEGÓRIA RAJZOLÓ (Stabilabb 2 oszlopos)
-        let leftY = yPos;
-        let rightY = yPos;
+                doc.text(`• ${feat}`, x, yPos);
 
-        Object.entries(groupedFeatures).forEach(([category, feats], index) => {
-            const isLeftColumn = leftY <= rightY;
-            const x = isLeftColumn ? leftColX : rightColX;
-            let y = isLeftColumn ? leftY : rightY;
-
-            // Kategória Cím
-            doc.setFontSize(10);
-            doc.setTextColor(15, 23, 42); // Sötét
-            doc.setFont('Roboto', 'bold');
-            doc.text(category.toUpperCase(), x, y);
-            y += 6;
-
-            // Elemek
-            doc.setFontSize(9);
-            doc.setTextColor(71, 85, 105); // Szürkébb
-            doc.setFont('Roboto', 'normal');
-            
-            feats.forEach(feat => {
-                doc.text(`•  ${feat}`, x, y);
-                y += 5;
+                colIndex++;
+                if (colIndex > 2) {
+                    colIndex = 0;
+                    yPos += 5; // Új sor
+                }
             });
 
-            y += 10; // Margó
-
-            // Frissítjük a magasságot
-            if (isLeftColumn) leftY = y; else rightY = y;
+            // Ha nem volt teljes az utolsó sor, akkor is léptetünk egyet a következő kategóriához
+            if (colIndex !== 0) yPos += 5;
+            
+            yPos += 4; // Kis plusz térköz a kategóriák között
         });
 
-        // A tartalom vége a lejjebb lévő oszlop alja
-        yPos = Math.max(leftY, rightY) + 10;
+        // 4. LÁBLÉC (FIXEN AZ ALJÁN)
+        // A lábléc magassága kb 45mm. Ellenőrizzük, rácsúszunk-e.
+        // Ha yPos > 250, akkor már necces, de mivel "1 oldal" a cél, feltételezzük, hogy kifér.
+        // Ha nagyon sok az extra, akkor is az aljára tesszük, legfeljebb rálóg (de a 3 oszlop miatt sok kifér).
+        
+        const footerY = pageHeight - 45; 
+        
+        // Háttér a QR kódnak (Opcionális, de elválasztja)
+        doc.setFillColor(248, 250, 252); // Slate-50
+        doc.roundedRect(10, footerY, pageWidth - 20, 35, 3, 3, 'F');
 
-
-        // 4. LÁBLÉC QR KÓDDAL
+        // QR Kód
         const verifyUrl = `${window.location.origin}/verify/${car.id}`
         const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 200, margin: 1 })
         
-        // Ha nem fér ki, új oldal
-        if (yPos > pageHeight - 60) {
-            doc.addPage();
-            yPos = 20;
-        } else {
-            yPos = pageHeight - 50; // Legalulra igazítva
-        }
-
-        // QR Kód
-        doc.addImage(qrDataUrl, 'PNG', 14, yPos, 40, 40);
+        doc.addImage(qrDataUrl, 'PNG', 16, footerY + 2, 30, 30);
         
         // Szöveg a QR mellett
+        const textX = 55;
+        const textYStart = footerY + 10;
+
         doc.setFontSize(12);
         doc.setTextColor(15, 23, 42);
         doc.setFont('Roboto', 'bold');
-        doc.text("Hitelesített Járműtörténet", 60, yPos + 10);
+        doc.text("Hitelesített Járműtörténet", textX, textYStart);
         
         doc.setFontSize(9);
         doc.setTextColor(100, 116, 139);
         doc.setFont('Roboto', 'normal');
-        doc.text("Szkennelje be a kódot a részletes digitális", 60, yPos + 16);
-        doc.text("szervizkönyv és futásteljesítmény megtekintéséhez.", 60, yPos + 21);
+        doc.text("Szkennelje be a kódot a részletes digitális szervizkönyv,", textX, textYStart + 6);
+        doc.text("futásteljesítmény és dokumentáció megtekintéséhez.", textX, textYStart + 11);
         
-        doc.text("drivesync.hu", 60, yPos + 35);
+        doc.setTextColor(245, 158, 11);
+        doc.setFont('Roboto', 'bold');
+        doc.text("drivesync.hu", textX, textYStart + 20);
 
         doc.save(`${car.make}_${car.model}_Adatlap.pdf`)
         onClose()
