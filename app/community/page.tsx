@@ -281,7 +281,7 @@ export default async function CommunityPage({
                     {activeTab === 'chat' ? (
                         <ChatWindow type="group" id={activeGroupId} currentUser={user} />
                     ) : (
-                        <Marketplace groupId={activeGroupId} items={marketItems} />
+                        <Marketplace groupId={activeGroupId} items={marketItems} currentUser={user} />
                     )}
                 </div>
             </>

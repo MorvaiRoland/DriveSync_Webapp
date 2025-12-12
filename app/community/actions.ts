@@ -135,12 +135,66 @@ export async function deleteDMAction(partnerId: string) {
 
   if (!user) return
 
-  // Töröljük az összes üzenetet, ahol ÉN vagyok a küldő ÉS Ő a fogadó, VAGY fordítva.
-  // Ez a szintaxis a Supabase összetett szűrését használja.
-  await supabase.from('direct_messages')
+  // Törlés az adatbázisból
+  const { error } = await supabase.from('direct_messages')
     .delete()
     .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`)
 
-  // Visszairányítás a főoldalra, hogy frissüljön a lista
+  if (error) {
+      console.error("Törlési hiba:", error)
+      return
+  }
+
+  // Ez frissíti be a bal oldali sávot (hogy eltűnjön a név)
+  revalidatePath('/community') 
+  
+  // Visszairányítás az üres nézetre
   redirect('/community')
+}
+
+export async function createListingAction(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const groupId = formData.get('groupId') as string
+  const title = formData.get('title') as string
+  const price = formData.get('price')
+  const description = formData.get('description') as string
+  const imageUrl = formData.get('imageUrl') as string
+
+  await supabase.from('group_listings').insert({
+    group_id: groupId,
+    user_id: user.id,
+    title,
+    price: Number(price),
+    description,
+    image_url: imageUrl || 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2671&auto=format&fit=crop' // Alapértelmezett kép
+  })
+
+  revalidatePath('/community')
+}
+
+// ÚJ: Kapcsolatfelvétel (DM indítása az eladóval)
+export async function contactSellerAction(sellerId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  // Ne indítsunk chatet magunkkal
+  if (user.id === sellerId) return
+
+  // Megnézzük, van-e már üzenetváltás
+  // (A legegyszerűbb, ha visszairányítunk a DM nézetre, a CommunityPage majd kezeli a profilt)
+  redirect(`/community?dm=${sellerId}`)
+}
+
+// ÚJ: Hirdetés törlése
+export async function deleteListingAction(listingId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+  
+    await supabase.from('group_listings').delete().eq('id', listingId).eq('user_id', user.id)
+    revalidatePath('/community')
 }
