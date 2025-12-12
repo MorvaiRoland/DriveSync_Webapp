@@ -89,7 +89,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         // 1. ERŐFORRÁSOK BETÖLTÉSE
         const fontRegularUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf';
         const fontBoldUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf';
-        const logoUrl = window.location.origin + '/drivesync-logo.png'; 
+        const logoUrl = window.location.origin + '/icons/icon-512.png'; 
 
         const [fontRegRes, fontBoldRes, logoRes] = await Promise.all([
             fetch(fontRegularUrl),
