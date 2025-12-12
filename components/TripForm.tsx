@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
 // JAVÍTVA: Az import útvonalat a közös actions fájlhoz igazítottuk
-import { addTrip } from '@/app/cars/actions' 
+import { addTrip } from '@/app/cars/[id]/actions' 
 import LocationAutocomplete from '@/components/LocationAutocomplete'
 
 // Térkép dinamikus betöltése
