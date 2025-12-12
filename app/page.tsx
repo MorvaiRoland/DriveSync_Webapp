@@ -11,7 +11,7 @@ import GamificationWidget from '@/components/GamificationWidget'
 import PromoModal from '@/components/PromoModal'
 import SubscribeForm from '@/components/SubscribeForm'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
-import { History, Fuel, Wrench, Lock, Plus, Pencil, ArrowRight, Sparkles, Calendar, CheckCircle2, Users } from 'lucide-react';
+import { Hammer, History, Fuel, Wrench, Lock, Plus, Pencil, ArrowRight, Sparkles, Calendar, CheckCircle2, Users } from 'lucide-react';
 import FuelWidget from '@/components/FuelWidget';
 
 // --- KONFIGURÁCIÓ ---
@@ -557,47 +557,39 @@ async function DashboardComponent() {
             <div className="lg:col-span-4 space-y-8">
               
               {/* --- ÚJ: KÖZÖSSÉG WIDGET (CSAK PRO/LIFETIME) --- */}
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900 to-slate-900 border border-blue-800 p-6 shadow-xl group">
-                  <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl group-hover:bg-blue-500/30 transition-all"></div>
-                  <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-20 h-20 bg-purple-500/20 rounded-full blur-2xl"></div>
-                  
-                  <div className="relative z-10">
-                      <div className="flex justify-between items-start mb-4">
-                          <div className="p-3 bg-blue-600/20 border border-blue-500/30 rounded-xl text-blue-400">
-                              <Users className="w-6 h-6" />
-                          </div>
-                          {isPremium ? (
-                              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded border border-emerald-500/30 flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> AKTÍV
-                              </span>
-                          ) : (
-                              <span className="bg-amber-500/20 text-amber-400 text-[10px] font-bold px-2 py-1 rounded border border-amber-500/30 flex items-center gap-1">
-                                  <Lock className="w-3 h-3" /> PRO
-                              </span>
-                          )}
-                      </div>
+              <div className="relative overflow-hidden rounded-2xl bg-slate-900/50 border border-slate-800 p-6 shadow-xl opacity-90">
+    {/* Háttér effektek - kicsit halványítva */}
+    <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-slate-500/10 rounded-full blur-2xl"></div>
+    <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-20 h-20 bg-slate-500/10 rounded-full blur-2xl"></div>
+    
+    <div className="relative z-10">
+        <div className="flex justify-between items-start mb-4">
+            {/* Ikon doboz - szürkébb, inaktívabb hatás */}
+            <div className="p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-400">
+                <Hammer className="w-6 h-6" />
+            </div>
 
-                      <h3 className="text-xl font-bold text-white mb-1">DriveSync Klub</h3>
-                      <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-                          Csatlakozz a márkaklubokhoz, beszélgess szerelőkkel és add el felesleges alkatrészeidet a piactéren!
-                      </p>
+            {/* Státusz címke */}
+            <span className="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-2 py-1 rounded border border-amber-500/20 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> HAMAROSAN
+            </span>
+        </div>
 
-                      <Link 
-                          href={isPremium ? "/community" : "/pricing"} 
-                          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-95 ${
-                              isPremium 
-                              ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-900/20' 
-                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                          }`}
-                      >
-                          {isPremium ? (
-                              <>Belépés a Chatbe <ArrowRight className="w-4 h-4" /></>
-                          ) : (
-                              <>Feloldás (Csomagváltás) <Lock className="w-3 h-3" /></>
-                          )}
-                      </Link>
-                  </div>
-              </div>
+        <h3 className="text-xl font-bold text-slate-200 mb-1">DriveSync Klub</h3>
+        <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+            A közösségi funkciók és a piactér jelenleg fejlesztés alatt állnak. Értesítünk, amint elérhető lesz!
+        </p>
+
+        {/* Gomb - Letiltva, nem kattintható */}
+        <button 
+            disabled
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm 
+            bg-slate-800/50 text-slate-500 border border-slate-700/50 cursor-not-allowed select-none"
+        >
+            Fejlesztés alatt <Lock className="w-3 h-3 opacity-50" />
+        </button>
+    </div>
+</div>
 
               {FEATURES.gamification && <GamificationWidget badges={badges} />}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
