@@ -25,7 +25,9 @@ export const metadata: Metadata = {
   description: "A DriveSync Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen.",
   keywords: ["drivesync", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
   authors: [{ name: "DriveSync Technologies" }],
-  
+  alternates: {
+    canonical: '/',
+  },
   manifest: "/manifest.webmanifest",
   
   appleWebApp: {
