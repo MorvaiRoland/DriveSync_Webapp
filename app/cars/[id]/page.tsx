@@ -13,13 +13,14 @@ import SalesWidget from '@/components/SalesWidget'
 import AnalyticsCharts from '@/components/AnalyticsCharts'
 import ResponsiveDashboard from '@/components/ResponsiveDashboard'
 import PredictiveMaintenance from '@/components/PredictiveMaintenance'
+import CarHealthWidget from '@/components/CarHealthWidget'
 
 import { 
   Fuel, Wrench, Bell, Map, Package, Warehouse, 
   Lock, Pencil, Activity, FileText, 
   ShieldCheck, Disc, Snowflake, Sun, Wallet, Banknote, 
   Sparkles, Lightbulb, Plus, Trash2, Gauge, History, 
-  ChevronRight, CarFront
+  ChevronRight, CarFront, Zap
 } from 'lucide-react';
 
 // --- TÍPUSOK ---
@@ -87,14 +88,19 @@ export default async function CarDetailsPage(props: Props) {
   
   const fuelEvents = safeEvents.filter(e => e.type === 'fuel' && e.mileage && e.liters).sort((a, b) => a.mileage - b.mileage)
   let avgConsumption = "Nincs adat"
+  
+  // Elektromos / Hagyományos fogyasztás kijelzés
+  const isElectric = car.fuel_type === 'electric';
+  const unit = isElectric ? 'kWh' : 'L';
+
   if (fuelEvents.length >= 2) {
     const totalLiters = fuelEvents.reduce((sum, e) => sum + (e.liters || 0), 0) - (fuelEvents[0].liters || 0)
     const distanceDelta = fuelEvents[fuelEvents.length - 1].mileage - fuelEvents[0].mileage
-    if (distanceDelta > 0) avgConsumption = `${((totalLiters / distanceDelta) * 100).toFixed(1)} L`
+    if (distanceDelta > 0) avgConsumption = `${((totalLiters / distanceDelta) * 100).toFixed(1)} ${unit}`
   }
 
   // --- Service Logic ---
-  const serviceIntervalKm = car.service_interval_km || 15000;
+  const serviceIntervalKm = car.service_interval_km || (isElectric ? 30000 : 15000); // Elektromosnál ritkább alapértelmezett
   let baseKm = car.last_service_mileage || 0;
   const lastServiceEvent = safeEvents.find(e => e.type === 'service');
   if (lastServiceEvent && lastServiceEvent.mileage > baseKm) baseKm = lastServiceEvent.mileage;
@@ -104,32 +110,36 @@ export default async function CarDetailsPage(props: Props) {
   const kmRemaining = nextServiceKm - car.mileage;
   const kmSinceService = car.mileage - baseKm;
 
+  // Státusz logika (HealthStatus)
   let healthStatus = { text: "Kiváló", color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", dot: "bg-emerald-500" };
   if (kmRemaining <= 0) healthStatus = { text: "Szerviz Most!", color: "text-red-500 bg-red-500/10 border-red-500/20", dot: "bg-red-500 animate-pulse" };
   else if (kmRemaining < 2000) healthStatus = { text: "Hamarosan", color: "text-amber-500 bg-amber-500/10 border-amber-500/20", dot: "bg-amber-500" };
 
   const percentageUsed = Math.min(100, Math.max(0, (kmSinceService / serviceIntervalKm) * 100));
-  const oilLife = 100 - percentageUsed;
+  const oilLife = 100 - percentageUsed; // Elektromosnál ez "Akku/Szerviz állapot" lesz a komponensben
   const motStatus = getExpiryStatus(car.mot_expiry);
   const insuranceStatus = getExpiryStatus(car.insurance_expiry);
 
-  // --- Smart Tips ---
+  // --- Smart Tips (Elektromosra szabva) ---
   const smartTips = [];
-  if (oilLife < 15) smartTips.push("Az olajcsere nagyon hamarosan esedékes.");
-  if (car.mileage > 200000) smartTips.push("200e km felett érdemes ellenőrizni a vezérlést.");
+  if (!isElectric && oilLife < 15) smartTips.push("Az olajcsere nagyon hamarosan esedékes.");
+  if (isElectric && kmRemaining < 2000) smartTips.push("Közeleg a kötelező átvizsgálás ideje.");
+  if (car.mileage > 200000) smartTips.push(isElectric ? "200e km felett érdemes az akku SOH mérése." : "200e km felett érdemes ellenőrizni a vezérlést.");
   if (motStatus.alert) smartTips.push(`A műszaki vizsga kritikus: ${motStatus.status}`);
   if (safeTires.length === 0) smartTips.push("Rögzítsd a téli/nyári gumikat a Gumihotelben.");
   if (smartTips.length === 0) smartTips.push("Minden rendszer rendben. Biztonságos utat!");
 
   const healthProps = { car, oilLife, kmSinceService, serviceIntervalKm, kmRemaining, motStatus, insuranceStatus }
-  const techProps = { car, avgConsumption }
-  const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost }
+  const techProps = { car, avgConsumption, isElectric }
+  const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost, isElectric }
   const carIdString = car.id.toString();
 
   // --- WIDGET DEFINITIONS ---
   const WidgetParking = <ParkingAssistant carId={carIdString} activeSession={activeParking} />;
-  const WidgetHealth = <HealthCard {...healthProps} />;
-  // --- ÚJ: Prediktív Karbantartás Widget ---
+  
+  // ITT HASZNÁLJUK AZ ÚJ KOMPONENST:
+  const WidgetHealth = <CarHealthWidget {...healthProps} />;
+  
   const WidgetPrediction = isPro ? <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} /> : null;
   const WidgetCost = <CostCard {...costProps} />;
   const WidgetSales = isPro ? <SalesWidget car={car} /> : <ProTeaser />;
@@ -149,32 +159,23 @@ export default async function CarDetailsPage(props: Props) {
   );
   const WidgetTips = isPro ? <SmartTipsCard tips={smartTips} /> : null;
   const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
-  
-  // Itt van a grafikon widget definiálása
   const WidgetCharts = <AnalyticsCharts events={safeEvents} />;
-  
   const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
-
   // --- MOBILE TABS CONTENT ---
-  const mobileTabs = {
-    // A Prediktív kártya itt is bekerült az áttekintésbe
+ const mobileTabs = {
     overview: <div className="space-y-6">{WidgetParking}{WidgetHealth}{WidgetPrediction}{WidgetCost}{WidgetSales}</div>,
     services: <div className="space-y-6">{WidgetSpecs}{WidgetVignette}{WidgetTires}{WidgetDocs}</div>,
-    // Itt van a grafikon a mobilos Napló fülben
     log: <div className="space-y-6">{WidgetTips}{WidgetReminders}{WidgetCharts}{WidgetLog}</div>
   };
 
   // --- DESKTOP BENTO GRID CONTENT ---
   const DesktopLayout = (
     <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
-        {/* BAL OSZLOP (Fő tartalom) - 8 egység széles */}
         <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
-            {/* Statisztikai Sor */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                 {/* Egészség + Prediktív egy oszlopban */}
                  <div className="space-y-6">
                     {WidgetHealth}
-                    {WidgetPrediction} {/* ITT JELENIK MEG PC-N */}
+                    {WidgetPrediction}
                  </div>
                  
                  <div className="space-y-6">
@@ -182,21 +183,15 @@ export default async function CarDetailsPage(props: Props) {
                     {WidgetCost}
                  </div>
             </div>
-
-            {/* Itt van a grafikon a desktop nézetben */}
             {WidgetCharts}
-
-            {/* Napló teljes szélességben */}
             {WidgetLog}
         </div>
 
-        {/* JOBB OSZLOP (Sidebar) - 4 egység széles, Sticky */}
         <div className="col-span-12 lg:col-span-4 space-y-6 sticky top-24">
              {WidgetSales}
              {WidgetTips}
              {WidgetReminders}
              
-             {/* Kisebb widgetek csoportosítva egy konténerbe */}
              <div className="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
                  <div className="px-2 pt-2">{WidgetSpecs}</div>
                  <div className="px-2">{WidgetVignette}</div>
@@ -209,23 +204,15 @@ export default async function CarDetailsPage(props: Props) {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
-      
-      {/* HEADER SECTION */}
       <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={isPro} />
-      
-      {/* ACTION GRID (Desktop Only) */}
-      <DesktopActionGrid carId={carIdString} />
-
-      {/* MAIN CONTENT AREA */}
+      <DesktopActionGrid carId={carIdString} isElectric={isElectric} />
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
         <ResponsiveDashboard 
             mobileTabs={mobileTabs}
             desktopContent={DesktopLayout}
         />
       </div>
-
-      {/* MOBILE FLOATING NAV */}
-      <MobileBottomNav carId={carIdString} />
+      <MobileBottomNav carId={carIdString} isElectric={isElectric} />
     </div>
   )
 }
@@ -330,13 +317,14 @@ function StatBadge({ label, value, valueColor = "text-white" }: any) {
     )
 }
 
-function MobileBottomNav({ carId }: { carId: string }) {
+function MobileBottomNav({ carId, isElectric }: { carId: string, isElectric?: boolean }) {
     const btnBase = "flex flex-col items-center justify-center gap-1.5 py-2 rounded-2xl transition-all active:scale-95";
     return (
         <div className="md:hidden fixed bottom-6 left-4 right-4 bg-slate-900/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl z-50">
             <div className="grid grid-cols-5 gap-1 p-2">
-                <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnBase} text-amber-500 hover:bg-white/5`}>
-                    <Fuel className="w-5 h-5" /><span className="text-[9px] font-bold">Tankol</span>
+                <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnBase} hover:bg-white/5 ${isElectric ? 'text-cyan-400' : 'text-amber-500'}`}>
+                    {isElectric ? <Zap className="w-5 h-5" /> : <Fuel className="w-5 h-5" />}
+                    <span className="text-[9px] font-bold">{isElectric ? 'Töltés' : 'Tankol'}</span>
                 </Link>
                 <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnBase} text-slate-300 hover:bg-white/5`}>
                     <Wrench className="w-5 h-5" /><span className="text-[9px] font-bold">Szerviz</span>
@@ -355,15 +343,16 @@ function MobileBottomNav({ carId }: { carId: string }) {
     )
 }
 
-function DesktopActionGrid({ carId }: { carId: string }) {
+function DesktopActionGrid({ carId, isElectric }: { carId: string, isElectric?: boolean }) {
     const btnClass = "group h-16 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all hover:-translate-y-1 font-bold border border-transparent overflow-hidden relative";
     const shine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer";
     
     return (
         <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-5 gap-4">
-             <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} bg-amber-500 hover:bg-amber-400 text-slate-900`}>
+             <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} ${isElectric ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-amber-500 hover:bg-amber-400 text-slate-900'}`}>
                 <div className={shine} />
-                <Fuel className="w-5 h-5" />Tankolás
+                {isElectric ? <Zap className="w-5 h-5" /> : <Fuel className="w-5 h-5" />}
+                {isElectric ? 'Töltés rögzítése' : 'Tankolás'}
              </Link>
              <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnClass} bg-slate-800 hover:bg-slate-700 text-white`}>
                 <div className={shine} />
@@ -483,7 +472,7 @@ function TireHotelCard({ tires, carMileage, carId }: any) {
     )
 }
 
-function CostCard({ total, fuel, service }: any) {
+function CostCard({ total, fuel, service, isElectric }: any) {
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-6"><Wallet className="w-5 h-5 text-slate-400" />Költségek</h3>
@@ -497,7 +486,7 @@ function CostCard({ total, fuel, service }: any) {
                 </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-                 <CostItem label="Üzemanyag" value={fuel} icon={<Fuel className="w-3 h-3" />} />
+                 <CostItem label={isElectric ? "Töltés" : "Üzemanyag"} value={fuel} icon={isElectric ? <Zap className="w-3 h-3" /> : <Fuel className="w-3 h-3" />} />
                  <CostItem label="Szerviz" value={service} icon={<Wrench className="w-3 h-3" />} />
             </div>
         </div>
