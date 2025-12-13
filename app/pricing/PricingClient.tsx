@@ -90,7 +90,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
         </Link>
         <div className="flex items-center gap-2 opacity-90">
             <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" width={28} height={28} className="object-contain" />
-            <span className="font-black text-lg tracking-tight hidden sm:block">Drive<span className="text-amber-500">Sync</span></span>
+            <span className="font-black text-lg tracking-tight hidden sm:block">Dynamic<span className="text-amber-500">Sense</span></span>
         </div>
       </nav>
 
