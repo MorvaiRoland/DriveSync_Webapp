@@ -476,7 +476,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
          
          <div className="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
              <p className="text-slate-600 text-xs font-mono uppercase tracking-widest">
-                © 2025 DynamicSense Hungary. Minden jog fenntartva.
+                © 2025 DynamicSense Technologies. Minden jog fenntartva.
              </p>
              <div className="flex items-center gap-2 text-xs text-slate-600 font-mono">
                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
