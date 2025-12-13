@@ -195,7 +195,7 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
                    <div>
                       <h3 className="text-white font-bold text-base leading-tight">AI Szerelő</h3>
                       <p className="text-indigo-100/80 text-xs font-medium flex items-center gap-1">
-                         <Sparkles className="w-3 h-3" /> GPT-4o Powered
+                         <Sparkles className="w-3 h-3" /> gemini-2.5-flash Powered
                       </p>
                    </div>
                 </div>

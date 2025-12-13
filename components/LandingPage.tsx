@@ -113,7 +113,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
     },
     {
       question: "Tényleg felismeri az AI a hibakódokat?",
-      answer: "Igen! A GPT-4o alapú AI Szerelőnk képes értelmezni a fotózott vagy beírt hibakódokat (pl. P0300), és magyar nyelven, érthetően elmagyarázza a probléma okát és a teendőket."
+      answer: "Igen! A gemini-2.5-flash alapú AI Szerelőnk képes értelmezni a fotózott vagy beírt hibakódokat (pl. P0300), és magyar nyelven, érthetően elmagyarázza a probléma okát és a teendőket."
     },
     {
       question: "Mi az a Gumihotel és Matrica menedzser?",
