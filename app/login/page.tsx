@@ -47,7 +47,7 @@ export default async function LoginPage(props: Props) {
               <div className="relative w-24 h-24 mx-auto mb-4">
                  <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain" />
               </div>
-              <h1 className="text-3xl font-black text-white">Drive<span className="text-amber-500">Sync</span></h1>
+              <h1 className="text-3xl font-black text-white">Dynamic<span className="text-amber-500">Sense</span></h1>
           </div>
 
           <AuthForm isLogin={isLogin} message={message} />
