@@ -11,7 +11,7 @@ interface CarHealthProps {
 }
 
 export default function CarHealthWidget({ car, kmRemaining, serviceIntervalKm, oilLife }: CarHealthProps) {
-  const isElectric = car.fuel_type === 'electric';
+  const isElectric = car.fuel_type === 'Elektromos';
 
   // --- ELEKTROMOS AUTÓ NÉZET ---
   if (isElectric) {
