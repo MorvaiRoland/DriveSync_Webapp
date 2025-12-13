@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { 
   ArrowRight, Sparkles, CheckCircle2, Calendar, 
   BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
-  Star, MessageCircle, HelpCircle, ChevronDown 
+  Star, MessageCircle, HelpCircle, Server, Database, Smartphone 
 } from 'lucide-react';
 import PromoModal from '@/components/PromoModal'; 
 
@@ -59,7 +59,6 @@ const DashboardPreview = () => (
 export default function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -78,7 +77,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group">
              <div className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300">
-                <Image src="/drivesync-logo.png" alt="Logo" fill className="object-contain" />
+                <Image src="/icons/icon-512.png" alt="Logo" fill className="object-contain" />
              </div>
              <span className="text-xl font-bold tracking-tight text-white uppercase">
                 Drive<span className="text-amber-500">Sync</span>
@@ -87,7 +86,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Funkciók</a>
-            <a href="#reviews" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Vélemények</a>
+            <a href="#philosophy" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Filozófia</a>
             <a href="#changelog" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Újdonságok</a>
             <div className="h-4 w-px bg-slate-800"></div>
             <Link href="/login" className="text-sm font-bold text-white hover:text-amber-400 transition-colors">Bejelentkezés</Link>
@@ -104,7 +103,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         {mobileMenuOpen && (
              <div className="absolute top-full left-0 w-full bg-slate-950 border-b border-slate-800 p-6 flex flex-col gap-4 md:hidden animate-in slide-in-from-top-5 shadow-2xl">
                 <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Funkciók</a>
-                <a href="#reviews" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Vélemények</a>
+                <a href="#philosophy" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Filozófia</a>
                 <a href="#changelog" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Újdonságok</a>
                 <Link href="/login" className="bg-amber-500 text-slate-950 text-center py-3 rounded-xl font-bold mt-2 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
                     Belépés / Regisztráció
@@ -123,7 +122,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                Stabil Rendszer v2.0
+                Rendszer Élesítve v1.0
             </div>
 
             <h1 className="text-5xl sm:text-7xl md:text-8xl font-black text-white tracking-tight leading-[1.1] mb-6 drop-shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
@@ -132,7 +131,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </h1>
 
             <p className="text-lg sm:text-xl text-slate-400 leading-relaxed font-light max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                Felejtsd el a kockás füzetet. A DriveSync egy mesterséges intelligenciával támogatott, felhőalapú rendszer a teljes flottád kezelésére.
+                Felejtsd el a kockás füzetet. A DriveSync egy mesterséges intelligenciával támogatott, felhőalapú rendszer, amely készen áll a flottád fogadására.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center z-20 relative animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
@@ -148,14 +147,14 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             <DashboardPreview />
         </section>
 
-        {/* TRUST / NUMBERS SECTION */}
+        {/* TRUST / TECH SPECS SECTION (MÓDOSÍTVA: KAPACITÁSRA FÓKUSZÁLVA) */}
         <section className="w-full max-w-7xl mx-auto mb-32 border-y border-white/5 py-12 bg-white/[0.02]">
              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                  {[
-                    { label: 'Rögzített Km', value: '2.5M+' },
-                    { label: 'Aktív Autó', value: '1,200+' },
-                    { label: 'Megspórolt Idő', value: '∞' },
-                    { label: 'App Értékelés', value: '4.9/5' },
+                    { label: 'Adatbiztonság', value: '100%' },
+                    { label: 'Rendelkezésre Állás', value: '24/7' },
+                    { label: 'Támogatott Típus', value: 'Összes' },
+                    { label: 'Platform', value: 'Web & Mobil' },
                  ].map((stat, i) => (
                      <div key={i}>
                          <h4 className="text-3xl md:text-4xl font-black text-white mb-1">{stat.value}</h4>
@@ -169,7 +168,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         <section id="features" className="max-w-7xl mx-auto mb-32 w-full px-4">
             <div className="text-center mb-16">
                 <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Több mint egy Excel tábla.</h2>
-                <p className="text-slate-400 max-w-xl mx-auto">Minden eszközünk azt a célt szolgálja, hogy pénzt és időt spóroljunk neked.</p>
+                <p className="text-slate-400 max-w-xl mx-auto">Minden eszközünk azt a célt szolgálja, hogy pénzt és időt spóroljunk neked a jövőben.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -195,31 +194,24 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
         </section>
 
-        {/* TESTIMONIALS SECTION */}
-        <section id="reviews" className="max-w-7xl mx-auto mb-32 px-4">
+        {/* PHILOSOPHY / GUARANTEE SECTION (MÓDOSÍTVA: ÉRTÉKELÉSEK HELYETT ÍGÉRETEK) */}
+        <section id="philosophy" className="max-w-7xl mx-auto mb-32 px-4">
              <div className="text-center mb-16">
-                 <h2 className="text-3xl font-bold text-white mb-4">Mit mondanak a felhasználók?</h2>
+                 <h2 className="text-3xl font-bold text-white mb-4">Amit garantálunk</h2>
+                 <p className="text-slate-400">Nemcsak egy szoftvert építünk, hanem egy modern autós kultúrát.</p>
              </div>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  {[
-                     { name: "Gábor", role: "Suzuki Swift Tulaj", text: "Végre nem felejtem el az olajcserét. Az AI funkció pedig megmentett egy drága szerviztől." },
-                     { name: "Dávid", role: "Flottakezelő", text: "Több autót kezelünk a családban, ezzel a rendszerrel végre minden egy helyen van." },
-                     { name: "Anna", role: "Ford Focus Tulaj", text: "Nagyon szép a design, és imádom, hogy mobilon is tökéletesen működik." }
-                 ].map((review, i) => (
-                     <div key={i} className="bg-slate-900/30 p-8 rounded-3xl border border-slate-800 backdrop-blur-sm">
-                         <div className="flex gap-1 text-amber-500 mb-4">
-                             {[1,2,3,4,5].map(s => <Star key={s} size={16} fill="currentColor" />)}
+                     { title: "Transzparencia", icon: <Database className="text-blue-400" />, text: "Az adataid a tieid. Bármikor exportálhatod őket, nincsenek rejtett zárolások vagy apróbetűs részek." },
+                     { title: "Biztonság Elsőként", icon: <Server className="text-green-400" />, text: "Ipari szintű titkosítást használunk. A szervereink 99.9%-os rendelkezésre állást és napi biztonsági mentést garantálnak." },
+                     { title: "Mobil-First Design", icon: <Smartphone className="text-purple-400" />, text: "Tudjuk, hogy az autóban nem laptoppal ülsz. A felületet úgy terveztük, hogy egy kézzel is gyorsan használható legyen." }
+                 ].map((item, i) => (
+                     <div key={i} className="bg-slate-900/30 p-8 rounded-3xl border border-slate-800 backdrop-blur-sm group hover:border-slate-600 transition-colors">
+                         <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                             {item.icon}
                          </div>
-                         <p className="text-slate-300 italic mb-6">"{review.text}"</p>
-                         <div className="flex items-center gap-3">
-                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center font-bold text-white">
-                                 {review.name[0]}
-                             </div>
-                             <div>
-                                 <h4 className="font-bold text-white text-sm">{review.name}</h4>
-                                 <p className="text-slate-500 text-xs">{review.role}</p>
-                             </div>
-                         </div>
+                         <h4 className="font-bold text-white text-lg mb-3">{item.title}</h4>
+                         <p className="text-slate-400 leading-relaxed text-sm">{item.text}</p>
                      </div>
                  ))}
              </div>
@@ -233,7 +225,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                   <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
                       <div>
                           <div className="inline-block px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold mb-4 uppercase tracking-wider border border-purple-500/30">
-                            Aktív Ajánlat
+                            Indulási Ajánlat
                           </div>
                           <h3 className="text-3xl font-bold text-white mb-2">{promo.title}</h3>
                           <p className="text-purple-200/80 max-w-md">{promo.description}</p>
@@ -281,13 +273,13 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
         </div>
 
-        {/* BOTTOM CTA */}
+        {/* BOTTOM CTA (MÓDOSÍTVA: HYPE-OLÁSRA) */}
         <section className="max-w-5xl mx-auto mb-20 px-4">
              <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-12 rounded-[2.5rem] text-center relative overflow-hidden">
                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-amber-500/10 blur-[120px] rounded-full pointer-events-none" />
-                 <h2 className="text-4xl md:text-5xl font-black text-white mb-6 relative z-10">Készen állsz?</h2>
+                 <h2 className="text-4xl md:text-5xl font-black text-white mb-6 relative z-10">Készen állsz a jövőre?</h2>
                  <p className="text-slate-400 text-lg mb-8 max-w-xl mx-auto relative z-10">
-                    Csatlakozz több ezer tudatos autóshoz. Kezdd el ingyen, bankkártya nélkül.
+                    Legyél az elsők között, akik digitalizálják autós életüket. Indítsd el a fiókodat ingyen, bankkártya nélkül.
                  </p>
                  <Link href="/login" className="relative z-10 inline-flex items-center gap-2 bg-white text-slate-950 font-bold text-lg px-8 py-4 rounded-full hover:bg-amber-400 transition-all hover:scale-105 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                     Fiók létrehozása <ArrowRight size={20} />
@@ -306,7 +298,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                     <span className="text-xl font-bold tracking-tight text-white uppercase">Drive<span className="text-amber-500">Sync</span></span>
                 </Link>
                 <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                    Magyarország legmodernebb autófenntartási rendszere. AI diagnosztika, költségkövetés és digitális szervizkönyv egy helyen.
+                    Magyarország legújabb autófenntartási rendszere. AI diagnosztika, költségkövetés és digitális szervizkönyv egy helyen.
                 </p>
                 <div className="flex gap-4">
                     {/* Social Icons Placeholders */}
@@ -320,7 +312,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                  <ul className="space-y-4 text-sm text-slate-400">
                      <li><a href="#features" className="hover:text-amber-500 transition-colors">Funkciók</a></li>
                      <li><Link href="/pricing" className="hover:text-amber-500 transition-colors">Árazás</Link></li>
-                     <li><a href="#reviews" className="hover:text-amber-500 transition-colors">Vélemények</a></li>
+                     <li><a href="#philosophy" className="hover:text-amber-500 transition-colors">Filozófia</a></li>
                      <li><a href="#changelog" className="hover:text-amber-500 transition-colors">Frissítések</a></li>
                  </ul>
              </div>
@@ -337,7 +329,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
              <div>
                  <h4 className="text-white font-bold mb-6">Jogi</h4>
                  <ul className="space-y-4 text-sm text-slate-400">
-                     {/* Itt vannak a javított linkek. A (legal) mappa nem kell az URL-be! */}
                      <li><Link href="/privacy" className="hover:text-amber-500 transition-colors">Adatvédelmi tájékoztató</Link></li>
                      <li><Link href="/terms" className="hover:text-amber-500 transition-colors">Általános Szerződési Feltételek</Link></li>
                      <li><Link href="/impressum" className="hover:text-amber-500 transition-colors">Impresszum</Link></li>
@@ -351,7 +342,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
              </p>
              <div className="flex items-center gap-2 text-xs text-slate-600 font-mono">
                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                 All Systems Operational
+                 Rendszer Online
              </div>
          </div>
       </footer>
