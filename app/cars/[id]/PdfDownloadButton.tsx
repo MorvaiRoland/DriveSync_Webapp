@@ -72,7 +72,7 @@ function DownloadOption({ type, label, desc, car, events }: any) {
   return (
     <PDFDownloadLink
         document={<CarReportDocument car={car} events={events} type={type} />}
-        fileName={`DriveSync_${type}_${car.plate}.pdf`}
+        fileName={`DynamicSense_${type}_${car.plate}.pdf`}
         className="block w-full no-underline"
     >
         {({ loading }) => (

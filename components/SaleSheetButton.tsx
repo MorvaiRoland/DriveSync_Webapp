@@ -22,7 +22,7 @@ export default function SaleSheetButton({ car, events }: { car: any, events: any
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(22)
     doc.setFont('helvetica', 'bold')
-    doc.text("DriveSync", 14, 20)
+    doc.text("DynamicSense", 14, 20)
     
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
@@ -49,7 +49,7 @@ export default function SaleSheetButton({ car, events }: { car: any, events: any
 
     // --- 3. QR KÓD GENERÁLÁS ---
     // Ez a link a publikus (vagy bejelentkezést igénylő) ellenőrző oldalra mutat
-    // Fontos: A window.location.origin megadja a domain-t (pl. https://drivesync.vercel.app)
+    // Fontos: A window.location.origin megadja a domain-t (pl. https://DynamicSense.vercel.app)
     const verifyUrl = `${window.location.origin}/verify/${car.id}`
     
     try {
@@ -90,7 +90,7 @@ export default function SaleSheetButton({ car, events }: { car: any, events: any
         doc.setPage(i)
         doc.setFontSize(8)
         doc.setTextColor(150)
-        doc.text('A dokumentum a DriveSync rendszerével keszult. A papir alapu adatok tajekoztato jelleguek.', 14, 285)
+        doc.text('A dokumentum a DynamicSense rendszerével keszult. A papir alapu adatok tajekoztato jelleguek.', 14, 285)
         doc.text(`Oldal ${i} / ${pageCount}`, 190, 285)
     }
 

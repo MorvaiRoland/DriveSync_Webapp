@@ -66,7 +66,7 @@ export const CarReportDocument = ({ car, events, type }: ReportProps) => {
         {/* FEJLÉC */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.brand}>DriveSync</Text>
+            <Text style={styles.brand}>DynamicSense</Text>
             <Text style={styles.subBrand}>Jármű Jelentés</Text>
           </View>
           <View style={styles.meta}>

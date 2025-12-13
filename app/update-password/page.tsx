@@ -19,7 +19,7 @@ export default async function UpdatePasswordPage(props: Props) {
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-slate-900 via-slate-950 to-black opacity-90 z-0"></div>
         <div className="relative z-10 flex flex-col items-center text-center px-12">
            <div className="relative w-64 h-64 mb-8 animate-in zoom-in duration-700">
-             <Image src="/drivesync-logo.png" alt="DriveSync Logo" fill className="object-contain drop-shadow-2xl" priority />
+             <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain drop-shadow-2xl" priority />
            </div>
            <h1 className="text-5xl font-black text-white tracking-tight mb-4 drop-shadow-lg">
              Drive<span className="text-amber-500">Sync</span>

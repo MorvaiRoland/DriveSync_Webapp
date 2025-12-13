@@ -23,7 +23,7 @@ export default async function LoginPage(props: Props) {
         
         <div className="relative z-10 flex flex-col items-center text-center px-12">
            <div className="relative w-64 h-64 mb-8 animate-in zoom-in duration-700">
-             <Image src="/drivesync-logo.png" alt="DriveSync Logo" fill className="object-contain drop-shadow-2xl" priority />
+             <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain drop-shadow-2xl" priority />
            </div>
            <h1 className="text-5xl font-black text-white tracking-tight mb-4 drop-shadow-lg">
              Drive<span className="text-amber-500">Sync</span>
@@ -33,7 +33,7 @@ export default async function LoginPage(props: Props) {
              <span className="text-amber-500/90 italic font-serif mt-2 block">"Just drive. We Sync."</span>
            </p>
         </div>
-        <div className="absolute bottom-8 text-xs text-slate-600 z-10">© 2025 DriveSync Technologies</div>
+        <div className="absolute bottom-8 text-xs text-slate-600 z-10">© 2025 DynamicSense Technologies</div>
       </div>
 
       {/* JOBB OLDAL (Form) */}
@@ -45,7 +45,7 @@ export default async function LoginPage(props: Props) {
         <div className="mx-auto w-full max-w-sm lg:w-96 relative z-10">
           <div className="lg:hidden text-center mb-10">
               <div className="relative w-24 h-24 mx-auto mb-4">
-                 <Image src="/drivesync-logo.png" alt="DriveSync Logo" fill className="object-contain" />
+                 <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain" />
               </div>
               <h1 className="text-3xl font-black text-white">Drive<span className="text-amber-500">Sync</span></h1>
           </div>

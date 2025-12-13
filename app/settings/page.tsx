@@ -77,7 +77,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ [key
                     <Link href="/privacy" className="hover:text-slate-900 dark:hover:text-slate-300 transition-colors">Adatvédelem</Link>
                 </div>
                 <div className="text-slate-400 text-[10px] font-mono">
-                    DriveSync ID: {user.id.split('-')[0]}... • Plan: {currentPlan.toUpperCase()}
+                    DynamicSense ID: {user.id.split('-')[0]}... • Plan: {currentPlan.toUpperCase()}
                 </div>
             </div>
         </div>

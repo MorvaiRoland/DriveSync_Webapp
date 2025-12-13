@@ -7,7 +7,7 @@ export default function ImpressumPage() {
     <LegalLayout title="Impresszum" icon="building" lastUpdated="2025.12.13.">
       
       <p className="text-xl text-slate-400 mb-10 leading-relaxed">
-        A DriveSync szolgáltatás üzemeltetőjének és a weboldal tartalmáért felelős szolgáltatónak a hivatalos adatai az elektronikus kereskedelmi szolgáltatásokról szóló 2001. évi CVIII. törvény alapján.
+        A DynamicSense szolgáltatás üzemeltetőjének és a weboldal tartalmáért felelős szolgáltatónak a hivatalos adatai az elektronikus kereskedelmi szolgáltatásokról szóló 2001. évi CVIII. törvény alapján.
       </p>
 
       <div className="grid gap-6 not-prose">
@@ -26,7 +26,7 @@ export default function ImpressumPage() {
             <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-2">
                     <span className="text-slate-500 font-medium">Cégnév / Üzemeltető</span>
-                    <span className="text-white font-bold text-lg">DriveSync Technologies</span>
+                    <span className="text-white font-bold text-lg">DynamicSense Technologies</span>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-2">
@@ -41,8 +41,8 @@ export default function ImpressumPage() {
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-2">
                     <span className="text-slate-500 font-medium flex items-center gap-2"><Mail size={16} /> Kapcsolat</span>
-                    <a href="mailto:info.drivesync.mail@gmail.com" className="text-amber-500 hover:text-amber-400 font-medium transition-colors">
-                        info.drivesync.mail@gmail.com
+                    <a href="mailto:info.DynamicSense.mail@gmail.com" className="text-amber-500 hover:text-amber-400 font-medium transition-colors">
+                        info.DynamicSense.mail@gmail.com
                     </a>
                 </div>
             </div>

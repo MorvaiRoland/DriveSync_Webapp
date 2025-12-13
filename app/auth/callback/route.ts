@@ -13,8 +13,8 @@ export async function GET(request: Request) {
     
     if (!error) {
       // Siker! Irány a jelszócsere oldal
-      // Biztosítjuk, hogy a www.drivesync-hungary.hu-ra menjen
-      const targetBase = origin.includes('localhost') ? origin : 'https://www.drivesync-hungary.hu'
+      // Biztosítjuk, hogy a www.dynamicsense.hu-ra menjen
+      const targetBase = origin.includes('localhost') ? origin : 'https://dynamicsense.hu'
       return NextResponse.redirect(`${targetBase}${next}`)
     } else {
         console.error('Auth error:', error)

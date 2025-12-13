@@ -111,7 +111,7 @@ export default function ServiceHistoryList({ events }: { events: any[] }) {
 
                     {/* Lábléc ID-vel */}
                     <div className="flex justify-between items-center text-[10px] text-slate-400 pt-2 border-t border-slate-200/50">
-                        <span>DriveSync Verified Entry</span>
+                        <span>DynamicSense Verified Entry</span>
                         <span className="font-mono">ID: #{displayId}</span>
                     </div>
                 </div>

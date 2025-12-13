@@ -168,7 +168,7 @@ export default async function VerifyPage(props: Props) {
                     <div>
                         <h3 className="font-bold text-emerald-900">Hitelesített Adatok</h3>
                         <p className="text-sm text-emerald-700/80 mt-1">
-                            A jármű szerviztörténetét és futásteljesítményét a DriveSync rendszerében rögzítették. Az alábbi adatok megváltoztathatatlan digitális lenyomatok.
+                            A jármű szerviztörténetét és futásteljesítményét a DynamicSense rendszerében rögzítették. Az alábbi adatok megváltoztathatatlan digitális lenyomatok.
                         </p>
                     </div>
                 </div>
@@ -196,7 +196,7 @@ export default async function VerifyPage(props: Props) {
                     <div className="w-6 h-6 bg-slate-900 rounded-md flex items-center justify-center">
                         <span className="text-[10px] text-white font-bold">DS</span>
                     </div>
-                    <span className="text-sm font-bold text-slate-900">DriveSync Technologies</span>
+                    <span className="text-sm font-bold text-slate-900">DynamicSense Technologies</span>
                 </div>
             </div>
         </div>

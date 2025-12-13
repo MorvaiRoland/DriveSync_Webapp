@@ -136,14 +136,14 @@ export default function StatusPage() {
               <ArrowLeft className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
               <div className="flex items-center gap-3">
                   <div className="w-8 h-8 relative">
-                      <Image src="/drivesync-logo.png" alt="Logo" fill className="object-contain" />
+                      <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
                   </div>
                   <span className="font-bold text-white uppercase text-lg hidden sm:block">
                       Drive<span className="text-amber-500">Sync</span> Status
                   </span>
               </div>
            </Link>
-           <a href="mailto:support@drivesync.hu" className="text-sm font-medium text-slate-400 hover:text-white transition-colors border border-slate-700 rounded-lg px-4 py-2 hover:bg-slate-800">
+           <a href="mailto:support@DynamicSense.hu" className="text-sm font-medium text-slate-400 hover:text-white transition-colors border border-slate-700 rounded-lg px-4 py-2 hover:bg-slate-800">
                Hibabejelentés
            </a>
         </div>
@@ -265,7 +265,7 @@ export default function StatusPage() {
       
       {/* SIMPLE FOOTER */}
       <footer className="border-t border-slate-900 py-8 text-center text-slate-600 text-xs font-mono uppercase tracking-widest">
-         Powered by DriveSync Monitors • 2025
+         Powered by DynamicSense Monitors • 2025
       </footer>
 
     </div>

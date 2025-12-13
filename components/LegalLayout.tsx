@@ -67,7 +67,7 @@ export default function LegalLayout({ children, title, icon, lastUpdated }: Lega
 
         {/* --- Footer --- */}
         <footer className="mt-20 pt-8 border-t border-slate-800 text-center text-sm text-slate-600 font-mono">
-           &copy; {new Date().getFullYear()} DriveSync Technologies. Minden jog fenntartva.
+           &copy; {new Date().getFullYear()} DynamicSense Technologies. Minden jog fenntartva.
         </footer>
       </div>
     </div>

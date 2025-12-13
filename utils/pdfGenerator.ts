@@ -84,7 +84,7 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         doc.setTextColor(255, 255, 255);
         doc.setFont('Roboto', 'bold');
         doc.setFontSize(24);
-        doc.text("DriveSync", 50, 20);
+        doc.text("DynamicSense", 50, 20);
         
         doc.setFont('Roboto', 'normal');
         doc.setFontSize(10);
@@ -260,7 +260,7 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
                 doc.setFontSize(8);
                 doc.setTextColor(150);
                 
-                const footerText = "Készült a DriveSync alkalmazással - https://www.drivesync-hungary.hu/";
+                const footerText = "Készült a DynamicSense alkalmazással - https://dynamicsense.hu/";
                 doc.text(footerText, 14, pageHeight - 10);
                 
                 const pageNumber = `Oldal ${doc.getNumberOfPages()}`;

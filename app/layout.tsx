@@ -16,15 +16,15 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   // FONTOS: Ez kell, hogy a '/icons/...' útvonalak teljes URL-ek legyenek
-  metadataBase: new URL('https://drivesync-hungary.hu'),
+  metadataBase: new URL('https://dynamicsense.hu'),
   
   title: {
-    default: "DriveSync - Prémium Garázsmenedzsment",
-    template: "%s | DriveSync"
+    default: "DynamicSense - Prémium Garázsmenedzsment",
+    template: "%s | DynamicSense"
   },
-  description: "A DriveSync Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen.",
-  keywords: ["drivesync", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
-  authors: [{ name: "DriveSync Technologies" }],
+  description: "A DynamicSense Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen.",
+  keywords: ["DynamicSense", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
+  authors: [{ name: "DynamicSense Technologies" }],
   alternates: {
     canonical: '/',
   },
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "DriveSync",
+    title: "DynamicSense",
   },
   
   icons: {
@@ -47,10 +47,10 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title: "DriveSync - Az autód digitális garázsa",
+    title: "DynamicSense - Az autód digitális garázsa",
     description: "Felejtsd el a papírokat. Kezeld a szervizkönyvet és a költségeket egyetlen prémium felületen.",
-    url: "https://drivesync-hungary.hu",
-    siteName: "DriveSync Hungary",
+    url: "https://dynamicsense.hu",
+    siteName: "DynamicSense Hungary",
     locale: "hu_HU",
     type: "website",
     images: [
@@ -58,14 +58,14 @@ export const metadata: Metadata = {
         url: '/icons/opengraph-image.png',
         width: 1200,
         height: 630,
-        alt: 'DriveSync Hungary Dashboard Preview',
+        alt: 'DynamicSense Hungary Dashboard Preview',
       },
     ],
   },
   
   twitter: {
     card: 'summary_large_image',
-    title: "DriveSync - Prémium Garázsmenedzsment",
+    title: "DynamicSense - Prémium Garázsmenedzsment",
     description: "Kezeld a szerviztörténetet és költségeket egy helyen.",
     images: ['/icons/opengraph-image.png'],
   },

@@ -36,7 +36,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                 {car.image_url ? (
                     <Image src={car.image_url} alt="Car" fill className="object-cover" priority />
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-white/20 text-6xl font-black">DRIVESYNC</div>
+                    <div className="absolute inset-0 flex items-center justify-center text-white/20 text-6xl font-black">DynamicSense</div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-black/30"></div>
                 
@@ -80,9 +80,9 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                         </div>
 
                         <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
-                            <p className="text-indigo-900 font-bold text-sm mb-2">Miért DriveSync?</p>
+                            <p className="text-indigo-900 font-bold text-sm mb-2">Miért DynamicSense?</p>
                             <p className="text-indigo-700/80 text-xs leading-relaxed">
-                                Ennek az autónak a tulajdonosa digitálisan vezette a szervizkönyvet a DriveSync rendszerében. Ez garantálja az átláthatóságot és a gondos karbantartást.
+                                Ennek az autónak a tulajdonosa digitálisan vezette a szervizkönyvet a DynamicSense rendszerében. Ez garantálja az átláthatóságot és a gondos karbantartást.
                             </p>
                         </div>
                     </div>
@@ -132,8 +132,8 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                 </div>
 
                 <div className="mt-20 text-center border-t border-slate-200 pt-8">
-                    <p className="text-slate-400 text-xs font-mono mb-2">Generálva a DriveSync által • {new Date().toLocaleDateString()}</p>
-                    <a href="https://drivesync-hungary.hu" className="text-indigo-600 font-bold text-sm hover:underline">
+                    <p className="text-slate-400 text-xs font-mono mb-2">Generálva a DynamicSense által • {new Date().toLocaleDateString()}</p>
+                    <a href="https://DynamicSense-hungary.hu" className="text-indigo-600 font-bold text-sm hover:underline">
                         Saját autód kezeléséhez kattints ide
                     </a>
                 </div>

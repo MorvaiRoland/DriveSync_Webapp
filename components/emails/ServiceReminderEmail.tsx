@@ -80,7 +80,7 @@ export const ServiceReminderEmail = ({
 
           <Section style={footer}>
             <Text style={footerText}>
-              © 2025 DriveSync Technologies<br />
+              © 2025 DynamicSense Technologies<br />
               Ez egy automatikus üzenet, kérjük ne válaszolj rá.
             </Text>
           </Section>

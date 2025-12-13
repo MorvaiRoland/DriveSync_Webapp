@@ -7,12 +7,12 @@ export default function TermsPage() {
     <LegalLayout title="Általános Szerződési Feltételek" icon="scale" lastUpdated="2025. december 10.">
       
       <p className="text-xl text-slate-400">
-        Üdvözöljük a DriveSync alkalmazásban! A szolgáltatás használatával (regisztráció, böngészés) Ön (a továbbiakban: "Felhasználó") automatikusan elfogadja az alábbi feltételeket.
+        Üdvözöljük a DynamicSense alkalmazásban! A szolgáltatás használatával (regisztráció, böngészés) Ön (a továbbiakban: "Felhasználó") automatikusan elfogadja az alábbi feltételeket.
       </p>
 
       <h2 className="text-2xl text-white mt-12 mb-4 border-l-4 border-amber-500 pl-4">1. A Szolgáltatás Leírása</h2>
       <p>
-        A DriveSync egy felhőalapú járműnyilvántartó szoftver (SaaS), amely digitális eszköztárat biztosít autótulajdonosok számára a karbantartások, költségek és dokumentumok menedzselésére. A szolgáltatás "as-is" (megtekintett állapotban) alapon működik.
+        A DynamicSense egy felhőalapú járműnyilvántartó szoftver (SaaS), amely digitális eszköztárat biztosít autótulajdonosok számára a karbantartások, költségek és dokumentumok menedzselésére. A szolgáltatás "as-is" (megtekintett állapotban) alapon működik.
       </p>
 
       <h2 className="text-2xl text-white mt-12 mb-4 border-l-4 border-amber-500 pl-4">2. Csomagok és Fizetési Feltételek</h2>
@@ -33,7 +33,7 @@ export default function TermsPage() {
               <h3 className="text-lg font-bold uppercase tracking-wide m-0">3. Elállási Jog (Lemondó Nyilatkozat)</h3>
           </div>
           <p className="text-slate-300 text-sm leading-relaxed">
-            A fogyasztó és a vállalkozás közötti szerződések részletes szabályairól szóló <strong>45/2014. (II. 26.) Korm. rendelet 29. §</strong> alapján, mivel a DriveSync digitális adattartalmat szolgáltat, amelynek teljesítése a vásárlás után azonnal megkezdődik, a Felhasználó a vásárlás véglegesítésével kifejezetten tudomásul veszi, hogy <strong>elveszíti a 14 napos indoklás nélküli elállási jogát</strong>.
+            A fogyasztó és a vállalkozás közötti szerződések részletes szabályairól szóló <strong>45/2014. (II. 26.) Korm. rendelet 29. §</strong> alapján, mivel a DynamicSense digitális adattartalmat szolgáltat, amelynek teljesítése a vásárlás után azonnal megkezdődik, a Felhasználó a vásárlás véglegesítésével kifejezetten tudomásul veszi, hogy <strong>elveszíti a 14 napos indoklás nélküli elállási jogát</strong>.
           </p>
       </div>
 

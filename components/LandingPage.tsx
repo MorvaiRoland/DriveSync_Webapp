@@ -136,7 +136,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group">
              <div className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300">
-                <Image src="/drivesync-logo.png" alt="Logo" fill className="object-contain" />
+                <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
              </div>
              <span className="text-xl font-bold tracking-tight text-white uppercase hidden sm:block">
                Drive<span className="text-amber-500">Sync</span>
@@ -191,7 +191,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </h1>
 
             <p className="text-lg sm:text-xl text-slate-400 leading-relaxed font-light max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-                A DriveSync egy mesterséges intelligenciával támogatott, felhőalapú garázs. Költségkövetés, digitális szervizkönyv és flotta menedzsment egy helyen.
+                A DynamicSense egy mesterséges intelligenciával támogatott, felhőalapú garázs. Költségkövetés, digitális szervizkönyv és flotta menedzsment egy helyen.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center z-20 relative animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
@@ -323,7 +323,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
             <div className="mt-12 bg-slate-900/50 border border-slate-800 p-6 rounded-2xl inline-block">
                 <p className="text-slate-400 text-sm">
-                    <span className="text-amber-500 font-bold">Hamarosan:</span> DriveSync Klub közösségi funkciók és piactér.
+                    <span className="text-amber-500 font-bold">Hamarosan:</span> DynamicSense Klub közösségi funkciók és piactér.
                 </p>
             </div>
         </section>
@@ -425,14 +425,14 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
              <div className="md:col-span-1">
                 <Link href="/" className="flex items-center gap-2 mb-6">
-                    <div className="w-8 h-8 relative"><Image src="/drivesync-logo.png" alt="Logo" fill className="object-contain" /></div>
+                    <div className="w-8 h-8 relative"><Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" /></div>
                     <span className="text-xl font-bold tracking-tight text-white uppercase">Drive<span className="text-amber-500">Sync</span></span>
                 </Link>
                 <p className="text-slate-500 text-sm leading-relaxed mb-6">
                     Magyarország legújabb autófenntartási rendszere. AI diagnosztika, költségkövetés és digitális szervizkönyv egy helyen.
                 </p>
                 <div className="flex gap-4">
-                    <a href="mailto:info.drivesync.mail@gmail.com" className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-800 hover:border-amber-500/50">
+                    <a href="mailto:info.DynamicSense.mail@gmail.com" className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-800 hover:border-amber-500/50">
                         <MessageCircle size={16} />
                     </a>
                     <a href="#faq" className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-800 hover:border-amber-500/50">
@@ -476,7 +476,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
          
          <div className="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
              <p className="text-slate-600 text-xs font-mono uppercase tracking-widest">
-                © 2025 DriveSync Hungary. Minden jog fenntartva.
+                © 2025 DynamicSense Hungary. Minden jog fenntartva.
              </p>
              <div className="flex items-center gap-2 text-xs text-slate-600 font-mono">
                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

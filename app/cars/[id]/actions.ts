@@ -556,7 +556,7 @@ export async function checkAndSendReminders() {
             );
 
             const { data, error } = await resend.emails.send({
-              from: 'DriveSync <onboarding@resend.dev>',
+              from: 'DynamicSense <onboarding@resend.dev>',
               to: [user.email], 
               subject: `🔔 Szerviz: ${reminder.cars.make} ${reminder.cars.model}`,
               html: emailHtml 

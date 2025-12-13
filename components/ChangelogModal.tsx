@@ -37,7 +37,7 @@ export default function ChangelogModal() {
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
-    const lastSeenVersion = localStorage.getItem('drivesync_version');
+    const lastSeenVersion = localStorage.getItem('DynamicSense_version');
     
     // Ha a verzió nem egyezik, megjelenítjük a modalt
     if (lastSeenVersion !== CURRENT_VERSION) {
@@ -48,7 +48,7 @@ export default function ChangelogModal() {
 
   const handleClose = () => {
     setIsOpen(false);
-    localStorage.setItem('drivesync_version', CURRENT_VERSION);
+    localStorage.setItem('DynamicSense_version', CURRENT_VERSION);
   };
 
   if (!isOpen) return null;

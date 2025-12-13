@@ -89,7 +89,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
             <span>Vissza a garázshoz</span>
         </Link>
         <div className="flex items-center gap-2 opacity-90">
-            <Image src="/drivesync-logo.png" alt="DriveSync Logo" width={28} height={28} className="object-contain" />
+            <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" width={28} height={28} className="object-contain" />
             <span className="font-black text-lg tracking-tight hidden sm:block">Drive<span className="text-amber-500">Sync</span></span>
         </div>
       </nav>
@@ -108,7 +108,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
           </h1>
           
           <p className="text-slate-400 mb-10 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-light">
-            A DriveSync Pro nem csak kényelem, hanem befektetés. Egy pontosan vezetett digitális szervizkönyv milliókkal növelheti az eladási árat.
+            A DynamicSense Pro nem csak kényelem, hanem befektetés. Egy pontosan vezetett digitális szervizkönyv milliókkal növelheti az eladási árat.
           </p>
           
           {/* BILLING TOGGLE (Havi / Éves váltó) */}
@@ -222,7 +222,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
                     Biztonságos fizetés a Stripe rendszerén keresztül.
                 </span>
-                A DriveSync szerverei semmilyen bankkártyaadatot nem tárolnak. <br/>
+                A DynamicSense szerverei semmilyen bankkártyaadatot nem tárolnak. <br/>
                 Az előfizetés bármikor, egy kattintással lemondható a beállításokban.
                 A feltüntetett árak tartalmazzák az ÁFÁ-t.
             </p>

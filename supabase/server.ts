@@ -20,7 +20,7 @@ export async function createClient() {
                 ...options,
                  // FONTOS: Ez segít, ha a www és a sima domain keveredik
                  // Ha localhoston vagy, ezt a domain sort vedd ki!
-                 // Élesben: domain: '.drivesync-hungary.hu'
+                 // Élesben: domain: '.DynamicSense-hungary.hu'
               })
             )
           } catch {

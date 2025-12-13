@@ -8,7 +8,7 @@ import { createClient } from '@/supabase/server'
 // --- JAVÍTOTT URL MEGHATÁROZÁS ---
 function getSiteUrl() {
   // 1. Prioritás: A manuálisan beállított éles domain (Vercel Env Variable)
-  // Ha ez be van állítva (pl. https://www.drivesync-hungary.hu), akkor EZT használjuk.
+  // Ha ez be van állítva (pl. https://www.DynamicSense-hungary.hu), akkor EZT használjuk.
   if (process.env.NEXT_PUBLIC_BASE_URL) {
     return process.env.NEXT_PUBLIC_BASE_URL;
   }
@@ -81,7 +81,7 @@ export async function signup(formData: FormData) {
 // --- 3. GOOGLE LOGIN ---
 export async function signInWithGoogle() {
   const supabase = await createClient()
-  // Itt is a helyes URL lesz: https://www.drivesync-hungary.hu/auth/callback
+  // Itt is a helyes URL lesz: https://www.DynamicSense-hungary.hu/auth/callback
   const callbackUrl = `${getSiteUrl()}/auth/callback`
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -124,7 +124,7 @@ export async function resetPassword(formData: FormData) {
     const siteUrl = getSiteUrl();
     console.log("Jelszó visszaállítási link alapja:", siteUrl); // Logolás a biztonság kedvéért
 
-    // A redirectTo most már fixen a https://www.drivesync-hungary.hu címmel kezdődik majd
+    // A redirectTo most már fixen a https://www.DynamicSense-hungary.hu címmel kezdődik majd
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${siteUrl}/auth/callback?next=/update-password`, 
     });

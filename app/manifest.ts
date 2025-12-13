@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'DriveSync Hungary',
-    short_name: 'DriveSync',
+    name: 'DynamicSense Hungary',
+    short_name: 'DynamicSense',
     description: 'Prémium Garázsmenedzsment - Szervizkönyv és költségek kezelése egy helyen.',
     start_url: '/',
     display: 'standalone',

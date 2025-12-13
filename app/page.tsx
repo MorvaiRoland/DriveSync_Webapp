@@ -173,7 +173,7 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
             <div className="flex items-center gap-6"> 
               <Link href="/" className="flex items-center gap-3 group">
                 <div className="relative w-8 h-8 group-hover:scale-110 transition-transform">
-                  <Image src="/drivesync-logo.png" alt="DriveSync" fill className="object-contain" priority />
+                  <Image src="/DynamicSense-logo.png" alt="DynamicSense" fill className="object-contain" priority />
                 </div>
                 <span className="text-xl font-bold tracking-tight text-white uppercase hidden sm:block">
                   Drive<span className="text-amber-500">Sync</span>
@@ -437,7 +437,7 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
             </span>
         </div>
 
-        <h3 className="text-xl font-bold text-slate-200 mb-1">DriveSync Klub</h3>
+        <h3 className="text-xl font-bold text-slate-200 mb-1">DynamicSense Klub</h3>
         <p className="text-sm text-slate-400 mb-6 leading-relaxed">
             A közösségi funkciók és a piactér jelenleg fejlesztés alatt állnak. Értesítünk, amint elérhető lesz!
         </p>

@@ -6,14 +6,14 @@ export default function PrivacyPage() {
     <LegalLayout title="Adatvédelmi Tájékoztató" icon="shield" lastUpdated="2025. december 10.">
       
       <p className="lead text-xl text-slate-400 border-l-4 border-emerald-500 pl-6 italic">
-        A DriveSync Technologies elkötelezett az Ön személyes adatainak védelme mellett. Jelen tájékoztató célja, hogy közérthetően és transzparensen bemutassa, hogyan kezeljük adatait az Európai Unió Általános Adatvédelmi Rendeletének (GDPR) megfelelően.
+        A DynamicSense Technologies elkötelezett az Ön személyes adatainak védelme mellett. Jelen tájékoztató célja, hogy közérthetően és transzparensen bemutassa, hogyan kezeljük adatait az Európai Unió Általános Adatvédelmi Rendeletének (GDPR) megfelelően.
       </p>
 
       <div className="my-12 h-px bg-slate-800 w-full" />
 
       <h2 className="text-2xl text-white mt-10">1. Az Adatkezelő</h2>
       <p>
-        Az Ön adatainak kezelője a <strong>DriveSync Technologies</strong>. Részletes cégadatainkat, elérhetőségeinket és a tárhelyszolgáltatóink listáját a <a href="/impressum">Impresszum</a> menüpont alatt találja meg.
+        Az Ön adatainak kezelője a <strong>DynamicSense Technologies</strong>. Részletes cégadatainkat, elérhetőségeinket és a tárhelyszolgáltatóink listáját a <a href="/impressum">Impresszum</a> menüpont alatt találja meg.
       </p>
 
       <h2 className="text-2xl text-white mt-10">2. Kezelt Adatok Köre</h2>
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
         Adatait az Európai Unión belül tároljuk. Infrastruktúránk a <strong>Supabase (PostgreSQL)</strong> rendszerére épül, amely ipari szabványú titkosítást (AES-256) alkalmaz mind a tárolás (at rest), mind az átvitel (in transit) során.
       </p>
       <p>
-        A bankkártya-adatokat nem a DriveSync, hanem a <strong>Stripe Inc.</strong> kezeli, amely rendelkezik a legmagasabb szintű PCI-DSS tanúsítvánnyal. Rendszerünk sosem látja és nem tárolja a teljes kártyaadatait.
+        A bankkártya-adatokat nem a DynamicSense, hanem a <strong>Stripe Inc.</strong> kezeli, amely rendelkezik a legmagasabb szintű PCI-DSS tanúsítvánnyal. Rendszerünk sosem látja és nem tárolja a teljes kártyaadatait.
       </p>
 
       <h2 className="text-2xl text-white mt-10">5. Az Ön Jogai</h2>

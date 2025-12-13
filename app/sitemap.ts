@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
  
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://drivesync-hungary.hu'
+  const baseUrl = 'https://dynamicsense.hu'
 
   return [
     {

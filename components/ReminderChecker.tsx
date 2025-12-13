@@ -15,11 +15,11 @@ export default function ReminderChecker() {
         result.alerts.forEach(msg => {
           // 1. Próbáljunk natív böngésző értesítést küldeni
           if (Notification.permission === 'granted') {
-             new Notification('DriveSync Emlékeztető', { body: msg })
+             new Notification('DynamicSense Emlékeztető', { body: msg })
           } else if (Notification.permission !== 'denied') {
              Notification.requestPermission().then(permission => {
                if (permission === 'granted') {
-                 new Notification('DriveSync Emlékeztető', { body: msg })
+                 new Notification('DynamicSense Emlékeztető', { body: msg })
                }
              })
           }
