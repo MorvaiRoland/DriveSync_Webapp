@@ -135,7 +135,48 @@ export default async function CarDetailsPage(props: Props) {
   const carIdString = car.id.toString();
 
   // --- WIDGET DEFINITIONS ---
-  const WidgetParking = <ParkingAssistant carId={carIdString} activeSession={activeParking} />;
+  // 1. Az eredeti logikai komponenst mentsd el egy ideiglenes változóba
+  const ParkingLogic = <ParkingAssistant carId={carIdString} activeSession={activeParking} />;
+
+  // 2. A WidgetParking legyen a kondicionális megjelenítés
+  const WidgetParking = activeParking ? (
+    <div className="relative h-48 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 group cursor-pointer shadow-lg">
+        {/* Statikus Térkép Háttér */}
+        {/* FONTOS: Ha nincs Mapbox tokened, cseréld le ezt a div-et egy sima képre vagy gradiensre! */}
+        <div 
+            className="absolute inset-0 bg-slate-800 bg-cover bg-center opacity-80 group-hover:scale-110 transition-transform duration-700"
+            style={{ 
+                backgroundImage: `url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/${activeParking.longitude || '19.0402'},${activeParking.latitude || '47.4979'},15,0/600x300?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || 'PK_PLACEHOLDER'}')`
+            }}
+        ></div>
+        
+        {/* Sötétítés a szöveg alatt */}
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
+        
+        {/* Tartalom */}
+        <Link href={`/cars/${carIdString}/parking`} className="absolute inset-0 z-20 flex flex-col justify-end p-5">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold mb-1.5 text-xs uppercase tracking-wider">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                Parkolás aktív
+            </div>
+            <p className="text-white font-black text-xl leading-tight mb-1 truncate">{activeParking.location_name || "Ismeretlen hely"}</p>
+            <div className="flex justify-between items-end">
+                <p className="text-slate-300 text-xs font-mono">
+                    Kezdet: {new Date(activeParking.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </p>
+                <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-bold text-white border border-white/20 hover:bg-white/20 transition-colors">
+                    Részletek
+                </div>
+            </div>
+        </Link>
+    </div>
+  ) : (
+    // Ha nincs aktív parkolás, jelenjen meg a sima indító gomb/assistant
+    ParkingLogic
+  );
   
   // ITT HASZNÁLJUK AZ ÚJ KOMPONENST:
   const WidgetHealth = <CarHealthWidget {...healthProps} />;
@@ -644,38 +685,53 @@ function EventLog({ events, carId }: any) {
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2"><History className="w-5 h-5 text-slate-400" />Események</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <History className="w-5 h-5 text-slate-400" /> Eseménytörténet
+                </h3>
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{events.length} bejegyzés</span>
             </div>
-            <div className="divide-y divide-slate-50 dark:divide-slate-800 max-h-[500px] overflow-y-auto custom-scrollbar">
+            
+            <div className="p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
                 {events.length > 0 ? (
-                    events.map((event: any) => (
-                        <div key={event.id} className="relative p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all group">
-                            <Link href={`/cars/${carId}/events/${event.id}/edit`} className="flex gap-4 items-start">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border ${event.type === 'fuel' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30 text-amber-600' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600'}`}>
-                                    {event.type === 'fuel' ? <Fuel className="w-4 h-4" /> : <Wrench className="w-4 h-4" />}
-                                </div>
-                                <div className="flex-1 min-w-0 pt-0.5">
-                                    <div className="flex justify-between items-baseline mb-1">
-                                        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{event.title}</h4>
-                                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs flex-shrink-0">-{event.cost.toLocaleString()} Ft</span>
+                    <div className="relative border-l-2 border-slate-100 dark:border-slate-800 ml-3 space-y-8">
+                        {events.map((event: any, index: number) => (
+                            <div key={event.id} className="relative pl-8 group">
+                                {/* Idővonal pötty */}
+                                <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white dark:border-slate-900 ${
+                                    event.type === 'fuel' ? 'bg-amber-500' : 
+                                    event.type === 'service' ? 'bg-indigo-500' : 'bg-slate-400'
+                                } shadow-sm`}></div>
+
+                                <Link href={`/cars/${carId}/events/${event.id}/edit`} className="block bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:border-amber-500/30 hover:shadow-md transition-all">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">
+                                                {new Date(event.event_date).toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                            </span>
+                                            <h4 className="font-bold text-slate-900 dark:text-white text-base">{event.title}</h4>
+                                        </div>
+                                        <span className={`font-mono font-bold ${event.cost > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                                            {event.cost > 0 ? `-${event.cost.toLocaleString()} Ft` : '-'}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                                        <span>{new Date(event.event_date).toLocaleDateString('hu-HU')}</span>
-                                        <span>•</span>
-                                        <span>{event.mileage.toLocaleString()} km</span>
-                                        {event.liters && <span className="text-amber-600 dark:text-amber-500">• {event.liters}L</span>}
+                                    
+                                    <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
+                                        <div className="flex items-center gap-1.5">
+                                            <Gauge className="w-3.5 h-3.5" />
+                                            {event.mileage.toLocaleString()} km
+                                        </div>
+                                        {event.liters && (
+                                            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
+                                                <Fuel className="w-3.5 h-3.5" />
+                                                {event.liters}L
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-slate-300 self-center" />
-                            </Link>
-                            <form action={deleteEvent} className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <input type="hidden" name="event_id" value={event.id} />
-                                <input type="hidden" name="car_id" value={carId} />
-                                <button className="p-1.5 bg-white dark:bg-slate-800 rounded-full shadow-md border border-slate-100 dark:border-slate-700 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                            </form>
-                        </div>
-                    ))
+                                    <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
                 ) : (
                     <div className="py-12 text-center text-slate-400 text-sm italic">Nincs rögzített esemény.</div>
                 )}

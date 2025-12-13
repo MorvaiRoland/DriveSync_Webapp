@@ -561,67 +561,97 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
       </main>
 
-      {/* FOOTER */}
       <footer className="border-t border-slate-900 bg-slate-950 pt-20 pb-10 px-6 relative z-10">
          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-             <div className="md:col-span-1">
+            <div className="md:col-span-1">
                 <Link href="/" className="flex items-center gap-2 mb-6">
-                    <div className="w-8 h-8 relative"><Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" /></div>
+                    <div className="w-8 h-8 relative"><Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain" /></div>
                     <span className="text-xl font-bold tracking-tight text-white uppercase">Dynamic<span className="text-amber-500">Sense</span></span>
                 </Link>
                 <p className="text-slate-500 text-sm leading-relaxed mb-6">
-                    Magyarország legújabb autófenntartási rendszere. AI diagnosztika, költségkövetés és digitális szervizkönyv egy helyen.
+                    Innovatív autós platform Magyarországon. AI alapú diagnosztika, digitális szervizkönyv és költségmenedzsment – minden egy helyen.
                 </p>
+                
+                {/* --- ITT A BEKÖTÉS --- */}
                 <div className="flex gap-4">
-                    <a href="mailto:info.dynamicsense@gmail.com" className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-800 hover:border-amber-500/50">
-                        <MessageCircle size={16} />
+                    {/* Email gomb marad */}
+                    <a 
+                        href="mailto:info.dynamicsense@gmail.com" 
+                        aria-label="Email küldése"
+                        className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-all cursor-pointer border border-slate-800 hover:border-amber-500/50 hover:scale-105"
+                    >
+                        <MessageCircle size={18} />
                     </a>
-                    <a href="#faq" className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-800 hover:border-amber-500/50">
-                        <HelpCircle size={16} />
-                    </a>
+
+                    {/* HIBAJELENTŐ GOMB BEKÖTÉSE */}
+                    {/* Lecseréltem az 'a' taget 'Link'-re és a href-et '/support'-ra */}
+                    <Link 
+                        href="/support" 
+                        aria-label="Hibajelentés és Támogatás"
+                        title="Hibajelentés és Támogatás"
+                        className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-amber-500 transition-all cursor-pointer border border-slate-800 hover:border-amber-500/50 hover:scale-105"
+                    >
+                        <HelpCircle size={18} />
+                    </Link>
                 </div>
              </div>
              
+             {/* PRODUCT COLUMN */}
              <div>
-                 <h4 className="text-white font-bold mb-6">Termék</h4>
+                 <h4 className="text-white font-bold mb-6 tracking-wide">Termék</h4>
                  <ul className="space-y-4 text-sm text-slate-400">
                      <li><a href="#features" className="hover:text-amber-500 transition-colors">Funkciók</a></li>
-                     <li><Link href="/pricing" className="hover:text-amber-500 transition-colors">Árazás</Link></li>
+                     <li><Link href="/pricing" className="hover:text-amber-500 transition-colors">Csomagok & Árak</Link></li>
                      <li><a href="#gamification" className="hover:text-amber-500 transition-colors">Közösség</a></li>
-                     <li><a href="#changelog" className="hover:text-amber-500 transition-colors">Frissítések</a></li>
+                     <li><a href="#changelog" className="hover:text-amber-500 transition-colors">Újdonságok</a></li>
+                     <li>
+            <Link href="/support" className="hover:text-amber-500 transition-colors flex items-center gap-2">
+                Hibajelentés & Kapcsolat
+                <span className="bg-amber-500/10 text-amber-500 text-[10px] px-1.5 py-0.5 rounded">Support</span>
+            </Link>
+        </li>
                  </ul>
              </div>
 
+             {/* LEGAL COLUMN */}
              <div>
-                 <h4 className="text-white font-bold mb-6">Jogi</h4>
+                 <h4 className="text-white font-bold mb-6 tracking-wide">Jogi Információk</h4>
                  <ul className="space-y-4 text-sm text-slate-400">
-                     <li><Link href="/privacy" className="hover:text-amber-500 transition-colors">Adatvédelmi tájékoztató</Link></li>
-                     <li><Link href="/terms" className="hover:text-amber-500 transition-colors">ÁSZF</Link></li>
+                     <li><Link href="/privacy" className="hover:text-amber-500 transition-colors">Adatkezelési Tájékoztató</Link></li>
+                     <li><Link href="/terms" className="hover:text-amber-500 transition-colors">Általános Szerződési Feltételek</Link></li>
                      <li><Link href="/impressum" className="hover:text-amber-500 transition-colors">Impresszum</Link></li>
                  </ul>
              </div>
              
+             {/* PLATFORM COLUMN */}
              <div>
-                <h4 className="text-white font-bold mb-6">Platform</h4>
-                <div className="flex items-center gap-2 text-sm text-slate-400 mb-2">
-                    <Server size={14} /> Felhőalapú
+                <h4 className="text-white font-bold mb-6 tracking-wide">Technológia</h4>
+                <div className="flex items-center gap-3 text-sm text-slate-400 mb-3 group cursor-default">
+                    <div className="p-2 bg-slate-900 rounded-lg group-hover:text-amber-500 transition-colors"><Server size={16} /></div>
+                    <span>Felhőalapú rendszer</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-400 mb-2">
-                    <Smartphone size={14} /> Mobil-First
+                <div className="flex items-center gap-3 text-sm text-slate-400 mb-3 group cursor-default">
+                    <div className="p-2 bg-slate-900 rounded-lg group-hover:text-amber-500 transition-colors"><Smartphone size={16} /></div>
+                    <span>Mobil-optimalizált</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-400 mb-2">
-                    <Lock size={14} /> SSL Titkosítás
+                <div className="flex items-center gap-3 text-sm text-slate-400 mb-3 group cursor-default">
+                    <div className="p-2 bg-slate-900 rounded-lg group-hover:text-amber-500 transition-colors"><Lock size={16} /></div>
+                    <span>Banki szintű titkosítás</span>
                 </div>
              </div>
          </div>
          
+         {/* BOTTOM BAR */}
          <div className="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
              <p className="text-slate-600 text-xs font-mono uppercase tracking-widest">
-                © 2025 DynamicSense Technologies. Minden jog fenntartva.
+                © {new Date().getFullYear()} DynamicSense Technologies. Minden jog fenntartva.
              </p>
-             <div className="flex items-center gap-2 text-xs text-slate-600 font-mono">
-                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                 Rendszer Online
+             <div className="flex items-center gap-2 text-xs text-slate-600 font-mono bg-slate-900/50 px-3 py-1 rounded-full border border-slate-800">
+                 <span className="relative flex h-2 w-2">
+                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                 </span>
+                 Rendszer állapota: <span className="text-emerald-500 font-bold">Online</span>
              </div>
          </div>
       </footer>
