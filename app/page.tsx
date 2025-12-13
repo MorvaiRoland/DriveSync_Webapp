@@ -176,7 +176,7 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
                   <Image src="/DynamicSense-logo.png" alt="DynamicSense" fill className="object-contain" priority />
                 </div>
                 <span className="text-xl font-bold tracking-tight text-white uppercase hidden sm:block">
-                  Drive<span className="text-amber-500">Sync</span>
+                  Dynamic<span className="text-amber-500">Sense</span>
                 </span>
               </Link>
               <Link href="/pricing" className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors">Csomagok</Link>
