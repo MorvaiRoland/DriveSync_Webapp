@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://dynamicsense.hu'),
   
   title: {
-    default: "DynamicSense - Prémium Garázsmenedzsment",
-    template: "%s | DynamicSense"
+    absolute: "DynamicSense Technologies - Prémium Garázsmenedzsment",
+    //template: "%s | DynamicSense"
   },
   description: "A DynamicSense Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen.",
   keywords: ["DynamicSense", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
