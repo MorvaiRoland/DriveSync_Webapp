@@ -26,7 +26,7 @@ export default async function LoginPage(props: Props) {
              <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain drop-shadow-2xl" priority />
            </div>
            <h1 className="text-5xl font-black text-white tracking-tight mb-4 drop-shadow-lg">
-             Drive<span className="text-amber-500">Sync</span>
+             Dynamic<span className="text-amber-500">Sense</span>
            </h1>
            <p className="text-xl text-slate-400 max-w-md leading-relaxed font-light">
              Prémium garázsmenedzsment a zsebedben.<br/>
