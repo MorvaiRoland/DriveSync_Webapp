@@ -4,7 +4,7 @@ import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner"; 
 import CookieBanner from '@/components/CookieBanner'
-import InstallPrompt from '@/components/InstallPrompt' // Import hozzáadva
+import InstallPrompt from '@/components/InstallPrompt'
 
 export const viewport: Viewport = {
   themeColor: "#0f172a",
@@ -15,13 +15,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  // FONTOS: Ez kell, hogy a '/icons/...' útvonalak teljes URL-ek legyenek
   metadataBase: new URL('https://dynamicsense.hu'),
   
-  title: {
-    absolute: "DynamicSense Technologies - Prémium Garázsmenedzsment",
-    //template: "%s | DynamicSense"
-  },
+  // --- ITT A MÓDOSÍTÁS ---
+  // Így pontosan ez a szöveg jelenik meg a böngésző fülön:
+  title: "DynamicSense Technologies - Prémium Garázsmenedzsment",
+  
   description: "A DynamicSense Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen.",
   keywords: ["DynamicSense", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
   authors: [{ name: "DynamicSense Technologies" }],
@@ -71,7 +70,6 @@ export const metadata: Metadata = {
   },
 };
 
-// CSAK EGY RootLayout függvény maradt, amiben minden benne van:
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -92,7 +90,7 @@ export default function RootLayout({
             {/* UI Komponensek */}
             <Toaster position="top-center" richColors closeButton />
             <CookieBanner />
-            <InstallPrompt /> {/* ITT VAN: A telepítés ablak */}
+            <InstallPrompt />
             
             {/* Technikai komponensek */}
             <RegisterSW />
