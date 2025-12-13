@@ -14,6 +14,7 @@ import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan }
 import { Hammer, History, Fuel, Wrench, Lock, Plus, Pencil, ArrowRight, Sparkles, Calendar, CheckCircle2, Users } from 'lucide-react';
 import FuelWidget from '@/components/FuelWidget';
 import LandingPage from '@/components/LandingPage';
+import CongratulationModal from '@/components/CongratulationModal'; //
 
 // --- KONFIGURÁCIÓ ---
 const DEV_SECRET_KEY = "admin"; 
@@ -162,6 +163,9 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-32 transition-colors duration-300 selection:bg-amber-500/30">
       
+      {/* --- ITT A GRATULÁCIÓ MODAL --- */}
+      <CongratulationModal />
+      
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       <ChangelogModal />
       <ReminderChecker />
@@ -246,15 +250,15 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
             {!hasServices ? (
                 // --- HA NINCS ADAT: TÁJÉKOZTATÁS ---
                 <div className="w-full flex flex-col items-start sm:items-end justify-center h-12">
-                     <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Flotta Egészség</p>
-                     <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Flotta Egészség</p>
+                      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                         <span className="text-xs font-medium text-right leading-tight">
                             Rögzítsen szervizt<br className="hidden sm:block"/> a számításhoz
                         </span>
                         <svg className="w-5 h-5 opacity-60 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                     </div>
+                      </div>
                 </div>
             ) : (
                 // --- HA VAN ADAT: EREDETI DIAGRAM ---
