@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { 
   ArrowRight, Sparkles, CheckCircle2, Calendar, 
   BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
-  Star, MessageCircle, HelpCircle, Server, Database, Smartphone 
+  Star, MessageCircle, HelpCircle, Server, Database, Smartphone,
+  ChevronDown // Hozzáadva a lenyitáshoz
 } from 'lucide-react';
 import PromoModal from '@/components/PromoModal'; 
 
@@ -59,12 +60,33 @@ const DashboardPreview = () => (
 export default function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null); // State a FAQ lenyitásához
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // FAQ Adatok
+  const faqs = [
+    {
+      question: "Mennyibe kerül a DriveSync használata?",
+      answer: "A DriveSync 'Starter' csomagja magánszemélyeknek 1 autóig teljesen ingyenes. Ez tartalmazza a szervizkönyvet, a költségkövetést és az alapvető emlékeztetőket. Flották és prémium funkciók esetén havi előfizetéses rendszerünk van."
+    },
+    {
+      question: "Hogyan működik az AI hibakód elemző?",
+      answer: "Egyszerűen fotózd le a műszerfalon megjelenő hibaüzenetet vagy írd be a kódot (pl. P0300). A rendszerünk összeveti ezt az adatbázisunkkal és a gyártói specifikációkkal, majd közérthető nyelven elmagyarázza a hiba lehetséges okát."
+    },
+    {
+      question: "Exportálhatom az adataimat eladáskor?",
+      answer: "Igen! Ez az egyik legfontosabb funkciónk. Egy gombnyomással generálhatsz egy hitelesített PDF 'Digitális Szervizkönyvet' vagy megoszthatsz egy linket a vevővel, ami növeli az autód eladási értékét."
+    },
+    {
+      question: "Mi történik, ha telefont cserélek?",
+      answer: "Semmi gond. A DriveSync felhőalapú, tehát az adataid biztonságos szervereken vannak tárolva. Csak lépj be az új készülékeden, és ott folytathatod, ahol abbahagytad."
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col font-sans text-slate-200 selection:bg-amber-500/30 overflow-x-hidden">
@@ -77,7 +99,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group">
              <div className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300">
-                <Image src="/icons/icon-512.png" alt="Logo" fill className="object-contain" />
+                <Image src="/drivesync-logo.png" alt="Logo" fill className="object-contain" />
              </div>
              <span className="text-xl font-bold tracking-tight text-white uppercase">
                 Drive<span className="text-amber-500">Sync</span>
@@ -87,7 +109,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Funkciók</a>
             <a href="#philosophy" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Filozófia</a>
-            <a href="#changelog" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Újdonságok</a>
+            <a href="#faq" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">GY.I.K.</a>
             <div className="h-4 w-px bg-slate-800"></div>
             <Link href="/login" className="text-sm font-bold text-white hover:text-amber-400 transition-colors">Bejelentkezés</Link>
             <Link href="/login" className="group bg-white text-slate-950 px-5 py-2.5 rounded-full text-sm font-bold transition-all hover:bg-amber-400 hover:shadow-[0_0_20px_rgba(251,191,36,0.4)] flex items-center gap-2">
@@ -104,7 +126,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
              <div className="absolute top-full left-0 w-full bg-slate-950 border-b border-slate-800 p-6 flex flex-col gap-4 md:hidden animate-in slide-in-from-top-5 shadow-2xl">
                 <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Funkciók</a>
                 <a href="#philosophy" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Filozófia</a>
-                <a href="#changelog" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Újdonságok</a>
+                <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Gyakori Kérdések</a>
                 <Link href="/login" className="bg-amber-500 text-slate-950 text-center py-3 rounded-xl font-bold mt-2 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
                     Belépés / Regisztráció
                 </Link>
@@ -122,7 +144,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                Rendszer Élesítve v1.0
+                Rendszer Élesítve v1.8
             </div>
 
             <h1 className="text-5xl sm:text-7xl md:text-8xl font-black text-white tracking-tight leading-[1.1] mb-6 drop-shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
@@ -147,7 +169,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             <DashboardPreview />
         </section>
 
-        {/* TRUST / TECH SPECS SECTION (MÓDOSÍTVA: KAPACITÁSRA FÓKUSZÁLVA) */}
+        {/* TRUST / TECH SPECS SECTION */}
         <section className="w-full max-w-7xl mx-auto mb-32 border-y border-white/5 py-12 bg-white/[0.02]">
              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                  {[
@@ -156,10 +178,10 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                     { label: 'Támogatott Típus', value: 'Összes' },
                     { label: 'Platform', value: 'Web & Mobil' },
                  ].map((stat, i) => (
-                     <div key={i}>
-                         <h4 className="text-3xl md:text-4xl font-black text-white mb-1">{stat.value}</h4>
-                         <p className="text-slate-500 text-sm uppercase tracking-widest font-bold">{stat.label}</p>
-                     </div>
+                      <div key={i}>
+                          <h4 className="text-3xl md:text-4xl font-black text-white mb-1">{stat.value}</h4>
+                          <p className="text-slate-500 text-sm uppercase tracking-widest font-bold">{stat.label}</p>
+                      </div>
                  ))}
              </div>
         </section>
@@ -194,7 +216,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
         </section>
 
-        {/* PHILOSOPHY / GUARANTEE SECTION (MÓDOSÍTVA: ÉRTÉKELÉSEK HELYETT ÍGÉRETEK) */}
+        {/* PHILOSOPHY / GUARANTEE SECTION */}
         <section id="philosophy" className="max-w-7xl mx-auto mb-32 px-4">
              <div className="text-center mb-16">
                  <h2 className="text-3xl font-bold text-white mb-4">Amit garantálunk</h2>
@@ -202,17 +224,17 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
              </div>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  {[
-                     { title: "Transzparencia", icon: <Database className="text-blue-400" />, text: "Az adataid a tieid. Bármikor exportálhatod őket, nincsenek rejtett zárolások vagy apróbetűs részek." },
-                     { title: "Biztonság Elsőként", icon: <Server className="text-green-400" />, text: "Ipari szintű titkosítást használunk. A szervereink 99.9%-os rendelkezésre állást és napi biztonsági mentést garantálnak." },
-                     { title: "Mobil-First Design", icon: <Smartphone className="text-purple-400" />, text: "Tudjuk, hogy az autóban nem laptoppal ülsz. A felületet úgy terveztük, hogy egy kézzel is gyorsan használható legyen." }
+                      { title: "Transzparencia", icon: <Database className="text-blue-400" />, text: "Az adataid a tieid. Bármikor exportálhatod őket, nincsenek rejtett zárolások vagy apróbetűs részek." },
+                      { title: "Biztonság Elsőként", icon: <Server className="text-green-400" />, text: "Ipari szintű titkosítást használunk. A szervereink 99.9%-os rendelkezésre állást és napi biztonsági mentést garantálnak." },
+                      { title: "Mobil-First Design", icon: <Smartphone className="text-purple-400" />, text: "Tudjuk, hogy az autóban nem laptoppal ülsz. A felületet úgy terveztük, hogy egy kézzel is gyorsan használható legyen." }
                  ].map((item, i) => (
-                     <div key={i} className="bg-slate-900/30 p-8 rounded-3xl border border-slate-800 backdrop-blur-sm group hover:border-slate-600 transition-colors">
-                         <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                             {item.icon}
-                         </div>
-                         <h4 className="font-bold text-white text-lg mb-3">{item.title}</h4>
-                         <p className="text-slate-400 leading-relaxed text-sm">{item.text}</p>
-                     </div>
+                      <div key={i} className="bg-slate-900/30 p-8 rounded-3xl border border-slate-800 backdrop-blur-sm group hover:border-slate-600 transition-colors">
+                          <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                              {item.icon}
+                          </div>
+                          <h4 className="font-bold text-white text-lg mb-3">{item.title}</h4>
+                          <p className="text-slate-400 leading-relaxed text-sm">{item.text}</p>
+                      </div>
                  ))}
              </div>
         </section>
@@ -239,7 +261,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         )}
 
         {/* CHANGELOG */}
-        <div id="changelog" className="max-w-4xl mx-auto w-full mb-20 px-4">
+        <div id="changelog" className="max-w-4xl mx-auto w-full mb-32 px-4">
             <div className="flex items-end gap-4 mb-10 border-b border-slate-800 pb-6">
                 <h2 className="text-3xl font-bold text-white">Fejlesztési Napló</h2>
                 <span className="text-slate-500 pb-1 text-sm font-mono hidden sm:inline-block">build history</span>
@@ -265,15 +287,51 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                         </div>
                     </div>
                 )) : (
-                     <div className="pl-12 py-10 text-slate-500 italic">
-                        <div className="absolute -left-[5px] top-2 w-3 h-3 rounded-full bg-slate-800 border-2 border-slate-700"></div>
-                        A rendszer elindult. Nincsenek még frissítési bejegyzések.
-                     </div>
+                      <div className="pl-12 py-10 text-slate-500 italic">
+                         <div className="absolute -left-[5px] top-2 w-3 h-3 rounded-full bg-slate-800 border-2 border-slate-700"></div>
+                         A rendszer elindult. Nincsenek még frissítési bejegyzések.
+                      </div>
                 )}
             </div>
         </div>
 
-        {/* BOTTOM CTA (MÓDOSÍTVA: HYPE-OLÁSRA) */}
+        {/* --- ÚJ: GYAKORI KÉRDÉSEK (FAQ) --- */}
+        <section id="faq" className="max-w-4xl mx-auto w-full mb-32 px-4">
+            <div className="text-center mb-16">
+                 <h2 className="text-3xl font-bold text-white mb-4">Gyakori Kérdések</h2>
+                 <p className="text-slate-400">Minden, amit tudni érdemes a rendszerről.</p>
+             </div>
+
+             <div className="space-y-4">
+                {faqs.map((faq, index) => (
+                    <div 
+                        key={index} 
+                        className={`bg-slate-900/30 rounded-2xl border transition-all duration-300 overflow-hidden ${openFaq === index ? 'border-amber-500/50 bg-slate-900/50' : 'border-slate-800 hover:border-slate-700'}`}
+                    >
+                        <button 
+                            onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                            className="w-full text-left p-6 flex justify-between items-center focus:outline-none"
+                        >
+                            <span className="font-bold text-white text-lg">{faq.question}</span>
+                            {openFaq === index ? (
+                                <ChevronDown className="text-amber-500 rotate-180 transition-transform duration-300" />
+                            ) : (
+                                <ChevronDown className="text-slate-500 transition-transform duration-300" />
+                            )}
+                        </button>
+                        <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${openFaq === index ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                            <div className="overflow-hidden">
+                                <div className="p-6 pt-0 text-slate-400 leading-relaxed border-t border-white/5 mt-2">
+                                    {faq.answer}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+             </div>
+        </section>
+
+        {/* BOTTOM CTA */}
         <section className="max-w-5xl mx-auto mb-20 px-4">
              <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 p-12 rounded-[2.5rem] text-center relative overflow-hidden">
                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-amber-500/10 blur-[120px] rounded-full pointer-events-none" />
@@ -301,9 +359,13 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                     Magyarország legújabb autófenntartási rendszere. AI diagnosztika, költségkövetés és digitális szervizkönyv egy helyen.
                 </p>
                 <div className="flex gap-4">
-                    {/* Social Icons Placeholders */}
-                    <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"><MessageCircle size={16} /></div>
-                    <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"><HelpCircle size={16} /></div>
+                    {/* --- JAVÍTOTT IKONOK: Működő linkek --- */}
+                    <a href="mailto:support@info.drivesync.mail@gmail.com" title="Írj nekünk" className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-800 hover:border-amber-500/50">
+                        <MessageCircle size={16} />
+                    </a>
+                    <a href="#faq" title="Gyakori Kérdések" className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer border border-slate-800 hover:border-amber-500/50">
+                        <HelpCircle size={16} />
+                    </a>
                 </div>
              </div>
              
@@ -320,8 +382,8 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
              <div>
                  <h4 className="text-white font-bold mb-6">Támogatás</h4>
                  <ul className="space-y-4 text-sm text-slate-400">
-                     <li><a href="mailto:support@drivesync.hu" className="hover:text-amber-500 transition-colors">Kapcsolat</a></li>
-                     <li><Link href="/faq" className="hover:text-amber-500 transition-colors">Gyakori Kérdések</Link></li>
+                     <li><a href="mailto:support@info.drivesync.mail@gmail.com" className="hover:text-amber-500 transition-colors">Kapcsolat</a></li>
+                     <li><a href="#faq" className="hover:text-amber-500 transition-colors">Gyakori Kérdések</a></li>
                      <li><Link href="/status" className="hover:text-amber-500 transition-colors">Rendszerállapot</Link></li>
                  </ul>
              </div>
