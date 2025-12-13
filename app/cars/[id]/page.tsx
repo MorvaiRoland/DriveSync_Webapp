@@ -90,7 +90,7 @@ export default async function CarDetailsPage(props: Props) {
   let avgConsumption = "Nincs adat"
   
   // Elektromos / Hagyományos fogyasztás kijelzés
-  const isElectric = car.fuel_type === 'electric';
+  const isElectric = car.fuel_type === 'Elektromos';
   const unit = isElectric ? 'kWh' : 'L';
 
   if (fuelEvents.length >= 2) {
