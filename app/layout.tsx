@@ -17,8 +17,8 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://dynamicsense.hu'),
   
-  // --- ITT A MÓDOSÍTÁS ---
-  // Így pontosan ez a szöveg jelenik meg a böngésző fülön:
+  // Ezt a stringet fogja mutatni alapértelmezetten minden oldalon,
+  // ahol nincs külön felülírva a title.
   title: "DynamicSense Technologies - Prémium Garázsmenedzsment",
   
   description: "A DynamicSense Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen.",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "DynamicSense",
+    title: "DynamicSense", // Ez csak a telefonos ikon neve marad
   },
   
   icons: {
@@ -46,10 +46,11 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title: "DynamicSense - Az autód digitális garázsa",
+    // Az OpenGraph cím legyen ugyanaz, mint a tab címe az egységességért
+    title: "DynamicSense Technologies - Prémium Garázsmenedzsment",
     description: "Felejtsd el a papírokat. Kezeld a szervizkönyvet és a költségeket egyetlen prémium felületen.",
     url: "https://dynamicsense.hu",
-    siteName: "DynamicSense Hungary",
+    siteName: "DynamicSense Technologies",
     locale: "hu_HU",
     type: "website",
     images: [
@@ -57,14 +58,14 @@ export const metadata: Metadata = {
         url: '/icons/opengraph-image.png',
         width: 1200,
         height: 630,
-        alt: 'DynamicSense Hungary Dashboard Preview',
+        alt: 'DynamicSense Dashboard',
       },
     ],
   },
   
   twitter: {
     card: 'summary_large_image',
-    title: "DynamicSense - Prémium Garázsmenedzsment",
+    title: "DynamicSense Technologies - Prémium Garázsmenedzsment",
     description: "Kezeld a szerviztörténetet és költségeket egy helyen.",
     images: ['/icons/opengraph-image.png'],
   },
