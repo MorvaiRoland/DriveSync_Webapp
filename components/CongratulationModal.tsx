@@ -2,27 +2,54 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, X, Star, Zap } from 'lucide-react';
+import { X, Star, Zap } from 'lucide-react';
 import Confetti from 'react-confetti';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
-export default function CongratulationModal() {
+interface CongratulationModalProps {
+  currentPlan?: string; // Pl: 'free', 'pro', 'lifetime'
+}
+
+export default function CongratulationModal({ currentPlan }: CongratulationModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   useEffect(() => {
-    // Check for the success parameter in the URL
-    if (searchParams.get('checkout_success') === 'true') {
+    // Képernyőméret beállítása a konfettihez
+    setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+
+    // 1. ESET: URL paraméter alapú ellenőrzés (Stripe után)
+    const isCheckoutSuccess = searchParams.get('checkout_success') === 'true';
+
+    // 2. ESET: Admin oldali váltás figyelése (LocalStorage alapú)
+    // Megnézzük, mi volt a legutóbb ismert csomagja a böngésző szerint
+    const lastKnownPlan = localStorage.getItem('dynamicsense_user_plan');
+    
+    // Logika: Ha volt mentett "free" csomagja, DE most már "pro" vagy "lifetime" van,
+    // ÉS ez nem ugyanaz, mint amit eddig tudtunk -> Gratulálunk!
+    const isUpgradeDetected = 
+        lastKnownPlan && 
+        (lastKnownPlan === 'free' || lastKnownPlan === 'starter') && 
+        (currentPlan === 'pro' || currentPlan === 'lifetime' || currentPlan === 'founder');
+
+    if (isCheckoutSuccess || isUpgradeDetected) {
       setIsOpen(true);
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
       
-      // Clean up the URL without refreshing
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
+      // URL takarítása (ha van paraméter)
+      if (isCheckoutSuccess) {
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
     }
-  }, [searchParams]);
+
+    // Mindig elmentjük a JELENLEGI állapotot a jövőbeli összehasonlításhoz.
+    // Ha most 'free', akkor legközelebb ha 'pro' lesz, tudni fogjuk, hogy váltás történt.
+    if (currentPlan) {
+      localStorage.setItem('dynamicsense_user_plan', currentPlan);
+    }
+
+  }, [searchParams, currentPlan]);
 
   if (!isOpen) return null;
 
@@ -34,8 +61,8 @@ export default function CongratulationModal() {
           width={windowSize.width}
           height={windowSize.height}
           recycle={false}
-          numberOfPieces={500}
-          gravity={0.2}
+          numberOfPieces={800} // Több konfetti a drámai hatáshoz
+          gravity={0.15}
         />
 
         {/* Backdrop */}
@@ -60,7 +87,7 @@ export default function CongratulationModal() {
 
           <button 
             onClick={() => setIsOpen(false)}
-            className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+            className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-20"
           >
             <X size={20} />
           </button>
@@ -71,9 +98,9 @@ export default function CongratulationModal() {
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
-              className="w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.5)] mb-6"
+              className="w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(245,158,11,0.6)] mb-6 ring-4 ring-slate-900"
             >
-              <Star className="w-10 h-10 text-white fill-white" />
+              <Star className="w-12 h-12 text-white fill-white" />
             </motion.div>
 
             <motion.h2 
@@ -89,10 +116,10 @@ export default function CongratulationModal() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2 mb-6"
+              className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-xl px-4 py-2 mb-6"
             >
               <span className="text-amber-400 font-bold tracking-wide uppercase text-sm flex items-center gap-2">
-                <Zap size={14} className="fill-amber-400" /> Prémium Tagság Aktiválva
+                <Zap size={16} className="fill-amber-400" /> Prémium Státusz Aktiválva
               </span>
             </motion.div>
 
@@ -102,7 +129,7 @@ export default function CongratulationModal() {
               transition={{ delay: 0.5 }}
               className="text-slate-400 mb-8 leading-relaxed"
             >
-              Köszönjük a bizalmat! Mostantól korlátlanul használhatod a garázsodat, az AI szerelőt és minden Pro funkciót.
+              A fiókod sikeresen frissült! Mostantól korlátlan hozzáférésed van a garázsodhoz, az AI szerelőhöz és minden Pro funkcióhoz.
             </motion.p>
 
             <motion.button
@@ -110,7 +137,7 @@ export default function CongratulationModal() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
               onClick={() => setIsOpen(false)}
-              className="w-full bg-white text-slate-950 font-bold py-4 rounded-xl hover:bg-slate-200 transition-colors shadow-lg shadow-white/10"
+              className="w-full bg-white text-slate-950 font-bold py-4 rounded-xl hover:bg-slate-200 transition-colors shadow-lg shadow-white/10 active:scale-95"
             >
               Kezdjük el! 🚀
             </motion.button>
