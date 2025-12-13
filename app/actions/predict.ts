@@ -52,7 +52,7 @@ export async function generateCarPrediction(carId: number) {
   `
 
   const { object } = await generateObject({
-    model: google('gemini-1.5-flash'), // Gyors és olcsó
+    model: google('gemini-2.5-flash'), // Gyors és olcsó
     schema: IssueSchema,
     prompt: prompt,
   })
