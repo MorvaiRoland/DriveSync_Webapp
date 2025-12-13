@@ -12,6 +12,7 @@ import ParkingAssistant from '@/components/ParkingAssistant'
 import SalesWidget from '@/components/SalesWidget'
 import AnalyticsCharts from '@/components/AnalyticsCharts'
 import ResponsiveDashboard from '@/components/ResponsiveDashboard'
+import PredictiveMaintenance from '@/components/PredictiveMaintenance'
 
 import { 
   Fuel, Wrench, Bell, Map, Package, Warehouse, 
@@ -34,10 +35,10 @@ type Car = {
 const getExpiryStatus = (dateString: string | null) => {
   if (!dateString) return { 
       label: 'Nincs megadva', 
-      status: 'Kitöltés...', // Ez jelzi, hogy hiányzik
-      alert: false, // Ne legyen piros, csak semleges
+      status: 'Kitöltés...', 
+      alert: false, 
       color: 'text-slate-400', 
-      bg: 'bg-slate-50 dark:bg-slate-800/50 border-dashed' // Szaggatott keret jelzi a hiányt
+      bg: 'bg-slate-50 dark:bg-slate-800/50 border-dashed'
   };
   const today = new Date();
   const expiry = new Date(dateString);
@@ -128,6 +129,8 @@ export default async function CarDetailsPage(props: Props) {
   // --- WIDGET DEFINITIONS ---
   const WidgetParking = <ParkingAssistant carId={carIdString} activeSession={activeParking} />;
   const WidgetHealth = <HealthCard {...healthProps} />;
+  // --- ÚJ: Prediktív Karbantartás Widget ---
+  const WidgetPrediction = isPro ? <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} /> : null;
   const WidgetCost = <CostCard {...costProps} />;
   const WidgetSales = isPro ? <SalesWidget car={car} /> : <ProTeaser />;
   const WidgetSpecs = <TechnicalSpecs {...techProps} />;
@@ -154,7 +157,8 @@ export default async function CarDetailsPage(props: Props) {
 
   // --- MOBILE TABS CONTENT ---
   const mobileTabs = {
-    overview: <div className="space-y-6">{WidgetParking}{WidgetHealth}{WidgetCost}{WidgetSales}</div>,
+    // A Prediktív kártya itt is bekerült az áttekintésbe
+    overview: <div className="space-y-6">{WidgetParking}{WidgetHealth}{WidgetPrediction}{WidgetCost}{WidgetSales}</div>,
     services: <div className="space-y-6">{WidgetSpecs}{WidgetVignette}{WidgetTires}{WidgetDocs}</div>,
     // Itt van a grafikon a mobilos Napló fülben
     log: <div className="space-y-6">{WidgetTips}{WidgetReminders}{WidgetCharts}{WidgetLog}</div>
@@ -167,7 +171,12 @@ export default async function CarDetailsPage(props: Props) {
         <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
             {/* Statisztikai Sor */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                 {WidgetHealth}
+                 {/* Egészség + Prediktív egy oszlopban */}
+                 <div className="space-y-6">
+                    {WidgetHealth}
+                    {WidgetPrediction} {/* ITT JELENIK MEG PC-N */}
+                 </div>
+                 
                  <div className="space-y-6">
                     {WidgetParking}
                     {WidgetCost}
@@ -201,7 +210,7 @@ export default async function CarDetailsPage(props: Props) {
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
       
-      {/* HEADER SECTION - Javított dizájnnal */}
+      {/* HEADER SECTION */}
       <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={isPro} />
       
       {/* ACTION GRID (Desktop Only) */}
@@ -244,7 +253,6 @@ function ProTeaser() {
 
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
-        // JAVÍTÁS: PC-n fix magasságot (h-[28rem]) adtam vissza, hogy legyen elég hely a tartalomnak
         <div className="relative bg-slate-900 w-full overflow-hidden shadow-2xl shrink-0 group min-h-[22rem] md:h-[28rem]">
             {car.image_url && (
                 <div className="absolute inset-0 z-0">
@@ -253,8 +261,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                 </div>
             )}
             
-            {/* JAVÍTÁS: md:justify-center visszakerült PC-re, hogy vertikálisan középen legyen */}
-            {/* Mobilon (alapértelmezett) marad a justify-end és pb-8, ahogy kérted */}
             <div className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-end pb-8 pt-20 md:pt-0 md:pb-0 md:justify-center">
                 
                 {/* Top Nav */}
@@ -317,7 +323,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
 
 function StatBadge({ label, value, valueColor = "text-white" }: any) {
     return (
-        // JAVÍTÁS: flex-grow mobilon, hogy kitöltse a teret, ha kell
         <div className="bg-slate-900/80 px-4 py-2 md:py-3 rounded-xl border border-white/10 backdrop-blur-md shadow-lg flex flex-col items-center justify-center min-w-[120px] flex-grow md:flex-grow-0">
             <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-0.5">{label}</p>
             <p className={`font-mono font-bold text-sm md:text-lg ${valueColor} drop-shadow-sm`}>{value}</p>
@@ -355,9 +360,6 @@ function DesktopActionGrid({ carId }: { carId: string }) {
     const shine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer";
     
     return (
-        // JAVÍTÁS: A -mt-8 (negatív margin) miatt lógnak bele a gombok a képbe.
-        // Ez PC-n szép design elem ("floating cards"), de ha neked ez "felcsúszásnak" tűnik,
-        // akkor itt állíthatod. Most hagytam -mt-8-on, de biztosítottam a z-indexet (z-30).
         <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-5 gap-4">
              <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} bg-amber-500 hover:bg-amber-400 text-slate-900`}>
                 <div className={shine} />
@@ -420,14 +422,13 @@ function HealthCard({ car, oilLife, kmSinceService, serviceIntervalKm, kmRemaini
                 </div>
             </div>
             <div className="grid grid-cols-1 gap-3">
-    {/* Linket teszünk köré, hogy szerkeszthető legyen */}
-    <Link href={`/cars/${car.id}/edit`}>
-        <StatusItem label="Műszaki Vizsga" data={motStatus} iconType="file" />
-    </Link>
-    <Link href={`/cars/${car.id}/edit`}>
-        <StatusItem label="Biztosítás" data={insuranceStatus} iconType="shield" />
-    </Link>
-</div>
+                <Link href={`/cars/${car.id}/edit`}>
+                    <StatusItem label="Műszaki Vizsga" data={motStatus} iconType="file" />
+                </Link>
+                <Link href={`/cars/${car.id}/edit`}>
+                    <StatusItem label="Biztosítás" data={insuranceStatus} iconType="shield" />
+                </Link>
+            </div>
         </div>
     )
 }
