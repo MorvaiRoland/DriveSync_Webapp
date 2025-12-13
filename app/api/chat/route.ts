@@ -1,7 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { streamText } from 'ai';
-// Ellenőrizd: '@/lib/supabase/server' vagy '@/utils/supabase/server'
-import { createClient } from 'supabase/server'; 
+import { createClient } from 'supabase/server'; // Vagy ahol a tied van
 
 export const maxDuration = 30;
 
@@ -19,6 +18,7 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 });
 
+  // Adatok lekérése a kontextushoz
   const [carsRes, eventsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('user_id', user.id),
     supabase
@@ -32,21 +32,31 @@ export async function POST(req: Request) {
   const cars = carsRes.data || [];
   const events = eventsRes.data || [];
 
+  // Rendszer üzenet (System Prompt)
+  // Fontos: Itt instruáljuk, hogy képes képeket is nézni.
   const contextText = `
     TE VAGY A DRIVESYNC AI SZERELŐ.
-    Adatok:
-    Járművek: ${JSON.stringify(cars)}
-    Napló: ${JSON.stringify(events)}
     
-    Válaszolj magyarul, segítőkészen. Használj listákat.
+    A felhasználó autói: ${JSON.stringify(cars)}
+    Szerviznapló: ${JSON.stringify(events)}
+    
+    KÉPESSÉGEK:
+    - Képes vagy elemezni a felhasználó által feltöltött képeket (pl. műszerfal hibajelzések, motortér, sérülések).
+    - Ha képet kapsz, elemezd a látható problémát, és adj tanácsot.
+    - Ha hibakódot látsz, magyarázd el.
+    
+    Válaszolj magyarul, szakmailag, de érthetően.
   `;
 
+  // A messages tömb már tartalmazhatja a képet base64 formátumban a frontendről.
+  // A Vercel AI SDK Google provider ezt automatikusan kezeli, ha a struktúra:
+  // { role: 'user', content: [ { type: 'text', text: '...' }, { type: 'image', image: 'base64...' } ] }
+  
   const result = streamText({
-    model: google('gemini-2.5-flash'),
+    model: google('gemini-2.5-flash'), // A flash modell gyors és jó képekkel
     system: contextText,
-    messages,
+    messages, // A frontend által küldött teljes tömböt átadjuk
   });
 
-  // Ez a biztos pont a buildhez:
   return result.toTextStreamResponse();
 }
