@@ -194,8 +194,8 @@ function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
                         <CheckCircle2 className="w-4 h-4" /> Hamarosan...
                     </h3>
                     <ul className="text-xs text-slate-500 list-disc list-inside">
-                        <li>OBDII Bluetooth integráció</li>
-                        <li>Exportálás PDF-be</li>
+                        <li>-</li>
+                        <li>-</li>
                     </ul>
                 </div>
             </div>
