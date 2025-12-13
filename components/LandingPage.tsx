@@ -139,7 +139,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
              </div>
              <span className="text-xl font-bold tracking-tight text-white uppercase hidden sm:block">
-               Drive<span className="text-amber-500">Sync</span>
+               Dynamic<span className="text-amber-500">Sense</span>
             </span>
           </Link>
 
@@ -426,7 +426,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
              <div className="md:col-span-1">
                 <Link href="/" className="flex items-center gap-2 mb-6">
                     <div className="w-8 h-8 relative"><Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" /></div>
-                    <span className="text-xl font-bold tracking-tight text-white uppercase">Drive<span className="text-amber-500">Sync</span></span>
+                    <span className="text-xl font-bold tracking-tight text-white uppercase">Dynamic<span className="text-amber-500">Sense</span></span>
                 </Link>
                 <p className="text-slate-500 text-sm leading-relaxed mb-6">
                     Magyarország legújabb autófenntartási rendszere. AI diagnosztika, költségkövetés és digitális szervizkönyv egy helyen.
