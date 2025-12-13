@@ -20,7 +20,7 @@ const IssueSchema = z.object({
 export async function generateCarPrediction(carId: number) {
   const supabase = await createClient()
   
-  // 1. Lekérjük az autó adatait (Bővítve transmission-nel, ha van az adatbázisban)
+  // 1. Lekérjük az autó adatait
   const { data: car } = await supabase
     .from('cars')
     .select('*')
@@ -29,21 +29,23 @@ export async function generateCarPrediction(carId: number) {
     
   if (!car) throw new Error("Autó nem található")
 
-  // 2. ÚJ: Lekérjük az eddigi SZERVIZ eseményeket, hogy az AI lássa, mi volt már cserélve
+  // 2. SZERVIZTÖRTÉNET LEKÉRÉSE
+  // MÓDOSÍTÁS: Itt adjuk hozzá a 'description' oszlopot a lekérdezéshez!
   const { data: events } = await supabase
     .from('events')
-    .select('event_date, title, mileage, notes, type')
+    .select('event_date, title, mileage, description, type') 
     .eq('car_id', carId)
-    .eq('type', 'service') // Csak a szervizek érdekelnek minket
-    .order('event_date', { ascending: false }) // Legfrissebbek elöl
-    .limit(20) // Elég az utolsó 20 bejegyzés a kontextushoz
+    .eq('type', 'service')
+    .order('event_date', { ascending: false })
+    .limit(20)
 
-  // 3. Formázzuk a szerviztörténetet olvasható szöveggé az AI számára
+  // 3. SZERVIZTÖRTÉNET FORMÁZÁSA
+  // MÓDOSÍTÁS: A 'description' mezőt fűzzük be a szövegbe, hogy az AI lássa a részleteket.
   const historySummary = events && events.length > 0
-    ? events.map(e => `- ${e.event_date}: ${e.title} (${e.mileage} km) - Megjegyzés: ${e.notes || ''}`).join('\n')
+    ? events.map(e => `- Dátum: ${e.event_date}, Cím: ${e.title}, Km: ${e.mileage} -> Részletek (Description): ${e.description || 'Nincs leírás'}`).join('\n')
     : "Nincs rögzített szerviztörténet.";
 
-  // 4. Megnézzük, van-e friss elemzés (cache)
+  // 4. Cache ellenőrzés (hogy ne hívjuk feleslegesen az AI-t)
   const { data: existing } = await supabase
     .from('car_predictions')
     .select('*')
@@ -57,7 +59,7 @@ export async function generateCarPrediction(carId: number) {
     return { issues: existing.issues, summary: existing.summary, cached: true }
   }
 
-  // 5. A kibővített Prompt az AI számára
+  // 5. PROMPT ÖSSZEÁLLÍTÁSA
   const prompt = `
     Te egy tapasztalt autószerelő szakértő és diagnoszta vagy.
     
@@ -75,21 +77,21 @@ export async function generateCarPrediction(carId: number) {
     ${historySummary}
 
     SZIGORÚ SZABÁLYOK:
-    1. Nézd át alaposan az "ELVÉGZETT KARBANTARTÁSOK" listát!
-    2. HA egy alkatrész (pl. kuplung, vezérműlánc, fék) cseréje megtörtént a közelmúltban (az elmúlt 50-80.000 km-en belül), AKKOR AZT NE JAVASOLD hibaként!
-    3. Csak olyan hibákat írj, amik ennél a konkrét motornál és futásnál esedékesek, és még NEM voltak javítva a napló szerint.
+    1. Olvasd el figyelmesen a fenti "Részletek (Description)" mezőket!
+    2. HA a leírásban szerepel, hogy egy alkatrész (pl. "kettőstömegű", "vezérlés", "turbo") cseréje megtörtént a közelmúltban (az elmúlt 50-80.000 km-en belül), AKKOR AZT NE JAVASOLD hibaként!
+    3. Csak olyan hibákat írj, amik ennél a konkrét motornál és futásnál esedékesek, és még NEM voltak javítva a description szerint.
     4. Becsülj reális magyarországi javítási költségeket.
 
     Kimenet nyelve: Magyar.
   `
 
   const { object } = await generateObject({
-    model: google('gemini-2.5-flash'), // A legfrissebb stabil modell
+    model: google('gemini-2.5-flash'),
     schema: IssueSchema,
     prompt: prompt,
   })
 
-  // 6. Elmentjük az adatbázisba
+  // 6. Eredmény mentése az adatbázisba
   await supabase.from('car_predictions').insert({
     car_id: carId,
     mileage_at_prediction: car.mileage,
