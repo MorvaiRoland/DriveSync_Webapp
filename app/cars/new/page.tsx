@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { addCar } from '@/app/cars/actions'
+import { addCar } from '@/app/cars/actions' // Ellenőrizd az elérési utat!
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
@@ -24,15 +24,7 @@ function SubmitButton() {
           ? 'bg-slate-700 text-slate-400 cursor-wait' 
           : 'bg-amber-500 text-slate-900 hover:bg-amber-400 hover:shadow-amber-500/20 active:scale-[0.98]'}`}
     >
-      {pending ? (
-        <>
-           <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-           </svg>
-           Mentés...
-        </>
-      ) : (
+      {pending ? 'Mentés folyamatban...' : (
         <>
           <CheckCircle2 className="w-5 h-5" />
           Mentés a Garázsba
@@ -42,7 +34,7 @@ function SubmitButton() {
   )
 }
 
-// --- INPUT MEZŐK (JAVÍTOTT STÍLUS) ---
+// --- INPUT MEZŐ ---
 function InputGroup({ label, name, type = "text", placeholder, required = false, uppercase = false, icon, suffix }: any) {
   return (
     <div className="flex flex-col gap-1.5 w-full">
@@ -81,7 +73,8 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
   )
 }
 
-// --- SELECT MEZŐ (JAVÍTOTT CSS + CHEVRON) ---
+// --- SELECT MEZŐ (JAVÍTVA) ---
+// A value propot opcionálissá tettük, hogy működjön kontrollált és nem kontrollált módban is
 function SelectGroup({ label, name, children, required = false, icon, value, onChange, disabled }: any) {
   return (
     <div className="flex flex-col gap-1.5 w-full">
@@ -98,7 +91,8 @@ function SelectGroup({ label, name, children, required = false, icon, value, onC
           name={name}
           id={name}
           required={required}
-          value={value}
+          // Csak akkor adjuk át a value-t, ha nem undefined, különben az űrlap "uncontrolled" marad
+          {...(value !== undefined ? { value } : {})}
           onChange={onChange}
           disabled={disabled}
           className={`
@@ -112,7 +106,6 @@ function SelectGroup({ label, name, children, required = false, icon, value, onC
         >
           {children}
         </select>
-        {/* Egyedi Nyíl (Chevron) a gyári helyett */}
         <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500 dark:text-slate-400">
             <ChevronDown className="w-4 h-4" />
         </div>
@@ -121,7 +114,7 @@ function SelectGroup({ label, name, children, required = false, icon, value, onC
   )
 }
 
-// --- FŐ ŰRLAP LOGIKA ---
+// --- FŐ ŰRLAP ---
 function CarForm() {
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
@@ -138,24 +131,15 @@ function CarForm() {
   const [loadingModels, setLoadingModels] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
-  // Márkák betöltése
   useEffect(() => {
     async function fetchBrands() {
-      console.log("Márkák lekérése...")
-      const { data, error } = await supabase.from('catalog_brands').select('*').order('name')
-      
-      if (error) {
-        console.error("Hiba a márkák betöltésekor:", error.message)
-      } else {
-        console.log("Betöltött márkák száma:", data?.length)
-        setBrands(data || [])
-      }
+      const { data } = await supabase.from('catalog_brands').select('*').order('name')
+      if (data) setBrands(data)
       setLoadingBrands(false)
     }
     fetchBrands()
   }, [])
 
-  // Modellek betöltése
   useEffect(() => {
     async function fetchModels() {
       if (!selectedBrandId || selectedBrandId === 'other') {
@@ -182,6 +166,7 @@ function CarForm() {
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors">
+      {/* Fontos: az encType nélkül nem mennek át a fájlok! */}
       <form action={addCar} className="p-6 sm:p-10 space-y-10">
         
         {error && (
@@ -237,8 +222,6 @@ function CarForm() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            
-            {/* Márka */}
             <SelectGroup 
                 label="Gyártó (Márka)" 
                 name="brand_select" 
@@ -247,17 +230,12 @@ function CarForm() {
                 onChange={(e: any) => setSelectedBrandId(e.target.value)} 
                 disabled={loadingBrands}
             >
-                <option value="" disabled>{loadingBrands ? "Betöltés..." : "Válassz márkát..."}</option>
-                {brands.length > 0 ? (
-                    brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)
-                ) : (
-                    <option value="" disabled>Nincs betöltött márka (DB hiba?)</option>
-                )}
+                <option value="" disabled>Válassz márkát...</option>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                 <option value="other">Egyéb / Nem találom</option>
             </SelectGroup>
             <input type="hidden" name="make" value={selectedBrandName || (selectedBrandId === 'other' ? 'Egyéb' : '')} />
 
-            {/* Modell */}
             <div className="w-full">
                 {selectedBrandId === "other" || (models.length === 0 && !loadingModels && selectedBrandId !== "") ? (
                     <InputGroup label="Modell" name="model" required placeholder="pl. Focus" />
@@ -268,7 +246,7 @@ function CarForm() {
                         required 
                         disabled={!selectedBrandId || loadingModels}
                     >
-                        <option value="" disabled selected>{loadingModels ? "Modellek betöltése..." : "Válassz típust..."}</option>
+                        <option value="" disabled selected>Válassz típust...</option>
                         {models.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
                         <option value="Egyéb">Egyéb / Kézzel írom be</option>
                     </SelectGroup>
@@ -282,7 +260,7 @@ function CarForm() {
 
         <hr className="border-slate-100 dark:border-slate-800" />
 
-        {/* 3. TECHNIKAI RÉSZLETEK - JAVÍTOTT GRID */}
+        {/* 3. TECHNIKAI RÉSZLETEK */}
         <div>
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-500"><Settings className="w-6 h-6" /></div>
@@ -304,13 +282,14 @@ function CarForm() {
                 <option value="robotized">Robotizált</option>
             </SelectGroup>
 
+            {/* JAVÍTOTT: Az opciók értéke (value) angol, a megjelenítés magyar */}
             <SelectGroup label="Üzemanyag" name="fuel_type" required icon={<Fuel className="w-4 h-4" />}>
                 <option value="Dízel">Dízel</option>
                 <option value="Benzin">Benzin</option>
                 <option value="Hybrid">Hybrid</option>
-                <option value="Plug-in Hybrid">Plug-in Hybrid</option>
+                <option value="Plugin_Hybrid">Plug-in Hybrid</option>
                 <option value="Elektromos">Elektromos</option>
-                <option value="LPG / Gáz">LPG / Gáz</option>
+                <option value="LPG">LPG / Gáz</option>
             </SelectGroup>
 
             <InputGroup label="Hengerűrtartalom" name="engine_size" type="number" placeholder="pl. 1998" suffix="cm³" />
@@ -325,7 +304,7 @@ function CarForm() {
           </div>
         </div>
 
-        {/* 4. DÁTUMOK (Külön kártya) */}
+        {/* 4. DÁTUMOK */}
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-800">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-amber-500" /> Lejáratok / Vizsgák
@@ -358,7 +337,6 @@ function CarForm() {
             </div>
         </div>
 
-        {/* LÁBLÉC */}
         <div className="pt-6 flex flex-col-reverse sm:flex-row items-center justify-end gap-4">
           <Link href="/" className="w-full sm:w-auto px-6 py-4 rounded-xl text-center text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             Mégse
@@ -370,12 +348,9 @@ function CarForm() {
   )
 }
 
-// --- FŐ OLDAL ---
 export default function NewCarPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 font-sans">
-      
-      {/* DEKORÁCIÓS HEADER */}
       <div className="relative bg-slate-900 pt-12 pb-24 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-amber-500/20 rounded-full blur-3xl"></div>

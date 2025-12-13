@@ -5,14 +5,15 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 // Segédfüggvény: Üres string kezelése (számoknál és dátumoknál fontos)
+// Segédfüggvény: Üres string kezelése
 const parseNullableInt = (val: FormDataEntryValue | null) => {
   const str = String(val);
-  return str && str !== '' ? parseInt(str) : null;
+  return str && str !== '' && str !== 'null' ? parseInt(str) : null;
 }
 
 const parseNullableString = (val: FormDataEntryValue | null) => {
   const str = String(val);
-  return str && str !== '' ? str : null;
+  return str && str !== '' && str !== 'null' ? str : null;
 }
 
 // --- ÚJ AUTÓ LÉTREHOZÁSA ---
@@ -24,43 +25,59 @@ export async function addCar(formData: FormData) {
   const imageFile = formData.get('image') as File;
   let image_url = null;
 
-  // Képfeltöltés
+  // Képfeltöltés logika
   if (imageFile && imageFile.size > 0) {
-    const fileName = `${user.id}/${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
-    const { error: uploadError } = await supabase.storage.from('car-images').upload(fileName, imageFile);
-    if (!uploadError) {
-      const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
-      image_url = data.publicUrl;
+    // Ékezetek és szóközök eltávolítása a fájlnévből a biztonságos mentéshez
+    const cleanName = imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
+    const fileName = `${user.id}/${Date.now()}_${cleanName}`;
+    
+    // Feltöltés a 'car-images' bucket-be
+    const { data, error: uploadError } = await supabase.storage
+      .from('car-images')
+      .upload(fileName, imageFile, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Képfeltöltési hiba:', uploadError);
+      // Nem állítjuk meg a folyamatot, csak nem lesz képe
+    } else {
+      // Publikus URL lekérése
+      const { data: publicUrlData } = supabase.storage
+        .from('car-images')
+        .getPublicUrl(fileName);
+      image_url = publicUrlData.publicUrl;
     }
   }
 
   const { error } = await supabase.from('cars').insert({
     user_id: user.id,
-    // Alapadatok
     make: String(formData.get('make')),
     model: String(formData.get('model')),
-    plate: String(formData.get('plate')).toUpperCase().replace(/\s/g, ''), // Formázás
+    plate: String(formData.get('plate')).toUpperCase().replace(/\s/g, ''),
     vin: String(formData.get('vin')) || null,
     year: parseInt(String(formData.get('year'))),
     color: String(formData.get('color')),
     status: String(formData.get('status')),
     image_url: image_url,
     
-    // Műszaki adatok (ÚJ)
+    // Műszaki adatok
     mileage: parseInt(String(formData.get('mileage'))),
-    fuel_type: String(formData.get('fuel_type')), // Most már magyarul jön
+    
+    // FONTOS: Itt az angol kulcsszót mentjük el (pl. 'electric'), ami a form value-jából jön
+    fuel_type: String(formData.get('fuel_type')), 
+    
     transmission: String(formData.get('transmission')),
     power_hp: parseNullableInt(formData.get('power_hp')),
     engine_size: parseNullableInt(formData.get('engine_size')),
-
-    // Dátumok (ÚJ)
     mot_expiry: parseNullableString(formData.get('mot_expiry')),
     insurance_expiry: parseNullableString(formData.get('insurance_expiry')),
   })
 
   if (error) {
-    console.error('Hiba a mentéskor:', error)
-    return redirect('/cars/new?error=Sikertelen mentés. Ellenőrizd az adatokat.')
+    console.error('Adatbázis hiba:', error)
+    return redirect('/cars/new?error=Sikertelen mentés: ' + error.message)
   }
   
   revalidatePath('/')
