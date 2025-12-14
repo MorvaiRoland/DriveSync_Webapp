@@ -603,7 +603,13 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                      <li><a href="#features" className="hover:text-amber-500 transition-colors">Funkciók</a></li>
                      <li><Link href="/pricing" className="hover:text-amber-500 transition-colors">Csomagok & Árak</Link></li>
                      <li><a href="#gamification" className="hover:text-amber-500 transition-colors">Közösség</a></li>
-                     <li><a href="#changelog" className="hover:text-amber-500 transition-colors">Újdonságok</a></li>
+                     <li>
+    <Link href="/changelog" className="hover:text-amber-500 transition-colors flex items-center gap-2 group">
+        Újdonságok
+        {/* Opcionális: egy kis pötty, ha van új update */}
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:animate-pulse"></span>
+    </Link>
+</li>
                      <li>
             <Link href="/support" className="hover:text-amber-500 transition-colors flex items-center gap-2">
                 Hibajelentés & Kapcsolat
