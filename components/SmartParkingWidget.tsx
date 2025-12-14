@@ -13,7 +13,7 @@ function SubmitButton({ label, icon: Icon, colorClass, disabled }: any) {
     <button 
       disabled={pending || disabled}
       type="submit" 
-      className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${colorClass}`}
+      className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${colorClass}`}
     >
       {pending ? <Loader2 className="animate-spin h-5 w-5"/> : <><Icon size={18} /> {label}</>}
     </button>
@@ -79,8 +79,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
     // tempSession: amit mi hozunk létre a UI-on azonnal (optimista)
     const [tempSession, setTempSession] = useState<any>(null);
 
-    // Ha a szerverről megérkezik a friss adat (activeSession), akkor a tempSession-t töröljük,
-    // mert innentől a valós adatot mutatjuk.
+    // Ha a szerverről megérkezik a friss adat (activeSession), akkor a tempSession-t töröljük
     useEffect(() => {
         if (activeSession) {
             setTempSession(null);
@@ -151,16 +150,23 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         // 2. Szerver hívás
         try {
             await startParkingAction(formData);
-            // Ha sikeres, a tempSession marad, amíg az activeSession meg nem érkezik a props-ban
         } catch (error) {
             console.error("Indítási hiba:", error);
             alert("Nem sikerült elmenteni a parkolást.");
-            setTempSession(null); // Visszavonjuk az optimista állapotot
+            setTempSession(null); 
         }
     }
 
     // --- ACTION: Parkolás Leállítása (JAVÍTVA) ---
     const handleStopParking = async (formData: FormData) => {
+        // JAVÍTÁS: Ha "temp-id" van, akkor csak a helyi állapotot dobjuk el (Mégse funkció)
+        // Nem hívunk szervert, mert nincs valós ID, ami beragadást okozna
+        if (currentSession?.id === 'temp-id') {
+            setTempSession(null);
+            setIsDetailsOpen(false);
+            return;
+        }
+
         try {
             // Biztosítjuk, hogy a car_id átmenjen
             formData.set('car_id', carId);
@@ -168,7 +174,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
             // 1. Szerver hívás
             await stopParkingAction(formData);
             
-            // 2. Kliens takarítás (Azonnal eltüntetjük a kártyát)
+            // 2. Kliens takarítás
             setTempSession(null);
             setIsDetailsOpen(false);
 
@@ -233,15 +239,17 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                     </div>
                 </div>
 
-                {/* MODAL */}
+                {/* MODAL - JAVÍTOTT POZICIONÁLÁS (z-index, fixed) */}
                 {isDetailsOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                        {/* Háttér sötétítés */}
                         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsDetailsOpen(false)} />
                         
-                        <div className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Modal ablak */}
+                        <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
                             
                             {/* Térkép / Fotó Fejléc */}
-                            <div className="h-48 relative w-full bg-slate-800">
+                            <div className="h-48 relative w-full bg-slate-800 shrink-0">
                                 {currentSession.photo_url ? (
                                      <Image src={currentSession.photo_url} alt="Bizonyíték" fill className="object-cover" />
                                 ) : (
@@ -261,7 +269,8 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                                 </button>
                             </div>
 
-                            <div className="px-6 pb-6 -mt-10 relative z-10">
+                            {/* Tartalom - Gördíthető, ha túl hosszú */}
+                            <div className="px-6 pb-6 -mt-10 relative z-10 overflow-y-auto">
                                 <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-600 rounded-2xl p-4 mb-5 shadow-xl">
                                     <h2 className="text-2xl font-bold text-white mb-1">{currentSession.note || "Parkolás"}</h2>
                                     <div className="flex items-center text-slate-400 text-xs gap-2 mb-4 font-mono">
@@ -290,7 +299,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                                         href={`https://www.google.com/maps/dir/?api=1&destination=${currentSession.latitude},${currentSession.longitude}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors shadow-lg shadow-blue-900/20"
+                                        className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors shadow-lg shadow-blue-900/20"
                                     >
                                         <Navigation size={18} /> Odavezetés (Maps)
                                     </a>
@@ -298,10 +307,13 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                                     <form action={handleStopParking}>
                                         <input type="hidden" name="parking_id" value={currentSession.id} />
                                         
-                                        {/* Ha épp mentés alatt van, letiltjuk a leállítást */}
+                                        {/* JAVÍTÁS: Szinkronizálás alatt is KATTINTHATÓ a "Mégse" gomb */}
                                         {isTemp ? (
-                                            <button disabled className="w-full py-3 rounded-xl bg-slate-800 text-slate-500 font-bold border border-slate-700 flex items-center justify-center gap-2 cursor-wait">
-                                                <Loader2 className="animate-spin h-4 w-4" /> Szinkronizálás...
+                                            <button 
+                                                type="submit"
+                                                className="w-full py-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold border border-slate-600 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                                            >
+                                                <X size={18} /> Mégse (Szinkronizálás megszakítása)
                                             </button>
                                         ) : (
                                             <SubmitButton 
