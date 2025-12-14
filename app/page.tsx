@@ -15,6 +15,7 @@ import { Hammer, History, Fuel, Wrench, Lock, Plus, Pencil, ArrowRight, Sparkles
 import FuelWidget from '@/components/FuelWidget';
 import LandingPage from '@/components/LandingPage';
 import CongratulationModal from '@/components/CongratulationModal'; //
+import MarketplaceSection from '@/components/MarketplaceSection'
 
 // --- KONFIGURÁCIÓ ---
 const DEV_SECRET_KEY = "admin"; 
@@ -169,6 +170,7 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       <ChangelogModal />
       <ReminderChecker />
+      
       
       {/* NAVBAR */}
       <nav className="bg-slate-900 sticky top-0 z-50 shadow-lg border-b border-white/5 backdrop-blur-md bg-opacity-95">
@@ -423,39 +425,7 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
             <div className="lg:col-span-4 space-y-8">
               
               {/* --- ÚJ: KÖZÖSSÉG WIDGET (CSAK PRO/LIFETIME) --- */}
-              <div className="relative overflow-hidden rounded-2xl bg-slate-900/50 border border-slate-800 p-6 shadow-xl opacity-90">
-    {/* Háttér effektek - kicsit halványítva */}
-    <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-slate-500/10 rounded-full blur-2xl"></div>
-    <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-20 h-20 bg-slate-500/10 rounded-full blur-2xl"></div>
-    
-    <div className="relative z-10">
-        <div className="flex justify-between items-start mb-4">
-            {/* Ikon doboz - szürkébb, inaktívabb hatás */}
-            <div className="p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-400">
-                <Hammer className="w-6 h-6" />
-            </div>
-
-            {/* Státusz címke */}
-            <span className="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-2 py-1 rounded border border-amber-500/20 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> HAMAROSAN
-            </span>
-        </div>
-
-        <h3 className="text-xl font-bold text-slate-200 mb-1">DynamicSense Klub</h3>
-        <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-            A közösségi funkciók és a piactér jelenleg fejlesztés alatt állnak. Értesítünk, amint elérhető lesz!
-        </p>
-
-        {/* Gomb - Letiltva, nem kattintható */}
-        <button 
-            disabled
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm 
-            bg-slate-800/50 text-slate-500 border border-slate-700/50 cursor-not-allowed select-none"
-        >
-            Fejlesztés alatt <Lock className="w-3 h-3 opacity-50" />
-        </button>
-    </div>
-</div>
+          <MarketplaceSection />
 
               {FEATURES.gamification && <GamificationWidget badges={badges} />}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
