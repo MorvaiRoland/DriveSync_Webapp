@@ -667,15 +667,21 @@ export async function deleteVignette(formData: FormData) {
 }
 
 export async function toggleSaleMode(formData: FormData) {
+  const supabase = await createClient()
   const carId = formData.get('car_id') as string
-  const enable = formData.get('enable') === 'true'
   
+  // Állapot kapcsolók
+  const enable = formData.get('enable') === 'true'
+  const listedOnMarketplace = formData.get('listed_on_marketplace') === 'on'
   const hidePrices = formData.get('hide_prices') === 'on'
   const hideSensitive = formData.get('hide_sensitive') === 'on'
-  const listedOnMarketplace = formData.get('listed_on_marketplace') === 'on'
+  const exchangePossible = formData.get('exchange_possible') === 'on'
 
-  // Supabase kliens létrehozása
-  const supabase = await createClient()
+  // Szöveges adatok
+  const price = formData.get('price') ? parseInt(formData.get('price') as string) : null
+  const sellerPhone = formData.get('seller_phone') as string
+  const location = formData.get('location') as string
+  const description = formData.get('description') as string
 
   try {
     // 1. Lekérjük a jelenlegi autót a token miatt
@@ -688,33 +694,41 @@ export async function toggleSaleMode(formData: FormData) {
     // 2. Token generálás, ha nincs
     let shareToken = currentCar?.share_token
     if (enable && !shareToken) {
-      shareToken = uuidv4()
+      shareToken = crypto.randomUUID()
     }
 
-    // 3. Adatbázis frissítés (Supabase update)
+    // 3. Adatbázis frissítés (MINDEN mezőt frissítünk)
     const { error } = await supabase
       .from('cars')
       .update({
         is_for_sale: enable,
         share_token: shareToken,
+        is_listed_on_marketplace: enable ? listedOnMarketplace : false,
+        
+        // Hirdetési beállítások
         hide_prices: hidePrices,
         hide_sensitive: hideSensitive,
-        // Ha kikapcsoljuk az eladást, levesszük a marketplace-ről is
-        is_listed_on_marketplace: enable ? listedOnMarketplace : false,
+        exchange_possible: exchangePossible,
+        
+        // Adatok
+        price: price,
+        seller_phone: sellerPhone,
+        location: location,
+        description: description,
+        
         updated_at: new Date().toISOString(),
       })
       .eq('id', carId)
 
     if (error) throw error
 
-    // 4. Cache frissítés
     revalidatePath(`/cars/${carId}`)
-    revalidatePath('/') 
     revalidatePath('/marketplace')
+    revalidatePath('/')
 
     return { success: true }
   } catch (error) {
     console.error('Supabase hiba:', error)
-    return { success: false, error: 'Adatbázis hiba történt' }
+    return { success: false, error: 'Hiba a mentés során' }
   }
 }
