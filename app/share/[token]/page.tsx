@@ -18,6 +18,9 @@ const formatDate = (dateStr: string | null) => {
     return new Date(dateStr).toLocaleDateString('hu-HU', { year: 'numeric', month: 'long' })
 }
 
+// Közös stílus változó, hogy ne kelljen ismételni (Glass effect)
+const glassCardStyle = "bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-xl"
+
 export default async function SharedCarPage({ params }: { params: Promise<{ token: string }> }) {
     const { token } = await params
     const supabase = await createClient()
@@ -70,7 +73,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                                 alt="Logo" 
                                 width={120} 
                                 height={32} 
-                                className="object-contain object-left invert" // invert kell, ha fekete a logód, hogy látszódjon sötét háttéren
+                                className="object-contain object-left invert" // invert kell, ha fekete a logód
                                 priority
                              />
                         </div>
@@ -114,7 +117,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
 
                     {/* Jobb oldal: Ár és Kapcsolat (Desktopon) */}
                     <div className="lg:col-span-4 lg:pt-24">
-                        <div className="glass-card p-6 md:p-8 sticky top-24">
+                        <div className={`${glassCardStyle} p-6 md:p-8 sticky top-24`}>
                             <div className="mb-8">
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Vételár</p>
                                 {!car.hide_prices ? (
@@ -180,7 +183,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
 
                         {/* Leírás */}
                         {car.description && (
-                            <div className="glass-card p-8">
+                            <div className={`${glassCardStyle} p-8`}>
                                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                                     <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" /> Leírás
                                 </h3>
@@ -191,7 +194,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                         )}
 
                         {/* Specifikációk */}
-                        <div className="glass-card overflow-hidden">
+                        <div className={`${glassCardStyle} overflow-hidden`}>
                             <div className="p-6 border-b border-white/5">
                                 <h3 className="text-lg font-bold text-white">Specifikáció</h3>
                             </div>
@@ -220,7 +223,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
 
                         {/* Extrák */}
                         {car.features && car.features.length > 0 && (
-                            <div className="glass-card p-8">
+                            <div className={`${glassCardStyle} p-8`}>
                                 <h3 className="text-lg font-bold text-white mb-4">Felszereltség</h3>
                                 <div className="flex flex-wrap gap-2">
                                     {car.features.map((feature: string, idx: number) => (
@@ -233,7 +236,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                         )}
 
                         {/* Szerviztörténet */}
-                        <div className="glass-card p-8">
+                        <div className={`${glassCardStyle} p-8`}>
                             <div className="flex items-center justify-between mb-8">
                                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
                                     <Wrench className="w-5 h-5 text-indigo-400" /> Szerviztörténet
@@ -290,7 +293,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
 
                     {/* JOBB OLDAL - TIPP (Desktop) */}
                     <div className="lg:col-span-4 space-y-6">
-                        <div className="glass-card p-6 relative overflow-hidden group">
+                        <div className={`${glassCardStyle} p-6 relative overflow-hidden group`}>
                             <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                             <Zap className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5 rotate-12" />
                             
@@ -308,13 +311,6 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
 
                 </div>
             </main>
-
-            {/* Glass CSS osztályok (ha nem Tailwind-ben akarod mindenhol írni) */}
-            <style jsx global>{`
-                .glass-card {
-                    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-xl;
-                }
-            `}</style>
         </div>
     )
 }
