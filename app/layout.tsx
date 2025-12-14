@@ -17,9 +17,13 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://dynamicsense.hu'),
   
-  // Ezt a stringet fogja mutatni alapértelmezetten minden oldalon,
-  // ahol nincs külön felülírva a title.
-  title: "DynamicSense Technologies - Prémium Garázsmenedzsment",
+  // ITT A JAVÍTÁS:
+  title: {
+    // Ez a szöveg jelenik meg a főoldalon (pontosan amit kértél):
+    default: "DynamicSense Technologies - Prémium Garázsmenedzsment",
+    // Ez pedig az aloldalakon (pl. "Profil | DynamicSense..."):
+    template: "%s | DynamicSense Technologies - Prémium Garázsmenedzsment"
+  },
   
   description: "A DynamicSense Magyarország legmodernebb autós alkalmazása. Kezeld a szerviztörténetet, tankolásokat és költségeket egy helyen.",
   keywords: ["DynamicSense", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
@@ -32,7 +36,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "DynamicSense", // Ez csak a telefonos ikon neve marad
+    title: "DynamicSense",
   },
   
   icons: {
@@ -46,7 +50,6 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    // Az OpenGraph cím legyen ugyanaz, mint a tab címe az egységességért
     title: "DynamicSense Technologies - Prémium Garázsmenedzsment",
     description: "Felejtsd el a papírokat. Kezeld a szervizkönyvet és a költségeket egyetlen prémium felületen.",
     url: "https://dynamicsense.hu",
@@ -85,15 +88,10 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {/* A fő tartalom */}
             {children}
-            
-            {/* UI Komponensek */}
             <Toaster position="top-center" richColors closeButton />
             <CookieBanner />
             <InstallPrompt />
-            
-            {/* Technikai komponensek */}
             <RegisterSW />
         </ThemeProvider>
       </body>
