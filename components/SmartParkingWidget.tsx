@@ -1,17 +1,17 @@
 'use client'
 
-import { useState, useEffect, useOptimistic, startTransition } from 'react'
+import { useState, useEffect } from 'react'
 import { MapPin, Camera, Navigation, X, Ban, Loader2, Clock, Check, RefreshCw } from 'lucide-react'
 import Image from 'next/image'
 import { startParkingAction, stopParkingAction } from '@/app/parking/actions' 
 import { useFormStatus } from 'react-dom'
 
 // --- SEGÉD: Submit Gomb ---
-function SubmitButton({ label, icon: Icon, colorClass }: any) {
+function SubmitButton({ label, icon: Icon, colorClass, disabled }: any) {
   const { pending } = useFormStatus()
   return (
     <button 
-      disabled={pending}
+      disabled={pending || disabled}
       type="submit" 
       className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${colorClass}`}
     >
@@ -57,7 +57,7 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
                 setDisplayTime(`${hours}ó ${minutes}p (eltelt)`)
             }
         }
-        update() // Azonnal futtatjuk egyszer
+        update() 
         const interval = setInterval(update, 60000)
         return () => clearInterval(interval)
     }, [startTime, expiresAt])
@@ -67,6 +67,7 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
 
 // --- FŐ KOMPONENS ---
 export default function SmartParkingWidget({ carId, activeSession }: { carId: string, activeSession: any }) {
+    // UI Állapotok
     const [isLocating, setIsLocating] = useState(false)
     const [location, setLocation] = useState<{lat: number, lng: number} | null>(null)
     const [showStartForm, setShowStartForm] = useState(false)
@@ -74,23 +75,20 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
     const [selectedDuration, setSelectedDuration] = useState<number | null>(null)
     const [isDetailsOpen, setIsDetailsOpen] = useState(false)
     
-    // JAVÍTÁS: "Sticky" (Ragadós) Helyi állapot
-    // Ha elindítjuk a parkolást, ebbe tesszük az adatot.
-    // Ez nem törlődik automatikusan, mint a useOptimistic, csak ha mi mondjuk.
+    // Parkolás Állapotok
+    // tempSession: amit mi hozunk létre a UI-on azonnal (optimista)
     const [tempSession, setTempSession] = useState<any>(null);
 
-    // Ha megérkezik a VALÓDI adat a szerverről (activeSession),
-    // akkor töröljük a tempSession-t, mert már nincs rá szükség.
+    // Ha a szerverről megérkezik a friss adat (activeSession), akkor a tempSession-t töröljük,
+    // mert innentől a valós adatot mutatjuk.
     useEffect(() => {
         if (activeSession) {
             setTempSession(null);
         }
     }, [activeSession]);
 
-    // A megjelenítendő session: Vagy a temp (amit most hoztunk létre), vagy a valódi.
-    // Fontos a sorrend: a temp legyen elől, hogy azonnal látszódjon.
+    // A megjelenítendő session kiválasztása
     const currentSession = tempSession || activeSession;
-
     const safeStartTime = currentSession?.start_time || currentSession?.created_at || new Date().toISOString();
 
     const { displayTime, isExpired } = useParkingTimer(
@@ -98,25 +96,36 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         currentSession?.expires_at || null
     )
 
-    // ... handleGetLocation, handleImageChange, resetForm maradnak ...
-    // Csak a handleGetLocation stb... másold be a régiből
-
-    const handleGetLocation = () => { /* ... régi kód ... */
+    // --- GPS Mérés ---
+    const handleGetLocation = () => {
        setIsLocating(true)
-       if (!navigator.geolocation) { alert('Hiba'); setIsLocating(false); return }
+       if (!navigator.geolocation) { alert('A böngésző nem támogatja a helymeghatározást.'); setIsLocating(false); return }
        navigator.geolocation.getCurrentPosition(
-           (pos) => { setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setIsLocating(false); setShowStartForm(true); },
-           (err) => { alert('Nem sikerült'); setIsLocating(false); }
+           (pos) => { 
+               setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); 
+               setIsLocating(false); 
+               setShowStartForm(true); 
+           },
+           (err) => { 
+               alert('Nem sikerült lekérni a pozíciót. Engedélyezd a GPS-t!'); 
+               setIsLocating(false); 
+           },
+           { enableHighAccuracy: true, timeout: 10000 }
        )
     }
+
+    // --- Fotó Kezelés ---
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]; if (file) setPhotoPreview(URL.createObjectURL(file));
+        const file = e.target.files?.[0]; 
+        if (file) setPhotoPreview(URL.createObjectURL(file));
     }
+
+    // --- Form Reset ---
     const resetForm = () => {
         setShowStartForm(false); setLocation(null); setPhotoPreview(null); setSelectedDuration(null);
     }
 
-    // JAVÍTOTT START HANDLER
+    // --- ACTION: Parkolás Indítása ---
     const handleStartParking = async (formData: FormData) => {
         const lat = parseFloat(String(formData.get('latitude')));
         const lng = parseFloat(String(formData.get('longitude')));
@@ -125,7 +134,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         
         const now = new Date();
         const fakeSession = {
-            id: 'temp-id',
+            id: 'temp-id', // Jelzi, hogy ez még csak kliens oldali
             car_id: carId,
             latitude: lat,
             longitude: lng,
@@ -135,25 +144,45 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
             photo_url: photoPreview
         };
 
-        // 1. Azonnal beállítjuk a helyi állapotot -> A UI átvált
+        // 1. Optimista UI frissítés
         setTempSession(fakeSession);
         resetForm();
 
-        // 2. Tényleges szerver hívás
+        // 2. Szerver hívás
         try {
             await startParkingAction(formData);
-            // Ha kész a szerver hívás, a tempSession még marad!
-            // Csak akkor tűnik el, amikor a fenti useEffect megkapja az új activeSession-t.
-            // Ez áthidalja a "villogást".
+            // Ha sikeres, a tempSession marad, amíg az activeSession meg nem érkezik a props-ban
         } catch (error) {
-            console.error("Hiba történt:", error);
-            alert("Hiba történt a parkolás indításakor.");
-            setTempSession(null); // Csak hiba esetén vonjuk vissza
+            console.error("Indítási hiba:", error);
+            alert("Nem sikerült elmenteni a parkolást.");
+            setTempSession(null); // Visszavonjuk az optimista állapotot
         }
     }
 
-    // --- MEGJELENÍTÉS (Ha van session - akár optimista, akár valódi) ---
+    // --- ACTION: Parkolás Leállítása (JAVÍTVA) ---
+    const handleStopParking = async (formData: FormData) => {
+        try {
+            // Biztosítjuk, hogy a car_id átmenjen
+            formData.set('car_id', carId);
+            
+            // 1. Szerver hívás
+            await stopParkingAction(formData);
+            
+            // 2. Kliens takarítás (Azonnal eltüntetjük a kártyát)
+            setTempSession(null);
+            setIsDetailsOpen(false);
+
+        } catch (error) {
+            console.error("Leállítási hiba:", error);
+            alert("Hiba történt a leállításkor. Próbáld újra.");
+            setIsDetailsOpen(false);
+        }
+    }
+
+    // --- RENDERELÉS: AKTÍV PARKOLÁS ---
     if (currentSession) {
+        const isTemp = currentSession.id === 'temp-id';
+
         return (
             <>
                 {/* WIDGET KÁRTYA */}
@@ -171,11 +200,19 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
 
                     <div className="absolute inset-0 z-20 flex flex-col justify-end p-5">
                         <div className="absolute top-4 left-4 flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider bg-black/40 backdrop-blur-md px-2 py-1 rounded-full border border-emerald-500/30">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                            Parkolás aktív
+                            {isTemp ? (
+                                <>
+                                    <Loader2 className="animate-spin h-3 w-3" /> Mentés...
+                                </>
+                            ) : (
+                                <>
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                    </span>
+                                    Parkolás aktív
+                                </>
+                            )}
                         </div>
                         
                         <p className="text-white font-black text-xl leading-tight mb-1 truncate drop-shadow-md">
@@ -203,6 +240,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                         
                         <div className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                             
+                            {/* Térkép / Fotó Fejléc */}
                             <div className="h-48 relative w-full bg-slate-800">
                                 {currentSession.photo_url ? (
                                      <Image src={currentSession.photo_url} alt="Bizonyíték" fill className="object-cover" />
@@ -257,19 +295,21 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                                         <Navigation size={18} /> Odavezetés (Maps)
                                     </a>
 
-                                    <form action={async (formData) => {
-                                        // Leállításnál is használhatnánk optimistát, de itt kevésbé kritikus
-                                        // De átadjuk a car_id-t a revalidáláshoz
-                                        formData.append('car_id', carId);
-                                        await stopParkingAction(formData);
-                                        setIsDetailsOpen(false);
-                                    }}>
+                                    <form action={handleStopParking}>
                                         <input type="hidden" name="parking_id" value={currentSession.id} />
-                                        <SubmitButton 
-                                            label="Parkolás Leállítása" 
-                                            icon={Ban} 
-                                            colorClass="bg-slate-800 hover:bg-red-500/10 text-white hover:text-red-500 border border-slate-700 hover:border-red-500/30" 
-                                        />
+                                        
+                                        {/* Ha épp mentés alatt van, letiltjuk a leállítást */}
+                                        {isTemp ? (
+                                            <button disabled className="w-full py-3 rounded-xl bg-slate-800 text-slate-500 font-bold border border-slate-700 flex items-center justify-center gap-2 cursor-wait">
+                                                <Loader2 className="animate-spin h-4 w-4" /> Szinkronizálás...
+                                            </button>
+                                        ) : (
+                                            <SubmitButton 
+                                                label="Parkolás Leállítása" 
+                                                icon={Ban} 
+                                                colorClass="bg-slate-800 hover:bg-red-500/10 text-white hover:text-red-500 border border-slate-700 hover:border-red-500/30" 
+                                            />
+                                        )}
                                     </form>
                                 </div>
                             </div>
@@ -280,7 +320,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         )
     }
 
-    // --- 2. START FORM (Ha nincs session) ---
+    // --- RENDERELÉS: START FORM (Ha nincs session) ---
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-1 w-full">
             {!showStartForm ? (
@@ -307,7 +347,6 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                     )}
                 </button>
             ) : (
-                // Itt a `form action` helyett `handleStartParking`-ot hívunk az optimista UI miatt
                 <form action={handleStartParking} className="p-4 space-y-5 animate-in fade-in slide-in-from-bottom-2">
                     
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">

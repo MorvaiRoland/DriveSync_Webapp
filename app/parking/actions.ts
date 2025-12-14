@@ -65,18 +65,31 @@ export async function startParkingAction(formData: FormData) {
 export async function stopParkingAction(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Nem vagy bejelentkezve')
+  
+  if (!user) {
+    throw new Error('Nem vagy bejelentkezve')
+  }
 
   const parkingId = formData.get('parking_id') as string
   const carId = formData.get('car_id') as string
 
-  await supabase
+  // Ha ez egy ideiglenes ID (optimista UI-ból), akkor a DB-ben nincs mit törölni,
+  // de a kliensnek sikeres választ küldünk, hogy frissítsen.
+  if (parkingId === 'temp-id') {
+      return { success: true }
+  }
+
+  const { error } = await supabase
     .from('parking_sessions')
     .delete()
     .eq('id', parkingId)
     .eq('user_id', user.id)
 
-  // JAVÍTÁS ITT IS:
+  if (error) {
+    console.error('Hiba a törléskor:', error)
+    throw new Error('Nem sikerült leállítani a parkolást')
+  }
+
   revalidatePath('/', 'layout')
   if (carId) revalidatePath(`/cars/${carId}`, 'layout')
   
