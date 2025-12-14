@@ -18,6 +18,7 @@ const cspHeader = `
 `.replace(/\s{2,}/g, ' ').trim(); // Kiveszi a felesleges szóközöket/sortöréseket
 
 const nextConfig = {
+  
   poweredByHeader: false,
   
   experimental: {
@@ -31,6 +32,9 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '**',
+        hostname: '**.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
       },
     ],
   },
@@ -92,3 +96,4 @@ const withPWA = require('next-pwa')({
 });
 
 module.exports = withPWA(nextConfig);
+
