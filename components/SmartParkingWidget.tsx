@@ -20,10 +20,12 @@ function SubmitButton({ label, icon: Icon, colorClass, disabled }: any) {
   )
 }
 
-// --- SEGÉD: Időzítő Hook ---
+// --- SEGÉD: Időzítő Hook (Értesítéssel) ---
 function useParkingTimer(startTime: string | null, expiresAt: string | null) {
     const [displayTime, setDisplayTime] = useState('Indítás...')
     const [isExpired, setIsExpired] = useState(false)
+    // Állapot, hogy küldtünk-e már értesítést
+    const [hasNotified, setHasNotified] = useState(false)
 
     useEffect(() => {
         if (!startTime) {
@@ -39,6 +41,23 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
                 if (isNaN(end)) { setDisplayTime('--:--'); return }
 
                 const diff = end - now
+
+                // --- ÉRTESÍTÉS LOGIKA ---
+                // Ha 10 perc (600.000 ms) alatt vagyunk, de még nem járt le, és még nem szóltunk
+                if (diff > 0 && diff <= 600000 && !hasNotified) {
+                    if (Notification.permission === "granted") {
+                        // Böngésző értesítés
+                        new Notification("⚠️ Parkolás hamarosan lejár!", {
+                            body: "Kevesebb mint 10 perced maradt a parkolásból.",
+                            tag: "parking-alert" // Megakadályozza a duplikációt
+                        });
+                        
+                        // Rezgés (ha támogatott a mobilon)
+                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    }
+                    setHasNotified(true); // Megjelöljük, hogy szóltunk
+                }
+
                 if (diff < 0) {
                     setIsExpired(true)
                     setDisplayTime("LEJÁRT")
@@ -48,6 +67,7 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
                     setDisplayTime(`${hours}ó ${minutes}p (hátralévő)`)
                 }
             } else {
+                // Számláló mód (nincs lejárat)
                 const start = new Date(startTime).getTime()
                 if (isNaN(start)) { setDisplayTime('Most'); return }
                 
@@ -60,7 +80,7 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
         update() 
         const interval = setInterval(update, 60000)
         return () => clearInterval(interval)
-    }, [startTime, expiresAt])
+    }, [startTime, expiresAt, hasNotified])
 
     return { displayTime, isExpired }
 }
@@ -121,6 +141,11 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
 
     // --- ACTION: Parkolás Indítása ---
     const handleStartParking = async (formData: FormData) => {
+        // Engedély kérése az értesítésekhez indításkor
+        if ("Notification" in window && Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+
         const lat = parseFloat(String(formData.get('latitude')));
         const lng = parseFloat(String(formData.get('longitude')));
         const note = String(formData.get('note') || '');
@@ -150,8 +175,9 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         }
     }
 
-    // --- ACTION: Parkolás Leállítása ---
+    // --- ACTION: Parkolás Leállítása (Javított) ---
     const handleStopParking = async (formData: FormData) => {
+        // Ha "temp-id" van, csak a helyi állapotot töröljük (Mégse gomb funkció)
         if (currentSession?.id === 'temp-id') {
             setTempSession(null);
             setIsDetailsOpen(false);
@@ -224,13 +250,13 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                     </div>
                 </div>
 
-                {/* MODAL - MOBIL OPTIMALIZÁLT VERZIÓ */}
+                {/* MODAL - MOBIL OPTIMALIZÁLT (z-index 9999, dvh magasság) */}
                 {isDetailsOpen && (
                     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-4 overscroll-none">
                         {/* Háttér sötétítés */}
                         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsDetailsOpen(false)} />
                         
-                        {/* Modal ablak - max-height: 85dvh mobilon */}
+                        {/* Modal ablak */}
                         <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85dvh] md:max-h-[90vh]">
                             
                             {/* Térkép / Fotó Fejléc (Fix magasság) */}
@@ -295,6 +321,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                                     <form action={handleStopParking}>
                                         <input type="hidden" name="parking_id" value={currentSession.id} />
                                         
+                                        {/* JAVÍTÁS: Mégse gomb szinkronizálás alatt */}
                                         {isTemp ? (
                                             <button 
                                                 type="submit"
