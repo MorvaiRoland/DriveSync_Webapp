@@ -1,21 +1,21 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { MapPin, Camera, Navigation, X, Ban, Loader2, Clock, Check, Car, Timer } from 'lucide-react'
+import { createPortal } from 'react-dom' // EZ A KULCS
+import { MapPin, Camera, Navigation, X, Ban, Loader2, Clock, Check, Car, Timer, ChevronDown } from 'lucide-react'
 import Image from 'next/image'
 import { startParkingAction, stopParkingAction } from '@/app/parking/actions' 
 import { useFormStatus } from 'react-dom'
 
-// --- SEGÉD: Submit Gomb (Stílusos) ---
+// --- SEGÉD: Submit Gomb ---
 function SubmitButton({ label, icon: Icon, variant = 'primary', disabled }: any) {
   const { pending } = useFormStatus()
   
   const baseClass = "w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-base"
   
   const variants = {
-    primary: "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-blue-500/25 hover:shadow-blue-500/40 border border-blue-400/20",
-    danger: "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-red-500/25 hover:shadow-red-500/40 border border-red-400/20",
-    secondary: "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700"
+    primary: "bg-blue-600 text-white shadow-blue-500/25 hover:bg-blue-500",
+    danger: "bg-red-600 text-white shadow-red-500/25 hover:bg-red-500",
   }
 
   return (
@@ -24,7 +24,7 @@ function SubmitButton({ label, icon: Icon, variant = 'primary', disabled }: any)
       type="submit" 
       className={`${baseClass} ${variants[variant as keyof typeof variants]}`}
     >
-      {pending ? <Loader2 className="animate-spin h-6 w-6"/> : <Icon size={20} strokeWidth={2.5} />}
+      {pending ? <Loader2 className="animate-spin h-6 w-6"/> : <Icon size={20} />}
       {label}
     </button>
   )
@@ -34,39 +34,37 @@ function SubmitButton({ label, icon: Icon, variant = 'primary', disabled }: any)
 function useParkingTimer(startTime: string | null, expiresAt: string | null) {
     const [displayTime, setDisplayTime] = useState('Indítás...')
     const [isExpired, setIsExpired] = useState(false)
-    const [progress, setProgress] = useState(0) // Progress barhoz
+    const [progress, setProgress] = useState(0)
 
     useEffect(() => {
         if (!startTime) return;
-
         const update = () => {
             const now = new Date().getTime()
             const start = new Date(startTime).getTime()
             
             if (expiresAt) {
                 const end = new Date(expiresAt).getTime()
-                const totalDuration = end - start
-                const diff = end - now
+                const total = end - start
+                const current = now - start
+                const percent = Math.min(100, Math.max(0, (current / total) * 100));
                 
-                // Progress számítás (fordítva, ahogy fogy az idő)
-                const elapsed = now - start;
-                const percent = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
-                setProgress(percent);
+                setProgress(100 - percent); // Fogyó csík
 
-                if (diff < 0) {
+                if (now > end) {
                     setIsExpired(true)
                     setDisplayTime("LEJÁRT")
                 } else {
-                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-                    const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-                    setDisplayTime(`${hours}:${minutes < 10 ? '0'+minutes : minutes}:${seconds < 10 ? '0'+seconds : seconds}`)
+                    const diff = end - now
+                    const h = Math.floor(diff / (1000 * 60 * 60))
+                    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+                    const s = Math.floor((diff % (1000 * 60)) / 1000)
+                    setDisplayTime(`${h}:${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`)
                 }
             } else {
                 const diff = now - start
-                const hours = Math.floor(diff / (1000 * 60 * 60))
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-                setDisplayTime(`${hours}ó ${minutes}p`)
+                const h = Math.floor(diff / (1000 * 60 * 60))
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+                setDisplayTime(`${h}ó ${m}p`)
                 setProgress(100)
             }
         }
@@ -78,7 +76,126 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
     return { displayTime, isExpired, progress }
 }
 
-// --- FŐ KOMPONENS ---
+// --- MODAL KOMPONENS (PORTAL) ---
+// Ez felelős azért, hogy az ablak "kiszakadjon" a helyéről és felülre kerüljön
+function ParkingDetailsModal({ session, onClose, displayTime, isExpired, progress, isTemp, carId }: any) {
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+        document.body.style.overflow = 'hidden' // Görgetés tiltása a háttérben
+        return () => { 
+            document.body.style.overflow = 'auto' 
+        }
+    }, [])
+
+    if (!mounted) return null;
+
+    const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/${session.longitude},${session.latitude},16,0/600x400?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}`;
+
+    // A createPortal "átteleportálja" ezt a HTML-t a body aljára
+    return createPortal(
+        <div className="fixed inset-0 z-[99999] isolate flex flex-col justify-end sm:justify-center">
+            
+            {/* Sötétített háttér (Click-re zár) */}
+            <div 
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+                onClick={onClose}
+            />
+
+            {/* A TARTALOM DOBOZ (Bottom Sheet mobilon) */}
+            <div className="relative w-full sm:max-w-md mx-auto bg-slate-900 sm:rounded-3xl rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-full duration-300">
+                
+                {/* Fejléc kép (Fix) */}
+                <div className="relative h-48 shrink-0 bg-slate-800">
+                    <button 
+                        onClick={onClose}
+                        className="absolute top-4 right-4 z-50 bg-black/50 text-white p-2 rounded-full backdrop-blur border border-white/10"
+                    >
+                        <X size={20} />
+                    </button>
+                    
+                    {session.photo_url ? (
+                        <Image src={session.photo_url} alt="Helyszín" fill className="object-cover" />
+                    ) : (
+                        <div 
+                            className="absolute inset-0 bg-cover bg-center opacity-70"
+                            style={{ backgroundImage: `url('${mapUrl}')` }}
+                        />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-black/30" />
+                    
+                    <div className="absolute bottom-4 left-6 right-6">
+                        <h2 className="text-2xl font-bold text-white truncate drop-shadow-md">
+                            {session.note || "Parkolóhely"}
+                        </h2>
+                        <div className="flex items-center gap-2 text-slate-300 text-xs font-mono mt-1">
+                             <MapPin size={12} className="text-blue-400" />
+                             {session.latitude.toFixed(5)}, {session.longitude.toFixed(5)}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Görgethető tartalom */}
+                <div className="flex-1 overflow-y-auto p-6 pt-2 pb-8 space-y-6 bg-slate-900">
+                    
+                    {/* Húzóka (Visual cue) */}
+                    <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-4 opacity-50 sm:hidden" />
+
+                    {/* Timer Panel */}
+                    <div className="bg-slate-800/50 p-5 rounded-2xl border border-slate-700/50">
+                        <div className="flex justify-between items-center mb-3">
+                            <span className="text-xs uppercase font-bold text-slate-500">Hátralévő idő</span>
+                            <Timer className="text-slate-600 w-4 h-4" />
+                        </div>
+                        <div className={`text-4xl font-mono font-bold tracking-tight mb-4 ${isExpired ? 'text-red-500' : 'text-emerald-400'}`}>
+                            {displayTime}
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="h-2 w-full bg-slate-700 rounded-full overflow-hidden">
+                            <div 
+                                className={`h-full transition-all duration-1000 ${isExpired ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Action Gombok */}
+                    <div className="space-y-3 pt-4">
+                        <a 
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${session.latitude},${session.longitude}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-slate-800 text-white font-bold border border-slate-700 hover:bg-slate-700 transition-colors"
+                        >
+                            <Navigation size={20} /> Útvonal (Google Maps)
+                        </a>
+
+                        <form action={async (formData) => {
+                            formData.set('parking_id', session.id);
+                            formData.set('car_id', carId);
+                            await stopParkingAction(formData);
+                            onClose();
+                        }}>
+                            <SubmitButton 
+                                label={isTemp ? "Mentés alatt..." : "Parkolás Vége"} 
+                                icon={Ban} 
+                                variant="danger" 
+                                disabled={isTemp}
+                            />
+                        </form>
+                    </div>
+
+                    {/* Extra padding az aljára, hogy mobilon ne takarja ki a 'home bar' */}
+                    <div className="h-8 sm:h-0" />
+                </div>
+            </div>
+        </div>,
+        document.body // Ide renderelünk, a DOM legvégére
+    )
+}
+
+// --- WIDGET ---
 export default function SmartParkingWidget({ carId, activeSession }: { carId: string, activeSession: any }) {
     const [isLocating, setIsLocating] = useState(false)
     const [location, setLocation] = useState<{lat: number, lng: number} | null>(null)
@@ -86,9 +203,8 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
     const [photoPreview, setPhotoPreview] = useState<string | null>(null)
     const [selectedDuration, setSelectedDuration] = useState<number | null>(null)
     
-    // UI State: Full Screen Details
+    // UI State
     const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-    
     const [tempSession, setTempSession] = useState<any>(null);
 
     useEffect(() => {
@@ -96,29 +212,20 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
     }, [activeSession]);
 
     const currentSession = tempSession || activeSession;
-    const safeStartTime = currentSession?.start_time || currentSession?.created_at || new Date().toISOString();
-
-    const { displayTime, isExpired, progress } = useParkingTimer(safeStartTime, currentSession?.expires_at || null)
-
-    // Body scroll lock when details open
-    useEffect(() => {
-        if (isDetailsOpen) document.body.style.overflow = 'hidden';
-        else document.body.style.overflow = 'auto';
-        return () => { document.body.style.overflow = 'auto'; }
-    }, [isDetailsOpen]);
+    const { displayTime, isExpired, progress } = useParkingTimer(
+        currentSession?.start_time || currentSession?.created_at, 
+        currentSession?.expires_at
+    );
 
     const handleGetLocation = () => {
-       setIsLocating(true)
-       if (!navigator.geolocation) { alert('GPS nem elérhető'); setIsLocating(false); return }
-       navigator.geolocation.getCurrentPosition(
-           (pos) => { 
-               setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); 
-               setIsLocating(false); 
-               setShowStartForm(true); 
-           },
-           (err) => { alert('GPS hiba'); setIsLocating(false); },
-           { enableHighAccuracy: true }
-       )
+        setIsLocating(true)
+        navigator.geolocation.getCurrentPosition(
+            (pos) => { 
+                setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); 
+                setIsLocating(false); setShowStartForm(true); 
+            },
+            () => { alert('GPS hiba'); setIsLocating(false); }
+        )
     }
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,275 +234,128 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
     }
 
     const handleStartParking = async (formData: FormData) => {
-        // Optimista UI update
-        const lat = parseFloat(String(formData.get('latitude')));
-        const lng = parseFloat(String(formData.get('longitude')));
-        const duration = formData.get('duration') ? parseInt(String(formData.get('duration'))) : null;
-        
+        const d = formData.get('duration') ? parseInt(String(formData.get('duration'))) : null;
         const now = new Date();
+        
         setTempSession({
-            id: 'temp-id', car_id: carId, latitude: lat, longitude: lng,
+            id: 'temp', car_id: carId, 
+            latitude: parseFloat(String(formData.get('latitude'))),
+            longitude: parseFloat(String(formData.get('longitude'))),
             note: String(formData.get('note') || ''),
             start_time: now.toISOString(),
-            expires_at: duration ? new Date(now.getTime() + duration * 60000).toISOString() : null,
+            expires_at: d ? new Date(now.getTime() + d * 60000).toISOString() : null,
             photo_url: photoPreview
         });
         
-        setShowStartForm(false);
-        setLocation(null);
-        setPhotoPreview(null);
-
-        try { await startParkingAction(formData); } 
-        catch (e) { setTempSession(null); alert("Hiba a mentéskor"); }
+        setShowStartForm(false); setLocation(null); setPhotoPreview(null);
+        try { await startParkingAction(formData); } catch (e) { setTempSession(null); }
     }
 
-    const handleStopParking = async (formData: FormData) => {
-        if (currentSession?.id === 'temp-id') {
-            setTempSession(null); setIsDetailsOpen(false); return;
-        }
-        try {
-            formData.set('car_id', carId);
-            await stopParkingAction(formData);
-            setIsDetailsOpen(false);
-        } catch (e) { alert("Hiba a leállításkor"); }
-    }
-
-    // --- AKTÍV PARKOLÁS NÉZET (Dashboard Widget + Full Screen Modal) ---
+    // --- RENDER ---
+    
+    // 1. Ha van aktív parkolás
     if (currentSession) {
-        const isTemp = currentSession.id === 'temp-id';
-        const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/${currentSession.longitude},${currentSession.latitude},15,0/800x600?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}`;
-
         return (
             <>
-                {/* 1. DASHBOARD WIDGET (A kártya amit alapból látsz) */}
+                {/* Kicsi Widget a Dashboardon */}
                 <div 
                     onClick={() => setIsDetailsOpen(true)}
-                    className="relative w-full h-44 rounded-3xl overflow-hidden cursor-pointer group shadow-2xl border border-slate-800"
+                    className="relative w-full h-40 bg-slate-900 rounded-2xl overflow-hidden cursor-pointer border border-slate-800 shadow-md group hover:border-slate-600 transition-all"
                 >
-                    {/* Background Map Placeholder/Image */}
-                    <div className="absolute inset-0 bg-slate-900">
-                        <div 
-                             className="w-full h-full opacity-60 bg-cover bg-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                             style={{ backgroundImage: `url('${mapUrl}')`, backgroundColor: '#0f172a' }}
-                        />
-                        {/* Sötétítés a szöveg alatt */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/60 to-transparent" />
-                    </div>
-
-                    {/* Content */}
-                    <div className="absolute inset-0 p-6 flex flex-col justify-between z-10">
-                        <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-2 bg-emerald-500/10 backdrop-blur-md border border-emerald-500/20 px-3 py-1 rounded-full">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider">Aktív Parkolás</span>
-                            </div>
-                            {isTemp && <Loader2 className="animate-spin text-white/50 w-5 h-5"/>}
+                    {/* Háttér Preview */}
+                    <div 
+                        className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:scale-105 transition-transform duration-700"
+                        style={{ backgroundImage: `url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/${currentSession.longitude},${currentSession.latitude},15,0/600x300?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}')` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
+                    
+                    {/* Info */}
+                    <div className="absolute bottom-0 left-0 p-4 w-full">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"/>
+                            <span className="text-emerald-400 text-xs font-bold uppercase">Aktív Parkolás</span>
                         </div>
-
-                        <div>
-                            <h3 className="text-white text-2xl font-black tracking-tight mb-1 truncate">{currentSession.note || "Parkolóhely"}</h3>
-                            <div className="flex items-center gap-2 text-slate-400 text-sm font-medium">
-                                <Clock size={16} />
-                                <span className={isExpired ? "text-red-400 font-bold" : "text-emerald-400 font-bold font-mono"}>
-                                    {displayTime}
-                                </span>
-                                <span>•</span>
-                                <span className="text-slate-500">Kattints a részletekért</span>
-                            </div>
-                        </div>
+                        <h3 className="text-white font-bold text-lg truncate">{currentSession.note || "Parkolóhely"}</h3>
+                        <p className="text-slate-400 text-sm font-mono">{displayTime}</p>
                     </div>
                 </div>
 
-                {/* 2. FULL SCREEN "APP" VIEW (Ez a lényeg: Elfedi az egészet) */}
+                {/* TELJES KÉPERNYŐS MODAL (Portal) */}
                 {isDetailsOpen && (
-                    <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-200">
-                        
-                        {/* Header: Kép és Bezárás */}
-                        <div className="relative h-[45vh] w-full shrink-0">
-                            {/* Bezárás gomb - Mindig látható felül */}
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); setIsDetailsOpen(false); }}
-                                className="absolute top-6 right-6 z-50 bg-black/40 backdrop-blur-md text-white p-3 rounded-full border border-white/10 active:scale-90 transition-transform"
-                            >
-                                <X size={24} />
-                            </button>
-
-                            {/* Háttér kép/térkép */}
-                            {currentSession.photo_url ? (
-                                <Image src={currentSession.photo_url} alt="Parkolás" fill className="object-cover" />
-                            ) : (
-                                <div 
-                                    className="w-full h-full bg-slate-800 bg-cover bg-center"
-                                    style={{ backgroundImage: `url('${mapUrl}')` }}
-                                />
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-slate-950" />
-                            
-                            {/* Cím a kép alján */}
-                            <div className="absolute bottom-0 left-0 w-full p-8 pb-10">
-                                <h1 className="text-4xl font-black text-white mb-2 leading-tight">{currentSession.note || "Ismeretlen hely"}</h1>
-                                <div className="flex items-center gap-2 text-slate-300 font-mono text-sm">
-                                    <MapPin className="text-blue-500" size={16} />
-                                    {currentSession.latitude.toFixed(5)}, {currentSession.longitude.toFixed(5)}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Alsó tartalom rész (Görgethető) */}
-                        <div className="flex-1 bg-slate-950 px-6 -mt-6 relative z-10 rounded-t-3xl border-t border-slate-800/50 flex flex-col overflow-y-auto pb-10">
-                            
-                            {/* Húzóka design elem */}
-                            <div className="w-12 h-1.5 bg-slate-800 rounded-full mx-auto mt-4 mb-8" />
-
-                            {/* Timer Kártya */}
-                            <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-3xl mb-8 relative overflow-hidden">
-                                <div className="flex justify-between items-end mb-4 relative z-10">
-                                    <div>
-                                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Hátralévő idő</p>
-                                        <p className={`text-4xl font-mono font-bold tracking-tighter ${isExpired ? 'text-red-500' : 'text-white'}`}>
-                                            {displayTime}
-                                        </p>
-                                    </div>
-                                    <Timer className="text-slate-700 w-10 h-10" />
-                                </div>
-                                
-                                {/* Progress bar */}
-                                {currentSession.expires_at && (
-                                    <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full transition-all duration-1000 ${isExpired ? 'bg-red-500' : 'bg-blue-500'}`} 
-                                            style={{ width: `${progress}%` }} 
-                                        />
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Action Buttons - A képernyő aljára tolva ha van hely */}
-                            <div className="mt-auto flex flex-col gap-4">
-                                <a 
-                                    href={`https://www.google.com/maps/dir/?api=1&destination=${currentSession.latitude},${currentSession.longitude}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="w-full py-4 rounded-2xl bg-slate-800 text-white font-bold flex items-center justify-center gap-3 border border-slate-700 active:scale-95 transition-transform"
-                                >
-                                    <Navigation size={20} />
-                                    Útvonal tervezése
-                                </a>
-
-                                <form action={handleStopParking}>
-                                    <input type="hidden" name="parking_id" value={currentSession.id} />
-                                    <SubmitButton 
-                                        label={isTemp ? "Mégse (Szinkronizálás...)" : "Parkolás Befejezése"}
-                                        icon={Ban}
-                                        variant="danger"
-                                    />
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                    <ParkingDetailsModal 
+                        session={currentSession}
+                        onClose={() => setIsDetailsOpen(false)}
+                        displayTime={displayTime}
+                        isExpired={isExpired}
+                        progress={progress}
+                        isTemp={currentSession.id === 'temp'}
+                        carId={carId}
+                    />
                 )}
             </>
         )
     }
 
-    // --- ÜRES ÁLLAPOT (Start Form) ---
-    // Ez nagyjából maradt, csak szebb design-t kapott
+    // 2. Start Form (Ha nincs parkolás)
     return (
-        <div className="bg-slate-900 rounded-3xl border border-slate-800 p-1 w-full shadow-xl">
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-lg">
             {!showStartForm ? (
                 <button 
-                    onClick={handleGetLocation}
+                    onClick={handleGetLocation} 
                     disabled={isLocating}
-                    className="w-full py-10 rounded-[1.4rem] border-2 border-dashed border-slate-800 hover:border-blue-500/50 hover:bg-slate-800/50 transition-all group flex flex-col items-center justify-center gap-4 relative overflow-hidden"
+                    className="w-full py-8 border-2 border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center gap-3 hover:bg-slate-800 hover:border-blue-500/50 transition-all group"
                 >
-                    <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {isLocating ? (
+                    {isLocating ? <Loader2 className="animate-spin text-blue-500 w-8 h-8"/> : (
                         <>
-                            <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-                            <span className="text-slate-400 font-medium">GPS keresése...</span>
-                        </>
-                    ) : (
-                        <>
-                            <div className="w-16 h-16 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-300">
-                                <MapPin className="w-8 h-8 text-white" />
+                            <div className="bg-blue-600 p-3 rounded-full shadow-lg group-hover:scale-110 transition-transform">
+                                <MapPin className="text-white w-6 h-6" />
                             </div>
-                            <div className="text-center relative z-10">
-                                <span className="block font-bold text-xl text-white mb-1">Parkolás indítása</span>
-                                <span className="text-sm text-slate-500">Rögzítsd a pozíciód egy gombnyomással</span>
-                            </div>
+                            <span className="text-slate-300 font-bold">Parkolás Itt</span>
                         </>
                     )}
                 </button>
             ) : (
-                <form action={handleStartParking} className="p-5 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2 text-white font-bold text-lg">
-                            <MapPin className="text-blue-500 fill-blue-500/20" /> 
-                            <span>Pozíció megvan</span>
-                        </div>
-                        <button type="button" onClick={() => setShowStartForm(false)} className="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white">
-                            <X size={18} />
-                        </button>
+                <form action={handleStartParking} className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex justify-between items-center text-white">
+                        <span className="font-bold flex gap-2"><Check className="text-emerald-500"/> Pozíció rögzítve</span>
+                        <button type="button" onClick={() => setShowStartForm(false)}><X className="text-slate-500 hover:text-white"/></button>
                     </div>
-
+                    
                     <input type="hidden" name="car_id" value={carId} />
                     <input type="hidden" name="latitude" value={location?.lat} />
                     <input type="hidden" name="longitude" value={location?.lng} />
-
-                    {/* Hely térkép preview */}
-                    <div className="h-28 w-full rounded-2xl overflow-hidden relative border border-slate-700 bg-slate-800">
-                        <div 
-                             className="absolute inset-0 bg-cover bg-center opacity-80"
-                             style={{ backgroundImage: `url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/${location?.lng},${location?.lat},16,0/600x200?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}')` }}
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="bg-blue-500 p-2 rounded-full shadow-lg shadow-blue-500/50 animate-bounce">
-                                <Car className="text-white w-5 h-5" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Jegyzet */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-slate-500 uppercase ml-1">Megjegyzés</label>
-                        <input 
-                            name="note" 
-                            placeholder="Pl. P3 zóna, 2. emelet..." 
-                            className="w-full px-5 py-4 rounded-2xl bg-slate-950 border border-slate-800 text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                        />
-                    </div>
                     
-                    {/* Fotó */}
-                    <label className="block w-full cursor-pointer group">
-                        <div className="relative h-16 rounded-2xl bg-slate-800 border border-slate-700 border-dashed flex items-center justify-center gap-3 hover:bg-slate-700/50 transition-all overflow-hidden">
-                            {photoPreview ? (
-                                <Image src={photoPreview} alt="Preview" fill className="object-cover opacity-50" />
-                            ) : null}
-                            <Camera className="text-slate-400 group-hover:text-blue-400" size={20} />
-                            <span className="text-sm font-bold text-slate-400 group-hover:text-slate-200">Fotó csatolása</span>
-                            <input type="file" name="photo" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
-                        </div>
+                    {/* Térképkivágat */}
+                    <div className="h-24 w-full rounded-xl bg-slate-800 relative overflow-hidden border border-slate-700">
+                         <div 
+                            className="absolute inset-0 bg-cover bg-center"
+                            style={{ backgroundImage: `url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/${location?.lng},${location?.lat},16,0/600x200?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}')` }}
+                        />
+                    </div>
+
+                    <input name="note" placeholder="Megjegyzés (pl. 2. emelet)" className="w-full bg-slate-950 border border-slate-800 text-white p-3 rounded-xl outline-none focus:border-blue-500 transition-colors" />
+
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                        {[15, 30, 60, 120].map(m => (
+                            <button 
+                                key={m} type="button" 
+                                onClick={() => setSelectedDuration(selectedDuration === m ? null : m)}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold border transition-colors whitespace-nowrap ${selectedDuration === m ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
+                            >
+                                {m} perc
+                            </button>
+                        ))}
+                         <input type="hidden" name="duration" value={selectedDuration || ''} />
+                    </div>
+
+                    <label className="flex items-center gap-3 p-3 rounded-xl bg-slate-800 border border-slate-700 cursor-pointer hover:bg-slate-750">
+                        <Camera className="text-slate-400"/>
+                        <span className="text-sm text-slate-300 flex-1">{photoPreview ? 'Fotó cseréje' : 'Fotó készítése'}</span>
+                        <input type="file" name="photo" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
+                        {photoPreview && <div className="w-8 h-8 rounded bg-slate-900 relative overflow-hidden"><Image src={photoPreview} fill alt="p" className="object-cover"/></div>}
                     </label>
 
-                    {/* Időtartam Választó */}
-                    <div className="grid grid-cols-4 gap-2">
-                        {[15, 30, 60, 120].map(min => (
-                            <div 
-                                key={min} 
-                                onClick={() => setSelectedDuration(min === selectedDuration ? null : min)}
-                                className={`cursor-pointer py-3 rounded-xl text-center text-xs font-bold transition-all border ${
-                                    selectedDuration === min 
-                                    ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/50' 
-                                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
-                                }`}
-                            >
-                                {min}p
-                                {selectedDuration === min && <input type="hidden" name="duration" value={min} />}
-                            </div>
-                        ))}
-                    </div>
-
-                    <SubmitButton label="Parkolás Indítása" icon={Check} variant="primary" />
+                    <SubmitButton label="Mentés" icon={Check} />
                 </form>
             )}
         </div>
