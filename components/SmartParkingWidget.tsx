@@ -1,15 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { MapPin, Camera, Timer, Navigation, X, Ban, Loader2, Clock, Check } from 'lucide-react'
+import { MapPin, Camera, Timer, Navigation, X, Ban, Loader2, Clock, Check, RefreshCw } from 'lucide-react'
 import Image from 'next/image'
 import { startParkingAction, stopParkingAction } from '@/app/parking/actions' 
 import { useFormStatus } from 'react-dom'
-import { toast } from 'sonner' // Ha nincs sonnered, töröld és használd a sima alert-et
 
-// --- SEGÉD KOMPONENSEK ---
-
-// Submit gomb, ami jelzi ha tölt
+// --- SEGÉD: Submit Gomb ---
 function SubmitButton({ label, icon: Icon, colorClass }: any) {
   const { pending } = useFormStatus()
   return (
@@ -23,18 +20,25 @@ function SubmitButton({ label, icon: Icon, colorClass }: any) {
   )
 }
 
-// Hook az időzítéshez (eltelt idő vagy hátralévő idő)
-function useParkingTimer(startTime: string, expiresAt: string | null) {
-    const [displayTime, setDisplayTime] = useState('')
+// --- SEGÉD: Időzítő Hook (Javított) ---
+function useParkingTimer(startTime: string | null, expiresAt: string | null) {
+    const [displayTime, setDisplayTime] = useState('Számítás...')
     const [isExpired, setIsExpired] = useState(false)
 
     useEffect(() => {
+        // Ha nincs start time, ne csináljon semmit (vagy írjon ki hibát)
+        if (!startTime) {
+            setDisplayTime('--:--');
+            return;
+        }
+
         const update = () => {
             const now = new Date().getTime()
             
-            // Ha van lejárati idő, visszafelé számolunk
             if (expiresAt) {
                 const end = new Date(expiresAt).getTime()
+                if (isNaN(end)) { setDisplayTime('--:--'); return }
+
                 const diff = end - now
                 if (diff < 0) {
                     setIsExpired(true)
@@ -45,8 +49,9 @@ function useParkingTimer(startTime: string, expiresAt: string | null) {
                     setDisplayTime(`${hours}ó ${minutes}p (hátralévő)`)
                 }
             } else {
-                // Ha nincs, akkor az eltelt időt mutatjuk
                 const start = new Date(startTime).getTime()
+                if (isNaN(start)) { setDisplayTime('--:--'); return }
+                
                 const diff = now - start
                 const hours = Math.floor(diff / (1000 * 60 * 60))
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
@@ -54,7 +59,7 @@ function useParkingTimer(startTime: string, expiresAt: string | null) {
             }
         }
         update()
-        const interval = setInterval(update, 60000) // Percenként frissít
+        const interval = setInterval(update, 60000)
         return () => clearInterval(interval)
     }, [startTime, expiresAt])
 
@@ -62,24 +67,23 @@ function useParkingTimer(startTime: string, expiresAt: string | null) {
 }
 
 // --- FŐ KOMPONENS ---
-
 export default function SmartParkingWidget({ carId, activeSession }: { carId: string, activeSession: any }) {
-    // START STATE
     const [isLocating, setIsLocating] = useState(false)
     const [location, setLocation] = useState<{lat: number, lng: number} | null>(null)
     const [showStartForm, setShowStartForm] = useState(false)
     const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-
-    // ACTIVE STATE (MODAL)
+    const [selectedDuration, setSelectedDuration] = useState<number | null>(null)
     const [isDetailsOpen, setIsDetailsOpen] = useState(false)
     
-    // Timer
+    // --- JAVÍTÁS: Start idő biztonságos lekérése ---
+    // Ha nincs start_time, próbáljuk meg a created_at-et, ha az sincs, akkor null
+    const safeStartTime = activeSession?.start_time || activeSession?.created_at || null;
+
     const { displayTime, isExpired } = useParkingTimer(
-        activeSession?.start_time || new Date().toISOString(), 
-        activeSession?.expires_at
+        safeStartTime, 
+        activeSession?.expires_at || null
     )
 
-    // GPS Lekérése
     const handleGetLocation = () => {
         setIsLocating(true)
         if (!navigator.geolocation) {
@@ -87,6 +91,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
             setIsLocating(false)
             return
         }
+        const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
@@ -95,10 +100,10 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
             },
             (err) => {
                 console.error(err)
-                alert('Hiba a GPS lekéréskor. Engedélyezd a hozzáférést!')
+                alert('Nem sikerült pontosan bemérni.')
                 setIsLocating(false)
             },
-            { enableHighAccuracy: true }
+            geoOptions
         )
     }
 
@@ -107,25 +112,30 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         if (file) setPhotoPreview(URL.createObjectURL(file))
     }
 
-    // --- 1. HA VAN AKTÍV PARKOLÁS (WIDGET + MODAL) ---
+    const resetForm = () => {
+        setShowStartForm(false)
+        setLocation(null)
+        setPhotoPreview(null)
+        setSelectedDuration(null)
+    }
+
+    // --- MEGJELENÍTÉS ---
     if (activeSession) {
         return (
             <>
-                {/* A WIDGET KÁRTYA */}
+                {/* WIDGET KÁRTYA */}
                 <div 
                     onClick={() => setIsDetailsOpen(true)}
                     className="relative h-48 w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 group cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
                 >
-                    {/* Térkép háttér */}
                     <div 
                         className="absolute inset-0 bg-slate-800 bg-cover bg-center opacity-90 group-hover:scale-105 transition-transform duration-700"
                         style={{ 
                             backgroundImage: `url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/${activeSession.longitude},${activeSession.latitude},15,0/600x300?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}')`
                         }}
-                    ></div>
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
 
-                    {/* Tartalom */}
                     <div className="absolute inset-0 z-20 flex flex-col justify-end p-5">
                         <div className="absolute top-4 left-4 flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider bg-black/40 backdrop-blur-md px-2 py-1 rounded-full border border-emerald-500/30">
                             <span className="relative flex h-2 w-2">
@@ -136,7 +146,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                         </div>
                         
                         <p className="text-white font-black text-xl leading-tight mb-1 truncate drop-shadow-md">
-                            {activeSession.note || "Ismeretlen hely"}
+                            {activeSession.note || "Parkolóhely"}
                         </p>
                         
                         <div className="flex justify-between items-end">
@@ -153,15 +163,14 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                     </div>
                 </div>
 
-                {/* A RÉSZLETEK MODAL (Overlay) */}
+                {/* MODAL */}
                 {isDetailsOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsDetailsOpen(false)} />
                         
                         <div className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                             
-                            {/* Modal Header + Kép/Térkép */}
-                            <div className="h-48 relative w-full bg-slate-800 group">
+                            <div className="h-48 relative w-full bg-slate-800">
                                 {activeSession.photo_url ? (
                                      <Image src={activeSession.photo_url} alt="Bizonyíték" fill className="object-cover" />
                                 ) : (
@@ -175,13 +184,12 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900" />
                                 <button 
                                     onClick={() => setIsDetailsOpen(false)} 
-                                    className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full backdrop-blur hover:bg-black/70 transition-colors"
+                                    className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full backdrop-blur hover:bg-black/70 transition-colors z-50"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
 
-                            {/* Modal Body */}
                             <div className="px-6 pb-6 -mt-10 relative z-10">
                                 <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-600 rounded-2xl p-4 mb-5 shadow-xl">
                                     <h2 className="text-2xl font-bold text-white mb-1">{activeSession.note || "Parkolás"}</h2>
@@ -194,7 +202,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                                         <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700">
                                             <p className="text-[10px] text-slate-500 uppercase font-bold">Kezdés</p>
                                             <p className="text-lg font-mono text-white">
-                                                {new Date(activeSession.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                {safeStartTime ? new Date(safeStartTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                                             </p>
                                         </div>
                                         <div className={`bg-slate-900/60 p-3 rounded-xl border border-slate-700 ${isExpired ? 'border-red-500/50' : ''}`}>
@@ -236,11 +244,10 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         )
     }
 
-    // --- 2. HA NINCS AKTÍV PARKOLÁS (START FORM) ---
+    // --- 2. START FORM (A kód többi része változatlan maradhat a te előző verziódból) ---
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-1 w-full">
             {!showStartForm ? (
-                // Kezdő Gomb
                 <button 
                     onClick={handleGetLocation}
                     disabled={isLocating}
@@ -249,7 +256,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                     {isLocating ? (
                         <>
                             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                            <span className="text-sm font-bold text-slate-500">Pozíció keresése...</span>
+                            <span className="text-sm font-bold text-slate-500">GPS pozíció keresése...</span>
                         </>
                     ) : (
                         <>
@@ -258,50 +265,73 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                             </div>
                             <div className="text-center">
                                 <span className="block font-bold text-lg text-slate-700 dark:text-slate-200">Itt parkoltam le</span>
-                                <span className="text-xs text-slate-400">Kattints a rögzítéshez</span>
+                                <span className="text-xs text-slate-400">Kattints a pozíció mentéséhez</span>
                             </div>
                         </>
                     )}
                 </button>
             ) : (
-                // Részletes Űrlap
                 <form action={async (formData) => {
                     await startParkingAction(formData);
-                    setShowStartForm(false);
-                    setPhotoPreview(null);
+                    resetForm();
                 }} className="p-4 space-y-5 animate-in fade-in slide-in-from-bottom-2">
                     
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
                         <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                             <MapPin className="text-blue-500" size={18} /> Pozíció rögzítve
                         </h3>
-                        <button type="button" onClick={() => setShowStartForm(false)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                            <X className="w-5 h-5 text-slate-400" />
-                        </button>
+                        <div className="flex gap-2">
+                            <button type="button" onClick={handleGetLocation} title="Újra mérés" className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-slate-200 transition-colors">
+                                <RefreshCw className="w-4 h-4 text-slate-500" />
+                            </button>
+                            <button type="button" onClick={resetForm} title="Bezárás" className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-slate-200 transition-colors">
+                                <X className="w-4 h-4 text-slate-500" />
+                            </button>
+                        </div>
                     </div>
 
                     <input type="hidden" name="car_id" value={carId} />
                     <input type="hidden" name="latitude" value={location?.lat} />
                     <input type="hidden" name="longitude" value={location?.lng} />
+                    
+                    {location && (
+                        <div className="h-24 w-full rounded-xl overflow-hidden relative border border-slate-200 dark:border-slate-700">
+                             <div 
+                                className="absolute inset-0 bg-cover bg-center"
+                                style={{ 
+                                    backgroundImage: `url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/${location.lng},${location.lat},16,0/600x200?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''}')`
+                                }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="bg-blue-500/20 p-2 rounded-full animate-pulse">
+                                    <MapPin className="text-blue-500 fill-blue-500 drop-shadow-md" size={24} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
-                    {/* Időtartam Választó */}
                     <div>
                         <label className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
                             <Clock className="w-3 h-3" /> Emlékeztető (opcionális)
                         </label>
                         <div className="grid grid-cols-4 gap-2">
                             {[15, 30, 60, 120].map(min => (
-                                <label key={min} className="cursor-pointer relative">
-                                    <input type="radio" name="duration" value={min} className="peer sr-only" />
-                                    <div className="py-2 text-center text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 hover:bg-slate-100 transition-all">
-                                        {min}p
-                                    </div>
-                                </label>
+                                <div 
+                                    key={min} 
+                                    onClick={() => setSelectedDuration(min === selectedDuration ? null : min)}
+                                    className={`cursor-pointer py-2 text-center text-xs font-bold rounded-lg border transition-all ${
+                                        selectedDuration === min 
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' 
+                                        : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                    }`}
+                                >
+                                    {min}p
+                                    {selectedDuration === min && <input type="hidden" name="duration" value={min} />}
+                                </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Fotó Feltöltés */}
                     <div className="relative">
                          <label className="block w-full cursor-pointer group">
                             <div className="relative h-32 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex flex-col items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors overflow-hidden">
@@ -323,7 +353,6 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                         </label>
                     </div>
 
-                    {/* Jegyzet */}
                     <input 
                         name="note" 
                         placeholder="Megjegyzés (pl. 2. emelet, 14-es hely)..." 
