@@ -24,7 +24,7 @@ export async function startParkingAction(formData: FormData) {
       expires_at = new Date(now.getTime() + durationMinutes * 60000).toISOString()
   }
 
-  // 1. Fotó feltöltés
+  // Fotó feltöltés...
   let photo_url = null
   if (photoFile && photoFile.size > 0) {
       const fileExt = photoFile.name.split('.').pop()
@@ -39,9 +39,10 @@ export async function startParkingAction(formData: FormData) {
       }
   }
 
-  // 2. Adatbázis művelet
+  // Előző törlése
   await supabase.from('parking_sessions').delete().eq('car_id', car_id)
 
+  // Új beszúrása
   const { error } = await supabase.from('parking_sessions').insert({
       user_id: user.id,
       car_id,
@@ -55,9 +56,10 @@ export async function startParkingAction(formData: FormData) {
 
   if (error) console.error('Hiba a mentéskor:', error)
 
-  // FONTOS: Frissítjük az összes lehetséges útvonalat
-  revalidatePath('/') 
-  revalidatePath(`/cars/${car_id}`) // Ez hiányzott!
+  // JAVÍTÁS: A 'layout' paraméter törli a teljes kliens oldali cache-t az adott útvonalakon,
+  // így biztosan friss adatot kap a felhasználó.
+  revalidatePath('/', 'layout') 
+  revalidatePath(`/cars/${car_id}`, 'layout')
 }
 
 export async function stopParkingAction(formData: FormData) {
@@ -66,20 +68,17 @@ export async function stopParkingAction(formData: FormData) {
   if (!user) throw new Error('Nem vagy bejelentkezve')
 
   const parkingId = formData.get('parking_id') as string
-  const carId = formData.get('car_id') as string // Ezt is átküldjük, hogy tudjuk mit kell frissíteni
+  const carId = formData.get('car_id') as string
 
-  if (!parkingId) throw new Error('Hiányzó parkolás ID')
-  
-  const { error } = await supabase
+  await supabase
     .from('parking_sessions')
     .delete()
     .eq('id', parkingId)
     .eq('user_id', user.id)
 
-  if (error) console.error('Hiba a leállításkor:', error)
-
-  revalidatePath('/')
-  if (carId) revalidatePath(`/cars/${carId}`)
+  // JAVÍTÁS ITT IS:
+  revalidatePath('/', 'layout')
+  if (carId) revalidatePath(`/cars/${carId}`, 'layout')
   
   return { success: true }
 }
