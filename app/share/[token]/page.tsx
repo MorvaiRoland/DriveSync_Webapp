@@ -1,9 +1,9 @@
 import { createClient } from 'supabase/server'
 import { notFound } from 'next/navigation'
-import Image from 'next/image' // Fontos import a logóhoz
+import Image from 'next/image'
 import { 
     CheckCircle2, Calendar, Gauge, Fuel, Wrench, ShieldCheck, 
-    MapPin, Phone, Zap, Info, ArrowUpRight, Share2
+    MapPin, Phone, Zap, Info, ArrowUpRight, Share2, Star
 } from 'lucide-react'
 import CarGallery from '@/components/CarGallery'
 
@@ -22,7 +22,6 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
     const { token } = await params
     const supabase = await createClient()
 
-    // 1. Autó lekérése
     const { data: car } = await supabase
         .from('marketplace_view')
         .select('*')
@@ -32,25 +31,15 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
 
     if (!car) return notFound()
 
-    // 2. Képek intelligens összefűzése
+    // Képek összerakása
     let allImages: string[] = []
-    
-    // Fő kép hozzáadása
-    if (car.image_url) {
-        allImages.push(car.image_url)
-    }
-
-    // Galéria képek hozzáadása (duplikáció szűréssel)
+    if (car.image_url) allImages.push(car.image_url)
     if (car.sale_images && Array.isArray(car.sale_images)) {
         car.sale_images.forEach((img: string) => {
-            // Csak akkor adjuk hozzá, ha nem egyezik a fő képpel
-            if (img !== car.image_url) {
-                allImages.push(img)
-            }
+            if (img !== car.image_url) allImages.push(img)
         })
     }
 
-    // 3. Események lekérése
     const { data: events } = await supabase
         .from('events')
         .select('*')
@@ -61,183 +50,230 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
     const displayVin = car.hide_sensitive ? '*****************' : car.vin
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20">
+        <div className="min-h-screen bg-[#0B0F19] text-white font-sans selection:bg-indigo-500 selection:text-white pb-20 overflow-x-hidden relative">
             
-            {/* --- HEADER (Tiszta, csík nélküli) --- */}
-            <div className="bg-white sticky top-0 z-40 shadow-sm"> 
-                <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-7xl">
-                    <div className="flex items-center gap-3">
-                        {/* SAJÁT LOGÓ HELYE */}
-                        {/* Tedd a logódat a 'public' mappába 'logo.png' néven */}
-                        <div className="relative h-10 w-32 md:w-40 flex items-center">
+            {/* --- HÁTTÉR EFFEKTEK (AURORA) --- */}
+            <div className="fixed inset-0 z-0 pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]"></div>
+            </div>
+
+            {/* --- NAVBAR (GLASS) --- */}
+            <div className="sticky top-4 z-50 px-4">
+                <div className="container mx-auto max-w-7xl">
+                    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl h-16 flex items-center justify-between px-6 shadow-2xl shadow-black/20">
+                        {/* LOGO */}
+                        <div className="relative h-8 w-32 flex items-center">
                              <Image 
-                                src="/DynamicSense-logo.png"  // Cseréld le a fájlnevet, ha más a neve
+                                src="/DynamicSense-logo.png" 
                                 alt="Logo" 
-                                width={160} 
-                                height={40} 
-                                className="object-contain object-left"
+                                width={120} 
+                                height={32} 
+                                className="object-contain object-left invert" // invert kell, ha fekete a logód, hogy látszódjon sötét háttéren
                                 priority
                              />
-                             {/* Fallback szöveg, ha még nincs kép (kivehető) */}
-                             {/* <span className="font-bold text-xl ml-2">DynamicSense</span> */}
                         </div>
                         
-                        <div className="hidden sm:flex items-center px-3 py-1 bg-slate-100 rounded-full">
-                             <CheckCircle2 className="w-3 h-3 text-emerald-500 mr-1.5" />
-                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ellenőrzött Hirdetés</span>
+                        <div className="flex items-center gap-3">
+                            <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+                                <CheckCircle2 className="w-3 h-3" /> Ellenőrzött
+                            </span>
+                            <button className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-slate-300 hover:text-white">
+                                <Share2 className="w-4 h-4" />
+                            </button>
                         </div>
                     </div>
-                    
-                    <button className="p-2.5 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors border border-transparent hover:border-slate-200">
-                        <Share2 className="w-5 h-5" />
-                    </button>
                 </div>
             </div>
 
-            <main className="container mx-auto px-4 py-8 max-w-7xl">
+            <main className="container mx-auto px-4 py-8 max-w-7xl relative z-10">
                 
-                {/* --- 1. CÍMSOR SZEKCIÓ --- */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-                    <div>
-                        <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-3">
-                            {car.make} <span className="text-indigo-600">{car.model}</span>
-                        </h1>
-                        
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-slate-500 font-medium text-lg">
-                            <span className="flex items-center gap-2"><Calendar className="w-5 h-5 text-slate-400" /> {car.year}</span>
-                            <span className="flex items-center gap-2"><Fuel className="w-5 h-5 text-slate-400" /> {car.fuel_type}</span>
-                            <span className="flex items-center gap-2"><Gauge className="w-5 h-5 text-slate-400" /> {car.mileage?.toLocaleString()} km</span>
+                {/* --- HERO SZEKCIÓ --- */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
+                    {/* Bal oldal: Cím és Galéria */}
+                    <div className="lg:col-span-8 space-y-6">
+                        <div>
+                            <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white mb-2">
+                                {car.make} <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">{car.model}</span>
+                            </h1>
+                            <div className="flex items-center gap-4 text-slate-400 font-medium">
+                                <span>{car.year}</span>
+                                <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                                <span>{car.fuel_type}</span>
+                                <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                                <span>{car.mileage?.toLocaleString()} km</span>
+                            </div>
+                        </div>
+
+                        {/* KÉP GALÉRIA KERET */}
+                        <div className="rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50 bg-[#1a1f2e]">
+                            <CarGallery images={allImages} carModel={`${car.make} ${car.model}`} />
                         </div>
                     </div>
 
-                    <div className="hidden md:block text-right">
-                         {!car.hide_prices ? (
-                            <>
-                                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Irányár</p>
-                                <p className="text-4xl font-black text-slate-900 tracking-tight">{formatPrice(car.price)}</p>
-                            </>
-                        ) : (
-                            <p className="text-2xl font-bold text-slate-900">Ár megegyezés szerint</p>
-                        )}
+                    {/* Jobb oldal: Ár és Kapcsolat (Desktopon) */}
+                    <div className="lg:col-span-4 lg:pt-24">
+                        <div className="glass-card p-6 md:p-8 sticky top-24">
+                            <div className="mb-8">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Vételár</p>
+                                {!car.hide_prices ? (
+                                    <p className="text-4xl lg:text-5xl font-black text-white tracking-tight drop-shadow-lg">
+                                        {formatPrice(car.price)}
+                                    </p>
+                                ) : (
+                                    <p className="text-2xl font-bold text-white">Megállapodás szerint</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-3">
+                                {car.seller_phone ? (
+                                    <a href={`tel:${car.seller_phone}`} className="flex items-center justify-center gap-2 w-full py-4 bg-white text-black hover:bg-slate-200 rounded-xl font-bold text-lg shadow-lg transition-all active:scale-[0.98]">
+                                        <Phone className="w-5 h-5" />
+                                        Hívás
+                                    </a>
+                                ) : (
+                                    <button disabled className="w-full py-4 bg-white/10 text-slate-400 rounded-xl font-bold cursor-not-allowed border border-white/5">
+                                        Nincs telefonszám
+                                    </button>
+                                )}
+                                <button className="flex items-center justify-center gap-2 w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-bold transition-all">
+                                    <Info className="w-5 h-5" />
+                                    Üzenet
+                                </button>
+                            </div>
+
+                            <div className="mt-8 pt-6 border-t border-white/10">
+                                {car.location && (
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 text-indigo-400">
+                                            <MapPin className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Megtekinthető</p>
+                                            <p className="font-bold text-white">{car.location}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="text-xs text-slate-500 flex gap-2 items-center">
+                                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                    DynamicSense Verified System
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* --- 2. GALÉRIA (Kliens komponens) --- */}
-                <CarGallery images={allImages} carModel={`${car.make} ${car.model}`} />
-
-                {/* --- 3. TARTALOM GRID --- */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mt-12 relative">
+                {/* --- RÉSZLETEK GRID --- */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     
-                    {/* BAL OSZLOP (Adatok) */}
-                    <div className="lg:col-span-8 space-y-12">
+                    {/* BAL OLDAL - ADATOK */}
+                    <div className="lg:col-span-8 space-y-8">
                         
-                        {/* Kiemelt Adatok */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <StatCard label="Évjárat" value={car.year} sub="Gyártási év" />
-                            <StatCard label="Futás" value={`${car.mileage?.toLocaleString()} km`} sub="Garantált" highlighted />
-                            <StatCard label="Teljesítmény" value={car.performance_hp || '-'} sub="Lóerő (LE)" />
-                            <StatCard label="Műszaki" value={car.mot_expiry ? new Date(car.mot_expiry).getFullYear() : '-'} sub="Érvényesség" />
+                        {/* Statisztika Sáv */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <GlassStat label="Évjárat" value={car.year} />
+                            <GlassStat label="Futás" value={`${car.mileage?.toLocaleString()} km`} highlight />
+                            <GlassStat label="Teljesítmény" value={car.performance_hp || '-'} sub="LE" />
+                            <GlassStat label="Műszaki" value={car.mot_expiry ? new Date(car.mot_expiry).getFullYear() : '-'} />
                         </div>
 
                         {/* Leírás */}
                         {car.description && (
-                            <section>
-                                <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                    <Info className="w-5 h-5 text-indigo-500" /> Leírás
+                            <div className="glass-card p-8">
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" /> Leírás
                                 </h3>
-                                <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-                                    <p className="whitespace-pre-wrap">{car.description}</p>
-                                </div>
-                            </section>
+                                <p className="text-slate-300 leading-relaxed whitespace-pre-wrap font-light text-base">
+                                    {car.description}
+                                </p>
+                            </div>
                         )}
 
-                        {/* Részletes Adatok Táblázat */}
-                        <section>
-                            <h3 className="text-xl font-bold text-slate-900 mb-4">Specifikáció</h3>
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                                <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                                    <div className="p-6 md:p-8 space-y-5">
-                                        <SpecItem label="Márka" value={car.make} />
-                                        <SpecItem label="Modell" value={car.model} />
-                                        <SpecItem label="Kivitel" value={car.body_type || '-'} />
-                                        <SpecItem label="Szín" value={car.color || '-'} />
-                                        <SpecItem label="Motor" value={car.engine_size ? `${car.engine_size} cm³` : '-'} />
-                                    </div>
-                                    <div className="p-6 md:p-8 space-y-5">
-                                        <SpecItem label="Üzemanyag" value={car.fuel_type} />
-                                        <SpecItem label="Váltó" value={car.transmission === 'manual' ? 'Manuális' : car.transmission || '-'} />
-                                        <SpecItem label="Műszaki vizsga" value={formatDate(car.mot_expiry)} />
-                                        
-                                        {!car.hide_sensitive && (
-                                            <>
-                                                <div className="h-px bg-slate-100 my-4"></div>
-                                                <SpecItem label="Rendszám" value={displayPlate} isBadge />
-                                                <SpecItem label="Alvázszám (VIN)" value={displayVin} isMono />
-                                            </>
-                                        )}
-                                    </div>
+                        {/* Specifikációk */}
+                        <div className="glass-card overflow-hidden">
+                            <div className="p-6 border-b border-white/5">
+                                <h3 className="text-lg font-bold text-white">Specifikáció</h3>
+                            </div>
+                            <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/5">
+                                <div className="p-6 space-y-4">
+                                    <SpecRow label="Márka" value={car.make} />
+                                    <SpecRow label="Modell" value={car.model} />
+                                    <SpecRow label="Kivitel" value={car.body_type || '-'} />
+                                    <SpecRow label="Szín" value={car.color || '-'} />
+                                    <SpecRow label="Motor" value={car.engine_size ? `${car.engine_size} cm³` : '-'} />
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <SpecRow label="Üzemanyag" value={car.fuel_type} />
+                                    <SpecRow label="Váltó" value={car.transmission === 'manual' ? 'Manuális' : car.transmission || '-'} />
+                                    <SpecRow label="Műszaki vizsga" value={formatDate(car.mot_expiry)} />
+                                    {!car.hide_sensitive && (
+                                        <>
+                                            <div className="h-px bg-white/5 my-2"></div>
+                                            <SpecRow label="Rendszám" value={displayPlate} badge />
+                                            <SpecRow label="Alvázszám" value={displayVin} mono />
+                                        </>
+                                    )}
                                 </div>
                             </div>
-                        </section>
+                        </div>
 
-                        {/* Felszereltség */}
+                        {/* Extrák */}
                         {car.features && car.features.length > 0 && (
-                            <section>
-                                <h3 className="text-xl font-bold text-slate-900 mb-4">Felszereltség</h3>
+                            <div className="glass-card p-8">
+                                <h3 className="text-lg font-bold text-white mb-4">Felszereltség</h3>
                                 <div className="flex flex-wrap gap-2">
                                     {car.features.map((feature: string, idx: number) => (
-                                        <span key={idx} className="px-4 py-2 bg-white text-slate-700 rounded-lg text-sm font-semibold border border-slate-200 shadow-sm">
+                                        <span key={idx} className="px-3 py-1.5 bg-white/5 text-slate-200 rounded-lg text-sm font-medium border border-white/5 hover:bg-white/10 transition-colors">
                                             {feature}
                                         </span>
                                     ))}
                                 </div>
-                            </section>
+                            </div>
                         )}
 
                         {/* Szerviztörténet */}
-                        <section>
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                                    <Wrench className="w-5 h-5 text-indigo-500" /> Szerviztörténet
+                        <div className="glass-card p-8">
+                            <div className="flex items-center justify-between mb-8">
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <Wrench className="w-5 h-5 text-indigo-400" /> Szerviztörténet
                                 </h3>
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
                                     <ShieldCheck className="w-3.5 h-3.5" />
-                                    Hitelesített adatok
+                                    Ellenőrzött
                                 </div>
                             </div>
-                            
-                            <div className="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-2">
+
+                            <div className="space-y-6 relative border-l border-white/10 ml-3 pb-2">
                                 {events && events.length > 0 ? (
                                     events.map((ev: any) => (
                                         <div key={ev.id} className="relative pl-8 group">
-                                            {/* Idővonal Pötty */}
-                                            <div className={`absolute -left-[9px] top-1.5 w-[18px] h-[18px] rounded-full border-4 border-white shadow-sm z-10 
-                                                ${ev.type === 'service' ? 'bg-indigo-600' : 'bg-slate-400'}`}>
+                                            {/* Pötty */}
+                                            <div className={`absolute -left-[5px] top-1.5 w-[11px] h-[11px] rounded-full border-2 border-[#0B0F19] shadow-[0_0_10px_rgba(99,102,241,0.5)] z-10 
+                                                ${ev.type === 'service' ? 'bg-indigo-500' : 'bg-slate-500'}`}>
                                             </div>
 
-                                            <div className="bg-white p-5 md:p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
+                                            <div className="bg-white/[0.03] hover:bg-white/[0.06] p-5 rounded-2xl border border-white/5 transition-all duration-300">
+                                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
                                                     <div>
-                                                        <h4 className="font-bold text-slate-900 text-lg leading-tight">{ev.title}</h4>
-                                                        <p className="text-sm text-slate-500 mt-1 font-medium">{formatDate(ev.event_date)}</p>
+                                                        <h4 className="font-bold text-white text-lg">{ev.title}</h4>
+                                                        <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide">{formatDate(ev.event_date)}</p>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex items-center gap-1.5 text-sm font-bold text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-lg">
-                                                            <Gauge className="w-3.5 h-3.5 text-slate-400" />
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex items-center gap-1.5 text-sm font-medium text-slate-300 bg-black/30 px-3 py-1.5 rounded-lg border border-white/5">
+                                                            <Gauge className="w-3.5 h-3.5 text-slate-500" />
                                                             {ev.mileage.toLocaleString()} km
                                                         </div>
-                                                        
-                                                        {/* Költség elrejtése logika */}
+                                                        {/* Ár megjelenítés - CSAK ha nincs elrejtve */}
                                                         {!car.hide_prices && !car.hide_service_costs && ev.cost > 0 && (
-                                                            <div className="text-sm font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-100">
+                                                            <div className="text-sm font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
                                                                 {formatPrice(ev.cost)}
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
-                                                
                                                 {ev.notes && (
-                                                    <p className="text-slate-600 text-sm leading-relaxed border-t border-slate-50 pt-3 mt-1">
+                                                    <p className="text-slate-400 text-sm leading-relaxed border-t border-white/5 pt-3 mt-2">
                                                         {ev.notes}
                                                     </p>
                                                 )}
@@ -245,110 +281,65 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                                         </div>
                                     ))
                                 ) : (
-                                    <div className="pl-8 text-slate-500 italic py-4">Ehhez az autóhoz még nem rögzítettek publikus eseményt.</div>
+                                    <div className="pl-8 text-slate-500 italic">Nincs rögzített publikus esemény.</div>
                                 )}
                             </div>
-                        </section>
+                        </div>
+
                     </div>
 
-                    {/* JOBB OSZLOP (Sticky Sidebar) */}
-                    <div className="lg:col-span-4">
-                        <div className="sticky top-28 space-y-6">
+                    {/* JOBB OLDAL - TIPP (Desktop) */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className="glass-card p-6 relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <Zap className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5 rotate-12" />
                             
-                            {/* KAPCSOLAT KÁRTYA */}
-                            <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 md:p-8 relative overflow-hidden">
-                                
-                                {/* Ár (Desktop/Mobile egységesen) */}
-                                <div className="mb-8">
-                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Vételár</p>
-                                     {!car.hide_prices ? (
-                                        <p className="text-4xl font-black text-slate-900 tracking-tight">{formatPrice(car.price)}</p>
-                                     ) : (
-                                        <p className="text-2xl font-bold text-slate-900">Megállapodás szerint</p>
-                                     )}
-                                </div>
-
-                                <div className="space-y-3">
-                                    {car.seller_phone ? (
-                                        <a href={`tel:${car.seller_phone}`} className="flex items-center justify-center gap-2 w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
-                                            <Phone className="w-5 h-5" />
-                                            Hívás
-                                        </a>
-                                    ) : (
-                                        <button disabled className="w-full py-4 bg-slate-100 text-slate-400 rounded-xl font-bold cursor-not-allowed">
-                                            Nincs telefonszám
-                                        </button>
-                                    )}
-
-                                    <button className="flex items-center justify-center gap-2 w-full py-3 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-700 rounded-xl font-bold transition-all">
-                                        <Info className="w-5 h-5 text-slate-400" />
-                                        Üzenet
-                                    </button>
-                                </div>
-
-                                <div className="mt-8 pt-6 border-t border-slate-100">
-                                    {car.location && (
-                                        <div className="flex items-start gap-3 mb-4">
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
-                                                <MapPin className="w-5 h-5 text-slate-500" />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Megtekinthető</p>
-                                                <p className="font-bold text-slate-900 text-lg">{car.location}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <p className="text-xs text-slate-400 leading-snug flex gap-2">
-                                        <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                                        Az adatok közvetlenül a DynamicSense rendszeréből származnak.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Tipp Kártya */}
-                            <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-                                <Zap className="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 rotate-12" />
-                                <h4 className="font-bold text-lg mb-2 flex items-center gap-2 relative z-10">
-                                    TIPP VÁSÁRLÓKNAK
-                                </h4>
-                                <p className="text-indigo-100 text-sm leading-relaxed mb-4 relative z-10">
-                                    Használt autó vásárlásakor mindig ellenőrizd az előéletet hivatalos forrásból is.
-                                </p>
-                                <a href="https://szuf.magyarorszag.hu/" target="_blank" className="relative z-10 text-xs font-bold uppercase tracking-wider text-white bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg inline-flex items-center gap-1 transition-colors">
-                                    JSZP Lekérdezés <ArrowUpRight className="w-3 h-3" />
-                                </a>
-                            </div>
-
+                            <h4 className="font-bold text-lg mb-2 flex items-center gap-2 text-white relative z-10">
+                                TIPP VÁSÁRLÓKNAK
+                            </h4>
+                            <p className="text-slate-300 text-sm leading-relaxed mb-4 relative z-10">
+                                A biztonság az első. Mindig ellenőrizd az autó adatait a hivatalos állami nyilvántartásban is (JSZP).
+                            </p>
+                            <a href="https://szuf.magyarorszag.hu/" target="_blank" className="relative z-10 text-xs font-bold uppercase tracking-wider text-white bg-white/10 hover:bg-white/20 border border-white/10 px-4 py-2.5 rounded-xl inline-flex items-center gap-2 transition-all">
+                                JSZP Lekérdezés <ArrowUpRight className="w-3 h-3" />
+                            </a>
                         </div>
                     </div>
 
                 </div>
             </main>
+
+            {/* Glass CSS osztályok (ha nem Tailwind-ben akarod mindenhol írni) */}
+            <style jsx global>{`
+                .glass-card {
+                    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-xl;
+                }
+            `}</style>
         </div>
     )
 }
 
 // --- KOMPONENSEK ---
 
-function StatCard({ label, value, sub, highlighted }: any) {
+function GlassStat({ label, value, sub, highlight }: any) {
     return (
-        <div className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${highlighted ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-200'}`}>
-            <span className="text-xs font-bold text-slate-400 uppercase mb-1">{label}</span>
-            <span className={`text-xl md:text-2xl font-black ${highlighted ? 'text-indigo-900' : 'text-slate-800'}`}>{value}</span>
-            {sub && <span className="text-[10px] font-medium text-slate-500 mt-1">{sub}</span>}
+        <div className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${highlight ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/5'}`}>
+            <span className="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">{label}</span>
+            <span className={`text-lg md:text-xl font-bold ${highlight ? 'text-indigo-300' : 'text-white'}`}>{value}</span>
+            {sub && <span className="text-[10px] font-medium text-slate-500">{sub}</span>}
         </div>
     )
 }
 
-function SpecItem({ label, value, isMono, isBadge }: any) {
+function SpecRow({ label, value, badge, mono }: any) {
     if (!value) return null
     return (
         <div className="flex justify-between items-center group">
-            <span className="text-slate-500 text-sm font-medium group-hover:text-slate-800 transition-colors">{label}</span>
-            {isBadge ? (
-                <span className="font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded text-sm border border-slate-200 font-mono tracking-wide">{value}</span>
+            <span className="text-slate-400 text-sm group-hover:text-slate-200 transition-colors">{label}</span>
+            {badge ? (
+                <span className="font-bold text-slate-900 bg-slate-200 px-2.5 py-0.5 rounded text-sm">{value}</span>
             ) : (
-                <span className={`font-bold text-slate-900 ${isMono ? 'font-mono text-sm tracking-wide' : 'text-base'}`}>{value}</span>
+                <span className={`font-medium text-slate-100 ${mono ? 'font-mono tracking-widest' : ''}`}>{value}</span>
             )}
         </div>
     )
