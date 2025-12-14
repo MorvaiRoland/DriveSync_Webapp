@@ -13,7 +13,7 @@ function SubmitButton({ label, icon: Icon, colorClass, disabled }: any) {
     <button 
       disabled={pending || disabled}
       type="submit" 
-      className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${colorClass}`}
+      className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${colorClass}`}
     >
       {pending ? <Loader2 className="animate-spin h-5 w-5"/> : <><Icon size={18} /> {label}</>}
     </button>
@@ -24,7 +24,6 @@ function SubmitButton({ label, icon: Icon, colorClass, disabled }: any) {
 function useParkingTimer(startTime: string | null, expiresAt: string | null) {
     const [displayTime, setDisplayTime] = useState('Indítás...')
     const [isExpired, setIsExpired] = useState(false)
-    // Állapot, hogy küldtünk-e már értesítést
     const [hasNotified, setHasNotified] = useState(false)
 
     useEffect(() => {
@@ -42,20 +41,15 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
 
                 const diff = end - now
 
-                // --- ÉRTESÍTÉS LOGIKA ---
-                // Ha 10 perc (600.000 ms) alatt vagyunk, de még nem járt le, és még nem szóltunk
                 if (diff > 0 && diff <= 600000 && !hasNotified) {
                     if (Notification.permission === "granted") {
-                        // Böngésző értesítés
                         new Notification("⚠️ Parkolás hamarosan lejár!", {
                             body: "Kevesebb mint 10 perced maradt a parkolásból.",
-                            tag: "parking-alert" // Megakadályozza a duplikációt
+                            tag: "parking-alert"
                         });
-                        
-                        // Rezgés (ha támogatott a mobilon)
                         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     }
-                    setHasNotified(true); // Megjelöljük, hogy szóltunk
+                    setHasNotified(true);
                 }
 
                 if (diff < 0) {
@@ -67,7 +61,6 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
                     setDisplayTime(`${hours}ó ${minutes}p (hátralévő)`)
                 }
             } else {
-                // Számláló mód (nincs lejárat)
                 const start = new Date(startTime).getTime()
                 if (isNaN(start)) { setDisplayTime('Most'); return }
                 
@@ -87,7 +80,6 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
 
 // --- FŐ KOMPONENS ---
 export default function SmartParkingWidget({ carId, activeSession }: { carId: string, activeSession: any }) {
-    // UI Állapotok
     const [isLocating, setIsLocating] = useState(false)
     const [location, setLocation] = useState<{lat: number, lng: number} | null>(null)
     const [showStartForm, setShowStartForm] = useState(false)
@@ -95,7 +87,6 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
     const [selectedDuration, setSelectedDuration] = useState<number | null>(null)
     const [isDetailsOpen, setIsDetailsOpen] = useState(false)
     
-    // Parkolás Állapotok
     const [tempSession, setTempSession] = useState<any>(null);
 
     useEffect(() => {
@@ -112,7 +103,6 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         currentSession?.expires_at || null
     )
 
-    // --- GPS Mérés ---
     const handleGetLocation = () => {
        setIsLocating(true)
        if (!navigator.geolocation) { alert('A böngésző nem támogatja a helymeghatározást.'); setIsLocating(false); return }
@@ -139,9 +129,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         setShowStartForm(false); setLocation(null); setPhotoPreview(null); setSelectedDuration(null);
     }
 
-    // --- ACTION: Parkolás Indítása ---
     const handleStartParking = async (formData: FormData) => {
-        // Engedély kérése az értesítésekhez indításkor
         if ("Notification" in window && Notification.permission !== "granted") {
             Notification.requestPermission();
         }
@@ -175,9 +163,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         }
     }
 
-    // --- ACTION: Parkolás Leállítása (Javított) ---
     const handleStopParking = async (formData: FormData) => {
-        // Ha "temp-id" van, csak a helyi állapotot töröljük (Mégse gomb funkció)
         if (currentSession?.id === 'temp-id') {
             setTempSession(null);
             setIsDetailsOpen(false);
@@ -196,7 +182,6 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         }
     }
 
-    // --- RENDERELÉS: AKTÍV PARKOLÁS ---
     if (currentSession) {
         const isTemp = currentSession.id === 'temp-id';
 
@@ -250,17 +235,17 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                     </div>
                 </div>
 
-                {/* MODAL - MOBIL OPTIMALIZÁLT (z-index 9999, dvh magasság) */}
+                {/* MODAL - ÚJ KOMPAKT DESIGN (FIX GÖRGETÉS PROBLÉMA) */}
                 {isDetailsOpen && (
-                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-4 overscroll-none">
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                         {/* Háttér sötétítés */}
                         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsDetailsOpen(false)} />
                         
-                        {/* Modal ablak */}
-                        <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85dvh] md:max-h-[90vh]">
+                        {/* Modal doboz - Max width és magasság korlátok */}
+                        <div className="relative w-full max-w-sm bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85dvh]">
                             
-                            {/* Térkép / Fotó Fejléc (Fix magasság) */}
-                            <div className="h-40 md:h-48 relative w-full bg-slate-800 shrink-0">
+                            {/* Fejléc (Térkép) - Kisebb magasság mobilon (h-32) */}
+                            <div className="h-32 md:h-40 relative w-full bg-slate-800 shrink-0">
                                 {currentSession.photo_url ? (
                                      <Image src={currentSession.photo_url} alt="Bizonyíték" fill className="object-cover" />
                                 ) : (
@@ -274,66 +259,69 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900" />
                                 <button 
                                     onClick={() => setIsDetailsOpen(false)} 
-                                    className="absolute top-3 right-3 md:top-4 md:right-4 bg-black/50 text-white p-2 rounded-full backdrop-blur hover:bg-black/70 transition-colors z-50"
+                                    className="absolute top-3 right-3 bg-black/50 text-white p-2 rounded-full backdrop-blur hover:bg-black/70 transition-colors z-50"
                                 >
-                                    <X size={20} />
+                                    <X size={18} />
                                 </button>
                             </div>
 
-                            {/* Tartalom (Görgethető rész) */}
-                            <div className="flex-1 overflow-y-auto custom-scrollbar px-5 md:px-6 pt-0 pb-6">
-                                <div className="relative -mt-10 z-10 mb-4">
-                                     <div className="bg-slate-800/90 backdrop-blur-xl border border-slate-600 rounded-2xl p-4 shadow-xl">
-                                        <h2 className="text-xl md:text-2xl font-bold text-white mb-1 truncate">{currentSession.note || "Parkolás"}</h2>
-                                        <div className="flex items-center text-slate-400 text-xs gap-2 mb-4 font-mono">
-                                            <MapPin size={12} className="text-emerald-500" />
-                                            {currentSession.latitude.toFixed(5)}, {currentSession.longitude.toFixed(5)}
+                            {/* Tartalom - Kompakt Padding, nincs negatív margó mobilon */}
+                            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+                                
+                                {/* Infó Blokkok */}
+                                <div>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-white leading-tight">{currentSession.note || "Parkolás"}</h2>
+                                            <div className="flex items-center text-slate-400 text-[10px] gap-1 font-mono mt-1">
+                                                <MapPin size={10} className="text-emerald-500" />
+                                                {currentSession.latitude.toFixed(5)}, {currentSession.longitude.toFixed(5)}
+                                            </div>
                                         </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700">
-                                                <p className="text-[10px] text-slate-500 uppercase font-bold">Kezdés</p>
-                                                <p className="text-base md:text-lg font-mono text-white">
-                                                    {safeStartTime ? new Date(safeStartTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
-                                                </p>
-                                            </div>
-                                            <div className={`bg-slate-900/60 p-3 rounded-xl border border-slate-700 ${isExpired ? 'border-red-500/50' : ''}`}>
-                                                <p className="text-[10px] text-slate-500 uppercase font-bold">Státusz</p>
-                                                <p className={`text-base md:text-lg font-mono font-bold ${isExpired ? 'text-red-500' : 'text-emerald-400'}`}>
-                                                    {displayTime}
-                                                </p>
-                                            </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                                            <p className="text-[10px] text-slate-500 uppercase font-bold mb-0.5">Kezdés</p>
+                                            <p className="text-base font-mono text-white">
+                                                {safeStartTime ? new Date(safeStartTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                                            </p>
+                                        </div>
+                                        <div className={`bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 ${isExpired ? 'border-red-500/30' : ''}`}>
+                                            <p className="text-[10px] text-slate-500 uppercase font-bold mb-0.5">Státusz</p>
+                                            <p className={`text-base font-mono font-bold ${isExpired ? 'text-red-500' : 'text-emerald-400'}`}>
+                                                {displayTime}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Gombok */}
-                                <div className="space-y-3 pb-2">
+                                {/* Gombok - Alulra igazítva, de a flex-col miatt görgethető ha kell */}
+                                <div className="mt-auto space-y-2 pt-2">
                                     <a 
                                         href={`https://www.google.com/maps/dir/?api=1&destination=${currentSession.latitude},${currentSession.longitude}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 w-full py-3 md:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors shadow-lg shadow-blue-900/20"
+                                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors shadow-lg shadow-blue-900/20"
                                     >
-                                        <Navigation size={18} /> Odavezetés (Maps)
+                                        <Navigation size={16} /> Odavezetés (Maps)
                                     </a>
 
                                     <form action={handleStopParking}>
                                         <input type="hidden" name="parking_id" value={currentSession.id} />
                                         
-                                        {/* JAVÍTÁS: Mégse gomb szinkronizálás alatt */}
                                         {isTemp ? (
                                             <button 
                                                 type="submit"
-                                                className="w-full py-3 md:py-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold border border-slate-600 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                                                className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold text-sm border border-slate-600 flex items-center justify-center gap-2 transition-colors cursor-pointer"
                                             >
-                                                <X size={18} /> Mégse (Szinkronizálás)
+                                                <X size={16} /> Mégse
                                             </button>
                                         ) : (
                                             <SubmitButton 
                                                 label="Parkolás Leállítása" 
                                                 icon={Ban} 
-                                                colorClass="bg-slate-800 hover:bg-red-500/10 text-white hover:text-red-500 border border-slate-700 hover:border-red-500/30" 
+                                                colorClass="bg-slate-800 hover:bg-red-500/10 text-white hover:text-red-500 border border-slate-700 hover:border-red-500/30 text-sm" 
                                             />
                                         )}
                                     </form>
@@ -346,7 +334,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         )
     }
 
-    // --- RENDERELÉS: START FORM (Ha nincs session) ---
+    // --- RENDERELÉS: START FORM (Marad a régi, azzal nem volt gond) ---
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-1 w-full">
             {!showStartForm ? (
