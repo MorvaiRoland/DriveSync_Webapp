@@ -1,21 +1,23 @@
 import { createClient } from '@/supabase/server'
-import MarketplaceFilters from './components/MarketplaceFilters' // Az elérési utat igazítsd
+import MarketplaceFilters from './components/MarketplaceFilters'
 import CarCard from './components/CarCard'
 import { ShoppingBag, Search } from 'lucide-react'
 
-// Dinamikus renderelés, hogy a searchParams mindig friss legyen
+// Dinamikus renderelés
 export const dynamic = 'force-dynamic';
 
-// Next.js SearchParams type definíció
+// JAVÍTÁS 1: A searchParams mostantól Promise
 type Props = {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default async function MarketplacePage({ searchParams }: Props) {
+export default async function MarketplacePage(props: Props) {
   const supabase = await createClient()
 
-  // 1. URL paraméterek kibontása
-  const params = searchParams;
+  // JAVÍTÁS 2: Megvárjuk a Promise feloldását (await)
+  const params = await props.searchParams;
+
+  // Innentől használjuk a 'params' változót, ami már a sima objektum
   const brand = typeof params.brand === 'string' ? params.brand : null;
   const minPrice = typeof params.minPrice === 'string' ? params.minPrice : null;
   const maxPrice = typeof params.maxPrice === 'string' ? params.maxPrice : null;
@@ -32,20 +34,18 @@ export default async function MarketplacePage({ searchParams }: Props) {
 
   // 3. Dinamikus szűrők alkalmazása
   if (brand) {
-    query = query.ilike('brand', brand) // ilike = kis/nagybetű nem számít
+    query = query.ilike('brand', brand)
   }
   if (fuel) {
     query = query.ilike('fuel_type', fuel)
   }
   if (minPrice) {
-    query = query.gte('price', minPrice) // Greater than or equal
+    query = query.gte('price', minPrice)
   }
   if (maxPrice) {
-    query = query.lte('price', maxPrice) // Less than or equal
+    query = query.lte('price', maxPrice)
   }
   if (queryText) {
-    // Keresés több mezőben (PostgreSQL 'or' szintaxis)
-    // Megjegyzés: Ez feltételezi, hogy a brand/model/description szöveges mezők
     query = query.or(`brand.ilike.%${queryText}%,model.ilike.%${queryText}%,description.ilike.%${queryText}%`)
   }
 
@@ -91,7 +91,6 @@ export default async function MarketplacePage({ searchParams }: Props) {
                          <h2 className="font-bold text-slate-700 dark:text-slate-300">
                             {cars?.length === 0 ? 'Nincs találat' : `${cars?.length} autó elérhető`}
                          </h2>
-                         {/* Ide jöhetne egy rendezés (Sort) dropdown is később */}
                     </div>
 
                     {(!cars || cars.length === 0) ? (
