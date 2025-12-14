@@ -1,9 +1,25 @@
 /** @type {import('next').NextConfig} */
+
+// 1. Lépés: Definiáljuk a szigorú CSP-t egy változóban, hogy átlátható legyen
+// A "frame-ancestors 'none'" javítja a ClickJacking hibát.
+// Az "object-src 'none'" és "base-uri 'self'" javítja a "No Fallback" hibát.
+const cspHeader = `
+    default-src 'self';
+    script-src 'self' 'unsafe-eval' 'unsafe-inline';
+    style-src 'self' 'unsafe-inline' fonts.googleapis.com;
+    img-src 'self' blob: data: https:;
+    font-src 'self' fonts.gstatic.com data:;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+    connect-src 'self' https:;
+    upgrade-insecure-requests;
+`.replace(/\s{2,}/g, ' ').trim(); // Kiveszi a felesleges szóközöket/sortöréseket
+
 const nextConfig = {
-  // 1. Ez tünteti el a "Server Leaks Information" hibát (X-Powered-By)
   poweredByHeader: false,
   
-  // Megtartjuk a te eredeti beállításaidat
   experimental: {
     serverActions: {
       bodySizeLimit: '20mb',
@@ -19,42 +35,52 @@ const nextConfig = {
     ],
   },
 
-  // 2. Itt adjuk hozzá a ZAP által hiányolt biztonsági fejléceket
   async headers() {
     return [
       {
-        // Minden útvonalra érvényes legyen a védelem
         source: '/:path*',
         headers: [
+          // --- Biztonsági Fejlécek ---
+          {
+            key: 'Content-Security-Policy',
+            value: cspHeader, // Itt adjuk át a fenti szigorú szabályokat
+          },
           {
             key: 'X-Frame-Options',
-            value: 'DENY', // Megakadályozza, hogy mások iframe-be rakják az oldalad (Clickjacking védelem)
+            value: 'DENY', // Régi böngészőknek (ClickJacking védelem 1. szint)
           },
           {
             key: 'X-Content-Type-Options',
-            value: 'nosniff', // Megakadályozza, hogy a böngésző "tippelje" a fájltípust
+            value: 'nosniff',
           },
           {
             key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload', // Kényszeríti a HTTPS-t (HSTS hiba javítása)
+            value: 'max-age=63072000; includeSubDomains; preload',
           },
           {
             key: 'X-XSS-Protection',
-            value: '1; mode=block', // Extra védelem Cross-Site Scripting ellen
+            value: '1; mode=block',
           },
           {
             key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin', // Adatvédelmi beállítás (hogy ne küldjön túl sok infót más oldalaknak)
+            value: 'origin-when-cross-origin',
           },
-          // 3. Content Security Policy (CSP)
-          // Mivel a "hostname: '**'" beállítást használod képeknél, itt a "img-src"-nél engedélyeznünk kell a "https:"-t
+          // --- CORS Beállítások (CORS Misconfiguration hiba javítása) ---
           {
-            key: 'Content-Security-Policy',
-            value: "default-src 'self'; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com data:;", 
+            key: 'Access-Control-Allow-Origin',
+            value: '*', // Vagy a saját domain-ed, ha szigorúbb akarsz lenni (pl. https://dynamicsense.hu)
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'X-Requested-With, Content-Type, Authorization',
           },
         ],
       },
-    ]
+    ];
   },
 };
 
