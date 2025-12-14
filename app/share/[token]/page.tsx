@@ -1,8 +1,9 @@
 import { createClient } from 'supabase/server'
 import { notFound } from 'next/navigation'
+import Image from 'next/image' // Fontos import a logóhoz
 import { 
     CheckCircle2, Calendar, Gauge, Fuel, Wrench, ShieldCheck, 
-    MapPin, Phone, RefreshCcw, Zap, Info, ArrowUpRight, Share2
+    MapPin, Phone, Zap, Info, ArrowUpRight, Share2
 } from 'lucide-react'
 import CarGallery from '@/components/CarGallery'
 
@@ -32,25 +33,21 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
     if (!car) return notFound()
 
     // 2. Képek intelligens összefűzése
-    // A fő kép (image_url) legyen az első, utána a galéria képek (sale_images)
     let allImages: string[] = []
     
+    // Fő kép hozzáadása
     if (car.image_url) {
         allImages.push(car.image_url)
     }
 
+    // Galéria képek hozzáadása (duplikáció szűréssel)
     if (car.sale_images && Array.isArray(car.sale_images)) {
-        // Csak azokat adjuk hozzá, amik még nincsenek benne (duplikáció szűrés)
         car.sale_images.forEach((img: string) => {
+            // Csak akkor adjuk hozzá, ha nem egyezik a fő képpel
             if (img !== car.image_url) {
                 allImages.push(img)
             }
         })
-    }
-
-    // Ha nincs kép, tegyünk be egy placeholdert (opcionális)
-    if (allImages.length === 0) {
-        // allImages.push('/placeholder-car.jpg') 
     }
 
     // 3. Események lekérése
@@ -60,28 +57,38 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
         .eq('car_id', car.id)
         .order('event_date', { ascending: false })
 
-    // Adatvédelem
     const displayPlate = car.hide_sensitive ? '******' : car.plate
     const displayVin = car.hide_sensitive ? '*****************' : car.vin
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans pb-20">
+        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20">
             
-            {/* --- HEADER --- */}
-            <div className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 transition-all">
-                <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-7xl">
+            {/* --- HEADER (Tiszta, csík nélküli) --- */}
+            <div className="bg-white sticky top-0 z-40 shadow-sm"> 
+                <div className="container mx-auto px-4 h-20 flex items-center justify-between max-w-7xl">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-slate-900/20">
-                            D
+                        {/* SAJÁT LOGÓ HELYE */}
+                        {/* Tedd a logódat a 'public' mappába 'logo.png' néven */}
+                        <div className="relative h-10 w-32 md:w-40 flex items-center">
+                             <Image 
+                                src="/DynamicSense-logo.png"  // Cseréld le a fájlnevet, ha más a neve
+                                alt="Logo" 
+                                width={160} 
+                                height={40} 
+                                className="object-contain object-left"
+                                priority
+                             />
+                             {/* Fallback szöveg, ha még nincs kép (kivehető) */}
+                             {/* <span className="font-bold text-xl ml-2">DynamicSense</span> */}
                         </div>
-                        <div className="hidden sm:block">
-                            <span className="font-bold text-slate-900 text-lg leading-none block">DynamicSense</span>
-                            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider block">Verified Listing</span>
+                        
+                        <div className="hidden sm:flex items-center px-3 py-1 bg-slate-100 rounded-full">
+                             <CheckCircle2 className="w-3 h-3 text-emerald-500 mr-1.5" />
+                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ellenőrzött Hirdetés</span>
                         </div>
                     </div>
                     
-                    {/* Share gomb (opcionális) */}
-                    <button className="p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors">
+                    <button className="p-2.5 rounded-full hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors border border-transparent hover:border-slate-200">
                         <Share2 className="w-5 h-5" />
                     </button>
                 </div>
@@ -92,23 +99,17 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                 {/* --- 1. CÍMSOR SZEKCIÓ --- */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                     <div>
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                            <Badge icon={CheckCircle2} text="Ellenőrzött hirdetés" color="emerald" />
-                            {car.exchange_possible && <Badge icon={RefreshCcw} text="Csere beszámítás" color="blue" />}
-                        </div>
-                        
-                        <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-2">
+                        <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-3">
                             {car.make} <span className="text-indigo-600">{car.model}</span>
                         </h1>
                         
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-slate-500 font-medium text-lg">
-                            <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-slate-400" /> {car.year}</span>
-                            <span className="flex items-center gap-1.5"><Fuel className="w-4 h-4 text-slate-400" /> {car.fuel_type}</span>
-                            <span className="flex items-center gap-1.5"><Gauge className="w-4 h-4 text-slate-400" /> {car.mileage?.toLocaleString()} km</span>
+                            <span className="flex items-center gap-2"><Calendar className="w-5 h-5 text-slate-400" /> {car.year}</span>
+                            <span className="flex items-center gap-2"><Fuel className="w-5 h-5 text-slate-400" /> {car.fuel_type}</span>
+                            <span className="flex items-center gap-2"><Gauge className="w-5 h-5 text-slate-400" /> {car.mileage?.toLocaleString()} km</span>
                         </div>
                     </div>
 
-                    {/* Ár mobilon rejtve, desktopon itt jelenik meg */}
                     <div className="hidden md:block text-right">
                          {!car.hide_prices ? (
                             <>
@@ -121,17 +122,16 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                     </div>
                 </div>
 
-                {/* --- 2. GALÉRIA --- */}
-                {/* Itt hívjuk meg a klienst komponenst a képekkel */}
+                {/* --- 2. GALÉRIA (Kliens komponens) --- */}
                 <CarGallery images={allImages} carModel={`${car.make} ${car.model}`} />
 
                 {/* --- 3. TARTALOM GRID --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mt-12 relative">
                     
-                    {/* BAL OSZLOP (Adatok) - 8 span */}
+                    {/* BAL OSZLOP (Adatok) */}
                     <div className="lg:col-span-8 space-y-12">
                         
-                        {/* Highlights Grid */}
+                        {/* Kiemelt Adatok */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <StatCard label="Évjárat" value={car.year} sub="Gyártási év" />
                             <StatCard label="Futás" value={`${car.mileage?.toLocaleString()} km`} sub="Garantált" highlighted />
@@ -145,15 +145,15 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                                 <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
                                     <Info className="w-5 h-5 text-indigo-500" /> Leírás
                                 </h3>
-                                <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed bg-white p-6 md:p-8 rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
                                     <p className="whitespace-pre-wrap">{car.description}</p>
                                 </div>
                             </section>
                         )}
 
-                        {/* Specifikációk Táblázat */}
+                        {/* Részletes Adatok Táblázat */}
                         <section>
-                            <h3 className="text-xl font-bold text-slate-900 mb-4">Részletes Adatok</h3>
+                            <h3 className="text-xl font-bold text-slate-900 mb-4">Specifikáció</h3>
                             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                                 <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
                                     <div className="p-6 md:p-8 space-y-5">
@@ -180,13 +180,13 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                             </div>
                         </section>
 
-                        {/* Felszereltség (Extrák) */}
+                        {/* Felszereltség */}
                         {car.features && car.features.length > 0 && (
                             <section>
                                 <h3 className="text-xl font-bold text-slate-900 mb-4">Felszereltség</h3>
                                 <div className="flex flex-wrap gap-2">
                                     {car.features.map((feature: string, idx: number) => (
-                                        <span key={idx} className="px-3 py-1.5 bg-white text-slate-700 rounded-lg text-sm font-semibold border border-slate-200 shadow-sm">
+                                        <span key={idx} className="px-4 py-2 bg-white text-slate-700 rounded-lg text-sm font-semibold border border-slate-200 shadow-sm">
                                             {feature}
                                         </span>
                                     ))}
@@ -194,7 +194,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                             </section>
                         )}
 
-                        {/* Digitális Szervizkönyv */}
+                        {/* Szerviztörténet */}
                         <section>
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -227,12 +227,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                                                             {ev.mileage.toLocaleString()} km
                                                         </div>
                                                         
-                                                        {/* SZERVIZKÖLTSÉG MEGJELENÍTÉS LOGIKA JAVÍTVA */}
-                                                        {/* Csak akkor mutatjuk, ha:
-                                                            1. Nincs globálisan elrejtve az ár (hide_prices)
-                                                            2. Nincs elrejtve a szervizköltség (hide_service_costs)
-                                                            3. Nagyobb mint 0
-                                                        */}
+                                                        {/* Költség elrejtése logika */}
                                                         {!car.hide_prices && !car.hide_service_costs && ev.cost > 0 && (
                                                             <div className="text-sm font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-100">
                                                                 {formatPrice(ev.cost)}
@@ -256,16 +251,15 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                         </section>
                     </div>
 
-                    {/* JOBB OSZLOP (Sticky) - 4 span */}
+                    {/* JOBB OSZLOP (Sticky Sidebar) */}
                     <div className="lg:col-span-4">
                         <div className="sticky top-28 space-y-6">
                             
                             {/* KAPCSOLAT KÁRTYA */}
                             <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-6 md:p-8 relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500"></div>
                                 
-                                {/* Ár megjelenítése mobilon fent volt, desktopon itt is legyen */}
-                                <div className="mb-8 md:block lg:block">
+                                {/* Ár (Desktop/Mobile egységesen) */}
+                                <div className="mb-8">
                                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Vételár</p>
                                      {!car.hide_prices ? (
                                         <p className="text-4xl font-black text-slate-900 tracking-tight">{formatPrice(car.price)}</p>
@@ -295,8 +289,8 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
                                 <div className="mt-8 pt-6 border-t border-slate-100">
                                     {car.location && (
                                         <div className="flex items-start gap-3 mb-4">
-                                            <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                                                <MapPin className="w-5 h-5 text-indigo-600" />
+                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">
+                                                <MapPin className="w-5 h-5 text-slate-500" />
                                             </div>
                                             <div>
                                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Megtekinthető</p>
@@ -336,24 +330,9 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
 
 // --- KOMPONENSEK ---
 
-function Badge({ icon: Icon, text, color }: any) {
-    const styles = {
-        emerald: "bg-emerald-100 text-emerald-800 border-emerald-200",
-        blue: "bg-blue-100 text-blue-800 border-blue-200",
-        slate: "bg-slate-100 text-slate-800 border-slate-200"
-    }
-    const style = styles[color as keyof typeof styles] || styles.slate
-
-    return (
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${style}`}>
-            <Icon className="w-3.5 h-3.5" /> {text}
-        </span>
-    )
-}
-
 function StatCard({ label, value, sub, highlighted }: any) {
     return (
-        <div className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${highlighted ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-100'}`}>
+        <div className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${highlighted ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-200'}`}>
             <span className="text-xs font-bold text-slate-400 uppercase mb-1">{label}</span>
             <span className={`text-xl md:text-2xl font-black ${highlighted ? 'text-indigo-900' : 'text-slate-800'}`}>{value}</span>
             {sub && <span className="text-[10px] font-medium text-slate-500 mt-1">{sub}</span>}

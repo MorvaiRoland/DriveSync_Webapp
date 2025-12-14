@@ -80,7 +80,7 @@ export default function ChangelogModal() {
                     A Garázsod <br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">Szintet Lépett.</span>
                 </h2>
-                <p className="text-slate-400 text-sm font-medium">Publikus adatlapok, Gumiabroncs Hotel és precízebb nyilvántartás.</p>
+                <p className="text-slate-400 text-sm font-medium">Publikus adatlapok, precízebb nyilvántartás.</p>
             </div>
         </div>
 
