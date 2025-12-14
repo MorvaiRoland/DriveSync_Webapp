@@ -6,7 +6,7 @@ export default async function MarketplaceWidget() {
   const supabase = await createClient()
 
   const { count } = await supabase
-    .from('cars')
+    .from('marketplace_view')
     .select('*', { count: 'exact', head: true })
     .eq('is_for_sale', true)
     .eq('is_listed_on_marketplace', true)

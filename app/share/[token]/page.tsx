@@ -25,7 +25,7 @@ export default async function SharedCarPage({ params }: { params: Promise<{ toke
 
     // 1. Autó lekérése (csak ha eladó)
     const { data: car } = await supabase
-        .from('cars')
+        .from('marketplace_view')
         .select('*')
         .eq('share_token', token)
         .eq('is_for_sale', true)

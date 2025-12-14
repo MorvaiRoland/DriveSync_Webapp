@@ -8,7 +8,7 @@ export default async function MarketplacePage() {
 
   // Lekérjük az autókat
   const { data: cars, error } = await supabase
-    .from('cars')
+    .from('marketplace_view')
     .select('*')
     .eq('is_for_sale', true)
     .eq('is_listed_on_marketplace', true)
