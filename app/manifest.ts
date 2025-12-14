@@ -2,52 +2,39 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'DynamicSense Hungary',
+    // ITT VOLT A HIBA: "DynamicSense Hungary" volt
+    name: 'DynamicSense Technologies', 
+    
+    // A rövid név maradhat DynamicSense (ez jelenik meg az ikon alatt a telefonon)
     short_name: 'DynamicSense',
+    
     description: 'Prémium Garázsmenedzsment - Szervizkönyv és költségek kezelése egy helyen.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0f172a', // Sötétkék háttér betöltéskor (a layout.tsx-ben is ez van)
-    theme_color: '#0f172a',       // FONTOS: Ez szebbé teszi a telefon státuszbárját (beleolvad az appba)
-    orientation: 'portrait',      // Megakadályozza, hogy betöltéskor elforduljon
-    id: '/',                      // Egyedi azonosító a PWA követéshez
+    background_color: '#0f172a',
+    theme_color: '#0f172a',
+    orientation: 'portrait',
+    id: '/',
     
     icons: [
       {
         src: '/icons/icon-192.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'any', // Ez jelenik meg sima ikonként (pl. Windows tálca)
+        purpose: 'any',
       },
       {
         src: '/icons/icon-512.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'maskable', // FONTOS! Ez kell Androidra (hogy kitöltse a kört/négyzetet)
+        purpose: 'maskable',
       },
       {
         src: '/icons/icon-512.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any', // Nagy felbontású ikon egyéb helyekre (pl. telepítési képernyő)
+        purpose: 'any',
       },
     ],
-    
-    // Opcionális: Később, ha teszel be képernyőképeket a /public/screenshots mappába, vedd ki a kommentet!
-    /*
-    screenshots: [
-      {
-        src: '/screenshots/mobile-1.png',
-        sizes: '1080x1920',
-        type: 'image/png',
-      },
-      {
-        src: '/screenshots/desktop-1.png',
-        sizes: '1920x1080',
-        type: 'image/png',
-        form_factor: 'wide',
-      },
-    ],
-    */
   }
 }
