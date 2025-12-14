@@ -22,7 +22,7 @@ export async function startParkingAction(formData: FormData) {
       expires_at = new Date(now.getTime() + durationMinutes * 60000).toISOString()
   }
 
-  // 1. Fotó feltöltés (ha van)
+  // 1. Fotó feltöltés
   let photo_url = null
   if (photoFile && photoFile.size > 0) {
       const fileExt = photoFile.name.split('.').pop()
@@ -37,8 +37,7 @@ export async function startParkingAction(formData: FormData) {
       }
   }
 
-  // 2. Mentés az adatbázisba
-  // Előtte töröljük az előző aktív parkolást ehhez az autóhoz (hogy ne legyen duplikáció)
+  // 2. Előző aktív parkolás törlése (cleanup)
   await supabase.from('parking_sessions').delete().eq('car_id', car_id)
 
   const { error } = await supabase.from('parking_sessions').insert({
@@ -51,15 +50,29 @@ export async function startParkingAction(formData: FormData) {
       expires_at
   })
 
-  if (error) console.error('Parking save error:', error)
+  if (error) console.error('Hiba a mentéskor:', error)
 
-  revalidatePath('/') // Frissítjük a dashboardot
+  revalidatePath('/') 
 }
 
 export async function stopParkingAction(formData: FormData) {
-    const supabase = await createClient()
-    const id = String(formData.get('id'))
-    
-    await supabase.from('parking_sessions').delete().eq('id', id)
-    revalidatePath('/')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Nem vagy bejelentkezve')
+
+  const parkingId = formData.get('parking_id') as string // Fontos: parking_id a neve a formban is!
+  
+  if (!parkingId) throw new Error('Hiányzó parkolás ID')
+  
+  const { error } = await supabase
+    .from('parking_sessions')
+    .delete()
+    .eq('id', parkingId)
+    // Biztonsági extra: csak a sajátját törölhesse
+    .eq('user_id', user.id)
+
+  if (error) console.error('Hiba a leállításkor:', error)
+
+  revalidatePath('/')
+  return { success: true }
 }
