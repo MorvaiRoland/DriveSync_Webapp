@@ -39,11 +39,15 @@ export async function startParkingAction(formData: FormData) {
       }
   }
 
-  // Előző törlése
-  await supabase.from('parking_sessions').delete().eq('car_id', car_id)
+  // 1. Előző törlése (Biztos ami biztos)
+  const { error: deleteError } = await supabase.from('parking_sessions').delete().eq('car_id', car_id)
+  if (deleteError) {
+      console.error('Törlési hiba:', deleteError)
+      // Itt még nem feltétlen kell megállni, de jó tudni róla
+  }
 
-  // Új beszúrása
-  const { error } = await supabase.from('parking_sessions').insert({
+  // 2. Új beszúrása
+  const { error: insertError } = await supabase.from('parking_sessions').insert({
       user_id: user.id,
       car_id,
       latitude,
@@ -54,30 +58,27 @@ export async function startParkingAction(formData: FormData) {
       expires_at
   })
 
-  if (error) console.error('Hiba a mentéskor:', error)
+  // JAVÍTÁS: Ha hiba van, akkor DOBJUNK HIBÁT, hogy a kliens is tudjon róla!
+  if (insertError) {
+      console.error('Hiba a mentéskor:', insertError)
+      throw new Error('Adatbázis hiba: Nem sikerült menteni a parkolást.')
+  }
 
-  // JAVÍTÁS: A 'layout' paraméter törli a teljes kliens oldali cache-t az adott útvonalakon,
-  // így biztosan friss adatot kap a felhasználó.
+  // Ha idáig eljutottunk, biztosan mentve van az adat.
   revalidatePath('/', 'layout') 
   revalidatePath(`/cars/${car_id}`, 'layout')
 }
 
+// ... a stopParkingAction maradhat a régi ...
 export async function stopParkingAction(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    throw new Error('Nem vagy bejelentkezve')
-  }
+  if (!user) throw new Error('Nem vagy bejelentkezve')
 
   const parkingId = formData.get('parking_id') as string
   const carId = formData.get('car_id') as string
 
-  // Ha ez egy ideiglenes ID (optimista UI-ból), akkor a DB-ben nincs mit törölni,
-  // de a kliensnek sikeres választ küldünk, hogy frissítsen.
-  if (parkingId === 'temp-id') {
-      return { success: true }
-  }
+  if (parkingId === 'temp-id') return { success: true }
 
   const { error } = await supabase
     .from('parking_sessions')
@@ -85,10 +86,7 @@ export async function stopParkingAction(formData: FormData) {
     .eq('id', parkingId)
     .eq('user_id', user.id)
 
-  if (error) {
-    console.error('Hiba a törléskor:', error)
-    throw new Error('Nem sikerült leállítani a parkolást')
-  }
+  if (error) throw new Error('Nem sikerült leállítani a parkolást')
 
   revalidatePath('/', 'layout')
   if (carId) revalidatePath(`/cars/${carId}`, 'layout')
