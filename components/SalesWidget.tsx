@@ -3,21 +3,26 @@
 import { useState, useEffect, useTransition } from 'react'
 import { 
   Share2, Link as LinkIcon, Eye, EyeOff, Shield, Copy, Check, Store, 
-  MapPin, Phone, Banknote, RefreshCcw, FileText, Save, Loader2 
+  MapPin, Phone, Banknote, RefreshCcw, FileText, Save, Loader2,
+  Image as ImageIcon, X, UploadCloud, Wrench // ÚJ ikonok
 } from 'lucide-react'
 import { toggleSaleMode } from '@/app/cars/[id]/actions'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image' // Next.js Image komponens az előnézethez
 
 export default function SalesWidget({ car }: { car: any }) {
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
 
     // --- ÁLLAPOTOK ---
-    // Azonnal inicializáljuk a prop-ból, de engedjük a helyi módosítást
     const [isForSale, setIsForSale] = useState(car.is_for_sale || false)
     const [shareToken, setShareToken] = useState(car.share_token || '')
     
+    // ÚJ: Képek állapotai
+    const [selectedImages, setSelectedImages] = useState<File[]>([])
+    const [previews, setPreviews] = useState<string[]>([])
+
     const [formData, setFormData] = useState({
         price: car.price || '',
         location: car.location || '',
@@ -26,7 +31,8 @@ export default function SalesWidget({ car }: { car: any }) {
         exchange_possible: car.exchange_possible || false,
         listed_on_marketplace: car.is_listed_on_marketplace || false,
         hide_prices: car.hide_prices || false,
-        hide_sensitive: car.hide_sensitive || false
+        hide_sensitive: car.hide_sensitive || false,
+        hide_service_costs: car.hide_service_costs || false // ÚJ mező
     })
 
     const [origin, setOrigin] = useState('')
@@ -36,66 +42,99 @@ export default function SalesWidget({ car }: { car: any }) {
         setOrigin(window.location.origin)
     }, [])
 
-    // Ha a szerverről új adat jön (pl. revalidate után), frissítjük a state-et
     useEffect(() => {
         if (car.share_token) setShareToken(car.share_token)
     }, [car.share_token])
 
+    // ÚJ: Takarítás (memória szivárgás elkerülése a preview URL-eknél)
+    useEffect(() => {
+        return () => {
+            previews.forEach(url => URL.revokeObjectURL(url))
+        }
+    }, [previews])
+
     const shareUrl = shareToken ? `${origin}/share/${shareToken}` : 'Link generálása...'
+
+    // --- ÚJ: KÉPKEZELŐ FÜGGVÉNYEK ---
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const filesArray = Array.from(e.target.files)
+            
+            // Új fájlok hozzáadása a meglévőkhöz
+            setSelectedImages(prev => [...prev, ...filesArray])
+
+            // Előnézeti URL-ek generálása
+            const newPreviews = filesArray.map(file => URL.createObjectURL(file))
+            setPreviews(prev => [...prev, ...newPreviews])
+        }
+    }
+
+    const removeImage = (index: number) => {
+        setSelectedImages(prev => prev.filter((_, i) => i !== index))
+        setPreviews(prev => {
+            // A törölt URL felszabadítása
+            URL.revokeObjectURL(prev[index])
+            return prev.filter((_, i) => i !== index)
+        })
+    }
 
     // --- MŰVELETEK ---
 
-    // 1. FŐKAPCSOLÓ (Külön logika, mert ez a legfontosabb)
     const handleToggleSale = async (checked: boolean) => {
-        // 1. Optimista frissítés: Azonnal átállítjuk a UI-t
         setIsForSale(checked)
         
         const formDataPayload = new FormData()
         formDataPayload.append('car_id', car.id)
         formDataPayload.append('enable', checked.toString())
-        // A többi adatot is mellékeljük, hogy ne vesszenek el
+        
         Object.entries(formData).forEach(([key, value]) => {
             formDataPayload.append(key, value.toString())
         })
 
-        // 2. Szerver hívás
         startTransition(async () => {
             const result = await toggleSaleMode(formDataPayload)
             
             if (result.success) {
                 toast.success(checked ? 'Hirdetés aktiválva!' : 'Hirdetés leállítva')
-                router.refresh() // Frissítjük az oldalt, hogy a token megjelenjen
+                router.refresh()
             } else {
-                setIsForSale(!checked) // Hiba esetén visszavonjuk
+                setIsForSale(!checked)
                 toast.error('Hiba történt: ' + result.error)
             }
         })
     }
 
-    // 2. ADATOK MENTÉSE (Gombnyomásra)
     const handleSaveDetails = async (e: React.FormEvent) => {
-        e.preventDefault() // Ne töltse újra az oldalt
+        e.preventDefault()
         
         const formDataPayload = new FormData()
         formDataPayload.append('car_id', car.id)
-        formDataPayload.append('enable', isForSale.toString()) // A jelenlegi státusz
+        formDataPayload.append('enable', isForSale.toString())
         
-        // Adatok csatolása
         formDataPayload.append('price', formData.price)
         formDataPayload.append('location', formData.location)
         formDataPayload.append('seller_phone', formData.seller_phone)
         formDataPayload.append('description', formData.description)
         
-        // Checkboxok (vigyázat, a FormData stringet vár)
         if (formData.exchange_possible) formDataPayload.append('exchange_possible', 'on')
         if (formData.listed_on_marketplace) formDataPayload.append('listed_on_marketplace', 'on')
         if (formData.hide_prices) formDataPayload.append('hide_prices', 'on')
         if (formData.hide_sensitive) formDataPayload.append('hide_sensitive', 'on')
+        // ÚJ: Szervizköltség
+        if (formData.hide_service_costs) formDataPayload.append('hide_service_costs', 'on')
+
+        // ÚJ: Képek csatolása
+        selectedImages.forEach((file) => {
+            formDataPayload.append('images', file) 
+        })
 
         startTransition(async () => {
             const result = await toggleSaleMode(formDataPayload)
             if (result.success) {
-                toast.success('Adatok sikeresen mentve!')
+                toast.success('Adatok és képek sikeresen mentve!')
+                // Képek törlése mentés után, ha a szerver sikeresen feldolgozta
+                setSelectedImages([])
+                setPreviews([])
                 router.refresh()
             } else {
                 toast.error('Mentési hiba')
@@ -103,7 +142,6 @@ export default function SalesWidget({ car }: { car: any }) {
         })
     }
 
-    // Input mezők kezelése
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const value = e.target.type === 'checkbox' 
             ? (e.target as HTMLInputElement).checked 
@@ -122,7 +160,6 @@ export default function SalesWidget({ car }: { car: any }) {
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-            {/* Fejléc */}
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-900/50 flex justify-between items-center">
                 <h3 className="font-bold text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
                     <Share2 className="w-5 h-5 text-indigo-500" />
@@ -132,7 +169,6 @@ export default function SalesWidget({ car }: { car: any }) {
             </div>
 
             <div className="p-5">
-                {/* 1. FŐKAPCSOLÓ - Külön a formtól */}
                 <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700 transition-colors hover:border-indigo-200 dark:hover:border-indigo-800 mb-6">
                     <div>
                         <span className="font-bold text-slate-900 dark:text-white block text-lg">Eladósorban</span>
@@ -152,10 +188,54 @@ export default function SalesWidget({ car }: { car: any }) {
                     </label>
                 </div>
 
-                {/* CSAK AKKOR MUTATJUK A RÉSZLETEKET, HA ELADÓ */}
                 {isForSale && (
                     <form onSubmit={handleSaveDetails} className="space-y-6 animate-in fade-in slide-in-from-top-2">
                         
+                        {/* --- ÚJ: KÉPFELTÖLTÉS SZEKCIÓ --- */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1">
+                                <ImageIcon className="w-3 h-3" /> Fotók feltöltése
+                            </label>
+                            
+                            <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50 dark:bg-slate-900/50">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                                    {/* Előnézeti képek */}
+                                    {previews.map((src, idx) => (
+                                        <div key={idx} className="relative aspect-video group">
+                                            <img 
+                                                src={src} 
+                                                alt={`Preview ${idx}`} 
+                                                className="w-full h-full object-cover rounded-lg border border-slate-200 dark:border-slate-700"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeImage(idx)}
+                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    
+                                    {/* Feltöltés gomb */}
+                                    <label className="cursor-pointer aspect-video flex flex-col items-center justify-center rounded-lg border border-indigo-200 dark:border-indigo-800/50 bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                                        <UploadCloud className="w-6 h-6 text-indigo-500 mb-1" />
+                                        <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">Képek kiválasztása</span>
+                                        <input 
+                                            type="file" 
+                                            multiple 
+                                            accept="image/*"
+                                            onChange={handleImageChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
+                                <p className="text-[10px] text-slate-400 text-center">
+                                    Tölts fel több képet a jobb eladhatóság érdekében. (Max 5MB/kép)
+                                </p>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1">
@@ -253,7 +333,7 @@ export default function SalesWidget({ car }: { car: any }) {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <EyeOff className="w-4 h-4 text-slate-400" />
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">Ár elrejtése</span>
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">Eladási ár elrejtése</span>
                                 </div>
                                 <input 
                                     type="checkbox" 
@@ -277,9 +357,23 @@ export default function SalesWidget({ car }: { car: any }) {
                                     className="accent-indigo-600 w-4 h-4 rounded" 
                                 />
                             </div>
+
+                            {/* --- ÚJ: SZERVIZKÖLTSÉG ELREJTÉSE --- */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Wrench className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm text-slate-600 dark:text-slate-400">Szervizköltségek elrejtése</span>
+                                </div>
+                                <input 
+                                    type="checkbox" 
+                                    name="hide_service_costs" 
+                                    checked={formData.hide_service_costs}
+                                    onChange={handleInputChange}
+                                    className="accent-indigo-600 w-4 h-4 rounded" 
+                                />
+                            </div>
                         </div>
 
-                        {/* MENTÉS GOMB */}
                         <button 
                             type="submit" 
                             disabled={isPending}
@@ -289,7 +383,6 @@ export default function SalesWidget({ car }: { car: any }) {
                             {isPending ? 'Mentés...' : 'Beállítások mentése'}
                         </button>
 
-                        {/* LINK MEGOSZTÁS */}
                         {shareToken && (
                             <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex flex-col gap-3">
                                 <div className="flex items-center gap-2 p-3 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">

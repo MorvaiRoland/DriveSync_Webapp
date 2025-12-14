@@ -160,29 +160,59 @@ export async function updateCar(formData: FormData) {
 
   const carId = String(formData.get('car_id'))
   
-  const motExpiry = formData.get('mot_expiry');
-  const insuranceExpiry = formData.get('insurance_expiry');
+  // Segédfüggvény: Üres string esetén null-t ad vissza, egyébként számot
+  const parseNullableInt = (key: string) => {
+      const val = formData.get(key)
+      if (!val || String(val).trim() === '') return null
+      const num = parseInt(String(val))
+      return isNaN(num) ? null : num
+  }
+
+  // Segédfüggvény: Üres string esetén null-t ad vissza (dátumokhoz, opcionális szövegekhez)
+  const parseNullableString = (key: string) => {
+      const val = formData.get(key)
+      return (val && String(val).trim() !== '') ? String(val) : null
+  }
+
   const status = String(formData.get('status') || formData.get('status_radio') || 'active');
 
   const updates: any = {
+    // 1. Alapadatok
     make: String(formData.get('make')),
     model: String(formData.get('model')),
     plate: String(formData.get('plate')).toUpperCase().replace(/\s/g, ''),
     year: parseInt(String(formData.get('year'))),
     mileage: parseInt(String(formData.get('mileage'))),
+    color: parseNullableString('color'),
+    vin: parseNullableString('vin'),
+    
+    // 2. Technikai adatok (ÚJ MEZŐK)
     fuel_type: String(formData.get('fuel_type')),
-    color: String(formData.get('color')),
-    vin: String(formData.get('vin')),
+    body_type: parseNullableString('body_type'),     // Kivitel
+    transmission: String(formData.get('transmission')), // Váltó
+    engine_size: parseNullableInt('engine_size'),    // cm3
+    power_hp: parseNullableInt('power_hp'),          // LE
+
+    // 3. Státusz és Beállítások
     status: status,
     service_interval_km: parseInt(String(formData.get('service_interval_km'))) || 15000,
     service_interval_days: parseInt(String(formData.get('service_interval_days'))) || 365,
-    mot_expiry: motExpiry && motExpiry !== '' ? String(motExpiry) : null,
-    insurance_expiry: insuranceExpiry && insuranceExpiry !== '' ? String(insuranceExpiry) : null,
+    
+    // 4. Okmányok
+    mot_expiry: parseNullableString('mot_expiry'),
+    insurance_expiry: parseNullableString('insurance_expiry'),
+    
+    // Frissítés ideje
+    updated_at: new Date().toISOString()
   }
 
+  // 5. Képfeltöltés (csak ha új kép lett kiválasztva)
   const imageFile = formData.get('image') as File;
   if (imageFile && imageFile.size > 0) {
-    const fileName = `${user.id}/${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
+    // Fájlnév tisztítás
+    const cleanName = imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
+    const fileName = `${user.id}/${Date.now()}_${cleanName}`;
+    
     const { error: uploadError } = await supabase.storage.from('car-images').upload(fileName, imageFile);
     
     if (uploadError) {
@@ -668,6 +698,13 @@ export async function deleteVignette(formData: FormData) {
 
 export async function toggleSaleMode(formData: FormData) {
   const supabase = await createClient()
+  
+  // Biztonsági ellenőrzés: csak bejelentkezett user módosíthat
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+      return { success: false, error: 'Nincs bejelentkezve' }
+  }
+
   const carId = formData.get('car_id') as string
   
   // Boolean konverziók
@@ -676,6 +713,8 @@ export async function toggleSaleMode(formData: FormData) {
   const hidePrices = formData.get('hide_prices') === 'on'
   const hideSensitive = formData.get('hide_sensitive') === 'on'
   const exchangePossible = formData.get('exchange_possible') === 'on'
+  // ÚJ: Szervizköltségek elrejtése flag
+  const hideServiceCosts = formData.get('hide_service_costs') === 'on'
 
   // Adatok
   const price = formData.get('price') ? parseInt(formData.get('price') as string) : null
@@ -683,48 +722,85 @@ export async function toggleSaleMode(formData: FormData) {
   const location = formData.get('location') as string
   const description = formData.get('description') as string
 
+  // --- ÚJ: Képfeltöltés kezelése ---
+  const imageFiles = formData.getAll('images') as File[]
+  const newImageUrls: string[] = []
+
+  // Ha vannak feltöltendő képek
+  if (imageFiles && imageFiles.length > 0) {
+    for (const file of imageFiles) {
+        // Ellenőrizzük, hogy valódi fájl-e és van-e mérete
+        if (file.size > 0 && file.name !== 'undefined') {
+            const fileExt = file.name.split('.').pop()
+            // Egyedi fájlnév generálás: user_id/car_id/timestamp_random.ext
+            const fileName = `${user.id}/${carId}/sale_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+            
+            // Feltöltés a 'car-images' bucket-be
+            const { error: uploadError } = await supabase.storage
+                .from('car-images')
+                .upload(fileName, file)
+
+            if (uploadError) {
+                console.error('Képfeltöltési hiba:', uploadError)
+                // Opcionális: itt megállíthatjuk a folyamatot, vagy csak logolunk
+            } else {
+                // Publikus URL lekérése
+                const { data } = supabase.storage.from('car-images').getPublicUrl(fileName)
+                newImageUrls.push(data.publicUrl)
+            }
+        }
+    }
+  }
+
   try {
     // 1. Lekérjük a jelenlegi autót
     const { data: currentCar } = await supabase
       .from('cars')
-      .select('share_token')
+      .select('share_token, sale_images') // Lekérjük a meglévő képeket is
       .eq('id', carId)
       .single()
     
     // 2. Token generálás, ha nincs, DE eladóvá tesszük
     let shareToken = currentCar?.share_token
     if (enable && !shareToken) {
-      shareToken = crypto.randomUUID()
+      shareToken = uuidv4()
     }
 
-    // 3. Adatbázis frissítés
+    // 3. Képek összefűzése: Meglévő képek + Új képek
+    // Feltételezzük, hogy a 'sale_images' egy text[] oszlop az adatbázisban
+    const existingImages = currentCar?.sale_images || []
+    const updatedImages = [...existingImages, ...newImageUrls]
+
+    // 4. Adatbázis frissítés
     const { error } = await supabase
       .from('cars')
       .update({
         is_for_sale: enable,
-        share_token: shareToken, // Itt mentjük el az új tokent
+        share_token: shareToken,
         is_listed_on_marketplace: enable ? listedOnMarketplace : false,
         hide_prices: hidePrices,
         hide_sensitive: hideSensitive,
+        hide_service_costs: hideServiceCosts, // ÚJ MEZŐ MENTÉSE
         exchange_possible: exchangePossible,
         price: price,
         seller_phone: sellerPhone,
         location: location,
         description: description,
+        sale_images: updatedImages, // ÚJ: KÉPEK MENTÉSE
         updated_at: new Date().toISOString(),
       })
       .eq('id', carId)
 
     if (error) throw error
 
-    // 4. Cache frissítés
+    // 5. Cache frissítés
     revalidatePath(`/cars/${carId}`)
     revalidatePath('/marketplace')
-    revalidatePath('/') // Főoldal
+    revalidatePath('/') 
 
     return { success: true }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mentési hiba:', error)
-    return { success: false, error: 'Hiba történt a mentés során' }
+    return { success: false, error: error.message || 'Hiba történt a mentés során' }
   }
 }

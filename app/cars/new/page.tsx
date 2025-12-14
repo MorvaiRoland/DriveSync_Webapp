@@ -281,6 +281,19 @@ function CarForm() {
                 <option value="cvt">Fokozatmentes (CVT)</option>
                 <option value="robotized">Robotizált</option>
             </SelectGroup>
+            <SelectGroup label="Kivitel" name="body_type" icon={<CarFront className="w-4 h-4" />}>
+    <option value="" disabled selected>Válassz...</option>
+    <option value="sedan">Sedan / Limuzin</option>
+    <option value="kombi">Kombi / Touring</option>
+    <option value="hatchback">Ferdehátú (Hatchback)</option>
+    <option value="suv">SUV / Terepjáró</option>
+    <option value="crossover">Crossover</option>
+    <option value="coupe">Coupé</option>
+    <option value="cabrio">Cabriolet</option>
+    <option value="mpv">Egyterű (MPV)</option>
+    <option value="pickup">Pickup</option>
+    <option value="van">Kisbusz / Furgon</option>
+</SelectGroup>
 
             {/* JAVÍTOTT: Az opciók értéke (value) angol, a megjelenítés magyar */}
             <SelectGroup label="Üzemanyag" name="fuel_type" required icon={<Fuel className="w-4 h-4" />}>

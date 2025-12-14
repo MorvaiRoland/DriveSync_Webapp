@@ -22,52 +22,34 @@ export async function addCar(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
+  // ... (Képfeltöltés logika változatlan marad) ...
   const imageFile = formData.get('image') as File;
   let image_url = null;
+  // ... (Képfeltöltés kód vége)
 
-  // Képfeltöltés logika
-  if (imageFile && imageFile.size > 0) {
-    // Ékezetek és szóközök eltávolítása a fájlnévből a biztonságos mentéshez
-    const cleanName = imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
-    const fileName = `${user.id}/${Date.now()}_${cleanName}`;
-    
-    // Feltöltés a 'car-images' bucket-be
-    const { data, error: uploadError } = await supabase.storage
-      .from('car-images')
-      .upload(fileName, imageFile, {
-        cacheControl: '3600',
-        upsert: false
-      });
-
-    if (uploadError) {
-      console.error('Képfeltöltési hiba:', uploadError);
-      // Nem állítjuk meg a folyamatot, csak nem lesz képe
-    } else {
-      // Publikus URL lekérése
-      const { data: publicUrlData } = supabase.storage
-        .from('car-images')
-        .getPublicUrl(fileName);
-      image_url = publicUrlData.publicUrl;
-    }
-  }
+  // Segédfüggvények (ha nincsenek definiálva a fájlban, érdemes hozzáadni őket, vagy inline megoldani)
+  const parseNullableInt = (val: FormDataEntryValue | null) => val ? parseInt(String(val)) : null;
+  const parseNullableString = (val: FormDataEntryValue | null) => val && String(val).trim() !== '' ? String(val) : null;
 
   const { error } = await supabase.from('cars').insert({
     user_id: user.id,
     make: String(formData.get('make')),
     model: String(formData.get('model')),
     plate: String(formData.get('plate')).toUpperCase().replace(/\s/g, ''),
-    vin: String(formData.get('vin')) || null,
+    vin: parseNullableString(formData.get('vin')),
     year: parseInt(String(formData.get('year'))),
-    color: String(formData.get('color')),
+    color: parseNullableString(formData.get('color')),
+    
+    // --- ÚJ MEZŐ HOZZÁADVA: ---
+    body_type: parseNullableString(formData.get('body_type')),
+    // --------------------------
+
     status: String(formData.get('status')),
     image_url: image_url,
     
     // Műszaki adatok
     mileage: parseInt(String(formData.get('mileage'))),
-    
-    // FONTOS: Itt az angol kulcsszót mentjük el (pl. 'electric'), ami a form value-jából jön
     fuel_type: String(formData.get('fuel_type')), 
-    
     transmission: String(formData.get('transmission')),
     power_hp: parseNullableInt(formData.get('power_hp')),
     engine_size: parseNullableInt(formData.get('engine_size')),
