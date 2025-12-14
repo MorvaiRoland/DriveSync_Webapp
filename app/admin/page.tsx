@@ -193,7 +193,7 @@ export default async function AdminDashboard({
                 <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></div>
                 <h1 className="text-3xl font-black text-white tracking-tight">ADMIN PARANCSNOKI HÍD</h1>
             </div>
-            <p className="text-slate-400 text-sm mt-1">DynamicSense Hungary • <span className="text-amber-500 font-mono text-xs">MAGIC LINK ACCESS</span></p>
+            <p className="text-slate-400 text-sm mt-1">DynamicSense Technologies • <span className="text-amber-500 font-mono text-xs">MAGIC LINK ACCESS</span></p>
         </div>
         <Link href="/" className="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors hover:text-white">
             Vissza az Appba
