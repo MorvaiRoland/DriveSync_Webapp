@@ -46,7 +46,7 @@ async function logCurrentMileage(formData: FormData) {
 }
 
 // =================================================================================================
-// DASHBOARD KOMPONENS (DESIGN FRISSÍTVE)
+// DASHBOARD KOMPONENS (DESIGN FRISSÍTVE: STICKY NAV + THEMED WIDGET)
 // =================================================================================================
 async function DashboardComponent() {
   const supabase = await createClient()
@@ -187,9 +187,9 @@ async function DashboardComponent() {
       <ChangelogModal />
       <ReminderChecker />
 
-      {/* --- NAVBAR (LIQUID GLASS STYLE) --- */}
+      {/* --- NAVBAR (LIQUID GLASS STYLE & STICKY FIX) --- */}
       <nav className="sticky top-4 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
            <div className="flex items-center gap-6"> 
              <Link href="/" className="flex items-center gap-3 group">
                <div className="relative w-8 h-8 group-hover:rotate-12 transition-transform duration-500">
@@ -239,7 +239,7 @@ async function DashboardComponent() {
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32">
         
-        {/* --- HEADER --- */}
+        {/* --- HERO HEADER --- */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
@@ -251,10 +251,9 @@ async function DashboardComponent() {
               </h1>
             </div>
 
-            {/* --- KPI STATS BAR (LIQUID STYLE) --- */}
+            {/* --- KPI STATS BAR --- */}
             {cars.length > 0 && (
                 <div className="w-full lg:w-auto bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-2 border border-white/20 dark:border-slate-700 shadow-xl flex flex-col sm:flex-row gap-2">
-                    
                     {/* Health Score */}
                     <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[200px]">
                         <div className="relative w-10 h-10 flex-shrink-0">
@@ -299,22 +298,22 @@ async function DashboardComponent() {
             {/* BAL OLDAL (Fő funkciók) */}
             <div className="lg:col-span-8 space-y-8">
               
-              {/* 1. GYORS KM NAPLÓZÁS WIDGET */}
+              {/* 1. GYORS KM NAPLÓZÁS WIDGET (TÉMA KORREKCIÓ: Fekete/Fehér) */}
               {FEATURES.mileageLog && myCars.length > 0 && (
-                  <div className="relative overflow-hidden rounded-3xl bg-slate-900 text-white shadow-2xl p-6 sm:p-8 group">
-                      {/* Background decorations */}
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none group-hover:bg-amber-500/30 transition-colors duration-700"></div>
-                      <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
-                      <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
+                  <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xl p-6 sm:p-8 group border border-slate-200 dark:border-slate-800">
+                      
+                      {/* Background decorations - Subtle */}
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-colors duration-700"></div>
+                      <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-600/5 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
 
                       <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
                           <div className="flex items-center gap-4 w-full md:w-auto">
-                              <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-inner">
-                                  <Gauge className="w-7 h-7 text-amber-400" />
+                              <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-inner">
+                                  <Gauge className="w-7 h-7 text-amber-500" />
                               </div>
                               <div>
-                                  <h3 className="text-xl font-black tracking-tight">Gyors Km Rögzítés</h3>
-                                  <p className="text-slate-400 text-sm">Frissítsd az óraállást egy kattintással.</p>
+                                  <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Gyors Km Rögzítés</h3>
+                                  <p className="text-slate-500 dark:text-slate-400 text-sm">Frissítsd az óraállást egy kattintással.</p>
                               </div>
                           </div>
 
@@ -322,11 +321,11 @@ async function DashboardComponent() {
                               <div className="relative group/input">
                                   <select 
                                       name="car_id" 
-                                      className="w-full sm:w-48 pl-4 pr-10 py-3.5 bg-slate-800/50 border border-white/10 rounded-xl text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none appearance-none cursor-pointer transition-colors hover:bg-slate-800"
+                                      className="w-full sm:w-48 pl-4 pr-10 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none appearance-none cursor-pointer transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white"
                                       defaultValue={latestCarId || ""}
                                   >
                                       {myCars.map((car) => (
-                                          <option key={car.id} value={car.id} className="text-slate-900 bg-white">
+                                          <option key={car.id} value={car.id}>
                                               {car.make} {car.model}
                                           </option>
                                       ))}
@@ -341,13 +340,13 @@ async function DashboardComponent() {
                                       type="number" 
                                       name="current_mileage" 
                                       placeholder="Új állás..." 
-                                      className="w-full sm:w-36 pl-4 pr-10 py-3.5 bg-slate-800/50 border border-white/10 rounded-xl text-sm font-bold font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none transition-colors hover:bg-slate-800 placeholder-slate-500"
+                                      className="w-full sm:w-36 pl-4 pr-10 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 placeholder-slate-400 dark:placeholder-slate-500 text-slate-900 dark:text-white"
                                       required
                                   />
-                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 uppercase">KM</span>
+                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase">KM</span>
                               </div>
 
-                              <button type="submit" className="px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold rounded-xl shadow-lg shadow-amber-900/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                              <button type="submit" className="px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold rounded-xl shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
                                   <CheckCircle2 className="w-5 h-5" />
                                   <span className="hidden sm:inline">Mentés</span>
                               </button>
@@ -362,7 +361,7 @@ async function DashboardComponent() {
                       <div className="flex items-center justify-between px-2">
                           <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                               <span className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500">
-                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                                  <CarFront className="w-5 h-5" />
                               </span>
                               Saját Garázs
                           </h3>

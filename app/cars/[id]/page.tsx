@@ -8,7 +8,6 @@ import ExportMenu from '@/components/ExportMenu'
 import LockedFeature from '@/components/LockedFeature'
 import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
 import VignetteManager from '@/components/VignetteManager'
-// Itt egységesítettem a nevet: SmartParkingWidget
 import SmartParkingWidget from '@/components/SmartParkingWidget' 
 import SalesWidget from '@/components/SalesWidget'
 import AnalyticsCharts from '@/components/AnalyticsCharts'
@@ -91,7 +90,6 @@ export default async function CarDetailsPage(props: Props) {
   const fuelEvents = safeEvents.filter(e => e.type === 'fuel' && e.mileage && e.liters).sort((a, b) => a.mileage - b.mileage)
   let avgConsumption = "Nincs adat"
   
-  // Elektromos / Hagyományos fogyasztás kijelzés
   const isElectric = car.fuel_type === 'Elektromos';
   const unit = isElectric ? 'kWh' : 'L';
 
@@ -102,7 +100,7 @@ export default async function CarDetailsPage(props: Props) {
   }
 
   // --- Service Logic ---
-  const serviceIntervalKm = car.service_interval_km || (isElectric ? 30000 : 15000); // Elektromosnál ritkább alapértelmezett
+  const serviceIntervalKm = car.service_interval_km || (isElectric ? 30000 : 15000); 
   let baseKm = car.last_service_mileage || 0;
   const lastServiceEvent = safeEvents.find(e => e.type === 'service');
   if (lastServiceEvent && lastServiceEvent.mileage > baseKm) baseKm = lastServiceEvent.mileage;
@@ -118,11 +116,11 @@ export default async function CarDetailsPage(props: Props) {
   else if (kmRemaining < 2000) healthStatus = { text: "Hamarosan", color: "text-amber-500 bg-amber-500/10 border-amber-500/20", dot: "bg-amber-500" };
 
   const percentageUsed = Math.min(100, Math.max(0, (kmSinceService / serviceIntervalKm) * 100));
-  const oilLife = 100 - percentageUsed; // Elektromosnál ez "Akku/Szerviz állapot" lesz a komponensben
+  const oilLife = 100 - percentageUsed; 
   const motStatus = getExpiryStatus(car.mot_expiry);
   const insuranceStatus = getExpiryStatus(car.insurance_expiry);
 
-  // --- Smart Tips (Elektromosra szabva) ---
+  // --- Smart Tips ---
   const smartTips = [];
   if (!isElectric && oilLife < 15) smartTips.push("Az olajcsere nagyon hamarosan esedékes.");
   if (isElectric && kmRemaining < 2000) smartTips.push("Közeleg a kötelező átvizsgálás ideje.");
@@ -136,16 +134,8 @@ export default async function CarDetailsPage(props: Props) {
   const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost, isElectric }
   const carIdString = car.id.toString();
 
-  // --- WIDGET DEFINITIONS (Javítva) ---
-  
-  // 1. Parkoló Widget - Most már helyesen változóba mentve
-  const WidgetParking = (
-    <SmartParkingWidget 
-      carId={carIdString} 
-      activeSession={activeParking} 
-    />
-  );
-  
+  // --- WIDGET DEFINITIONS ---
+  const WidgetParking = <SmartParkingWidget carId={carIdString} activeSession={activeParking} />;
   const WidgetHealth = <CarHealthWidget {...healthProps} />;
   const WidgetPrediction = isPro ? <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} /> : null;
   const WidgetCost = <CostCard {...costProps} />;
@@ -214,20 +204,35 @@ export default async function CarDetailsPage(props: Props) {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
-      <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={isPro} />
+      
+      {/* HEADER SECTION (Liquid Style) */}
+      <HeaderSection 
+        car={car} 
+        healthStatus={healthStatus} 
+        nextServiceKm={nextServiceKm} 
+        kmRemaining={kmRemaining} 
+        safeEvents={safeEvents} 
+        isPro={isPro} 
+      />
+
+      {/* DESKTOP ACTION BAR */}
       <DesktopActionGrid carId={carIdString} isElectric={isElectric} />
+
+      {/* MAIN CONTENT */}
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
         <ResponsiveDashboard 
             mobileTabs={mobileTabs}
             desktopContent={DesktopLayout}
         />
       </div>
+
+      {/* MOBILE BOTTOM NAV */}
       <MobileBottomNav carId={carIdString} isElectric={isElectric} />
     </div>
   )
 }
 
-// --- SUB-COMPONENTS (UI Elemek) ---
+// --- SUB-COMPONENTS ---
 
 function ProTeaser() {
     return (
@@ -251,6 +256,7 @@ function ProTeaser() {
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
         <div className="relative bg-slate-900 w-full overflow-hidden shadow-2xl shrink-0 group min-h-[22rem] md:h-[28rem]">
+            {/* Background Image with Blur */}
             {car.image_url && (
                 <div className="absolute inset-0 z-0">
                     <Image src={car.image_url} alt="Background" fill className="object-cover opacity-50 blur-xl scale-110" priority />
@@ -294,7 +300,7 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                     
                     {/* Szöveges Infók */}
                     <div className="text-center md:text-left flex-1 space-y-3 pb-2 w-full">
-                         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] md:text-xs font-bold uppercase tracking-widest ${healthStatus.color} backdrop-blur-md`}>
+                          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] md:text-xs font-bold uppercase tracking-widest ${healthStatus.color} backdrop-blur-md`}>
                             <span className={`w-2 h-2 rounded-full ${healthStatus.dot}`}></span>
                             {healthStatus.text}
                         </div>
