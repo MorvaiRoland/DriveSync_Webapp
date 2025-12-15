@@ -106,7 +106,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
                     <DetailRow label="Motor űrtartalom" value={car.engine_size ? `${car.engine_size} cm³` : '-'} icon={<Settings className="w-4 h-4"/>} />
-                    <DetailRow label="Teljesítmény" value={car.performance_hp ? `${car.performance_hp} LE` : '-'} icon={<Zap className="w-4 h-4"/>} />
+                    <DetailRow label="Teljesítmény" value={car.power_hp ? `${car.power_hp} LE` : '-'} icon={<Zap className="w-4 h-4"/>} />
                     <DetailRow label="Sebességváltó" value={car.transmission || '-'} icon={<Gauge className="w-4 h-4"/>} />
                     <DetailRow label="Szín" value={car.color || '-'} icon={<Info className="w-4 h-4"/>} />
                     
