@@ -93,7 +93,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
   )
 }
 
-// --- 3. GLASS SELECT MEZŐ ---
+// --- 3. GLASS SELECT MEZŐ (JAVÍTOTT) ---
 function SelectGroup({ label, name, children, required = false, icon, value, onChange, disabled }: any) {
   const [focused, setFocused] = useState(false)
 
@@ -132,6 +132,10 @@ function SelectGroup({ label, name, children, required = false, icon, value, onC
             text-slate-900 dark:text-white 
             focus:ring-0 focus:outline-none
             ${!icon && 'pl-4'}
+            
+            /* --- JAVÍTÁS: Kifejezetten a legördülő opciók stílusa --- */
+            [&>option]:bg-white [&>option]:text-slate-900 
+            dark:[&>option]:bg-slate-900 dark:[&>option]:text-white
           `}
         >
           {children}
@@ -145,7 +149,7 @@ function SelectGroup({ label, name, children, required = false, icon, value, onC
   )
 }
 
-// --- 4. KÁRTYA CONTAINER (iOS Card Style) ---
+// --- 4. KÁRTYA CONTAINER ---
 function FormSection({ title, step, children }: { title: string, step: string, children: React.ReactNode }) {
     return (
         <div className="relative overflow-hidden rounded-3xl bg-white/40 dark:bg-slate-900/40 border border-white/40 dark:border-white/5 backdrop-blur-xl shadow-xl p-6 md:p-8 mb-8 transition-all duration-500 hover:shadow-2xl">
@@ -239,7 +243,7 @@ function CarForm() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* BAL OLDAL - KÉP (LG: Col 4) */}
+            {/* BAL OLDAL - KÉP (LG: Col 5) */}
             <div className="lg:col-span-5 lg:sticky lg:top-24 h-fit space-y-6">
                 <div className="relative group">
                     <div className={`
