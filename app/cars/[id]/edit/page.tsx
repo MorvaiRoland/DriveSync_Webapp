@@ -7,6 +7,11 @@ import { useRouter, useParams } from 'next/navigation'
 import Image from 'next/image'
 import { useState, useEffect, useRef } from 'react'
 import ShareManager from '@/components/ShareManager'
+import { 
+  ArrowLeft, Upload, CheckCircle2, AlertCircle, 
+  Trash2, CarFront, Disc, Snowflake, Sun, 
+  ShieldAlert, Settings, Wrench, Fuel
+} from 'lucide-react'
 
 export default function EditCarPage() {
   const params = useParams()
@@ -18,41 +23,29 @@ export default function EditCarPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  // Referenciák
   const fileInputRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
 
-  // Állapotok
   const [car, setCar] = useState<any>(null)
   const [tires, setTires] = useState<any[]>([])
   const [shares, setShares] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  
-  // Státusz állapot
   const [status, setStatus] = useState<string>('active')
-  
-  // Kép előnézet
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-
-  // Értesítés (Toast)
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
-  // Adatok betöltése
   useEffect(() => {
     async function fetchData() {
-      // 1. Autó
       const { data: carData } = await supabase.from('cars').select('*').eq('id', carId).single()
       if (carData) {
           setCar(carData)
           setStatus(carData.status)
       }
 
-      // 2. Gumik
       const { data: tireData } = await supabase.from('tires').select('*').eq('car_id', carId).order('is_mounted', { ascending: false })
       if (tireData) setTires(tireData)
 
-      // 3. Megosztások
       const { data: shareData } = await supabase.from('car_shares').select('*').eq('car_id', carId)
       if (shareData) setShares(shareData)
       
@@ -81,7 +74,7 @@ export default function EditCarPage() {
 
     try {
         const formData = new FormData(formRef.current!)
-        formData.set('status', status) // Státusz felülírása a state-ből
+        formData.set('status', status) 
         
         if (fileInputRef.current?.files?.[0]) {
             formData.set('image', fileInputRef.current.files[0])
@@ -91,7 +84,6 @@ export default function EditCarPage() {
         
         showToast('Sikeres mentés!', 'success')
         router.refresh()
-        // Opcionális: kis késleltetés után a saving state kikapcsolása
         setTimeout(() => setSaving(false), 1000)
 
     } catch (error: any) {
@@ -99,7 +91,6 @@ export default function EditCarPage() {
             showToast('Sikeres mentés!', 'success')
             return;
         }
-        
         console.error(error)
         showToast('Hiba történt a mentéskor.', 'error')
         setSaving(false)
@@ -110,180 +101,173 @@ export default function EditCarPage() {
   if (!car) return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-red-500">Autó nem található</div>
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-500 relative overflow-x-hidden">
       
-      {/* --- TOAST --- */}
+      {/* HÁTTÉR EFFEKTEK */}
+      <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-[120px] animate-pulse-slow"></div>
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
+      </div>
+
+      {/* TOAST */}
       {toast && (
-          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 backdrop-blur-md border border-white/10 ${toast.type === 'success' ? 'bg-emerald-500/90 text-white' : 'bg-red-500/90 text-white'}`}>
+              {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
               <span className="font-bold text-sm">{toast.message}</span>
           </div>
       )}
 
-      <div className="bg-slate-900 py-12 px-4 text-center shadow-lg">
-        <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider">
-          Jármű <span className="text-amber-500">Szerkesztése</span>
-        </h1>
-        <p className="text-slate-400 mt-2">{car.make} {car.model} ({car.plate})</p>
+      {/* --- HERO HEADER --- */}
+      <div className="relative pt-8 pb-16 px-4 overflow-hidden">
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+            <Link href={`/cars/${carId}`} className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-6 text-sm font-bold bg-white/50 dark:bg-slate-800/50 px-4 py-2 rounded-full backdrop-blur-sm border border-slate-200 dark:border-slate-700">
+                <ArrowLeft className="w-4 h-4" /> Vissza az autóhoz
+            </Link>
+            
+            <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">
+                Jármű <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Szerkesztése</span>
+            </h1>
+            
+            <p className="text-slate-500 dark:text-slate-400 font-medium relative z-10">
+                {car.make} {car.model} ({car.plate})
+            </p>
+        </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 -mt-8 relative z-10">
+      <div className="max-w-4xl mx-auto px-4 -mt-8 relative z-20">
         
         {/* --- 1. JÁRMŰ ADATOK SZERKESZTÉSE --- */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 mb-8 transition-colors">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-6 sm:p-10 border border-white/20 dark:border-slate-700 mb-8 overflow-hidden relative group">
           
-          <form ref={formRef} onSubmit={handleSave} className="space-y-8">
+          <form ref={formRef} onSubmit={handleSave} className="space-y-10 relative z-10">
             <input type="hidden" name="car_id" value={car.id} />
 
-            {/* Képcsere */}
-            <div className="flex flex-col items-center mb-6">
-                <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-slate-100 dark:border-slate-700 shadow-md mb-4 bg-slate-200 dark:bg-slate-700">
+            {/* KÉPCSERE */}
+            <div className="flex flex-col items-center">
+                <div className="relative w-40 h-40 rounded-[2rem] overflow-hidden border-4 border-white/50 dark:border-slate-700 shadow-2xl mb-6 bg-slate-200 dark:bg-slate-800 group/image cursor-pointer hover:scale-105 transition-transform duration-500">
                    {imagePreview || car.image_url ? (
                        <Image src={imagePreview || car.image_url} alt="Car" fill className="object-cover" />
                    ) : (
                        <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                           <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                           <CarFront className="w-16 h-16 opacity-50" />
                        </div>
                    )}
+                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity backdrop-blur-sm">
+                       <Upload className="w-8 h-8 text-white" />
+                   </div>
+                   <input type="file" name="image" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" ref={fileInputRef} onChange={handleImageChange} />
                 </div>
-                <label className="cursor-pointer bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm">
-                    Fénykép módosítása
-                    <input type="file" name="image" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
-                </label>
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="text-sm font-bold text-amber-600 dark:text-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition-colors uppercase tracking-wider flex items-center gap-2">
+                    <Upload className="w-4 h-4" /> Fénykép módosítása
+                </button>
             </div>
 
             {/* A) ALAPADATOK */}
-            <div>
-                <h3 className="font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-700 pb-2 mb-4 uppercase text-sm tracking-wider">Alapadatok</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormSection title="Alapadatok" icon={<CarFront className="w-5 h-5 text-amber-500" />}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputGroup label="Márka" name="make" defaultValue={car.make} required />
                     <InputGroup label="Modell" name="model" defaultValue={car.model} required />
                     
-                    {/* BODY TYPE (KIVITEL) - ÚJ MEZŐ */}
-                    <div className="space-y-1">
-                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Kivitel</label>
-                      <select name="body_type" defaultValue={car.body_type || ""} className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2 px-3 bg-white dark:bg-slate-800 border text-slate-900 dark:text-white text-sm">
+                    <SelectGroup label="Kivitel" name="body_type" defaultValue={car.body_type}>
                         <option value="" disabled>Válassz...</option>
                         <option value="sedan">Sedan / Limuzin</option>
                         <option value="kombi">Kombi / Touring</option>
-                        <option value="hatchback">Ferdehátú (Hatchback)</option>
+                        <option value="hatchback">Ferdehátú</option>
                         <option value="suv">SUV / Terepjáró</option>
                         <option value="crossover">Crossover</option>
                         <option value="coupe">Coupé</option>
                         <option value="cabrio">Cabriolet</option>
-                        <option value="mpv">Egyterű (MPV)</option>
+                        <option value="mpv">Egyterű</option>
                         <option value="pickup">Pickup</option>
-                        <option value="van">Kisbusz / Furgon</option>
-                      </select>
-                      
-                    </div>
+                        <option value="van">Kisbusz</option>
+                    </SelectGroup>
 
-                    <InputGroup label="Rendszám" name="plate" defaultValue={car.plate} required />
+                    <InputGroup label="Rendszám" name="plate" defaultValue={car.plate} required uppercase />
                     <InputGroup label="Évjárat" name="year" type="number" defaultValue={car.year} required />
-                    <InputGroup label="Aktuális Km óra állás" name="mileage" type="number" defaultValue={car.mileage} required />
+                    <InputGroup label="Aktuális Km" name="mileage" type="number" defaultValue={car.mileage} required suffix="km" />
                     <InputGroup label="Szín" name="color" defaultValue={car.color} />
-                    <InputGroup label="Alvázszám (VIN)" name="vin" defaultValue={car.vin} />
+                    <InputGroup label="Alvázszám (VIN)" name="vin" defaultValue={car.vin} uppercase />
                 </div>
-            </div>
+            </FormSection>
 
-            {/* B) TECHNIKAI ADATOK - ÚJ SZEKCIÓ */}
-            <div>
-                <h3 className="font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-700 pb-2 mb-4 uppercase text-sm tracking-wider">Technikai Részletek</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* ÜZEMANYAG - KIBŐVÍTVE */}
-                    <div className="space-y-1">
-                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Üzemanyag</label>
-                      <select name="fuel_type" defaultValue={car.fuel_type} className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2 px-3 bg-white dark:bg-slate-800 border text-slate-900 dark:text-white text-sm">
+            {/* B) TECHNIKAI ADATOK */}
+            <FormSection title="Technikai Részletek" icon={<Settings className="w-5 h-5 text-amber-500" />}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <SelectGroup label="Üzemanyag" name="fuel_type" defaultValue={car.fuel_type}>
                         <option value="Dízel">Dízel</option>
                         <option value="Benzin">Benzin</option>
                         <option value="Hybrid">Hybrid</option>
                         <option value="Plugin_Hybrid">Plug-in Hybrid</option>
                         <option value="Elektromos">Elektromos</option>
                         <option value="LPG">LPG / Gáz</option>
-                      </select>
-                    </div>
+                    </SelectGroup>
 
-                    {/* VÁLTÓ - ÚJ MEZŐ */}
-                    <div className="space-y-1">
-                      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Váltó</label>
-                      <select name="transmission" defaultValue={car.transmission || "manual"} className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2 px-3 bg-white dark:bg-slate-800 border text-slate-900 dark:text-white text-sm">
+                    <SelectGroup label="Váltó" name="transmission" defaultValue={car.transmission || "manual"}>
                         <option value="manual">Manuális</option>
                         <option value="automatic">Automata</option>
-                        <option value="cvt">Fokozatmentes (CVT)</option>
+                        <option value="cvt">Fokozatmentes</option>
                         <option value="robotized">Robotizált</option>
-                      </select>
-                    </div>
+                    </SelectGroup>
 
-                    {/* MOTOR ADATOK - ÚJ MEZŐK */}
-                    <InputGroup label="Hengerűrtartalom (cm³)" name="engine_size" type="number" defaultValue={car.engine_size} placeholder="pl. 1998" />
-                    <InputGroup label="Teljesítmény (LE)" name="power_hp" type="number" defaultValue={car.power_hp} placeholder="pl. 150" />
+                    <InputGroup label="Hengerűrtartalom" name="engine_size" type="number" defaultValue={car.engine_size} placeholder="pl. 1998" suffix="cm³" />
+                    <InputGroup label="Teljesítmény" name="power_hp" type="number" defaultValue={car.power_hp} placeholder="pl. 150" suffix="LE" />
                 </div>
-            </div>
+            </FormSection>
 
             {/* C) STÁTUSZ */}
-            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Jármű Állapota</label>
-                <div className="flex gap-6">
-                    <label className="flex items-center gap-2 cursor-pointer group">
-                        <input 
-                            type="radio" 
-                            name="status_radio" 
-                            value="active" 
-                            checked={status === 'active'} 
-                            onChange={() => setStatus('active')}
-                            className="w-5 h-5 text-amber-500 focus:ring-amber-500 border-gray-300" 
-                        />
-                        <span className={`text-sm font-bold ${status === 'active' ? 'text-emerald-500' : 'text-slate-500 dark:text-slate-400'}`}>
-                            Aktív (Használatban)
-                        </span>
+            <div className="bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4">Jármű Állapota</label>
+                <div className="grid grid-cols-2 gap-4">
+                    <label className={`cursor-pointer group relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${status === 'active' ? 'border-emerald-500 bg-emerald-500/5' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-500/50'}`}>
+                        <input type="radio" name="status_radio" value="active" checked={status === 'active'} onChange={() => setStatus('active')} className="hidden" />
+                        <CheckCircle2 className={`w-6 h-6 ${status === 'active' ? 'text-emerald-500' : 'text-slate-400'}`} />
+                        <span className={`text-sm font-bold ${status === 'active' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}`}>Aktív</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer group">
-                        <input 
-                            type="radio" 
-                            name="status_radio" 
-                            value="service" 
-                            checked={status === 'service'} 
-                            onChange={() => setStatus('service')}
-                            className="w-5 h-5 text-amber-500 focus:ring-amber-500 border-gray-300" 
-                        />
-                        <span className={`text-sm font-bold ${status === 'service' ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400'}`}>
-                            Szerviz alatt
-                        </span>
+                    <label className={`cursor-pointer group relative flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${status === 'service' ? 'border-amber-500 bg-amber-500/5' : 'border-slate-200 dark:border-slate-700 hover:border-amber-500/50'}`}>
+                        <input type="radio" name="status_radio" value="service" checked={status === 'service'} onChange={() => setStatus('service')} className="hidden" />
+                        <Wrench className={`w-6 h-6 ${status === 'service' ? 'text-amber-500' : 'text-slate-400'}`} />
+                        <span className={`text-sm font-bold ${status === 'service' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>Szervizen</span>
                     </label>
                 </div>
             </div>
 
-            {/* D) OKMÁNYOK */}
-            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-100 dark:border-slate-700">
-                <h3 className="font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 text-sm uppercase">
-                   Okmányok Érvényessége
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputGroup label="Műszaki Vizsga Lejárata" name="mot_expiry" type="date" defaultValue={car.mot_expiry} />
-                    <InputGroup label="Biztosítás Évfordulója" name="insurance_expiry" type="date" defaultValue={car.insurance_expiry} />
+            {/* D) OKMÁNYOK & CIKLUSOK */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
+                    <h3 className="font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-3 mb-4 text-xs uppercase tracking-widest flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-amber-500" /> Okmányok
+                    </h3>
+                    <div className="space-y-4">
+                        <InputGroup label="Műszaki Vizsga" name="mot_expiry" type="date" defaultValue={car.mot_expiry} />
+                        <InputGroup label="Biztosítás Évforduló" name="insurance_expiry" type="date" defaultValue={car.insurance_expiry} />
+                    </div>
+                </div>
+
+                <div className="bg-amber-50/50 dark:bg-amber-900/10 rounded-2xl p-6 border border-amber-200/50 dark:border-amber-800/30">
+                    <h3 className="font-bold text-amber-800 dark:text-amber-500 border-b border-amber-200/50 dark:border-amber-800/30 pb-3 mb-4 text-xs uppercase tracking-widest flex items-center gap-2">
+                        <Settings className="w-4 h-4" /> Szerviz Ciklusok
+                    </h3>
+                    <div className="space-y-4">
+                        <InputGroup label="Km Intervallum" name="service_interval_km" type="number" defaultValue={car.service_interval_km || 15000} suffix="km" />
+                        <InputGroup label="Idő Intervallum" name="service_interval_days" type="number" defaultValue={car.service_interval_days || 365} suffix="nap" />
+                    </div>
                 </div>
             </div>
 
-            {/* E) SZERVIZ CIKLUSOK */}
-            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-100 dark:border-amber-800/50">
-                <h3 className="font-bold text-amber-800 dark:text-amber-500 border-b border-amber-200 dark:border-amber-800 pb-2 mb-4 text-sm uppercase">
-                    Szerviz Ciklusok (Értesítésekhez)
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputGroup label="Km Intervallum" name="service_interval_km" type="number" defaultValue={car.service_interval_km || 15000} />
-                    <InputGroup label="Idő Intervallum (Nap)" name="service_interval_days" type="number" defaultValue={car.service_interval_days || 365} />
-                </div>
-            </div>
-
-            <div className="pt-4 flex gap-4 border-t border-slate-100 dark:border-slate-700">
-               <Link href={`/cars/${car.id}`} className="w-1/3 py-3 rounded-lg text-slate-600 dark:text-slate-300 font-bold text-center border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Mégse
+            {/* ACTIONS */}
+            <div className="pt-6 flex gap-4 border-t border-slate-200 dark:border-slate-700">
+               <Link href={`/cars/${car.id}`} className="w-1/3 py-4 rounded-xl text-slate-500 dark:text-slate-400 font-bold text-center border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm uppercase tracking-wide flex items-center justify-center">
+                 Mégse
                </Link>
                <button 
-                  type="submit" 
-                  disabled={saving}
-                  className="w-2/3 py-3 rounded-lg bg-amber-500 text-white font-bold shadow-lg hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                 type="submit" 
+                 disabled={saving}
+                 className="relative w-2/3 py-4 rounded-xl font-bold shadow-lg transition-all transform hover:-translate-y-1 active:scale-[0.98] bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-amber-500/30 overflow-hidden group"
                >
-                  {saving ? 'Mentés folyamatban...' : 'Módosítások Mentése'}
+                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-xl"></div>
+                 <span className="relative flex items-center justify-center gap-2">
+                     {saving ? 'Mentés...' : 'Módosítások Mentése'}
+                 </span>
                </button>
             </div>
           </form>
@@ -293,22 +277,22 @@ export default function EditCarPage() {
         <ShareManager carId={car.id} shares={shares} />
 
         {/* --- 3. GUMIABRONCS HOTEL --- */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-200 dark:border-slate-700 mb-8 transition-colors">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[2.5rem] shadow-xl p-8 border border-white/20 dark:border-slate-700 mb-8">
              <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-6 flex items-center gap-2">
-                Gumiabroncs Hotel
+                <Disc className="w-5 h-5 text-slate-400" /> Gumiabroncs Hotel
              </h3>
              <div className="space-y-4 mb-8">
                  {tires.length > 0 ? (
                      tires.map((tire: any) => (
-                         <div key={tire.id} className={`border rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${tire.is_mounted ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                         <div key={tire.id} className={`border rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors ${tire.is_mounted ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800' : 'bg-slate-50/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'}`}>
                              <div className="flex items-center gap-4">
-                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${tire.is_mounted ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'}`}>
+                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${tire.is_mounted ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-slate-100 dark:bg-slate-700'}`}>
                                      {tire.type === 'winter' ? '❄️' : tire.type === 'summer' ? '☀️' : '🌤️'}
                                  </div>
                                  <div>
                                      <h4 className="font-bold text-slate-900 dark:text-white">{tire.brand} {tire.model}</h4>
                                      <p className="text-xs text-slate-500 dark:text-slate-400">{tire.size} • DOT: {tire.dot}</p>
-                                     <p className="text-xs font-mono mt-1 dark:text-slate-300">Futott: {tire.total_distance.toLocaleString()} km {tire.is_mounted && <span className="text-emerald-600 dark:text-emerald-400 font-bold">(Felszerelve)</span>}</p>
+                                     <p className="text-xs font-mono mt-1 dark:text-slate-300">Futott: {tire.total_distance.toLocaleString()} km {tire.is_mounted && <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-1">(Felszerelve)</span>}</p>
                                  </div>
                              </div>
                              
@@ -317,7 +301,7 @@ export default function EditCarPage() {
                                      <form action={async (fd) => { await swapTire(fd); showToast('Gumi felszerelve!', 'success'); router.refresh(); }} className="flex-1">
                                          <input type="hidden" name="car_id" value={car.id} />
                                          <input type="hidden" name="tire_id" value={tire.id} />
-                                         <button type="submit" className="w-full px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-700 text-white text-xs font-bold hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors">
+                                         <button type="submit" className="w-full px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold hover:opacity-90 transition-opacity">
                                              Felszerel
                                          </button>
                                      </form>
@@ -325,8 +309,8 @@ export default function EditCarPage() {
                                  <form action={async (fd) => { await deleteTire(fd); showToast('Gumi törölve.', 'error'); router.refresh(); }} className="flex-shrink-0">
                                      <input type="hidden" name="car_id" value={car.id} />
                                      <input type="hidden" name="tire_id" value={tire.id} />
-                                     <button type="submit" className="p-2 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" title="Törlés">
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                     <button type="submit" className="p-2 rounded-xl text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" title="Törlés">
+                                         <Trash2 className="w-4 h-4" />
                                      </button>
                                  </form>
                              </div>
@@ -337,25 +321,22 @@ export default function EditCarPage() {
                  )}
              </div>
 
-             <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-5 border border-slate-200 dark:border-slate-700">
+             <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
                  <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm mb-4 uppercase tracking-wide">Új szett hozzáadása</h4>
                  <form action={async (fd) => { await addTire(fd); showToast('Gumi hozzáadva!', 'success'); router.refresh(); }} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <input type="hidden" name="car_id" value={car.id} />
-                     <div className="space-y-1">
-                         <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Típus</label>
-                         <select name="type" className="block w-full rounded-lg border-slate-300 dark:border-slate-600 py-2 px-3 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
-                             <option value="summer">Nyári ☀️</option>
-                             <option value="winter">Téli ❄️</option>
-                             <option value="all_season">Négyévszakos 🌤️</option>
-                         </select>
-                     </div>
-                     <InputGroup label="Márka (pl. Michelin)" name="brand" required />
-                     <InputGroup label="Modell (pl. Alpin 6)" name="model" />
-                     <InputGroup label="Méret (pl. 205/55 R16)" name="size" required />
-                     <InputGroup label="DOT (pl. 2423)" name="dot" placeholder="HHÉÉ" />
+                     <SelectGroup label="Típus" name="type">
+                         <option value="summer">Nyári ☀️</option>
+                         <option value="winter">Téli ❄️</option>
+                         <option value="all_season">Négyévszakos 🌤️</option>
+                     </SelectGroup>
+                     <InputGroup label="Márka" name="brand" placeholder="pl. Michelin" required />
+                     <InputGroup label="Modell" name="model" placeholder="pl. Alpin 6" />
+                     <InputGroup label="Méret" name="size" placeholder="pl. 205/55 R16" required />
+                     <InputGroup label="DOT" name="dot" placeholder="HHÉÉ" />
                      <InputGroup label="Eddigi futás (km)" name="total_distance" type="number" defaultValue={0} />
                      <div className="md:col-span-2 pt-2">
-                         <button type="submit" className="w-full py-2.5 rounded-lg bg-slate-800 dark:bg-slate-700 text-white font-bold text-sm hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors">
+                         <button type="submit" className="w-full py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm hover:opacity-90 transition-opacity">
                              Szett Mentése
                          </button>
                      </div>
@@ -364,14 +345,14 @@ export default function EditCarPage() {
         </div>
 
         {/* --- 4. VESZÉLYZÓNA --- */}
-        <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl p-6 border border-red-200 dark:border-red-900/30 mb-8">
+        <div className="bg-red-50/50 dark:bg-red-900/10 rounded-[2.5rem] p-8 border border-red-200 dark:border-red-900/30 mb-8 backdrop-blur-sm">
             <h3 className="text-red-800 dark:text-red-400 font-bold text-lg mb-2">Veszélyzóna</h3>
-            <p className="text-red-600/80 dark:text-red-400/80 text-sm mb-4">
+            <p className="text-red-600/80 dark:text-red-400/80 text-sm mb-6">
                 A jármű törlése végleges. Minden hozzá tartozó tankolás, szerviz és emlékeztető is törlődik.
             </p>
             <form action={deleteCar}>
                 <input type="hidden" name="car_id" value={car.id} />
-                <button type="submit" className="w-full py-3 rounded-lg border-2 border-red-500 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-white transition-all uppercase text-sm tracking-wider">
+                <button type="submit" className="w-full py-4 rounded-xl border-2 border-red-500/50 text-red-600 dark:text-red-400 font-bold hover:bg-red-500 hover:text-white dark:hover:text-white transition-all uppercase text-sm tracking-wider">
                     Jármű Végleges Törlése
                 </button>
             </form>
@@ -382,19 +363,91 @@ export default function EditCarPage() {
   )
 }
 
-function InputGroup({ label, name, type = "text", placeholder, defaultValue, required = false }: any) {
+// --- REUSABLE COMPONENTS ---
+
+function FormSection({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) {
+    return (
+        <div className="space-y-6">
+            <h3 className="font-bold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-700 pb-3 uppercase text-xs tracking-widest flex items-center gap-2">
+                {icon} {title}
+            </h3>
+            {children}
+        </div>
+    )
+}
+
+function InputGroup({ label, name, type = "text", placeholder, defaultValue, required = false, uppercase, suffix }: any) {
+  const [focused, setFocused] = useState(false)
+
   return (
-    <div className="space-y-1">
-      <label htmlFor={name} className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">{label}</label>
-      <input 
-        type={type} 
-        name={name} 
-        id={name} 
-        defaultValue={defaultValue}
-        required={required} 
-        placeholder={placeholder} 
-        className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 py-2 px-3 bg-white dark:bg-slate-800 border text-slate-900 dark:text-white dark:placeholder-slate-500 transition-colors text-sm" 
-      />
+    <div className="space-y-1.5 group">
+      <label htmlFor={name} className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+        <span>{label}</span>
+        {required && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)]"></span>}
+      </label>
+      
+      <div className={`
+        relative flex items-center bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-md border rounded-xl overflow-hidden transition-all duration-300
+        ${focused 
+            ? 'border-amber-500 ring-2 ring-amber-500/10 shadow-lg shadow-amber-500/5' 
+            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        }
+      `}>
+        <input 
+            type={type} 
+            name={name} 
+            id={name} 
+            defaultValue={defaultValue}
+            required={required} 
+            placeholder={placeholder} 
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            className={`
+                w-full bg-transparent border-none py-3.5 px-4 text-sm font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:ring-0 focus:outline-none
+                ${uppercase ? 'uppercase' : ''}
+            `} 
+        />
+        {suffix && (
+            <div className="pr-4 pl-2 text-xs font-bold text-slate-400 bg-slate-200/50 dark:bg-slate-700/50 py-1.5 rounded-lg mr-2">
+                {suffix}
+            </div>
+        )}
+      </div>
     </div>
   )
+}
+
+function SelectGroup({ label, name, defaultValue, children }: any) {
+    const [focused, setFocused] = useState(false)
+  
+    return (
+      <div className="space-y-1.5 group">
+        <label htmlFor={name} className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+        <div className={`
+          relative flex items-center bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-md border rounded-xl overflow-hidden transition-all duration-300
+          ${focused 
+              ? 'border-amber-500 ring-2 ring-amber-500/10 shadow-lg shadow-amber-500/5' 
+              : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+          }
+        `}>
+          <select
+            name={name}
+            id={name}
+            defaultValue={defaultValue}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            className={`
+                w-full bg-transparent border-none py-3.5 px-4 text-sm font-bold text-slate-900 dark:text-white cursor-pointer appearance-none focus:ring-0 focus:outline-none
+                [&>option]:bg-white [&>option]:text-slate-900 
+                dark:[&>option]:bg-slate-900 dark:[&>option]:text-white
+            `}
+          >
+            {children}
+          </select>
+          <div className="absolute right-4 pointer-events-none text-slate-400">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </div>
+        </div>
+      </div>
+    )
 }

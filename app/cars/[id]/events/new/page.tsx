@@ -6,9 +6,14 @@ import { scanReceipt } from '@/app/actions/scan-receipt'
 import imageCompression from 'browser-image-compression'
 import Link from 'next/link'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { useEffect, useState, Suspense, useRef } from 'react'
+import { useEffect, useState, Suspense, useRef,  } from 'react'
+import { 
+  Fuel, Wrench, ScanLine, ArrowLeft, CheckCircle2, 
+  MapPin, Calendar, FileText, Banknote, Gauge, 
+  Loader2, AlertCircle, X, ChevronDown, Sparkles 
+} from 'lucide-react'
 
-// --- SEGÉDFÜGGVÉNY: Helyi idő szerinti YYYY-MM-DD ---
+// --- SEGÉDFÜGGVÉNY ---
 const getLocalToday = () => {
   const d = new Date()
   const year = d.getFullYear()
@@ -36,17 +41,14 @@ function EventForm() {
   const [serviceTypes, setServiceTypes] = useState<{id: number, name: string}[]>([])
   const [loading, setLoading] = useState(true)
   
-  // --- STATE-EK ---
   const [scanning, setScanning] = useState(false) 
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [aiFilled, setAiFilled] = useState<string[]>([])
   const [showAiDisclaimer, setShowAiDisclaimer] = useState(false)
-
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
-  // JAVÍTÁS 1: 'date' helyett 'event_date' a state kulcsa
   const [formData, setFormData] = useState({
       event_date: getLocalToday(), 
       mileage: '',
@@ -106,8 +108,6 @@ function EventForm() {
               }
 
               let newTitle = aiData.title || formData.title;
-
-              // JAVÍTÁS 2: 'formData.date' helyett 'formData.event_date' használata
               let newDate = formData.event_date;
               if (aiData.date) {
                  if (aiData.date.includes('T')) {
@@ -117,7 +117,6 @@ function EventForm() {
                  }
               }
 
-              // JAVÍTÁS 3: State frissítésnél is 'event_date' kulcsot használunk
               setFormData(prev => ({
                   ...prev,
                   title: newTitle, 
@@ -131,7 +130,7 @@ function EventForm() {
 
               const filledFields = []
               if (aiData.title) filledFields.push('title')
-              if (aiData.date) filledFields.push('event_date') // A highlight logic is frissítve
+              if (aiData.date) filledFields.push('event_date')
               if (aiData.cost) filledFields.push('cost')
               if (aiData.liters) filledFields.push('liters')
               if (aiData.location) filledFields.push('location')
@@ -179,44 +178,84 @@ function EventForm() {
   }
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400">Betöltés...</div>
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
+            <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
+            <p className="text-slate-500 font-medium animate-pulse">Betöltés...</p>
+        </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600 relative overflow-x-hidden">
       
+      {/* HÁTTÉR EFFEKTEK */}
+      <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-[120px] animate-pulse-slow"></div>
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
+      </div>
+
+      {/* TOAST */}
       {toast && (
-          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>
+          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 backdrop-blur-md border border-white/10 ${toast.type === 'success' ? 'bg-emerald-500/90 text-white' : 'bg-red-500/90 text-white'}`}>
+              {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
               <span className="font-bold text-sm">{toast.message}</span>
           </div>
       )}
 
+      {/* SCANNING OVERLAY */}
       {scanning && (
-          <div className="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
-              <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-lg font-bold animate-pulse">Az AI elemzi a számlát...</p>
-              <p className="text-sm text-slate-400">Kérlek várj egy pillanatot</p>
+          <div className="fixed inset-0 z-[60] bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
+              <div className="relative">
+                  <div className="w-20 h-20 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                      <ScanLine className="w-8 h-8 text-amber-500 animate-pulse" />
+                  </div>
+              </div>
+              <p className="text-xl font-bold animate-pulse mb-2">Az AI elemzi a számlát...</p>
+              <p className="text-sm text-slate-400">Ez eltarthat pár másodpercig</p>
           </div>
       )}
 
-      <div className="bg-slate-900 py-10 px-4 text-center shadow-lg relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-        <h1 className="text-3xl font-extrabold text-white uppercase tracking-wider relative z-10">
-          {isFuel ? 'Tankolás' : 'Szerviz'} <span className="text-amber-500">Rögzítése</span>
-        </h1>
-        {car && (
-          <p className="text-slate-400 mt-2 font-medium relative z-10">
-            {car.make} {car.model} ({car.plate})
-          </p>
-        )}
+      {/* --- HERO HEADER --- */}
+      <div className="relative pt-8 pb-16 px-4 overflow-hidden">
+        <div className="max-w-2xl mx-auto text-center relative z-10">
+            <Link href={`/cars/${carId}`} className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-6 text-sm font-bold bg-white/50 dark:bg-slate-800/50 px-4 py-2 rounded-full backdrop-blur-sm border border-slate-200 dark:border-slate-700">
+                <ArrowLeft className="w-4 h-4" /> Vissza az autóhoz
+            </Link>
+            
+            <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">
+                {isFuel ? 'Tankolás' : 'Szerviz'} <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Rögzítése</span>
+            </h1>
+            
+            {car && (
+                <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    {car.make} {car.model} <span className="opacity-50">|</span> {car.plate}
+                </div>
+            )}
+        </div>
       </div>
 
-      <div className="max-w-xl mx-auto px-4 -mt-6 relative z-20">
+      {/* --- MAIN CONTENT --- */}
+      <div className="max-w-2xl mx-auto px-4 -mt-8 relative z-20">
         
-        <div className="mb-6 flex justify-center">
-            <label className={`cursor-pointer group relative w-full sm:w-auto flex justify-center items-center gap-3 px-6 py-4 rounded-2xl shadow-xl transition-all transform hover:-translate-y-1 active:scale-95 bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:shadow-amber-500/30`}>
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                <span className="font-bold">Számla Beolvasása (AI)</span>
+        {/* AI SCANNER CARD */}
+        <div className="mb-8">
+            <label className={`cursor-pointer group relative w-full flex flex-col items-center justify-center gap-3 p-8 rounded-3xl shadow-xl transition-all transform hover:-translate-y-1 active:scale-[0.98] bg-gradient-to-br from-slate-900 to-slate-800 text-white overflow-hidden border border-slate-700`}>
+                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/20 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-amber-500/30 transition-colors"></div>
+                
+                <div className="relative z-10 flex flex-col items-center gap-3">
+                    <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                        <ScanLine className="w-7 h-7 text-amber-400" />
+                    </div>
+                    <div className="text-center">
+                        <span className="block text-lg font-bold">Számla Beolvasása (AI)</span>
+                        <span className="text-sm text-slate-400">Fotózd le a blokkot, mi kitöltjük az adatokat.</span>
+                    </div>
+                </div>
+                
                 <input 
                     type="file" 
                     accept="image/*" 
@@ -229,46 +268,52 @@ function EventForm() {
             </label>
         </div>
 
+        {/* AI DISCLAIMER */}
         {showAiDisclaimer && (
-            <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
-                <svg className="w-6 h-6 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <div>
-                    <h4 className="font-bold text-amber-800 dark:text-amber-400 text-sm">Ellenőrizd az adatokat!</h4>
-                    <p className="text-xs text-amber-700 dark:text-amber-300/80 mt-1">Az AI nagy pontossággal dolgozik, de előfordulhatnak tévedések. Kérlek, nézd át a sárgával jelölt mezőket mentés előtt.</p>
+            <div className="mb-6 bg-amber-50/80 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 backdrop-blur-md rounded-2xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-4">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-xl text-amber-600 dark:text-amber-500">
+                    <Sparkles className="w-5 h-5" />
                 </div>
-                <button onClick={() => setShowAiDisclaimer(false)} className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-300"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                <div className="flex-1">
+                    <h4 className="font-bold text-amber-800 dark:text-amber-400 text-sm">AI adatok betöltve!</h4>
+                    <p className="text-xs text-amber-700 dark:text-amber-300/80 mt-1 leading-relaxed">
+                        Az AI kitöltötte a mezőket. Kérlek, nézd át a sárgával jelölt adatokat mentés előtt a pontosság érdekében.
+                    </p>
+                </div>
+                <button onClick={() => setShowAiDisclaimer(false)} className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-300 p-1 hover:bg-amber-100 dark:hover:bg-amber-800 rounded-lg transition-colors">
+                    <X className="w-4 h-4" />
+                </button>
             </div>
         )}
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 transition-colors">
+        {/* --- FORM CARD (LIQUID STYLE) --- */}
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-6 sm:p-10 border border-white/20 dark:border-slate-700 relative overflow-hidden">
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
             <input type="hidden" name="car_id" value={carId} />
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               <div className="min-w-0">
-                   {/* JAVÍTÁS 4: Itt a 'name' és a 'value' kulcs már szinkronban van (event_date) */}
-                   <InputGroup 
-                     label="Dátum" 
-                     name="event_date" 
-                     type="date" 
-                     value={formData.event_date}
-                     onChange={handleChange}
-                     highlight={aiFilled.includes('event_date')}
-                     required 
-                   />
-               </div>
-               <div className="min-w-0">
-                   <InputGroup 
-                     label="Km óra állás" 
-                     name="mileage" 
-                     type="number" 
-                     value={formData.mileage}
-                     onChange={handleChange}
-                     highlight={aiFilled.includes('mileage')} 
-                     required 
-                   />
-               </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+               <InputGroup 
+                  label="Dátum" 
+                  name="event_date" 
+                  type="date" 
+                  value={formData.event_date}
+                  onChange={handleChange}
+                  highlight={aiFilled.includes('event_date')}
+                  required 
+                  icon={<Calendar className="w-5 h-5" />}
+               />
+               <InputGroup 
+                  label="Km óra állás" 
+                  name="mileage" 
+                  type="number" 
+                  value={formData.mileage}
+                  onChange={handleChange}
+                  highlight={aiFilled.includes('mileage')} 
+                  required 
+                  icon={<Gauge className="w-5 h-5" />}
+                  suffix="km"
+               />
             </div>
 
             {isFuel ? (
@@ -280,78 +325,75 @@ function EventForm() {
                  onChange={handleChange}
                  highlight={aiFilled.includes('title')}
                  required 
+                 icon={<MapPin className="w-5 h-5" />}
                />
             ) : (
-               <div className="space-y-1">
-                 <label htmlFor="title_select" className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                   Szerviz Típusa <span className="text-amber-500">*</span>
-                 </label>
-                 <div className="relative">
-                   <select
-                     name="title"
-                     id="title_select"
-                     required
-                     value={formData.title} 
-                     onChange={handleChange}
-                     className={`block w-full appearance-none h-11 rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-base sm:text-sm px-4 bg-slate-50 dark:bg-slate-700 border transition-all text-slate-900 dark:text-white cursor-pointer ${aiFilled.includes('title') ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20' : ''}`}
-                   >
-                     <option value="" disabled>Válassz...</option>
-                     {formData.title && !serviceTypes.some(s => s.name === formData.title) && formData.title !== 'Egyéb' && (
-                         <option value={formData.title}>{formData.title}</option>
-                     )}
-                     {serviceTypes.map(s => (
-                       <option key={s.id} value={s.name}>{s.name}</option>
-                     ))}
-                     <option value="Egyéb">Egyéb javítás</option>
-                   </select>
-                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                   </div>
-                 </div>
-               </div>
+               <SelectGroup 
+                  label="Szerviz Típusa" 
+                  name="title" 
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                  highlight={aiFilled.includes('title')}
+                  icon={<Wrench className="w-5 h-5" />}
+               >
+                  <option value="" disabled>Válassz...</option>
+                  {formData.title && !serviceTypes.some(s => s.name === formData.title) && formData.title !== 'Egyéb' && (
+                      <option value={formData.title}>{formData.title}</option>
+                  )}
+                  {serviceTypes.map(s => (
+                    <option key={s.id} value={s.name}>{s.name}</option>
+                  ))}
+                  <option value="Egyéb">Egyéb javítás</option>
+               </SelectGroup>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               <div className="min-w-0">
-                   <InputGroup 
-                      label="Költség (Ft)" 
-                      name="cost" 
-                      type="number" 
-                      placeholder="0" 
-                      value={formData.cost}
-                      onChange={handleChange}
-                      highlight={aiFilled.includes('cost')}
-                      required 
-                   />
-               </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+               <InputGroup 
+                  label="Költség" 
+                  name="cost" 
+                  type="number" 
+                  placeholder="0" 
+                  value={formData.cost}
+                  onChange={handleChange}
+                  highlight={aiFilled.includes('cost')}
+                  required 
+                  icon={<Banknote className="w-5 h-5" />}
+                  suffix="Ft"
+               />
                {isFuel && (
-                 <div className="min-w-0">
-                     <InputGroup 
-                        label="Mennyiség (Liter)" 
-                        name="liters" 
-                        type="number" 
-                        step="0.01" 
-                        placeholder="0.00" 
-                        value={formData.liters}
-                        onChange={handleChange}
-                        highlight={aiFilled.includes('liters')}
-                        required 
-                     />
-                 </div>
+                 <InputGroup 
+                    label="Mennyiség" 
+                    name="liters" 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="0.00" 
+                    value={formData.liters}
+                    onChange={handleChange}
+                    highlight={aiFilled.includes('liters')}
+                    required 
+                    icon={<Fuel className="w-5 h-5" />}
+                    suffix="L"
+                 />
                )}
             </div>
 
             {!isFuel && (
-               <div className="space-y-1">
-                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Megjegyzés / Részletek</label>
-                 <textarea 
-                   name="description" 
-                   rows={3} 
-                   value={formData.description}
-                   onChange={handleChange}
-                   className="block w-full rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 bg-slate-50 dark:bg-slate-700 border p-3 text-slate-900 dark:text-white dark:placeholder-slate-400 text-base sm:text-sm transition-colors" 
-                   placeholder="pl. Castrol olaj, MANN szűrő..."
-                 ></textarea>
+               <div className="space-y-2 group">
+                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Megjegyzés</label>
+                 <div className="relative">
+                    <textarea 
+                      name="description" 
+                      rows={3} 
+                      value={formData.description}
+                      onChange={handleChange}
+                      className="block w-full rounded-2xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-4 text-slate-900 dark:text-white placeholder-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all resize-none shadow-sm" 
+                      placeholder="pl. Castrol olaj, MANN szűrő..."
+                    ></textarea>
+                    <div className="absolute top-4 right-4 pointer-events-none text-slate-400">
+                        <FileText className="w-5 h-5" />
+                    </div>
+                 </div>
                </div>
             )}
 
@@ -362,18 +404,23 @@ function EventForm() {
                 value={formData.location}
                 onChange={handleChange}
                 highlight={aiFilled.includes('location')}
+                icon={<MapPin className="w-5 h-5" />}
             />
 
-            <div className="pt-4 flex gap-4 border-t border-slate-100 dark:border-slate-700 mt-6">
-              <Link href={`/cars/${carId}`} className="w-1/3 py-3 rounded-lg text-slate-600 dark:text-slate-300 font-bold text-center border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center transition-colors">
+            <div className="pt-6 flex gap-4 border-t border-slate-100 dark:border-slate-800">
+              <Link href={`/cars/${carId}`} className="w-1/3 py-4 rounded-xl text-slate-500 dark:text-slate-400 font-bold text-center border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm uppercase tracking-wide flex items-center justify-center">
                 Mégse
               </Link>
               <button 
                 type="submit" 
                 disabled={saving}
-                className="w-2/3 py-3 rounded-lg bg-amber-500 text-white font-bold shadow-lg hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.98]"
+                className="relative w-2/3 py-4 rounded-2xl font-bold shadow-lg transition-all transform hover:-translate-y-1 active:scale-[0.98] bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-amber-500/30 overflow-hidden group"
               >
-                {saving ? 'Mentés...' : 'Mentés'}
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-2xl"></div>
+                <span className="relative flex items-center justify-center gap-2">
+                    {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+                    {saving ? 'Mentés...' : 'Mentés a naplóba'}
+                </span>
               </button>
             </div>
           </form>
@@ -385,29 +432,118 @@ function EventForm() {
 
 export default function NewEventPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400">Betöltés...</div>}>
+    <Suspense fallback={
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
+            <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
+            <p className="text-slate-500 font-medium animate-pulse">Betöltés...</p>
+        </div>
+    }>
       <EventForm />
     </Suspense>
   )
 }
 
-function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight }: any) {
+// --- REUSABLE COMPONENTS ---
+
+function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight, icon, suffix }: any) {
+  const [focused, setFocused] = useState(false)
+
   return (
-    <div className="space-y-1">
-      <label htmlFor={name} className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-        {label} {required && <span className="text-amber-500">*</span>}
+    <div className="space-y-2 group">
+      <label htmlFor={name} className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+        <span>{label}</span>
+        {required && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)]"></span>}
       </label>
-      <input 
-        type={type} 
-        name={name} 
-        id={name} 
-        step={step} 
-        value={value}       
-        onChange={onChange} 
-        required={required} 
-        placeholder={placeholder} 
-        className={`block w-full appearance-none h-11 rounded-lg border-slate-300 dark:border-slate-600 shadow-sm focus:border-amber-500 focus:ring-amber-500 px-4 bg-slate-50 dark:bg-slate-700 border text-slate-900 dark:text-white dark:placeholder-slate-400 text-base sm:text-sm transition-all duration-500 ${highlight ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-300' : ''}`} 
-      />
+      
+      <div className={`
+        relative flex items-center bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border rounded-2xl overflow-hidden transition-all duration-300
+        ${highlight 
+            ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-900/10 ring-2 ring-amber-500/10' 
+            : focused 
+                ? 'border-amber-500 ring-2 ring-amber-500/10 shadow-lg shadow-amber-500/5' 
+                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+        }
+      `}>
+        {icon && (
+          <div className={`pl-4 pr-2 transition-colors duration-300 ${focused || highlight ? 'text-amber-500' : 'text-slate-400'}`}>
+            {icon}
+          </div>
+        )}
+        
+        <input 
+            type={type} 
+            name={name} 
+            id={name} 
+            step={step} 
+            value={value}       
+            onChange={onChange} 
+            required={required} 
+            placeholder={placeholder} 
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            className={`
+                w-full bg-transparent border-none py-3.5 text-sm font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:ring-0 focus:outline-none
+                ${!icon && 'pl-4'}
+            `} 
+        />
+        
+        {suffix && (
+            <div className="pr-4 pl-2 text-xs font-bold text-slate-400 bg-slate-100/50 dark:bg-white/5 py-1.5 rounded-lg mr-2">
+                {suffix}
+            </div>
+        )}
+      </div>
     </div>
   )
+}
+
+function SelectGroup({ label, name, value, onChange, required, highlight, icon, children }: any) {
+    const [focused, setFocused] = useState(false)
+  
+    return (
+      <div className="space-y-2 group">
+        <label htmlFor={name} className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
+          <span>{label}</span>
+          {required && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)]"></span>}
+        </label>
+        
+        <div className={`
+          relative flex items-center bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border rounded-2xl overflow-hidden transition-all duration-300
+          ${highlight 
+              ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-900/10 ring-2 ring-amber-500/10' 
+              : focused 
+                  ? 'border-amber-500 ring-2 ring-amber-500/10 shadow-lg shadow-amber-500/5' 
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+          }
+        `}>
+          {icon && (
+            <div className={`pl-4 pr-2 transition-colors duration-300 ${focused || highlight ? 'text-amber-500' : 'text-slate-400'}`}>
+              {icon}
+            </div>
+          )}
+          
+          <select
+            name={name}
+            id={name}
+            required={required}
+            value={value} 
+            onChange={onChange}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            className={`
+                w-full bg-transparent border-none py-3.5 text-sm font-bold text-slate-900 dark:text-white cursor-pointer appearance-none focus:ring-0 focus:outline-none
+                ${!icon && 'pl-4'}
+                [&>option]:bg-white [&>option]:text-slate-900 
+                dark:[&>option]:bg-slate-900 dark:[&>option]:text-white
+            `}
+          >
+            {children}
+          </select>
+          
+          <div className="absolute right-4 pointer-events-none text-slate-400">
+            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${focused ? 'rotate-180 text-amber-500' : ''}`} />
+          </div>
+        </div>
+      </div>
+    )
 }

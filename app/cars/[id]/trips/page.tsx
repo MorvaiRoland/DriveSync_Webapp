@@ -1,8 +1,9 @@
-import { createClient } from 'supabase/server' // Vagy 'supabase/server' - a tied szerint
+import { createClient } from '@/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { deleteTrip } from '../actions' // <--- FONTOS: Ez a helyes import!
+import { deleteTrip } from '../actions'
 import TripForm from '@/components/TripForm'
+import { Map, Briefcase, Home, ArrowLeft, Trash2, Route } from 'lucide-react'
 
 export default async function TripLoggerPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params
@@ -27,86 +28,130 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
   const businessRatio = totalKm > 0 ? Math.round((totalBusinessKm / totalKm) * 100) : 0
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600 relative overflow-x-hidden">
       
-      {/* Fejléc */}
-      <div className="bg-slate-900 py-12 px-4 shadow-lg">
-         <div className="max-w-4xl mx-auto">
-            <div className="flex items-center gap-4 mb-6">
-                <Link href={`/cars/${car.id}`} className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                </Link>
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Útnyilvántartás</h1>
-                    <p className="text-slate-400 text-sm">{car.make} {car.model} ({car.plate})</p>
-                </div>
+      {/* HÁTTÉR EFFEKTEK */}
+      <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-[120px] animate-pulse-slow"></div>
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
+      </div>
+
+      {/* --- HERO HEADER --- */}
+      <div className="relative pt-8 pb-12 px-4">
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+            <Link href={`/cars/${car.id}`} className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-6 text-sm font-bold bg-white/50 dark:bg-slate-800/50 px-4 py-2 rounded-full backdrop-blur-sm border border-slate-200 dark:border-slate-700 hover:bg-white/80 dark:hover:bg-slate-800/80 shadow-sm">
+                <ArrowLeft className="w-4 h-4" /> Vissza az autóhoz
+            </Link>
+            
+            <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-6">
+                Út<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-600">nyilvántartás</span>
+            </h1>
+            
+            <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                {car.make} {car.model} ({car.plate})
             </div>
 
-            {/* Statisztika Kártyák */}
-            <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
-                    <p className="text-xs text-slate-300 uppercase font-bold">Üzleti utak</p>
-                    <p className="text-xl font-black text-amber-400">{totalBusinessKm.toLocaleString()} km</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10">
-                    <p className="text-xs text-slate-300 uppercase font-bold">Magán utak</p>
-                    <p className="text-xl font-black text-white">{totalPersonalKm.toLocaleString()} km</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-amber-500/20" style={{ width: `${businessRatio}%` }}></div>
+            {/* STATISZTIKA KÁRTYÁK (LIQUID STYLE) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-5 border border-white/40 dark:border-slate-700/50 shadow-lg relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl -mr-6 -mt-6 group-hover:bg-blue-500/20 transition-colors"></div>
                     <div className="relative z-10">
-                        <p className="text-xs text-slate-300 uppercase font-bold">Céges Arány</p>
-                        <p className="text-xl font-black text-white">{businessRatio}%</p>
+                        <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
+                            <Briefcase className="w-4 h-4" />
+                            <p className="text-xs uppercase font-bold tracking-wider">Üzleti utak</p>
+                        </div>
+                        <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{totalBusinessKm.toLocaleString()} <span className="text-sm font-bold text-slate-400">km</span></p>
+                    </div>
+                </div>
+
+                <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-5 border border-white/40 dark:border-slate-700/50 shadow-lg relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full blur-2xl -mr-6 -mt-6 group-hover:bg-purple-500/20 transition-colors"></div>
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
+                            <Home className="w-4 h-4" />
+                            <p className="text-xs uppercase font-bold tracking-wider">Magán utak</p>
+                        </div>
+                        <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{totalPersonalKm.toLocaleString()} <span className="text-sm font-bold text-slate-400">km</span></p>
+                    </div>
+                </div>
+
+                <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-5 border border-white/40 dark:border-slate-700/50 shadow-lg relative overflow-hidden group flex flex-col justify-center">
+                    <div className="flex justify-between items-end mb-2 relative z-10">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Céges Arány</p>
+                        <p className="text-xl font-black text-slate-900 dark:text-white">{businessRatio}%</p>
+                    </div>
+                    <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden relative z-10">
+                        <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-1000" style={{ width: `${businessRatio}%` }}></div>
                     </div>
                 </div>
             </div>
-         </div>
+        </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 -mt-10 relative z-10 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 -mt-4 relative z-20 space-y-8">
          
-         {/* ITT HASZNÁLJUK AZ ÚJ KOMPONENST */}
-         <TripForm carId={car.id} />
+         {/* ÚJ ÚT RÖGZÍTÉSE (FORM KOMPONENS BEÁGYAZÁSA) */}
+         <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-1 border border-white/20 dark:border-slate-700 overflow-hidden">
+             <TripForm carId={car.id} />
+         </div>
 
-         {/* Napló Lista */}
-         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100">Rögzített utak</h3>
+         {/* NAPLÓ LISTA */}
+         <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-[2.5rem] border border-white/40 dark:border-slate-700/50 shadow-xl overflow-hidden">
+            <div className="px-8 py-6 border-b border-slate-200 dark:border-slate-700/50 bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm flex items-center justify-between">
+                <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+                    <Map className="w-5 h-5 text-slate-400" /> Rögzített utak
+                </h3>
+                <span className="text-xs font-bold bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-slate-500 dark:text-slate-400">{safeTrips.length} db</span>
             </div>
+            
             <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {safeTrips.length > 0 ? (
                     safeTrips.map((trip: any) => (
-                        <div key={trip.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-colors group">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 ${trip.purpose === 'business' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'}`}>
-                                    {trip.purpose === 'business' ? '💼' : '🏠'}
+                        <div key={trip.id} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors group">
+                            <div className="flex items-start gap-4">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 shadow-sm border border-white/20 dark:border-white/5 ${trip.purpose === 'business' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'}`}>
+                                    {trip.purpose === 'business' ? <Briefcase className="w-6 h-6" /> : <Home className="w-6 h-6" />}
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+                                    <div className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white mb-1 flex-wrap">
                                         <span>{trip.start_location}</span>
-                                        <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                                        <ArrowLeft className="w-4 h-4 text-slate-400 rotate-180" />
                                         <span>{trip.end_location}</span>
                                     </div>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(trip.trip_date).toLocaleDateString('hu-HU')} • {trip.distance} km</p>
+                                    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                            {new Date(trip.trip_date).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Route className="w-3 h-3" /> {trip.distance} km
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                             
-                            <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
-                                <span className={`text-xs font-bold px-2 py-1 rounded ${trip.purpose === 'business' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400'}`}>
+                            <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-700 sm:border-none mt-2 sm:mt-0">
+                                <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${trip.purpose === 'business' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-800' : 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-100 dark:border-purple-800'}`}>
                                     {trip.purpose === 'business' ? 'Üzleti' : 'Magán'}
                                 </span>
                                 <form action={deleteTrip}>
                                     <input type="hidden" name="trip_id" value={trip.id} />
                                     <input type="hidden" name="car_id" value={car.id} />
-                                    <button className="text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 p-2 transition-colors">
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    <button className="p-2.5 rounded-xl text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-transparent hover:border-red-100 dark:hover:border-red-900/30 transition-all" title="Törlés">
+                                        <Trash2 className="w-5 h-5" />
                                     </button>
                                 </form>
                             </div>
                         </div>
                     ))
                 ) : (
-                    <p className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm italic">Nincs rögzített út.</p>
+                    <div className="py-16 text-center">
+                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                            <Map className="w-8 h-8 opacity-50" />
+                        </div>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium">Még nincs rögzített út.</p>
+                        <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">Indulás előtt vagy után rögzítsd itt!</p>
+                    </div>
                 )}
             </div>
          </div>
