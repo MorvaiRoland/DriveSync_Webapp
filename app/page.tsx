@@ -1,3 +1,4 @@
+// ... (Importok maradnak változatlanul)
 import { createClient } from '@/supabase/server'
 import { signOut } from './login/action'
 import Link from 'next/link'
@@ -14,19 +15,17 @@ import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan }
 import { Hammer, History, Fuel, Wrench, Lock, Plus, Pencil, ArrowRight, Sparkles, Calendar, CheckCircle2, Users } from 'lucide-react';
 import FuelWidget from '@/components/FuelWidget';
 import LandingPage from '@/components/LandingPage';
-import CongratulationModal from '@/components/CongratulationModal'; //
+import CongratulationModal from '@/components/CongratulationModal';
 import MarketplaceSection from '@/components/MarketplaceSection'
 
-// --- KONFIGURÁCIÓ ---
+// ... (Konfiguráció és Feature Flags maradnak változatlanul)
 const DEV_SECRET_KEY = "admin"; 
-
-// --- FEATURE FLAGS ---
 const FEATURES = {
   mileageLog: true, addCar: true, aiMechanic: true, reminders: true,
   activityLog: true, gamification: true, weather: true, fuelPrices: true, sharedCars: true,
 };
 
-// --- SERVER ACTION: Km Naplózása ---
+// ... (logCurrentMileage server action marad változatlanul)
 async function logCurrentMileage(formData: FormData) {
   'use server'
   const car_id = formData.get('car_id');
@@ -49,10 +48,8 @@ async function logCurrentMileage(formData: FormData) {
   return redirect(`/?dev=${DEV_SECRET_KEY}&success=Km+frissitve`);
 }
 
-
-
 // =================================================================================================
-// DASHBOARD LOGIKA (Változatlan)
+// DASHBOARD LOGIKA (JAVÍTOTT VERZIÓ)
 // =================================================================================================
 async function DashboardComponent() {
   const supabase = await createClient()
@@ -82,44 +79,77 @@ async function DashboardComponent() {
   const { data: subData } = await supabase.from('subscriptions').select('status, plan_type').eq('user_id', user.id).single();
   subscription = subData;
 
-  // --- ÚJ: ELLENŐRIZZÜK A PREMIUM STÁTUSZT ---
   const isPremium = subscription?.plan_type === 'pro' || subscription?.plan_type === 'lifetime' || subscription?.plan_type === 'founder';
 
+  // --- 1. JAVÍTÁS: Lekérjük a 'car_shares' táblát is, hogy lássuk, kivel van megosztva ---
   const { data: carsData } = await supabase
       .from('cars')
-      .select('*, events(type, mileage)') 
+      .select('*, events(type, mileage), car_shares(email)') // <--- HOZZÁADVA: car_shares(email)
       .order('created_at', { ascending: false })
   
   if (carsData) {
       cars = carsData
+      
+      // Saját autók: ahol én vagyok a tulajdonos (user_id egyezik)
       myCars = carsData.filter(car => car.user_id === user.id)
-      sharedCars = carsData.filter(car => car.user_id !== user.id)
+      
+      // --- 2. JAVÍTÁS: Megosztott autók szűrése ---
+      // Csak azok az autók számítanak "megosztottnak", ahol:
+      // A) NEM én vagyok a tulajdonos
+      // B) ÉS az én email címem szerepel a 'car_shares' listában
+      sharedCars = carsData.filter(car => 
+        car.user_id !== user.id && 
+        car.car_shares && 
+        car.car_shares.some((share: any) => share.email === user.email)
+      )
+
       latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   }
 
   canAddCar = checkLimit(plan, 'maxCars', myCars.length);
   canUseAi = checkLimit(plan, 'allowAi');
-  // Ezt illeszd be a fleetHealth számítás után:
-const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
+  
+  const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
   if (cars.length > 0) {
-      const { data: reminders } = await supabase.from('service_reminders').select('*, cars(make, model)').order('due_date', { ascending: true }).limit(3);
-      if (reminders) upcomingReminders = reminders;
+      // Itt érdemes szűrni, hogy a Reminder/Activity csak a saját vagy explicit megosztott autókhoz jöjjön
+      // Most lekérjük az összeset, amihez van jogunk (Showroomosok is benne lehetnek)
+      // Javasolt: .in('car_id', [...myCars, ...sharedCars].map(c => c.id))
+      const relevantCarIds = [...myCars, ...sharedCars].map(c => c.id);
 
-      const { data: activities } = await supabase.from('events').select('*, cars(make, model)').order('event_date', { ascending: false }).limit(5);
-      if (activities) recentActivity = activities;
+      if (relevantCarIds.length > 0) {
+          const { data: reminders } = await supabase
+            .from('service_reminders')
+            .select('*, cars(make, model)')
+            .in('car_id', relevantCarIds) // Csak releváns autók
+            .order('due_date', { ascending: true })
+            .limit(3);
+          if (reminders) upcomingReminders = reminders;
 
-      const { data: allCosts } = await supabase.from('events').select('cost, event_date');
-      if (allCosts) {
-          const now = new Date();
-          const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-          const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
+          const { data: activities } = await supabase
+            .from('events')
+            .select('*, cars(make, model)')
+            .in('car_id', relevantCarIds) // Csak releváns autók
+            .order('event_date', { ascending: false })
+            .limit(5);
+          if (activities) recentActivity = activities;
 
-          spentLast30Days = allCosts.filter(e => new Date(e.event_date) >= thirtyDaysAgo).reduce((sum, e) => sum + (e.cost || 0), 0);
-          const spentPrev30Days = allCosts.filter(e => { const d = new Date(e.event_date); return d >= sixtyDaysAgo && d < thirtyDaysAgo; }).reduce((sum, e) => sum + (e.cost || 0), 0);
+          const { data: allCosts } = await supabase
+            .from('events')
+            .select('cost, event_date')
+            .in('car_id', relevantCarIds); // Költségnél is szűrünk
+            
+          if (allCosts) {
+              const now = new Date();
+              const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+              const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
 
-          if (spentPrev30Days > 0) spendingTrend = Math.round(((spentLast30Days - spentPrev30Days) / spentPrev30Days) * 100);
-          else if (spentLast30Days > 0) spendingTrend = 100;
+              spentLast30Days = allCosts.filter(e => new Date(e.event_date) >= thirtyDaysAgo).reduce((sum, e) => sum + (e.cost || 0), 0);
+              const spentPrev30Days = allCosts.filter(e => { const d = new Date(e.event_date); return d >= sixtyDaysAgo && d < thirtyDaysAgo; }).reduce((sum, e) => sum + (e.cost || 0), 0);
+
+              if (spentPrev30Days > 0) spendingTrend = Math.round(((spentLast30Days - spentPrev30Days) / spentPrev30Days) * 100);
+              else if (spentLast30Days > 0) spendingTrend = 100;
+          }
       }
 
       if (myCars.length > 0) {
@@ -161,61 +191,60 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
 
+  // ... (A return rész teljesen változatlan maradhat, ezért csak a végét jelzem)
   return (
     <div className="h-screen w-full overflow-y-auto overscroll-none bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-32 transition-colors duration-300 selection:bg-amber-500/30">
       
-      {/* --- ITT A GRATULÁCIÓ MODAL --- */}
+      {/* ... (Modalok, Navbar, stb. változatlan) ... */}
       <CongratulationModal currentPlan={subscription?.plan_type || 'free'} />
-      
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       <ChangelogModal />
       <ReminderChecker />
-      
-      
-      {/* NAVBAR */}
-      <nav className="bg-slate-900 sticky top-0 z-50 shadow-lg border-b border-white/5 backdrop-blur-md bg-opacity-95">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 justify-between items-center">
-            <div className="flex items-center gap-6"> 
-              <Link href="/" className="flex items-center gap-3 group">
-                <div className="relative w-8 h-8 group-hover:scale-110 transition-transform">
-                  <Image src="/DynamicSense-logo.png" alt="DynamicSense" fill className="object-contain" priority />
-                </div>
-                <span className="text-xl font-bold tracking-tight text-white uppercase hidden sm:block">
-                  Dynamic<span className="text-amber-500">Sense</span>
-                </span>
-              </Link>
-              <Link href="/pricing" className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors">Csomagok</Link>
-              <Link href="/showroom" className="hidden md:flex items-center gap-1 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors">
-    <span className="text-lg">🔥</span> Showroom
-  </Link>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
-                  subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime' 
-                    ? 'bg-amber-500/10 border-amber-500/50 text-amber-500 hover:bg-amber-500/20' 
-                  : subscription?.plan_type === 'pro' 
-                    ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 hover:bg-blue-500/20' 
-                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
-              }`}>
-                  {(subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime') && <span className="text-sm">🚀</span>}
-                  {
-                    subscription?.plan_type === 'founder' ? 'Founder' : 
-                    subscription?.plan_type === 'lifetime' ? 'Lifetime' :
-                    subscription?.plan_type === 'pro' ? 'Pro' : 'Starter'
-                  }
-              </Link>
-              <Link href="/settings" className="rounded-full bg-white/10 text-white p-2 hover:bg-white/20 transition-colors" title="Beállítások">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-              </Link>
-              <form action={signOut}>
-                <button className="bg-white/10 hover:bg-red-500/20 hover:text-red-400 text-slate-300 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all border border-white/5">Kilépés</button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </nav>
 
+      <nav className="bg-slate-900 sticky top-0 z-50 shadow-lg border-b border-white/5 backdrop-blur-md bg-opacity-95">
+       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+         <div className="flex h-16 justify-between items-center">
+           <div className="flex items-center gap-6"> 
+             <Link href="/" className="flex items-center gap-3 group">
+               <div className="relative w-8 h-8 group-hover:scale-110 transition-transform">
+                 <Image src="/DynamicSense-logo.png" alt="DynamicSense" fill className="object-contain" priority />
+               </div>
+               <span className="text-xl font-bold tracking-tight text-white uppercase hidden sm:block">
+                 Dynamic<span className="text-amber-500">Sense</span>
+               </span>
+             </Link>
+             <Link href="/pricing" className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors">Csomagok</Link>
+             <Link href="/showroom" className="hidden md:flex items-center gap-1 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors">
+               <span className="text-lg">🔥</span> Showroom
+             </Link>
+           </div>
+           <div className="flex items-center gap-4">
+             <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                 subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime' 
+                   ? 'bg-amber-500/10 border-amber-500/50 text-amber-500 hover:bg-amber-500/20' 
+                 : subscription?.plan_type === 'pro' 
+                   ? 'bg-blue-500/10 border-blue-500/50 text-blue-400 hover:bg-blue-500/20' 
+                 : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
+             }`}>
+                 {(subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime') && <span className="text-sm">🚀</span>}
+                 {
+                   subscription?.plan_type === 'founder' ? 'Founder' : 
+                   subscription?.plan_type === 'lifetime' ? 'Lifetime' :
+                   subscription?.plan_type === 'pro' ? 'Pro' : 'Starter'
+                 }
+             </Link>
+             <Link href="/settings" className="rounded-full bg-white/10 text-white p-2 hover:bg-white/20 transition-colors" title="Beállítások">
+               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+             </Link>
+             <form action={signOut}>
+               <button className="bg-white/10 hover:bg-red-500/20 hover:text-red-400 text-slate-300 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all border border-white/5">Kilépés</button>
+             </form>
+           </div>
+         </div>
+       </div>
+     </nav>
+
+      {/* --- Dashboard Content (Változatlan, csak a fenti logikát használja) --- */}
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         
         {/* HEADER & METRICS */}
@@ -247,13 +276,8 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
 
             {cars.length > 0 && (
     <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-6 bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700">
-        
-        {/* --- BAL OLDAL: FLOTTA EGÉSZSÉG --- */}
         <div className="flex-1 flex items-center justify-between sm:justify-end gap-4 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-6">
-            
-            {/* FELTÉTEL: Cseréld a '!hasServices'-t a saját változódra (pl. services.length === 0) */}
             {!hasServices ? (
-                // --- HA NINCS ADAT: TÁJÉKOZTATÁS ---
                 <div className="w-full flex flex-col items-start sm:items-end justify-center h-12">
                       <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Flotta Egészség</p>
                       <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
@@ -266,7 +290,6 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
                       </div>
                 </div>
             ) : (
-                // --- HA VAN ADAT: EREDETI DIAGRAM ---
                 <>
                     <div className="text-left sm:text-right">
                         <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Flotta Egészség</p>
@@ -283,8 +306,6 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
                 </>
             )}
         </div>
-
-        {/* --- JOBB OLDAL: KÖLTSÉGEK (VÁLTOZATLAN) --- */}
         <div className="flex-1 flex items-center justify-between sm:justify-start gap-4 sm:pl-2">
             <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -426,34 +447,32 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
             </div>
 
             <div className="lg:col-span-4 space-y-8">
+              
               {/* --- SHOWROOM BATTLE WIDGET --- */}
-<Link href="/showroom" className="block relative group overflow-hidden rounded-2xl shadow-lg transition-transform hover:scale-[1.02]">
-  {/* Háttér kép vagy gradiens */}
-  <div className="absolute inset-0 bg-gradient-to-br from-orange-600 to-red-700"></div>
-  <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>
-  
-  {/* Tartalom */}
-  <div className="relative p-6 flex flex-col items-center text-center text-white">
-    <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-3 text-2xl shadow-inner border border-white/20 group-hover:rotate-12 transition-transform">
-      🔥
-    </div>
-    <h3 className="text-xl font-black uppercase tracking-tight mb-1">Showroom Battle</h3>
-    <p className="text-sm text-orange-100 font-medium mb-4">Szavazz a legszebb autókra és gyűjts XP-t!</p>
-    
-    <div className="bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 group-hover:bg-white group-hover:text-red-600 transition-colors">
-      <span>Belépés az Arénába</span>
-      <ArrowRight className="w-3 h-3" />
-    </div>
-  </div>
-</Link>
-              {/* --- ÚJ: KÖZÖSSÉG WIDGET (CSAK PRO/LIFETIME) --- */}
-          <MarketplaceSection />
+              <Link href="/showroom" className="block relative group overflow-hidden rounded-2xl shadow-lg transition-transform hover:scale-[1.02]">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-600 to-red-700"></div>
+                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>
+                <div className="relative p-6 flex flex-col items-center text-center text-white">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-3 text-2xl shadow-inner border border-white/20 group-hover:rotate-12 transition-transform">
+                    🔥
+                  </div>
+                  <h3 className="text-xl font-black uppercase tracking-tight mb-1">Showroom Battle</h3>
+                  <p className="text-sm text-orange-100 font-medium mb-4">Szavazz a legszebb autókra és gyűjts XP-t!</p>
+                  <div className="bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 group-hover:bg-white group-hover:text-red-600 transition-colors">
+                    <span>Belépés az Arénába</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </div>
+                </div>
+              </Link>
+
+              <MarketplaceSection />
 
               {FEATURES.gamification && <GamificationWidget badges={badges} />}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                   {FEATURES.weather && <WeatherWidget />}
                   {FEATURES.fuelPrices && <FuelWidget />}
               </div>
+              
               {FEATURES.reminders && (
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
