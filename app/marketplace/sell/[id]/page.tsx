@@ -4,9 +4,13 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft, Car, Banknote, ShieldCheck } from 'lucide-react'
-import { publishListing } from './actions' // Ezt mindjárt megírjuk
+import { publishListing } from './actions'
 
-export default async function SellCarForm({ params }: { params: { id: string } }) {
+// JAVÍTÁS: A params típusa mostantól Promise<{ id: string }>
+export default async function SellCarForm(props: { params: Promise<{ id: string }> }) {
+  // JAVÍTÁS: Itt várjuk be a params-ot
+  const params = await props.params;
+  
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -15,7 +19,7 @@ export default async function SellCarForm({ params }: { params: { id: string } }
   const { data: car } = await supabase
     .from('cars')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', params.id) // Itt már a feloldott params.id-t használjuk
     .eq('user_id', user.id)
     .single()
 
@@ -25,7 +29,7 @@ export default async function SellCarForm({ params }: { params: { id: string } }
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-12 flex justify-center items-start">
         <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-12">
             
-            {/* BAL OLDAL: PREVIEW CARD (Hogy lássa, mit árul) */}
+            {/* BAL OLDAL: PREVIEW CARD */}
             <div className="space-y-6">
                 <Link href="/marketplace/sell" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white mb-4">
                     <ArrowLeft className="w-4 h-4" /> Vissza
@@ -103,14 +107,14 @@ export default async function SellCarForm({ params }: { params: { id: string } }
                         ></textarea>
                     </div>
 
-                    {/* Kapcsolat Infó (Opcionális, de hasznos) */}
+                    {/* Kapcsolat Infó */}
                     <div>
                         <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Kapcsolattartó Telefonszám</label>
                         <input 
                             type="tel" 
                             name="contact_phone" 
                             placeholder="+36 30 123 4567" 
-                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-amber-500 outline-none transition-all"
                         />
                     </div>
 
