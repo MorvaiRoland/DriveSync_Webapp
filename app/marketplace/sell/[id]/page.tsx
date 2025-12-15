@@ -50,7 +50,7 @@ export default async function SellCarEditorPage(props: { params: Promise<{ id: s
                              )}
                              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
                              <div className="absolute top-4 left-4 bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full">
-                                 ID: {car.id.slice(0, 8)}
+                                 ID: {car.id.toString()}
                              </div>
                         </div>
                         <div className="p-8">
