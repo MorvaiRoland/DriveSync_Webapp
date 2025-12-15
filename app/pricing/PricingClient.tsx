@@ -168,7 +168,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
             highlight={true}
             features={[
               'Korlátlan autó', 
-              'AI Szerelő (GPT-4o) 🤖', 
+              'AI Szerelő (Gemini-2.5-flash) 🤖', 
               'Digitális Kesztyűtartó 📂', 
               'Részletes statisztikák 📊', 
               'Excel & PDF Exportálás'
