@@ -44,10 +44,21 @@ export default async function PublicSharedAdPage(props: { params: Promise<{ id: 
       {/* 1. PUBLIKUS FEJLÉC (MARKETING) */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            {/* Logo helye */}
-            <Link href="/" className="flex items-center gap-2 font-black text-xl tracking-tighter text-slate-900 dark:text-white">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">D</div>
-                DynamicSense
+            
+            {/* Logo helye - FRISSÍTVE A KÉRÉSNEK MEGFELELŐEN */}
+            <Link href="/" className="flex items-center gap-2">
+                <div className="relative w-8 h-8">
+                    <Image 
+                        src="/DynamicSense-logo.png" 
+                        alt="DynamicSense" 
+                        fill 
+                        className="object-contain" 
+                        priority 
+                    />
+                </div>
+                <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase hidden sm:block">
+                    Dynamic<span className="text-amber-500">Sense</span>
+                </span>
             </Link>
 
             <div className="flex items-center gap-4">
