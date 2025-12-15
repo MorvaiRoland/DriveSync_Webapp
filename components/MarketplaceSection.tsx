@@ -72,13 +72,13 @@ export default async function MarketplaceWidget() {
                 Böngészés
             </Link>
 
-            <Link 
-                href="/cars" 
-                className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm text-slate-900 bg-amber-500 hover:bg-amber-400 border border-amber-400/50 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all active:scale-[0.98]"
-            >
-                <PlusCircle className="w-4 h-4" />
-                Hirdetés
-            </Link>
+           <Link 
+    href="/marketplace/sell" // <--- JAVÍTVA: /cars helyett /marketplace/sell
+    className="..."
+>
+    <PlusCircle className="w-4 h-4" />
+    Hirdetés
+</Link>
         </div>
       </div>
     </div>
