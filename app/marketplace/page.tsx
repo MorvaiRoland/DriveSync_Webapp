@@ -2,13 +2,23 @@ import { createClient } from '@/supabase/server'
 import FilterSidebar from './components/FilterSidebar'
 import CarCard from './components/CarCard'
 import Link from 'next/link'
-import { ArrowLeft, Home } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 export const dynamic = 'force-dynamic';
 
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
+
+// Egy átfogó lista a népszerű márkákról
+// Ezt később kiszervezheted egy külön konstans fájlba is (pl. constants/brands.ts)
+const POPULAR_BRANDS = [
+  "Alfa Romeo", "Audi", "BMW", "Chevrolet", "Citroen", "Dacia", "Dodge", "Fiat", 
+  "Ford", "Honda", "Hyundai", "Infiniti", "Jaguar", "Jeep", "Kia", "Lada", 
+  "Land Rover", "Lexus", "Mazda", "Mercedes-Benz", "Mini", "Mitsubishi", "Nissan", 
+  "Opel", "Peugeot", "Porsche", "Renault", "Saab", "Seat", "Skoda", "Smart", 
+  "Subaru", "Suzuki", "Tesla", "Toyota", "Volkswagen", "Volvo"
+];
 
 export default async function MarketplacePage(props: Props) {
   const supabase = await createClient()
@@ -27,30 +37,37 @@ export default async function MarketplacePage(props: Props) {
     .eq('is_listed_on_marketplace', true)
     .order('created_at', { ascending: false })
 
-  // Figyelem: az adatbázisban a márka oszlop neve valószínűleg 'make', 
-  // de az URL paraméter 'brand'. Ezt itt összehangoljuk.
+  // Szűrés alkalmazása
   if (brandParam) carQuery = carQuery.ilike('make', brandParam)
   if (minPrice) carQuery = carQuery.gte('price', minPrice)
   if (maxPrice) carQuery = carQuery.lte('price', maxPrice)
 
-  // --- 2. LEKÉRDEZÉS: Összes elérhető márka lekérése a szűrőhöz ---
-  // Csak a 'make' oszlopot kérjük le az aktív hirdetésekből
+  // --- 2. LEKÉRDEZÉS: Csak a márkák lekérése az adatbázisból ---
+  // Azért kell, hogy ha van olyan ritka autó (pl. "Trabant"), ami nincs a fenti
+  // statikus listában, az is megjelenjen a szűrőben.
   const brandQuery = supabase
     .from('marketplace_view')
     .select('make')
     .eq('is_for_sale', true)
     .eq('is_listed_on_marketplace', true)
-    .order('make', { ascending: true })
 
-  // Párhuzamos futtatás a sebességért
+  // Párhuzamos futtatás
   const [carsRes, brandsRes] = await Promise.all([carQuery, brandQuery])
 
   const cars = carsRes.data || []
+  const dbBrandsRaw = brandsRes.data || []
+
+  // --- MÁRKALISTA ÖSSZEÁLLÍTÁSA ---
+  // 1. Kinyerjük az adatbázisban lévő márkákat
+  // @ts-ignore
+  const dbBrands = dbBrandsRaw.map(item => item.make).filter(Boolean) as string[]
+
+  // 2. Összefésüljük a statikus listát a DB listával (Set a duplikációk ellen)
+  // Így meglesz az összes népszerű márka + ami ténylegesen van az adatbázisban
+  const allBrandsSet = new Set([...POPULAR_BRANDS, ...dbBrands]);
   
-  // Egyedi márkák kinyerése (Deduplikáció Set-tel)
-  const rawBrands = brandsRes.data || []
-  // @ts-ignore - Supabase típusok miatt néha kell, ha a view típusa nincs generálva
-  const uniqueBrands = Array.from(new Set(rawBrands.map(item => item.make))).filter(Boolean) as string[]
+  // 3. Tömbé alakítjuk és ABC sorrendbe rendezzük
+  const sortedBrands = Array.from(allBrandsSet).sort((a, b) => a.localeCompare(b));
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0B1120] pb-20 pt-6 font-sans">
@@ -79,9 +96,9 @@ export default async function MarketplacePage(props: Props) {
         </div>
 
         <div className="flex flex-col md:flex-row gap-8">
-            {/* Bal oldali sáv (Szűrő) - Átadjuk neki a márkákat! */}
+            {/* Bal oldali sáv (Szűrő) - Most már a bővített listát adjuk át */}
             <aside className="w-full md:w-72 flex-shrink-0">
-                <FilterSidebar availableBrands={uniqueBrands} />
+                <FilterSidebar availableBrands={sortedBrands} />
             </aside>
 
             {/* Jobb oldali sáv (Találatok) */}
@@ -92,7 +109,11 @@ export default async function MarketplacePage(props: Props) {
                             🔍
                         </div>
                         <p className="text-xl font-bold text-slate-900 dark:text-white">Nincs találat</p>
-                        <p className="text-slate-500 mt-2">Próbálj meg lazítani a szűrési feltételeken.</p>
+                        <p className="text-slate-500 mt-2">
+                            {brandParam 
+                                ? `Jelenleg nincs elérhető ${brandParam} hirdetésünk.` 
+                                : "Próbálj meg lazítani a szűrési feltételeken."}
+                        </p>
                         <Link href="/marketplace" className="mt-6 text-indigo-500 font-bold hover:underline">
                             Szűrők törlése
                         </Link>

@@ -1,44 +1,57 @@
 'use client'
 
-import { Share2, Check, Copy } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { Share2, Check } from 'lucide-react'
 
-export default function ShareButton() {
+// Elfogadjuk az ID-t prop-ként
+export default function ShareButton({ title, carId }: { title?: string, carId: string | number }) {
   const [copied, setCopied] = useState(false)
 
   const handleShare = async () => {
-    const url = window.location.href
-    const title = document.title
+    // ITT A LÉNYEG: Összerakjuk a publikus URL-t
+    // window.location.origin megadja a domaint (pl. https://dynamicsense.hu)
+    const shareUrl = `${window.location.origin}/hirdetes/${carId}`
 
-    // Ha a böngésző támogatja a natív megosztást (pl. mobil)
+    const shareData = {
+      title: title || 'Nézd meg ezt az autót a DynamicSense-en!',
+      text: 'Találtam egy érdekes autót, csekkold le a teljes szerviztörténetét:',
+      url: shareUrl,
+    }
+
     if (navigator.share) {
       try {
-        await navigator.share({ title, url })
+        await navigator.share(shareData)
         return
       } catch (err) {
-        console.error('Megosztás megszakítva', err)
+        console.log('Megosztás megszakítva')
       }
     }
 
-    // Fallback: Vágólapra másolás
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
-      toast.success('Link másolva a vágólapra!')
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      toast.error('Nem sikerült másolni')
+      console.error('Hiba másoláskor', err)
     }
   }
 
   return (
     <button 
-        onClick={handleShare}
-        className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 rounded-full transition-all active:scale-95" 
-        title="Megosztás"
+      onClick={handleShare}
+      className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-sm font-bold transition-colors"
     >
-        {copied ? <Check className="w-5 h-5 text-green-500" /> : <Share2 className="w-5 h-5" />}
+      {copied ? (
+        <>
+          <Check className="w-4 h-4 text-emerald-500" />
+          <span className="text-emerald-600">Link másolva!</span>
+        </>
+      ) : (
+        <>
+          <Share2 className="w-4 h-4" />
+          <span>Megosztás</span>
+        </>
+      )}
     </button>
   )
 }
