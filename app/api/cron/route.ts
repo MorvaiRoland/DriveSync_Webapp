@@ -61,7 +61,7 @@ export async function GET(request: Request) {
           )
 
           await resend.emails.send({
-            from: 'DriveSync <info.drivesync.mail@gmail.com>',
+            from: 'DriveSync <info.dynamicsense@gmail.com>',
             to: [user.email],
             subject: `🔔 Szerviz: ${reminder.cars.make} ${reminder.cars.model}`,
             html: emailHtml
