@@ -1,83 +1,143 @@
-// components/TripMap.tsx
 'use client'
 
-import { useEffect, useRef } from 'react'
-import Map, { Marker, Source, Layer, MapRef } from 'react-map-gl'
+import { useEffect, useRef, useState } from 'react'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import mapboxgl from 'mapbox-gl'
-
-// Fontos: next.js alatt néha kell ez a fix a transzpiláláshoz
-// Ha hibát dob a buildnél, tedd be a next.config.js-be a transpilePackages-t
-// De általában működik így:
+// Fontos: Itt is kellhet a "* as" import a TypeScript miatt
+import * as mapboxgl from 'mapbox-gl' 
 
 interface TripMapProps {
-  startPos: [number, number] | null // [lat, lng] a te kódodban, de Mapbox [lng, lat]-ot kér!
-  endPos: [number, number] | null
-  routeGeoJson: any | null // A Directions API válasza (geometry)
+  startPos: [number, number] | null // [lat, lng]
+  endPos: [number, number] | null   // [lat, lng]
+  routeGeoJson: any | null
 }
 
 export default function TripMap({ startPos, endPos, routeGeoJson }: TripMapProps) {
-  const mapRef = useRef<MapRef>(null)
+  const mapContainer = useRef<HTMLDivElement>(null)
+  const map = useRef<mapboxgl.Map | null>(null)
+  const startMarker = useRef<mapboxgl.Marker | null>(null)
+  const endMarker = useRef<mapboxgl.Marker | null>(null)
 
-  // Automatikus zoom (fitBounds), ha változnak a pontok
+  // 1. Térkép inicializálása (Csak egyszer fut le)
   useEffect(() => {
-    if (startPos && endPos && mapRef.current) {
-      // Mapbox [lng, lat] sorrendet használ!
-      const bounds = new mapboxgl.LngLatBounds()
-        .extend([startPos[1], startPos[0]])
-        .extend([endPos[1], endPos[0]])
+    if (map.current || !mapContainer.current) return
 
-      mapRef.current.fitBounds(bounds, { padding: 50, duration: 1000 })
-    } else if (startPos && mapRef.current) {
-      mapRef.current.flyTo({ center: [startPos[1], startPos[0]], zoom: 12 })
+    // Token beállítása
+    (mapboxgl as any).accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/navigation-night-v1',
+      center: [19.0402, 47.4979], // Budapest [lng, lat]
+      zoom: 6,
+    })
+
+    // Tisztítás unmountkor
+    return () => {
+      map.current?.remove()
+      map.current = null
     }
+  }, [])
+
+  // 2. Markerek kezelése (Amikor a startPos vagy endPos változik)
+  useEffect(() => {
+    if (!map.current) return
+
+    // --- Start Marker (A) ---
+    if (startPos) {
+      if (!startMarker.current) {
+        // Marker DOM elem létrehozása manuálisan
+        const el = document.createElement('div')
+        el.className = 'w-6 h-6 bg-emerald-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-xs text-white font-bold'
+        el.innerHTML = 'A'
+        
+        startMarker.current = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([startPos[1], startPos[0]])
+          .addTo(map.current)
+      } else {
+        startMarker.current.setLngLat([startPos[1], startPos[0]])
+      }
+    } else {
+      startMarker.current?.remove()
+      startMarker.current = null
+    }
+
+    // --- End Marker (B) ---
+    if (endPos) {
+      if (!endMarker.current) {
+        const el = document.createElement('div')
+        el.className = 'w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-xs text-white font-bold'
+        el.innerHTML = 'B'
+
+        endMarker.current = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([endPos[1], endPos[0]])
+          .addTo(map.current)
+      } else {
+        endMarker.current.setLngLat([endPos[1], endPos[0]])
+      }
+    } else {
+      endMarker.current?.remove()
+      endMarker.current = null
+    }
+
+    // --- Zoom igazítás (FitBounds) ---
+    if (startPos && endPos) {
+        const bounds = new mapboxgl.LngLatBounds()
+            .extend([startPos[1], startPos[0]])
+            .extend([endPos[1], endPos[0]])
+        
+        map.current.fitBounds(bounds, { padding: 50, duration: 1000 })
+    } else if (startPos) {
+        map.current.flyTo({ center: [startPos[1], startPos[0]], zoom: 12 })
+    }
+
   }, [startPos, endPos])
 
-  // A vonal stílusa
-  const layerStyle = {
-    id: 'route',
-    type: 'line',
-    paint: {
-      'line-color': '#3b82f6', // blue-500
-      'line-width': 5,
-      'line-opacity': 0.75,
-    },
-  } as const
+  // 3. Útvonal réteg (Route) kezelése
+  useEffect(() => {
+    if (!map.current || !routeGeoJson) return
 
-  return (
-    <Map
-      ref={mapRef}
-      mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
-      initialViewState={{
-        longitude: 19.0402, // Budapest alapértelmezett
-        latitude: 47.4979,
-        zoom: 6
-      }}
-      style={{ width: '100%', height: '100%' }}
-      // Sötét/Világos mód támogatása URL cserével (opcionális, most sötétet használunk példának)
-      mapStyle="mapbox://styles/mapbox/navigation-night-v1" 
-      attributionControl={false}
-    >
-      {/* Indulás Marker (Zöld) */}
-      {startPos && (
-        <Marker longitude={startPos[1]} latitude={startPos[0]} anchor="bottom">
-          <div className="w-6 h-6 bg-emerald-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-xs text-white font-bold">A</div>
-        </Marker>
-      )}
+    const mapInstance = map.current
 
-      {/* Érkezés Marker (Piros) */}
-      {endPos && (
-        <Marker longitude={endPos[1]} latitude={endPos[0]} anchor="bottom">
-          <div className="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-xs text-white font-bold">B</div>
-        </Marker>
-      )}
+    // Megvárjuk, amíg a stílus betöltődik, különben hibát dob
+    if (!mapInstance.isStyleLoaded()) {
+        mapInstance.once('style.load', () => drawRoute(mapInstance, routeGeoJson))
+    } else {
+        drawRoute(mapInstance, routeGeoJson)
+    }
 
-      {/* Útvonal vonal */}
-      {routeGeoJson && (
-        <Source id="route-source" type="geojson" data={routeGeoJson}>
-          <Layer {...layerStyle} />
-        </Source>
-      )}
-    </Map>
-  )
+  }, [routeGeoJson])
+
+  // Segédfüggvény a vonal rajzoláshoz
+  const drawRoute = (mapInstance: mapboxgl.Map, data: any) => {
+    // Ha már létezik a forrás, csak frissítjük az adatot
+    const source = mapInstance.getSource('route') as mapboxgl.GeoJSONSource
+    
+    if (source) {
+      source.setData(data)
+    } else {
+      // Ha nem létezik, hozzáadjuk a forrást és a réteget
+      mapInstance.addSource('route', {
+        type: 'geojson',
+        data: data
+      })
+
+      mapInstance.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#3b82f6',
+          'line-width': 5,
+          'line-opacity': 0.75
+        }
+      })
+    }
+  }
+
+  // A konténer, amibe a Mapbox injektálja magát
+  return <div ref={mapContainer} style={{ width: '100%', height: '100%', minHeight: '400px' }} />
 }

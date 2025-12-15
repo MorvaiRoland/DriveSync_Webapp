@@ -20,6 +20,7 @@ const cspHeader = `
 const nextConfig = {
   
   poweredByHeader: false,
+  transpilePackages: ['react-map-gl', 'mapbox-gl'],
   
   experimental: {
     serverActions: {
