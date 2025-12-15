@@ -1,52 +1,67 @@
+// components/TripForm.tsx
 'use client'
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
-// JAVÍTVA: Az import útvonalat a közös actions fájlhoz igazítottuk
-import { addTrip } from '@/app/cars/[id]/actions' 
+import { addTrip } from '@/app/cars/[id]/actions' // Ellenőrizd az útvonalat!
 import LocationAutocomplete from '@/components/LocationAutocomplete'
 
-// Térkép dinamikus betöltése
+// Dinamikus import, hogy ne legyen SSR hiba a mapbox-gl miatt
 const TripMap = dynamic(() => import('@/components/TripMap'), { 
   ssr: false,
-  loading: () => <div className="w-full h-full bg-slate-200 dark:bg-slate-700 animate-pulse rounded-xl flex items-center justify-center text-slate-400">Térkép betöltése...</div>
+  loading: () => <div className="w-full h-full bg-slate-900 animate-pulse flex items-center justify-center text-slate-500">Térkép betöltése...</div>
 })
 
 export default function TripForm({ carId }: { carId: string }) {
-  // STATE-ek
   const [startCoords, setStartCoords] = useState<{lat: number, lng: number} | null>(null)
   const [endCoords, setEndCoords] = useState<{lat: number, lng: number} | null>(null)
   const [calculatedDistance, setCalculatedDistance] = useState<string>('')
+  const [routeGeoJson, setRouteGeoJson] = useState<any>(null) // Új state a vonalnak
 
-  // Koordináta választás kezelése
+  const fetchDirections = async (start: {lat: number, lng: number}, end: {lat: number, lng: number}) => {
+    try {
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+      // Mapbox Directions API: driving profile, geojson geometry
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start.lng},${start.lat};${end.lng},${end.lat}?geometries=geojson&overview=full&access_token=${token}`
+      
+      const res = await fetch(url)
+      const data = await res.json()
+
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0]
+        // Távolság (méterben jön -> km)
+        const distanceKm = Math.round(route.distance / 1000)
+        setCalculatedDistance(distanceKm.toString())
+        
+        // Útvonal geometria a térképnek
+        setRouteGeoJson({
+          type: 'Feature',
+          properties: {},
+          geometry: route.geometry
+        })
+      }
+    } catch (error) {
+      console.error("Hiba az útvonal számításnál:", error)
+    }
+  }
+
   const handleLocationSelect = async (type: 'start' | 'end', lat: number, lng: number, name: string) => {
-    // 1. Frissítjük a state-et a térképhez
+    // 1. State frissítés
     if (type === 'start') setStartCoords({ lat, lng })
     else setEndCoords({ lat, lng })
 
-    // 2. Beírjuk a rejtett inputokba (DOM manipuláció)
+    // 2. Inputok frissítése (HTML Formhoz)
     const latInput = document.getElementById(`${type}_lat_input`) as HTMLInputElement
     const lngInput = document.getElementById(`${type}_lng_input`) as HTMLInputElement
     if (latInput) latInput.value = lat.toString()
     if (lngInput) lngInput.value = lng.toString()
 
-    // 3. Távolság számítás OSRM API-val
+    // 3. API Hívás, ha mindkét pont megvan
     const currentStart = type === 'start' ? { lat, lng } : startCoords
     const currentEnd = type === 'end' ? { lat, lng } : endCoords
 
     if (currentStart && currentEnd) {
-        try {
-            const url = `https://router.project-osrm.org/route/v1/driving/${currentStart.lng},${currentStart.lat};${currentEnd.lng},${currentEnd.lat}?overview=false`
-            const res = await fetch(url)
-            const data = await res.json()
-            
-            if (data.routes && data.routes.length > 0) {
-                const distanceKm = Math.round(data.routes[0].distance / 1000)
-                setCalculatedDistance(distanceKm.toString())
-            }
-        } catch (error) {
-            console.error("Hiba az útvonal számításnál:", error)
-        }
+      await fetchDirections(currentStart, currentEnd)
     }
   }
 
@@ -57,19 +72,16 @@ export default function TripForm({ carId }: { carId: string }) {
             Új út rögzítése
         </h3>
 
-        {/* JAVÍTVA: A form action most már egy wrapper függvény, ami megoldja a TypeScript hibát */}
         <form action={async (formData) => { await addTrip(formData) }} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
             <input type="hidden" name="car_id" value={carId} />
             
-            {/* BAL OSZLOP: Inputok */}
+            {/* BAL OSZLOP */}
             <div className="md:col-span-6 space-y-4">
-                {/* Dátum */}
                 <div className="space-y-1">
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Dátum</label>
                     <input type="date" name="trip_date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors" required />
                 </div>
 
-                {/* Okos Autocomplete inputok */}
                 <LocationAutocomplete 
                     label="Honnan" 
                     namePrefix="start" 
@@ -86,7 +98,6 @@ export default function TripForm({ carId }: { carId: string }) {
                     required
                 />
 
-                {/* Távolság */}
                 <div className="space-y-1">
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Táv (km)</label>
                     <div className="relative">
@@ -101,13 +112,12 @@ export default function TripForm({ carId }: { carId: string }) {
                         />
                         {calculatedDistance && startCoords && endCoords && (
                             <span className="absolute right-3 top-2.5 text-xs text-emerald-500 font-bold flex items-center gap-1">
-                                ✨ Auto
+                                ✨ Mapbox
                             </span>
                         )}
                     </div>
                 </div>
 
-                {/* Típus */}
                 <div className="space-y-1">
                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Típus</label>
                     <select name="purpose" className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors">
@@ -119,11 +129,12 @@ export default function TripForm({ carId }: { carId: string }) {
                 <button type="submit" className="w-full bg-slate-900 dark:bg-slate-700 text-white font-bold py-2.5 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors shadow-md active:scale-[0.99]">Rögzítés</button>
             </div>
 
-            {/* JOBB OSZLOP: Térkép */}
+            {/* JOBB OSZLOP: Mapbox Térkép */}
             <div className="md:col-span-6 w-full h-[400px] bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 relative overflow-hidden shadow-inner z-0">
                 <TripMap 
                     startPos={startCoords ? [startCoords.lat, startCoords.lng] : null} 
                     endPos={endCoords ? [endCoords.lat, endCoords.lng] : null} 
+                    routeGeoJson={routeGeoJson}
                 />
                 
                 {!startCoords && !endCoords && (

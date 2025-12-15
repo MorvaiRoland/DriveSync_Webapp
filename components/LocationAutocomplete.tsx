@@ -1,98 +1,102 @@
+// components/LocationAutocomplete.tsx
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { MapPin, Loader2 } from 'lucide-react' // Vagy a te ikonjaid
 
-type LocationResult = {
-  lat: string
-  lon: string
-  display_name: string
-}
-
-type Props = {
+interface Props {
   label: string
   namePrefix: string
-  onSelect: (lat: number, lng: number, name: string) => void
   placeholder: string
+  onSelect: (lat: number, lng: number, placeName: string) => void
   required?: boolean
 }
 
-export default function LocationAutocomplete({ label, namePrefix, onSelect, placeholder, required }: Props) {
+export default function LocationAutocomplete({ label, namePrefix, placeholder, onSelect, required }: Props) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<LocationResult[]>([])
-  const [showDropdown, setShowDropdown] = useState(false)
+  const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
+  // Keresés debounce-al
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (query.length > 2) {
         setLoading(true)
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=hu&limit=5`)
+          const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+          const res = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&types=place,address&language=hu&country=hu`
+          )
           const data = await res.json()
-          setResults(data)
-          setShowDropdown(true)
-        } catch (e) {
-          console.error(e)
+          setResults(data.features || [])
+          setIsOpen(true)
+        } catch (error) {
+          console.error('Geocoding error:', error)
         } finally {
           setLoading(false)
         }
       } else {
         setResults([])
-        setShowDropdown(false)
+        setIsOpen(false)
       }
-    }, 500)
+    }, 500) // 500ms várakozás gépelés után
 
     return () => clearTimeout(timer)
   }, [query])
 
-  const handleSelect = (item: LocationResult) => {
-    const cityName = item.display_name.split(',')[0]
-    setQuery(cityName)
-    setShowDropdown(false)
-    onSelect(parseFloat(item.lat), parseFloat(item.lon), cityName)
-  }
-
+  // Klikk kívülre bezárja a listát
   useEffect(() => {
-    function handleClickOutside(event: any) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setShowDropdown(false)
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [wrapperRef]);
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const handleSelect = (feature: any) => {
+    const [lng, lat] = feature.center
+    const name = feature.place_name
+    setQuery(name)
+    setIsOpen(false)
+    onSelect(lat, lng, name)
+  }
 
   return (
     <div className="space-y-1 relative" ref={wrapperRef}>
-      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">{label}</label>
+      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">{label}</label>
       
-      <input 
-        type="text" 
-        name={`${namePrefix}_location`} 
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        autoComplete="off"
-        className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors"
-      />
-      
-      {/* Rejtett inputok a koordinátáknak */}
-      <input type="hidden" name={`${namePrefix}_lat`} id={`${namePrefix}_lat_input`} />
-      <input type="hidden" name={`${namePrefix}_lng`} id={`${namePrefix}_lng_input`} />
+      <input type="hidden" name={`${namePrefix}_location`} value={query} />
+      <input type="hidden" id={`${namePrefix}_lat_input`} name={`${namePrefix}_lat`} />
+      <input type="hidden" id={`${namePrefix}_lng_input`} name={`${namePrefix}_lng`} />
 
-      {loading && <div className="absolute right-3 top-8 text-slate-400 text-xs">...</div>}
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 pl-9 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors"
+          autoComplete="off"
+        />
+        <div className="absolute left-2.5 top-2.5 text-slate-400">
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+        </div>
+      </div>
 
-      {showDropdown && results.length > 0 && (
-        <ul className="absolute z-50 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl mt-1 max-h-48 overflow-auto">
-          {results.map((item, index) => (
-            <li 
-              key={index}
-              onClick={() => handleSelect(item)}
-              className="px-3 py-2 hover:bg-amber-50 dark:hover:bg-slate-700 cursor-pointer text-sm text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 last:border-0"
+      {isOpen && results.length > 0 && (
+        <ul className="absolute z-50 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1">
+          {results.map((feature) => (
+            <li
+              key={feature.id}
+              onClick={() => handleSelect(feature)}
+              className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer text-sm text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700 last:border-0"
             >
-              {item.display_name}
+              {feature.place_name}
             </li>
           ))}
         </ul>
