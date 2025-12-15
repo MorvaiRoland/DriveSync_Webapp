@@ -186,6 +186,9 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
                 </span>
               </Link>
               <Link href="/pricing" className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors">Csomagok</Link>
+              <Link href="/showroom" className="hidden md:flex items-center gap-1 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors">
+    <span className="text-lg">🔥</span> Showroom
+  </Link>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all ${
@@ -423,7 +426,26 @@ const hasServices = myCars.some(car => car.events && car.events.some((e: any) =>
             </div>
 
             <div className="lg:col-span-4 space-y-8">
-              
+              {/* --- SHOWROOM BATTLE WIDGET --- */}
+<Link href="/showroom" className="block relative group overflow-hidden rounded-2xl shadow-lg transition-transform hover:scale-[1.02]">
+  {/* Háttér kép vagy gradiens */}
+  <div className="absolute inset-0 bg-gradient-to-br from-orange-600 to-red-700"></div>
+  <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>
+  
+  {/* Tartalom */}
+  <div className="relative p-6 flex flex-col items-center text-center text-white">
+    <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-3 text-2xl shadow-inner border border-white/20 group-hover:rotate-12 transition-transform">
+      🔥
+    </div>
+    <h3 className="text-xl font-black uppercase tracking-tight mb-1">Showroom Battle</h3>
+    <p className="text-sm text-orange-100 font-medium mb-4">Szavazz a legszebb autókra és gyűjts XP-t!</p>
+    
+    <div className="bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 group-hover:bg-white group-hover:text-red-600 transition-colors">
+      <span>Belépés az Arénába</span>
+      <ArrowRight className="w-3 h-3" />
+    </div>
+  </div>
+</Link>
               {/* --- ÚJ: KÖZÖSSÉG WIDGET (CSAK PRO/LIFETIME) --- */}
           <MarketplaceSection />
 
