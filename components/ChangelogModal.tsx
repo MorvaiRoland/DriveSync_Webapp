@@ -1,32 +1,31 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, ArrowRight, Zap } from 'lucide-react'
+import { X, ArrowRight, Zap, Trophy, Layers } from 'lucide-react'
 
-const CURRENT_VERSION = '2.2.0'; // Verzió emelés
-const RELEASE_DATE = '2025. December 14.';
+const CURRENT_VERSION = '2.3.0'; // Új verzió a Showroom miatt
+const RELEASE_DATE = '2025. December 15.';
 
-// 1. Új funkciók listája (Az elmúlt beszélgetéseink alapján)
+// 1. Új funkciók listája (Showroom Battle Update)
 const features = [
   {
-    emoji: '🏷️', 
-    title: 'Piactér & Publikus Megosztás',
-    desc: 'Eladnád az autód? Egy kattintással generálj biztonságos, megosztható linket! Te döntöd el, hogy a rendszám vagy a szervizköltségek látszódjanak-e a vevők számára.',
+    emoji: '🔥', 
+    title: 'Megérkezett a Showroom Battle!',
+    desc: 'Nevezd be az autódat a heti tematikus versenyekre! Legyen szó a legszebb felniről vagy a legtisztább motortérről, most megmutathatod a közösségnek, mit építettél.',
   },
-  
   {
-    emoji: '⚙️', 
-    title: 'Részletesebb Autóprofilok',
-    desc: 'Kibővítettük az adatlapokat: mostantól rögzítheted a kivitelt (sedan, kombi...), a váltó típusát, a motor adatait és a felszereltséget is a pontosabb nyilvántartásért.',
+    emoji: '❤️', 
+    title: 'Swipe & Vote Szavazás',
+    desc: 'Döntsd el te, ki nyerjen! Az új, Tinder-stílusú szavazófelületen jobbra húzva like-olhatod a kedvenceidet. Gyűjtsd a szavazatokat és kerülj a toplista élére!',
   },
 ];
 
 // 2. Jövőbeli fejlesztések
 const upcoming = [
   { 
-    emoji: '📅', 
-    title: 'Szerviz Időpontfoglalás', 
-    desc: 'Hamarosan közvetlenül az appból foglalhatsz időpontot a partnerműhelyekbe.' 
+    emoji: '🎁', 
+    title: 'XP Bolt és Jutalmak', 
+    desc: 'A versenyeken szerzett tapasztalati pontokat (XP) hamarosan valódi kedvezményekre és digitális relikviákra válthatod be.' 
   }
 ];
 
@@ -60,15 +59,15 @@ export default function ChangelogModal() {
       {/* Modal Ablak */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-300">
         
-        {/* Fejléc - ÚJ DESIGN (Business/Garage téma) */}
-        <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-black p-8 text-white relative overflow-hidden shrink-0">
+        {/* Fejléc - Showroom Téma (Orange/Red Gradient) */}
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-orange-900 p-8 text-white relative overflow-hidden shrink-0">
             {/* Háttér effektek */}
-            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl -ml-10 -mb-10"></div>
+            <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-500/20 rounded-full blur-3xl -ml-10 -mb-10"></div>
             
             <div className="relative z-10">
                 <div className="flex justify-between items-start mb-4">
-                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 text-emerald-300 shadow-lg">
+                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-white/10 text-orange-300 shadow-lg">
                         <Zap className="w-3 h-3 fill-current" /> v{CURRENT_VERSION}
                     </div>
                     <button onClick={handleClose} className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full">
@@ -77,10 +76,10 @@ export default function ChangelogModal() {
                 </div>
                 
                 <h2 className="text-3xl font-black tracking-tight mb-2 leading-tight">
-                    A Garázsod <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">Szintet Lépett.</span>
+                    Irány az <br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">Aréna! 🔥</span>
                 </h2>
-                <p className="text-slate-400 text-sm font-medium">Publikus adatlapok, precízebb nyilvántartás.</p>
+                <p className="text-slate-300 text-sm font-medium">Showroom csaták és interaktív szavazás.</p>
             </div>
         </div>
 
@@ -95,7 +94,7 @@ export default function ChangelogModal() {
                             {item.emoji}
                         </div>
                         <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-base mb-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base mb-1 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                                 {item.title}
                             </h3>
                             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -109,14 +108,14 @@ export default function ChangelogModal() {
             {/* Coming Soon */}
             {upcoming.length > 0 && (
                 <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-2xl blur-sm opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="bg-white dark:bg-slate-900/80 backdrop-blur rounded-2xl p-4 border border-emerald-100 dark:border-emerald-900/30 relative">
-                      <h3 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-purple-500/20 rounded-2xl blur-sm opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="bg-white dark:bg-slate-900/80 backdrop-blur rounded-2xl p-4 border border-orange-100 dark:border-orange-900/30 relative">
+                      <h3 className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                         <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
                         </span>
-                        Dolgozunk rajta...
+                        Hamarosan...
                       </h3>
                       {upcoming.map((item, idx) => (
                         <div key={idx} className="flex gap-3 items-center">

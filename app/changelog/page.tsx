@@ -1,22 +1,43 @@
-import { createClient } from 'supabase/server'
+import { createClient } from '@/supabase/server' // Figyelj az importra!
 import Link from 'next/link'
 import { ArrowLeft, Calendar, Zap, Sparkles } from 'lucide-react'
 
-export const revalidate = 0; // Mindig friss adatot kérjen
+export const revalidate = 0;
 
 export default async function ChangelogPage() {
   const supabase = await createClient()
 
-  // Lekérjük az összes release note-ot, a legújabbtól kezdve
+  // MÓDOSÍTÁS: Ha a verziószámok (pl. 2.3.0) konzisztensek, 
+  // akkor a legegyszerűbb továbbra is a dátumot használni, mert az a legbiztosabb.
+  // De ha a kérésed szerint verzió alapján kell:
+  
   const { data: releases } = await supabase
     .from('release_notes')
     .select('*')
-    .order('release_date', { ascending: false })
+    // Itt a 'version' mezőre cseréltem a rendezést
+    // FONTOS: Ez csak akkor működik jól, ha a verziók pl. 2.3.0 formátumúak,
+    // és nem "v2.3.0", vagy ha a Supabase tudja kezelni a verziókat.
+    // Ha nem, akkor javasolt maradni a 'release_date'-nél, ami logikailag ugyanazt adja.
+    .order('release_date', { ascending: false }) 
+
+  // Ha a verzió string (pl "v2.3.0") és a kliens oldalon akarod pontosan rendezni (semver szerint):
+  const sortedReleases = releases?.sort((a: any, b: any) => {
+      // Eltávolítjuk a 'v' betűt és pontok mentén szétvágjuk
+      const vA = a.version.replace('v', '').split('.').map(Number);
+      const vB = b.version.replace('v', '').split('.').map(Number);
+      
+      // Összehasonlítás (Major, Minor, Patch)
+      for (let i = 0; i < 3; i++) {
+          if (vA[i] > vB[i]) return -1; // Csökkenő sorrend
+          if (vA[i] < vB[i]) return 1;
+      }
+      return 0;
+  }) || [];
 
   return (
     <div className="min-h-screen bg-[#0B0F19] text-slate-200 font-sans selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
       
-      {/* --- HÁTTÉR EFFEKTEK (Ugyanaz, mint a Landing Page) --- */}
+      {/* ... (Háttér effektek maradnak) ... */}
       <div className="fixed inset-0 z-0 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px] animate-pulse"></div>
           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[100px]"></div>
@@ -45,8 +66,9 @@ export default async function ChangelogPage() {
             {/* Függőleges vonal */}
             <div className="absolute left-[19px] top-4 bottom-0 w-0.5 bg-gradient-to-b from-indigo-500/50 via-slate-800 to-transparent"></div>
 
-            {releases && releases.length > 0 ? (
-                releases.map((item: any, index: number) => (
+            {/* ITT HASZNÁLJUK A RENDEZETT LISTÁT (sortedReleases) */}
+            {sortedReleases.length > 0 ? (
+                sortedReleases.map((item: any, index: number) => (
                     <div key={item.id} className="relative pl-12 group">
                         
                         {/* Timeline Ikon */}
