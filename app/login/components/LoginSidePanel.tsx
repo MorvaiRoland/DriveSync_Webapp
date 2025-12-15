@@ -103,7 +103,7 @@ export const LoginSidePanel = () => {
         </motion.div>
 
         <div className="absolute bottom-6 text-[10px] text-slate-600 font-mono z-20">
-            © 2025 DynamicSense Technologies • V2.2.0
+            © 2025 DynamicSense Technologies • V2.3.0
         </div>
     </div>
   );

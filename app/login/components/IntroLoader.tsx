@@ -124,7 +124,7 @@ export const IntroLoader = ({ onComplete }: { onComplete: () => void }) => {
 
       {/* Bottom Legal/Tech Text */}
       <div className="absolute bottom-8 text-[10px] text-slate-600 font-mono uppercase tracking-widest">
-        DynamicSense Tech • V2.1 Boot Sequence
+        DynamicSense Tech • V2.3.0 Boot Sequence
       </div>
     </motion.div>
   );
