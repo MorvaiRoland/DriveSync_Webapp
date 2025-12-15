@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { MapPin, Camera, Navigation, X, Ban, Loader2, Clock, Check, Timer } from 'lucide-react'
+// HOZZÁADTAM AZ 'AlertTriangle' IKONT AZ IMPORTOKHOZ:
+import { MapPin, Camera, Navigation, X, Ban, Loader2, Clock, Check, Timer, AlertTriangle } from 'lucide-react'
 import Image from 'next/image'
 import { startParkingAction, stopParkingAction } from '@/app/parking/actions' 
 import { useFormStatus } from 'react-dom'
 
-// --- SEGÉD: Submit Gomb ---
+// --- SEGÉD: Submit Gomb (Változatlan) ---
 function SubmitButton({ label, icon: Icon, variant = 'primary', disabled }: any) {
   const { pending } = useFormStatus()
   
@@ -76,7 +77,7 @@ function useParkingTimer(startTime: string | null, expiresAt: string | null) {
     return { displayTime, isExpired, progress }
 }
 
-// --- MODAL KOMPONENS (PORTAL - Light/Dark adaptív) ---
+// --- MODAL KOMPONENS (Változatlan) ---
 function ParkingDetailsModal({ session, onClose, displayTime, isExpired, progress, isTemp, carId }: any) {
     const [mounted, setMounted] = useState(false)
 
@@ -92,17 +93,11 @@ function ParkingDetailsModal({ session, onClose, displayTime, isExpired, progres
 
     return createPortal(
         <div className="fixed inset-0 z-[99999] isolate flex flex-col justify-end sm:justify-center">
-            
-            {/* Overlay: Ez mindig sötét marad, hogy kiemelje a modalt */}
             <div 
                 className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
                 onClick={onClose}
             />
-
-            {/* A TARTALOM DOBOZ */}
             <div className="relative w-full sm:max-w-md mx-auto bg-white dark:bg-slate-900 sm:rounded-3xl rounded-t-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-full duration-300 transition-colors">
-                
-                {/* Fejléc kép */}
                 <div className="relative h-48 shrink-0 bg-slate-200 dark:bg-slate-800">
                     <button 
                         onClick={onClose}
@@ -110,7 +105,6 @@ function ParkingDetailsModal({ session, onClose, displayTime, isExpired, progres
                     >
                         <X size={20} />
                     </button>
-                    
                     {session.photo_url ? (
                         <Image src={session.photo_url} alt="Helyszín" fill className="object-cover" />
                     ) : (
@@ -119,9 +113,7 @@ function ParkingDetailsModal({ session, onClose, displayTime, isExpired, progres
                             style={{ backgroundImage: `url('${mapUrl}')` }}
                         />
                     )}
-                    {/* Gradient a szöveg olvashatóságáért */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    
                     <div className="absolute bottom-4 left-6 right-6">
                         <h2 className="text-2xl font-bold text-white truncate drop-shadow-md">
                             {session.note || "Parkolóhely"}
@@ -133,13 +125,17 @@ function ParkingDetailsModal({ session, onClose, displayTime, isExpired, progres
                     </div>
                 </div>
 
-                {/* Tartalom */}
                 <div className="flex-1 overflow-y-auto p-6 pt-2 pb-8 space-y-6 bg-white dark:bg-slate-900 transition-colors">
-                    
-                    {/* Húzóka */}
                     <div className="w-12 h-1 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 opacity-50 sm:hidden" />
+                    
+                    {/* INFO BOX A MODALBAN IS */}
+                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 p-3 rounded-xl flex gap-3">
+                         <AlertTriangle className="text-amber-600 dark:text-amber-500 shrink-0" size={18} />
+                         <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                            A pontos időméréshez ne zárd be az alkalmazást, csak tedd háttérbe!
+                         </p>
+                    </div>
 
-                    {/* Timer Panel */}
                     <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700/50 transition-colors shadow-sm dark:shadow-none">
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-xs uppercase font-bold text-slate-500 dark:text-slate-400">Hátralévő idő</span>
@@ -148,7 +144,6 @@ function ParkingDetailsModal({ session, onClose, displayTime, isExpired, progres
                         <div className={`text-4xl font-mono font-bold tracking-tight mb-4 ${isExpired ? 'text-red-500' : 'text-slate-800 dark:text-emerald-400'}`}>
                             {displayTime}
                         </div>
-                        
                         <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div 
                                 className={`h-full transition-all duration-1000 ${isExpired ? 'bg-red-500' : 'bg-blue-500 dark:bg-emerald-500'}`}
@@ -157,7 +152,6 @@ function ParkingDetailsModal({ session, onClose, displayTime, isExpired, progres
                         </div>
                     </div>
 
-                    {/* Gombok */}
                     <div className="space-y-3 pt-4">
                         <a 
                             href={`https://www.google.com/maps/dir/?api=1&destination=${session.latitude},${session.longitude}`}
@@ -182,7 +176,6 @@ function ParkingDetailsModal({ session, onClose, displayTime, isExpired, progres
                             />
                         </form>
                     </div>
-                    <div className="h-8 sm:h-0" />
                 </div>
             </div>
         </div>,
@@ -248,8 +241,6 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
     // --- RENDER ---
     
     // 1. AKTÍV PARKOLÁS KÁRTYA
-    // Megjegyzés: Ez a kártya megtartja a sötét stílust világos módban is, 
-    // mert a háttérkép (térkép) miatt a fehér szöveg olvashatóbb.
     if (currentSession) {
         return (
             <>
@@ -273,6 +264,15 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                     </div>
                 </div>
 
+                {/* ÚJ: FIGYELMEZTETŐ BANNER A KÁRTYA ALATT */}
+                <div className="mt-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-3 flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
+                    <AlertTriangle className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" size={18} />
+                    <div className="text-xs text-amber-800 dark:text-amber-200">
+                        <p className="font-bold mb-0.5">Fontos!</p>
+                        Az értesítésekhez hagyd futni az alkalmazást a háttérben. Ha bezárod a lapot, az időzítő megállhat.
+                    </div>
+                </div>
+
                 {isDetailsOpen && (
                     <ParkingDetailsModal 
                         session={currentSession}
@@ -288,7 +288,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
         )
     }
 
-    // 2. START FORM (ÜRES ÁLLAPOT) - Teljesen adaptív
+    // 2. START FORM (ÜRES ÁLLAPOT)
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-lg transition-colors">
             {!showStartForm ? (
@@ -308,6 +308,7 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                 </button>
             ) : (
                 <form action={handleStartParking} className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                    {/* ... (A form többi része változatlan) ... */}
                     <div className="flex justify-between items-center text-slate-800 dark:text-white">
                         <span className="font-bold flex gap-2 items-center">
                             <Check size={18} className="text-emerald-500"/> Pozíció rögzítve
@@ -321,7 +322,6 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                     <input type="hidden" name="latitude" value={location?.lat} />
                     <input type="hidden" name="longitude" value={location?.lng} />
                     
-                    {/* Térkép Preview */}
                     <div className="h-24 w-full rounded-xl bg-slate-100 dark:bg-slate-800 relative overflow-hidden border border-slate-200 dark:border-slate-700">
                          <div 
                             className="absolute inset-0 bg-cover bg-center"
@@ -335,7 +335,6 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                         className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-3 rounded-xl outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-400" 
                     />
 
-                    {/* Időtartam Választó */}
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                         {[15, 30, 60, 120].map(m => (
                             <button 
@@ -353,7 +352,6 @@ export default function SmartParkingWidget({ carId, activeSession }: { carId: st
                          <input type="hidden" name="duration" value={selectedDuration || ''} />
                     </div>
 
-                    {/* Fotó Feltöltés */}
                     <label className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-sm">
                         <div className="bg-slate-100 dark:bg-slate-700 p-2 rounded-lg">
                             <Camera className="text-slate-500 dark:text-slate-400" size={20}/>
