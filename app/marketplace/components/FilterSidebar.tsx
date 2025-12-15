@@ -1,19 +1,22 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
+import { SlidersHorizontal, X, Search, Check } from 'lucide-react'
 
-export default function FilterSidebar() {
+// Fogadjuk a márkákat props-ként
+export default function FilterSidebar({ availableBrands = [] }: { availableBrands?: string[] }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  const [isOpen, setIsOpen] = useState(false)
 
-  // State-ek a mezőkhöz
+  // State-ek
   const [brand, setBrand] = useState(searchParams.get('brand') || '')
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '')
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '')
 
-  // Szűrés alkalmazása gombnyomásra
+  // URL frissítése
   const handleFilter = () => {
     const params = new URLSearchParams(searchParams.toString())
     
@@ -23,68 +26,105 @@ export default function FilterSidebar() {
 
     startTransition(() => {
       router.push(`/marketplace?${params.toString()}`)
+      setIsOpen(false) // Mobilon bezárjuk szűrés után
     })
   }
 
   const handleReset = () => {
     setBrand(''); setMinPrice(''); setMaxPrice('');
     router.push('/marketplace')
+    setIsOpen(false)
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 h-fit sticky top-24">
-      <h2 className="font-bold text-lg mb-4 text-slate-900 dark:text-white">Szűrők</h2>
-      
-      <div className="space-y-4">
-        <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Márka</label>
-            <select 
-                value={brand} 
-                onChange={(e) => setBrand(e.target.value)}
-                className="w-full mt-1 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-            >
-                <option value="">Összes</option>
-                <option value="BMW">BMW</option>
-                <option value="Audi">Audi</option>
-                <option value="Mercedes">Mercedes</option>
-                <option value="Volkswagen">Volkswagen</option>
-                <option value="Ford">Ford</option>
-                <option value="Suzuki">Suzuki</option>
-            </select>
-        </div>
+    <>
+      {/* MOBIL GOMB */}
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="md:hidden w-full mb-6 flex items-center justify-center gap-2 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-bold shadow-sm text-slate-700 dark:text-white"
+      >
+        <SlidersHorizontal size={18} /> 
+        {isOpen ? 'Szűrők elrejtése' : 'Szűrők megjelenítése'}
+      </button>
 
-        <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Ár (Ft)</label>
-            <div className="flex gap-2 mt-1">
-                <input 
-                    type="number" placeholder="Min" 
-                    value={minPrice} onChange={e => setMinPrice(e.target.value)}
-                    className="w-1/2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                />
-                <input 
-                    type="number" placeholder="Max" 
-                    value={maxPrice} onChange={e => setMaxPrice(e.target.value)}
-                    className="w-1/2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-                />
-            </div>
+      {/* SIDEBAR TARTALOM */}
+      <div className={`${isOpen ? 'block' : 'hidden'} md:block bg-white dark:bg-slate-900 p-6 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 h-fit sticky top-24 shadow-xl shadow-slate-200/50 dark:shadow-none`}>
+        <div className="flex justify-between items-center mb-6">
+            <h2 className="font-black text-xl text-slate-900 dark:text-white flex items-center gap-2">
+                <SlidersHorizontal className="text-indigo-500" size={20}/> 
+                Részletes kereső
+            </h2>
+            {(brand || minPrice || maxPrice) && (
+                <button onClick={handleReset} className="text-xs text-red-500 font-bold hover:underline">
+                    Törlés
+                </button>
+            )}
         </div>
+        
+        <div className="space-y-6">
+          
+          {/* MÁRKA VÁLASZTÓ (DINAMIKUS) */}
+          <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Márka</label>
+              <div className="relative">
+                  <select 
+                      value={brand} 
+                      onChange={(e) => setBrand(e.target.value)}
+                      className="w-full p-3 pl-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-medium appearance-none focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer"
+                  >
+                      <option value="">Összes márka</option>
+                      {availableBrands.map((b) => (
+                          <option key={b} value={b}>{b}</option>
+                      ))}
+                  </select>
+                  {/* Custom nyíl ikon */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </div>
+              </div>
+          </div>
 
-        <div className="pt-2 flex flex-col gap-2">
-            <button 
-                onClick={handleFilter}
-                disabled={isPending}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors"
-            >
-                {isPending ? 'Frissítés...' : 'Szűrés'}
-            </button>
-            <button 
-                onClick={handleReset}
-                className="w-full py-2 text-slate-500 hover:text-slate-700 text-sm font-medium"
-            >
-                Törlés
-            </button>
+          {/* ÁR SÁV */}
+          <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Vételár (Ft)</label>
+              <div className="flex gap-2">
+                  <div className="relative w-1/2">
+                      <input 
+                          type="number" 
+                          placeholder="Min" 
+                          value={minPrice} 
+                          onChange={e => setMinPrice(e.target.value)}
+                          className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                  </div>
+                  <div className="relative w-1/2">
+                      <input 
+                          type="number" 
+                          placeholder="Max" 
+                          value={maxPrice} 
+                          onChange={e => setMaxPrice(e.target.value)}
+                          className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                  </div>
+              </div>
+          </div>
+
+          {/* KERESÉS GOMB */}
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+              <button 
+                  onClick={handleFilter}
+                  disabled={isPending}
+                  className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                  {isPending ? 'Frissítés...' : (
+                      <>
+                          <Search className="w-4 h-4" /> Keresés
+                      </>
+                  )}
+              </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

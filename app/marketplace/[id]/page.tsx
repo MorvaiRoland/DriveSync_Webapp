@@ -1,14 +1,14 @@
 import { createClient } from '@/supabase/server'
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
 import { 
   ArrowLeft, MapPin, Calendar, Gauge, Fuel, 
-  ShieldCheck, CheckCircle2, AlertTriangle, Share2, CarFront, 
-  Zap, Settings, Info, CalendarClock, Scale
+  CheckCircle2, AlertTriangle, Zap, Settings, Info, CalendarClock, Scale
 } from 'lucide-react'
 import ContactButton from '@/components/ContactButton'
-import ServiceHistoryList from '@/components/ServiceHistoryList' // AZ ÚJ KOMPONENS
+import ServiceHistoryList from '@/components/ServiceHistoryList'
+import ShareButton from '@/components/ShareButton'     // ÚJ
+import ImageGallery from '@/components/ImageGallery'   // ÚJ
 
 export const revalidate = 0
 
@@ -18,7 +18,6 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
   const supabase = await createClient()
 
   // 1. ADATLEKÉRÉS
-  // Minden mezőt lekérünk a cars táblából a view-n keresztül
   const { data: car } = await supabase
     .from('marketplace_view')
     .select('*')
@@ -28,7 +27,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
   // Szervizek lekérése
   const { data: serviceHistory } = await supabase
     .from('events')
-    .select('*') // Minden mező kell a részletekhez
+    .select('*')
     .eq('car_id', carId)
     .eq('type', 'service') 
     .order('event_date', { ascending: false })
@@ -54,9 +53,8 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
                 <span>Vissza a listához</span>
             </Link>
             
-            <button className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 rounded-full transition-all" title="Megosztás">
-                <Share2 className="w-5 h-5" />
-            </button>
+            {/* ÚJ: Kliens oldali megosztás gomb */}
+            <ShareButton />
         </div>
       </div>
 
@@ -65,29 +63,12 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
         {/* --- BAL OLDAL (Részletes infók) --- */}
         <div className="lg:col-span-8 space-y-10">
             
-            {/* GALÉRIA */}
-            <div className="relative aspect-[16/9] w-full bg-slate-200 dark:bg-slate-800 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 group">
-                {car.image_url ? (
-                    <Image 
-                        src={car.image_url} 
-                        alt={`${car.make} ${car.model}`} 
-                        fill 
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        priority
-                    />
-                ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-slate-400 flex-col gap-3 bg-slate-100 dark:bg-slate-900">
-                        <CarFront className="w-16 h-16 opacity-20" />
-                        <span className="font-bold text-sm opacity-50">Nincs feltöltött kép</span>
-                    </div>
-                )}
-                
-                <div className="absolute top-4 left-4">
-                    <div className="bg-slate-900/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border border-white/10 shadow-lg">
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                        Ellenőrzött hirdetés
-                    </div>
-                </div>
+            {/* ÚJ: INTERAKTÍV GALÉRIA */}
+            <div className="relative aspect-[16/9] w-full bg-slate-200 dark:bg-slate-800 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
+                <ImageGallery 
+                    mainImage={car.image_url} 
+                    alt={`${car.make} ${car.model}`}
+                />
             </div>
 
             {/* ALAP ADATOK GRID */}
@@ -98,7 +79,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
                 <SpecCard icon={<MapPin className="text-red-500" />} label="Helyszín" value={car.location || 'Nincs megadva'} />
             </div>
 
-            {/* --- RÉSZLETES TECHNIKAI ADATOK (A CARS TÁBLÁBÓL) --- */}
+            {/* --- RÉSZLETES TECHNIKAI ADATOK --- */}
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
                 <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                     <span className="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg text-lg">⚙️</span> 
@@ -209,7 +190,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
                 <div className="space-y-4">
                     <ContactButton 
                         phone={car.seller_phone || car.contact_phone} 
-                        email={car.email} // Ha a view-ban benne van az email, ha nincs, a cars tábla user_id-ja alapján kellene joinolni, de feltételezzük a telefon a fő.
+                        email={car.email} 
                     />
                     
                     {car.exchange_possible && (
@@ -232,7 +213,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
   )
 }
 
-// Segédkomponensek
+// Segédkomponensek (SpecCard, DetailRow) maradnak a fájl alján változatlanul
 function SpecCard({ icon, label, value }: { icon: any, label: string, value: string | number }) {
     return (
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center text-center gap-3 group">
