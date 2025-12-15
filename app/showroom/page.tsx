@@ -1,19 +1,17 @@
-// app/showroom/page.tsx
 import { createClient } from '@/supabase/server'
 import { getActiveBattleEntries } from '@/app/actions/showroom'
-import VotingCard from '@/components/showroom/VotingCard'
+import SwipeGame from '@/components/showroom/SwipeGame'
+import MyEntryStats from '@/components/showroom/MyEntryStats'
 import BattleEntry from '@/components/showroom/BattleEntry'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Layers } from 'lucide-react'
 
-// Ez egy Server Component (async)
 export default async function ShowroomPage() {
   const supabase = await createClient()
 
-  // 1. User ellenőrzése (hogy le tudjuk kérni az autóit)
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 2. Aktív verseny lekérése
+  // 1. Aktív verseny lekérése
   const { data: activeBattle } = await supabase
     .from('battles')
     .select('*')
@@ -23,48 +21,87 @@ export default async function ShowroomPage() {
   if (!activeBattle) {
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-center">
-            <div className="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center mb-6 border border-slate-800">
-                <span className="text-4xl">🏁</span>
-            </div>
             <h2 className="text-3xl font-black text-white mb-2">Jelenleg nincs aktív verseny</h2>
-            <p className="text-slate-500 mb-8 max-w-md">Az adminisztrátorok éppen a következő nagy megmérettetést készítik elő. Nézz vissza később!</p>
-            <Link href="/" className="px-6 py-3 bg-slate-100 text-slate-900 rounded-xl font-bold hover:bg-white transition-colors">
+             <Link href="/" className="px-6 py-3 bg-slate-100 text-slate-900 rounded-xl font-bold hover:bg-white transition-colors">
                 Vissza a kezdőlapra
             </Link>
         </div>
     )
   }
 
-  // 3. Verseny adatok lekérése (Nevezések)
+  // 2. Összes nevezés lekérése (Ezt az action-t használjuk, mert az már szépen formázza az adatot)
   const entries = await getActiveBattleEntries(activeBattle.id)
 
-  // 4. Saját autók és státusz lekérése (Csak ha be van lépve)
+  // 3. Saját adatok előkészítése
   let myCars: any[] = []
   let hasEntered = false
+  let myEntryData = null
 
   if (user) {
-      // Saját autók
+      // Saját garázs lekérése (hogy tudjunk miből választani nevezésnél)
       const { data: cars } = await supabase.from('cars').select('id, make, model').eq('user_id', user.id)
       if (cars) myCars = cars
 
-      // Ellenőrizzük, nevezett-e már ezzel a user ID-val erre a versenyre
-      const { data: entry } = await supabase
+      // Külön lekérjük a saját nevezést, hogy biztosak legyünk a státuszban
+      // Itt a TypeScript hibák elkerülése végett biztonságosan kezeljük a választ
+      const { data: entryData } = await supabase
         .from('battle_entries')
-        .select('id')
+        .select(`
+            id, 
+            car_id, 
+            battle_votes(count),
+            cars(make, model, image_url)
+        `)
         .eq('battle_id', activeBattle.id)
         .eq('user_id', user.id)
-        .single() // Ha van találat, akkor már nevezett
+        .maybeSingle() // maybeSingle jobb, mint a single, mert nem dob hibát ha nincs találat
       
-      if (entry) hasEntered = true
+      if (entryData) {
+          hasEntered = true
+          
+          // Biztonságos adatkinyerés (TypeScript barát módon)
+          // A Supabase válaszban a 'cars' lehet objektum vagy tömb, attól függően hogy egy vagy több találat lehetséges-e.
+          // Mivel battle_entries.car_id -> cars.id kapcsolat 1:1, ez elvileg objektum.
+          // De a biztonság kedvéért 'any'-re kényszerítjük vagy ellenőrizzük.
+          const carData = entryData.cars as any; 
+          const votesData = entryData.battle_votes as any;
+
+          // Ellenőrizzük, hogy a carData létezik-e (ne szálljon el, ha törölték a kocsit)
+          if (carData) {
+              // Ha esetleg tömbként jönne vissza (ritka, de előfordulhat rossz definíciónál)
+              const car = Array.isArray(carData) ? carData[0] : carData;
+              const voteCount = Array.isArray(votesData) ? votesData[0]?.count : votesData?.count;
+
+              myEntryData = {
+                  voteCount: voteCount || 0,
+                  carName: `${car.make} ${car.model}`,
+                  imageUrl: car.image_url
+              }
+          }
+      }
   }
+
+  // Szűrés: A Tinder-játékban NE lássuk a saját autónkat, és ne lássuk azokat, amikre MÁR szavaztunk.
+  // A `getActiveBattleEntries` függvénynek vissza kéne adnia, hogy szavaztunk-e már rá (`userHasVoted`).
+  // Feltételezve, hogy az előző lépésben ezt már megcsináltad az action-ben:
+  const playableEntries = entries.filter((e: any) => {
+      // 1. Saját magunkra ne szavazzunk
+      if (user && hasEntered && myEntryData && e.carName === myEntryData.carName) return false;
+      
+      // 2. Amire már szavaztunk, azt vegyük ki a pakliból (hogy fogyjanak a kártyák)
+      // Ha az action visszaadja a 'userHasVoted' mezőt (az előző utasítás alapján):
+      if (e.userHasVoted) return false;
+
+      return true;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 dark:bg-slate-950 transition-colors">
       
       {/* FEJLÉC */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-4 mb-4">
+             <div className="flex items-center gap-4 mb-4">
                 <Link href="/" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                     <ArrowLeft className="w-5 h-5 text-slate-500" />
                 </Link>
@@ -72,29 +109,20 @@ export default async function ShowroomPage() {
                     Showroom Battle
                 </span>
             </div>
-            
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-                <div>
-                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-2">
-                        {activeBattle.title} <span className="text-orange-500">🔥</span>
-                    </h1>
-                    <p className="text-slate-600 dark:text-slate-400 max-w-2xl">
-                        {activeBattle.description}
-                    </p>
-                </div>
-                <div className="text-right hidden md:block">
-                    <p className="text-xs text-slate-400 uppercase font-bold mb-1">Lezárás</p>
-                    <p className="text-lg font-mono font-bold text-slate-800 dark:text-slate-200">
-                        {new Date(activeBattle.end_date).toLocaleDateString('hu-HU')}
-                    </p>
-                </div>
-            </div>
+             <h1 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white">
+                 {activeBattle.title} <span className="text-orange-500">🔥</span>
+             </h1>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 mt-8">
+      <div className="container mx-auto px-4 mt-8 max-w-4xl">
         
-        {/* NEVEZÉSI SZEKCIÓ (Csak ha van user) */}
+        {/* 1. SAJÁT NEVEZÉS STATISZTIKA (Ha van) */}
+        {hasEntered && myEntryData && (
+            <MyEntryStats myEntry={myEntryData} />
+        )}
+
+        {/* 2. NEVEZÉS / VISSZAVONÁS PANEL */}
         {user && (
             <BattleEntry 
                 battleId={activeBattle.id} 
@@ -103,37 +131,24 @@ export default async function ShowroomPage() {
             />
         )}
 
-        {/* VERSENYZŐK LISTÁJA */}
-        {entries.length === 0 ? (
-            <div className="text-center py-20">
-                <div className="inline-block p-6 rounded-full bg-slate-100 dark:bg-slate-900 mb-4">
-                    <span className="text-4xl grayscale opacity-50">🏎️</span>
-                </div>
-                <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300">Még üres a pálya!</h3>
-                <p className="text-slate-500 dark:text-slate-500">Légy te az első, aki benevezi a verdáját.</p>
+        {/* 3. TINDER SWIPE GAME */}
+        <div className="mt-12">
+            <div className="flex items-center justify-center gap-2 mb-8">
+                <Layers className="text-orange-500 w-5 h-5" />
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Szavazz a kedvencekre!</h2>
             </div>
-        ) : (
-            <>
-                <div className="flex items-center gap-2 mb-6">
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Nevezések</h2>
-                    <span className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {entries.length}
-                    </span>
+            
+            {playableEntries.length > 0 ? (
+                <div className="pb-20"> 
+                    <SwipeGame entries={playableEntries} />
                 </div>
+            ) : (
+                <div className="text-center py-20 bg-slate-100 dark:bg-slate-900 rounded-3xl">
+                    <p className="text-slate-500">Nincs több autó, amire szavazhatnál (vagy már mindegyikre szavaztál).</p>
+                </div>
+            )}
+        </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {entries.map((entry: any) => (
-                        <VotingCard
-                            key={entry.entryId}
-                            entryId={entry.entryId}
-                            carName={entry.carName}
-                            imageUrl={entry.imageUrl}
-                            initialVotes={entry.voteCount}
-                        />
-                    ))}
-                </div>
-            </>
-        )}
       </div>
     </div>
   )

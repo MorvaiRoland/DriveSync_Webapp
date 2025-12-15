@@ -1,28 +1,51 @@
 'use client'
 
 import { useState } from 'react'
-import { joinBattle } from '@/app/actions/showroom'
-import { Trophy, Car, CheckCircle2, AlertCircle } from 'lucide-react'
+import { joinBattle, leaveBattle } from '@/app/actions/showroom' // Importáljuk a leaveBattle-t is
+import { Trophy, Car, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react'
 
 export default function BattleEntry({ battleId, myCars, hasEntered }: { battleId: string, myCars: any[], hasEntered: boolean }) {
   const [selectedCar, setSelectedCar] = useState(myCars.length > 0 ? myCars[0].id : '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedback, setFeedback] = useState<{type: 'success'|'error', msg: string} | null>(null)
 
-  // Ha már nevezett, mutassuk a státuszt
+  // ÚJ FÜGGVÉNY: Kilépés kezelése
+  const handleLeave = async () => {
+      if(!confirm("Biztosan vissza akarod vonni a nevezésed? Ezzel elveszíted az eddigi szavazataidat!")) return;
+      
+      setIsSubmitting(true)
+      await leaveBattle(battleId)
+      setIsSubmitting(false)
+      // A revalidatePath frissíti majd a UI-t, így eltűnik a "Már beneveztél" ablak
+  }
+
+  // Ha már nevezett -> Mutatjuk a státuszt ÉS a kilépés gombot
   if (hasEntered) {
     return (
-      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 text-center mb-8">
-        <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-emerald-500/20">
-            <CheckCircle2 className="text-white w-6 h-6" />
+      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4 text-center md:text-left">
+            <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20 flex-shrink-0">
+                <CheckCircle2 className="text-white w-6 h-6" />
+            </div>
+            <div>
+                <h3 className="text-emerald-500 font-bold text-lg">Már beneveztél!</h3>
+                <p className="text-emerald-400/80 text-sm">Sok sikert a versenyen! Gyűjtsd a szavazatokat!</p>
+            </div>
         </div>
-        <h3 className="text-emerald-500 font-bold text-lg">Már beneveztél!</h3>
-        <p className="text-emerald-400/80 text-sm">Sok sikert a versenyen! Gyűjtsd a szavazatokat!</p>
+        
+        {/* KILÉPÉS GOMB */}
+        <button 
+            onClick={handleLeave}
+            disabled={isSubmitting}
+            className="text-slate-400 hover:text-red-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2 px-4 py-2 hover:bg-red-500/10 rounded-lg transition-colors"
+        >
+            <Trash2 className="w-4 h-4" />
+            Nevezés visszavonása
+        </button>
       </div>
     )
   }
 
-  // Ha nincs autója
   if (myCars.length === 0) {
     return (
       <div className="bg-slate-800 rounded-2xl p-6 text-center mb-8 border border-slate-700">
@@ -32,7 +55,6 @@ export default function BattleEntry({ battleId, myCars, hasEntered }: { battleId
     )
   }
 
-  // Nevezési Form
   async function handleSubmit() {
       setIsSubmitting(true)
       setFeedback(null)

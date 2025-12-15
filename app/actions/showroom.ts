@@ -1,15 +1,15 @@
-// app/actions/showroom.ts
 'use server'
 
 import { createClient } from '@/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-// 1. Adatok lekérése egy aktív versenyhez
+// 1. Adatok lekérése (BŐVÍTVE: userHasVoted mezővel)
 export async function getActiveBattleEntries(battleId: string) {
-  // JAVÍTÁS: Itt hiányzott az 'await'. Most megvárjuk, amíg a kliens létrejön.
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const { data, error } = await supabase
+  // A. Lekérjük az összes nevezést és a szavazatok számát
+  const { data: entries, error } = await supabase
     .from('battle_entries')
     .select(`
       id,
@@ -19,33 +19,41 @@ export async function getActiveBattleEntries(battleId: string) {
     `)
     .eq('battle_id', battleId)
 
-  if (error) {
-    console.error('Error fetching entries:', error)
-    return []
+  if (error || !entries) return []
+
+  // B. Lekérjük, hogy a JELENLEGI user kire szavazott már ebben a csatában
+  let myVotes: Set<string> = new Set()
+  
+  if (user) {
+    const { data: userVotes } = await supabase
+        .from('battle_votes')
+        .select('entry_id')
+        .eq('voter_id', user.id)
+        // Opcionális: szűrhetnénk battle_id-ra is joinnal, de így is gyors
+    
+    if (userVotes) {
+        userVotes.forEach((v: any) => myVotes.add(v.entry_id))
+    }
   }
 
-  // Formázzuk az adatot
-  return data.map((entry: any) => ({
+  // C. Összefésüljük az adatokat
+  return entries.map((entry: any) => ({
     entryId: entry.id,
     carId: entry.car_id,
-    // Ellenőrizzük, hogy a cars objektum létezik-e (biztonsági okból)
     carName: entry.cars ? `${entry.cars.make} ${entry.cars.model}` : 'Ismeretlen autó',
     imageUrl: entry.cars?.image_url || null, 
-    voteCount: entry.battle_votes[0]?.count || 0
+    voteCount: entry.battle_votes[0]?.count || 0,
+    userHasVoted: myVotes.has(entry.id) // <--- EZ AZ ÚJ MEZŐ!
   }))
 }
 
-// 2. Szavazás leadása (Like/Unlike)
+// 2. Szavazás (Változatlan, de a unique constraint miatt most már betonbiztos)
 export async function toggleBattleVote(entryId: string) {
-  // JAVÍTÁS: Itt is hozzáadtuk az 'await'-et
   const supabase = await createClient()
-  
-  // Most már működni fog az auth.getUser(), mert a supabase változó a kliens, nem egy Promise
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) throw new Error('Must be logged in to vote')
 
-  // Megnézzük, szavazott-e már
   const { data: existingVote } = await supabase
     .from('battle_votes')
     .select('id')
@@ -54,57 +62,63 @@ export async function toggleBattleVote(entryId: string) {
     .single()
 
   if (existingVote) {
-    // Ha már szavazott, visszavonjuk (Unlike)
     await supabase.from('battle_votes').delete().eq('id', existingVote.id)
   } else {
-    // Ha még nem, beszúrjuk a szavazatot (Like)
+    // Ha a unique constraint miatt hiba lenne (dupla kattintás), a Supabase dobna egy hibát,
+    // amit elkaphatunk, vagy hagyhatjuk, hogy a UI ne frissüljön.
     await supabase.from('battle_votes').insert({
         entry_id: entryId,
         voter_id: user.id
     })
   }
   
-  revalidatePath('/showroom') // Frissítjük az oldalt, hogy látszódjon az új szavazat
+  revalidatePath('/showroom')
   return { success: true }
 }
-// 3. ÚJ: Nevezés a versenyre
+
+// 3. Nevezés (Változatlan)
 export async function joinBattle(formData: FormData) {
   const battleId = formData.get('battleId') as string
   const carId = formData.get('carId') as string
-  
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) throw new Error('Jelentkezéshez be kell lépni!')
 
-  // Ellenőrizzük, hogy ez a user tényleg a tulajdonosa-e az autónak (Biztonság)
-  const { data: car } = await supabase
-    .from('cars')
-    .select('id')
-    .eq('id', carId)
-    .eq('user_id', user.id)
-    .single()
+  const { data: car } = await supabase.from('cars').select('id').eq('id', carId).eq('user_id', user.id).single()
+  if (!car) return { error: 'Ez nem a te autód!' }
 
-  if (!car) {
-      return { error: 'Ez nem a te autód, vagy nem létezik!' }
-  }
-
-  // Beszúrjuk a nevezést
   const { error } = await supabase.from('battle_entries').insert({
     battle_id: battleId,
-    car_id: Number(carId), // Figyelj a típusra (bigint vs string)
+    car_id: Number(carId),
     user_id: user.id
   })
 
-  if (error) {
-    console.error('Nevezési hiba:', error)
-    // Supabase error code 23505 = unique_violation (már nevezett ezzel)
-    if (error.code === '23505') {
-        return { error: 'Ezzel az autóval (vagy erre a versenyre) már neveztél!' }
-    }
-    return { error: 'Hiba történt a nevezéskor.' }
-  }
+  if (error && error.code === '23505') return { error: 'Már neveztél!' }
+  if (error) return { error: 'Hiba történt.' }
 
   revalidatePath('/showroom')
   return { success: true }
+}
+
+// 4. ÚJ: KILÉPÉS A VERSENYBŐL (Visszavonás)
+export async function leaveBattle(battleId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+  
+    if (!user) return { error: 'Nincs bejelentkezve' }
+  
+    const { error } = await supabase
+      .from('battle_entries')
+      .delete()
+      .eq('battle_id', battleId)
+      .eq('user_id', user.id)
+  
+    if (error) {
+        console.error(error)
+        return { error: 'Nem sikerült visszavonni a nevezést.' }
+    }
+  
+    revalidatePath('/showroom')
+    return { success: true }
 }
