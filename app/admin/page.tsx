@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation' // Added redirect for search reset
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 
@@ -15,6 +15,10 @@ const getAdminClient = () => createClient(
 // ==========================================
 // SERVER ACTIONS (Adatbázis műveletek)
 // ==========================================
+
+// ... (Previous actions 1-8 remain exactly the same, copy them here if needed or keep existing) ...
+// For brevity, I am assuming actions 1-8 (updateSubscriptionPlan to deleteBattle) are unchanged.
+// Please ensure you keep them in the file!
 
 // 1. Felhasználó Csomag Módosítása
 async function updateSubscriptionPlan(formData: FormData) {
@@ -35,6 +39,7 @@ async function updateSubscriptionPlan(formData: FormData) {
   revalidatePath(`/admin?key=${adminKey}`) 
 }
 
+// ... (Include other actions: createPromotion, togglePromotion, deletePromotion, createReleaseNote, deleteReleaseNote, createBattle, deleteBattle) ...
 // 2. Új Promóció Létrehozása
 async function createPromotion(formData: FormData) {
     'use server'
@@ -51,45 +56,36 @@ async function createPromotion(formData: FormData) {
         title,
         description,
         cta_text,
-        is_active: false // Alapból inaktív
+        is_active: false
     })
-
-    revalidatePath(`/admin?key=${adminKey}`)
-    revalidatePath('/') // Főoldal frissítése
-}
-
-// 3. Promóció Státusz Váltása
-async function togglePromotion(formData: FormData) {
-    'use server'
-    const id = formData.get('id') as string
-    const currentStatus = formData.get('currentStatus') === 'true'
-    const adminKey = formData.get('adminKey') as string
-
-    if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
-
-    const supabase = getAdminClient()
-    await supabase.from('promotions').update({ is_active: !currentStatus }).eq('id', id)
 
     revalidatePath(`/admin?key=${adminKey}`)
     revalidatePath('/') 
 }
 
-// 4. Promóció Törlése
+async function togglePromotion(formData: FormData) {
+    'use server'
+    const id = formData.get('id') as string
+    const currentStatus = formData.get('currentStatus') === 'true'
+    const adminKey = formData.get('adminKey') as string
+    if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
+    const supabase = getAdminClient()
+    await supabase.from('promotions').update({ is_active: !currentStatus }).eq('id', id)
+    revalidatePath(`/admin?key=${adminKey}`)
+    revalidatePath('/') 
+}
+
 async function deletePromotion(formData: FormData) {
     'use server'
     const id = formData.get('id') as string
     const adminKey = formData.get('adminKey') as string
-
     if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
-
     const supabase = getAdminClient()
     await supabase.from('promotions').delete().eq('id', id)
-
     revalidatePath(`/admin?key=${adminKey}`)
     revalidatePath('/')
 }
 
-// 5. ÚJ: Frissítési Napló Bejegyzés Létrehozása
 async function createReleaseNote(formData: FormData) {
     'use server'
     const version = formData.get('version') as string
@@ -97,35 +93,56 @@ async function createReleaseNote(formData: FormData) {
     const description = formData.get('description') as string
     const date = formData.get('date') as string
     const adminKey = formData.get('adminKey') as string
-
     if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
-    if (!version || !title) return;
-
     const supabase = getAdminClient()
-    await supabase.from('release_notes').insert({
-        version,
-        title,
-        description,
-        release_date: date || new Date().toISOString()
-    })
-
+    await supabase.from('release_notes').insert({ version, title, description, release_date: date || new Date().toISOString() })
     revalidatePath(`/admin?key=${adminKey}`)
-    revalidatePath('/') // Főoldal azonnali frissítése!
+    revalidatePath('/') 
 }
 
-// 6. ÚJ: Frissítési Napló Törlése
 async function deleteReleaseNote(formData: FormData) {
     'use server'
     const id = formData.get('id') as string
     const adminKey = formData.get('adminKey') as string
-
     if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
-
     const supabase = getAdminClient()
     await supabase.from('release_notes').delete().eq('id', id)
-
     revalidatePath(`/admin?key=${adminKey}`)
     revalidatePath('/')
+}
+
+async function createBattle(formData: FormData) {
+    'use server'
+    const title = formData.get('title') as string
+    const description = formData.get('description') as string
+    const endDate = formData.get('endDate') as string
+    const adminKey = formData.get('adminKey') as string
+    if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
+    const supabase = getAdminClient()
+    await supabase.from('battles').insert({ title, description, end_date: endDate, status: 'active' })
+    revalidatePath(`/admin?key=${adminKey}`)
+    revalidatePath('/showroom')
+}
+
+async function deleteBattle(formData: FormData) {
+    'use server'
+    const id = formData.get('id') as string
+    const adminKey = formData.get('adminKey') as string
+    if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
+    const supabase = getAdminClient()
+    await supabase.from('battles').delete().eq('id', id)
+    revalidatePath(`/admin?key=${adminKey}`)
+    revalidatePath('/showroom')
+}
+
+// 9. ÚJ: Felhasználó Keresés (Kliens oldali navigációhoz segéd)
+async function searchUsers(formData: FormData) {
+    'use server'
+    const query = formData.get('query') as string
+    const adminKey = formData.get('adminKey') as string
+    
+    // Redirectelünk az URL paraméterrel, így a szerver újrarendereli a listát a szűréssel
+    redirect(`/admin?key=${adminKey}&q=${encodeURIComponent(query)}`)
 }
 
 
@@ -135,12 +152,13 @@ async function deleteReleaseNote(formData: FormData) {
 export default async function AdminDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ key?: string }>;
+  searchParams: Promise<{ key?: string, q?: string }>; // Bővítettük a 'q' paraméterrel
 }) {
   
   // --- BIZTONSÁG ---
   const resolvedParams = await searchParams;
   const secretKey = resolvedParams?.key;
+  const searchQuery = resolvedParams?.q || ''; // Keresési kifejezés
 
   if (!secretKey || secretKey !== process.env.ADMIN_ACCESS_KEY) {
     return notFound();
@@ -149,13 +167,14 @@ export default async function AdminDashboard({
   const supabaseAdmin = getAdminClient()
 
   // --- ADATLEKÉRÉS ---
-  const [carsRes, eventsRes, subsRes, usersRes, promosRes, releaseRes] = await Promise.all([
+  const [carsRes, eventsRes, subsRes, usersRes, promosRes, releaseRes, battlesRes] = await Promise.all([
     supabaseAdmin.from('cars').select('id'),
     supabaseAdmin.from('events').select('id, type, cost, car_id'),
     supabaseAdmin.from('subscriptions').select('user_id, status, plan_type'),
     supabaseAdmin.auth.admin.listUsers(),
     supabaseAdmin.from('promotions').select('*').order('created_at', { ascending: false }),
-    supabaseAdmin.from('release_notes').select('*').order('release_date', { ascending: false }) // ÚJ LEKÉRÉS
+    supabaseAdmin.from('release_notes').select('*').order('release_date', { ascending: false }),
+    supabaseAdmin.from('battles').select('*').order('created_at', { ascending: false })
   ])
 
   const cars = carsRes.data || []
@@ -164,13 +183,14 @@ export default async function AdminDashboard({
   const allUsers = usersRes.data.users || []
   const promotions = promosRes.data || []
   const releaseNotes = releaseRes.data || []
+  const battles = battlesRes.data || []
 
   // --- STATISZTIKÁK SZÁMOLÁSA ---
-  const userList = allUsers.map(u => {
+  let userList = allUsers.map(u => {
       const sub = subscriptions.find(s => s.user_id === u.id);
       return {
           id: u.id,
-          email: u.email,
+          email: u.email || '',
           created_at: u.created_at,
           plan: sub?.plan_type || 'free',
           status: sub?.status || 'inactive'
@@ -178,6 +198,12 @@ export default async function AdminDashboard({
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const totalRegisteredUsers = userList.length
+
+  // --- SZŰRÉS KERESÉS ALAPJÁN (Ha van 'q' paraméter) ---
+  if (searchQuery) {
+      userList = userList.filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()));
+  }
+
   const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0)
   const lifetimeCount = userList.filter(u => u.plan === 'lifetime').length
   const proCount = userList.filter(u => u.plan === 'pro').length
@@ -208,7 +234,8 @@ export default async function AdminDashboard({
          <KPICard title="Forgalom" value={`${(totalCost / 1000000).toFixed(1)}M`} subtitle="Költség (HUF)" color="emerald" icon={<span className="text-2xl">💰</span>} />
       </div>
 
-      {/* ===================================================================================== */}
+      {/* ... (Szekció 1, 2, 3: Promóciók, Release Notes, Battles - Ezek maradnak változatlanul) ... */}
+       {/* ===================================================================================== */}
       {/* SZEKCIÓ 1: PROMÓCIÓ KEZELŐ */}
       {/* ===================================================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
@@ -271,7 +298,7 @@ export default async function AdminDashboard({
       </div>
 
       {/* ===================================================================================== */}
-      {/* SZEKCIÓ 2: FRISSÍTÉSI NAPLÓ (CHANGELOG) - ÚJ RÉSZ */}
+      {/* SZEKCIÓ 2: FRISSÍTÉSI NAPLÓ (CHANGELOG) */}
       {/* ===================================================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         
@@ -338,27 +365,126 @@ export default async function AdminDashboard({
         </div>
       </div>
 
+      {/* ===================================================================================== */}
+      {/* SZEKCIÓ 3: SHOWROOM VERSENYEK (BATTLES) */}
+      {/* ===================================================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        
+        {/* BAL: ÚJ VERSENY */}
+        <div className="lg:col-span-1 bg-gradient-to-br from-slate-900 to-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2 relative z-10">
+                <span className="bg-orange-500/20 text-orange-400 p-1.5 rounded-lg">🔥</span>
+                Új Showroom Csata
+            </h3>
+            <form action={createBattle} className="space-y-4 relative z-10">
+                <input type="hidden" name="adminKey" value={secretKey} />
+                <input type="text" name="title" required placeholder="Verseny Neve (pl. Téli Felnik)" className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-orange-500 outline-none" />
+                <textarea name="description" rows={3} placeholder="Verseny leírása..." className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-orange-500 outline-none" />
+                
+                <div className="flex flex-col gap-1">
+                    <label className="text-xs text-slate-400 uppercase font-bold">Lezárás Dátuma</label>
+                    <input type="date" name="endDate" required className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-orange-500 outline-none" />
+                </div>
+                
+                <button type="submit" className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-xl transition-all">Verseny Indítása 🏁</button>
+            </form>
+        </div>
+
+        {/* JOBB: VERSENY LISTA */}
+        <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center">
+                <h3 className="font-bold text-white">Aktív & Lezárt Versenyek</h3>
+                <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">{battles.length} db</span>
+            </div>
+            <div className="overflow-y-auto max-h-[400px] flex-1">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-950 text-slate-400 text-xs uppercase sticky top-0">
+                        <tr>
+                            <th className="px-5 py-3">Verseny</th>
+                            <th className="px-5 py-3">Státusz</th>
+                            <th className="px-5 py-3">Vége</th>
+                            <th className="px-5 py-3 text-right">Törlés</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                        {battles.map((battle: any) => (
+                            <tr key={battle.id} className="hover:bg-slate-800/40">
+                                <td className="px-5 py-4">
+                                    <div className="font-bold text-white">{battle.title}</div>
+                                    <div className="text-slate-400 text-xs mt-1 line-clamp-1">{battle.description}</div>
+                                </td>
+                                <td className="px-5 py-4">
+                                    {battle.status === 'active' 
+                                        ? <span className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded text-xs font-bold border border-emerald-500/20">AKTÍV</span> 
+                                        : <span className="bg-slate-700/50 text-slate-400 px-2 py-1 rounded text-xs border border-slate-700">LEZÁRT</span>
+                                    }
+                                </td>
+                                <td className="px-5 py-4 text-slate-400 text-xs">
+                                    {new Date(battle.end_date).toLocaleDateString('hu-HU')}
+                                </td>
+                                <td className="px-5 py-4 text-right">
+                                    <form action={deleteBattle}>
+                                        <input type="hidden" name="id" value={battle.id} />
+                                        <input type="hidden" name="adminKey" value={secretKey} />
+                                        <button type="submit" className="text-slate-500 hover:text-red-400 p-2" title="Törlés">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+      </div>
+
       {/* --- FELHASZNÁLÓK TÁBLÁZAT --- */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8">
-          <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/30">
+          <div className="p-6 border-b border-slate-800 flex flex-col md:flex-row justify-between items-center bg-slate-800/30 gap-4">
               <h3 className="font-bold text-white flex items-center gap-2">
                   <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                  Felhasználók
+                  Felhasználók {searchQuery && <span className="text-slate-500 text-sm font-normal">(Szűrt)</span>}
               </h3>
+              
+              {/* KERESŐ FORM */}
+              <form action={searchUsers} className="flex gap-2 w-full md:w-auto">
+                  <input type="hidden" name="adminKey" value={secretKey} />
+                  <input 
+                    type="text" 
+                    name="query" 
+                    defaultValue={searchQuery}
+                    placeholder="Keresés email alapján..." 
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500 outline-none w-full md:w-64"
+                  />
+                  <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
+                    Keresés
+                  </button>
+                  {searchQuery && (
+                     <Link href={`/admin?key=${secretKey}`} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
+                        X
+                     </Link>
+                  )}
+              </form>
           </div>
           
           <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-400">
                   <thead className="bg-slate-950 text-slate-200 uppercase font-bold text-xs">
                       <tr>
+                          <th className="px-6 py-4 w-12 text-center">#</th> {/* SORSZÁM */}
                           <th className="px-6 py-4">User</th>
                           <th className="px-6 py-4 text-center">Jelenlegi Csomag</th>
                           <th className="px-6 py-4 text-right">Módosítás</th>
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                      {userList.map((u) => (
+                      {userList.length > 0 ? userList.map((u, index) => (
                           <tr key={u.id} className="hover:bg-slate-800/50 transition-colors">
+                              <td className="px-6 py-4 text-center font-mono text-slate-600 text-xs">
+                                  {index + 1}
+                              </td>
                               <td className="px-6 py-4">
                                   <div className="font-bold text-white">{u.email}</div>
                                   <div className="text-[10px] font-mono text-slate-600">{u.id}</div>
@@ -386,7 +512,13 @@ export default async function AdminDashboard({
                                   </form>
                               </td>
                           </tr>
-                      ))}
+                      )) : (
+                        <tr>
+                            <td colSpan={4} className="px-6 py-8 text-center text-slate-500 italic">
+                                Nincs találat erre a keresésre: "{searchQuery}"
+                            </td>
+                        </tr>
+                      )}
                   </tbody>
               </table>
           </div>

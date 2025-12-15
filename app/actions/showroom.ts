@@ -67,3 +67,44 @@ export async function toggleBattleVote(entryId: string) {
   revalidatePath('/showroom') // Frissítjük az oldalt, hogy látszódjon az új szavazat
   return { success: true }
 }
+// 3. ÚJ: Nevezés a versenyre
+export async function joinBattle(formData: FormData) {
+  const battleId = formData.get('battleId') as string
+  const carId = formData.get('carId') as string
+  
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Jelentkezéshez be kell lépni!')
+
+  // Ellenőrizzük, hogy ez a user tényleg a tulajdonosa-e az autónak (Biztonság)
+  const { data: car } = await supabase
+    .from('cars')
+    .select('id')
+    .eq('id', carId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!car) {
+      return { error: 'Ez nem a te autód, vagy nem létezik!' }
+  }
+
+  // Beszúrjuk a nevezést
+  const { error } = await supabase.from('battle_entries').insert({
+    battle_id: battleId,
+    car_id: Number(carId), // Figyelj a típusra (bigint vs string)
+    user_id: user.id
+  })
+
+  if (error) {
+    console.error('Nevezési hiba:', error)
+    // Supabase error code 23505 = unique_violation (már nevezett ezzel)
+    if (error.code === '23505') {
+        return { error: 'Ezzel az autóval (vagy erre a versenyre) már neveztél!' }
+    }
+    return { error: 'Hiba történt a nevezéskor.' }
+  }
+
+  revalidatePath('/showroom')
+  return { success: true }
+}
