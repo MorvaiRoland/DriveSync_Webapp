@@ -1,4 +1,4 @@
-import { createClient } from 'supabase/server'
+import { createClient } from '@/supabase/server'
 import { ArrowRight, Store, PlusCircle, ShoppingBag } from 'lucide-react'
 import Link from 'next/link'
 
@@ -7,6 +7,7 @@ export const revalidate = 0;
 export default async function MarketplaceWidget() {
   const supabase = await createClient()
 
+  // Lekérjük az aktív hirdetések számát
   const { count } = await supabase
     .from('marketplace_view')
     .select('*', { count: 'exact', head: true })
@@ -14,18 +15,16 @@ export default async function MarketplaceWidget() {
     .eq('is_listed_on_marketplace', true)
 
   return (
-    // JAVÍTÁS 1: h-full helyett h-fit, hogy ne nyúljon le az oldal aljáig
     <div className="group relative h-fit flex flex-col overflow-hidden rounded-[2rem] bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-slate-800 shadow-2xl transition-all duration-500 hover:shadow-amber-500/10">
       
       {/* --- HÁTTÉR EFFEKTEK --- */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none group-hover:bg-amber-500/20 transition-all duration-700"></div>
       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-slate-50/80 dark:to-slate-900/50 pointer-events-none"></div>
 
-      {/* --- TARTALOM (Egy konténerben a jobb elosztásért) --- */}
-      {/* JAVÍTÁS 2: p-7 helyett p-6 (kisebb padding), és gap-6 a részek között */}
+      {/* --- TARTALOM --- */}
       <div className="relative z-10 p-6 flex flex-col gap-6">
         
-        {/* FELSŐ SZEKCIÓ */}
+        {/* FELSŐ SZEKCIÓ (Cím és Adatok) */}
         <div>
             {/* Fejléc Sor */}
             <div className="flex justify-between items-start mb-4">
@@ -47,7 +46,6 @@ export default async function MarketplaceWidget() {
             {/* Számok / Adatok */}
             <div>
                 <div className="flex items-baseline gap-2">
-                    {/* JAVÍTÁS 3: text-6xl helyett text-5xl (kicsit kisebb szám) */}
                     <span className="text-5xl font-black text-slate-900 dark:text-white tracking-tight drop-shadow-sm">
                         {count || 0}
                     </span>
@@ -62,8 +60,8 @@ export default async function MarketplaceWidget() {
         </div>
 
         {/* ALSÓ SZEKCIÓ (Gombok) */}
-        {/* JAVÍTÁS 4: Kivettem az mt-auto-t, így a tartalomhoz tapad, nem tolja le az aljára */}
         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/50">
+            {/* GOMB 1: BÖNGÉSZÉS */}
             <Link 
                 href="/marketplace" 
                 className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-all active:scale-[0.98]"
@@ -72,13 +70,14 @@ export default async function MarketplaceWidget() {
                 Böngészés
             </Link>
 
-           <Link 
-    href="/marketplace/sell" // <--- JAVÍTVA: /cars helyett /marketplace/sell
-    className="..."
->
-    <PlusCircle className="w-4 h-4" />
-    Hirdetés
-</Link>
+            {/* GOMB 2: HIRDETÉS FELADÁSA (JAVÍTOTT LINK) */}
+            <Link 
+                href="/marketplace/sell" 
+                className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl font-bold text-sm text-slate-900 bg-amber-500 hover:bg-amber-400 border border-amber-400/50 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 transition-all active:scale-[0.98]"
+            >
+                <PlusCircle className="w-4 h-4" />
+                Hirdetés
+            </Link>
         </div>
       </div>
     </div>
