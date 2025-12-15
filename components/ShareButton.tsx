@@ -1,23 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import { Share2, Check } from 'lucide-react'
+import { Share2, Check, Copy } from 'lucide-react'
 
-// Elfogadjuk az ID-t prop-ként
-export default function ShareButton({ title, carId }: { title?: string, carId: string | number }) {
+interface ShareButtonProps {
+  title?: string;
+  carId?: string | number; // Opcionális ID
+}
+
+export default function ShareButton({ title, carId }: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleShare = async () => {
-    // ITT A LÉNYEG: Összerakjuk a publikus URL-t
-    // window.location.origin megadja a domaint (pl. https://dynamicsense.hu)
-    const shareUrl = `${window.location.origin}/hirdetes/${carId}`
+    // ITT A LÉNYEG:
+    // Ha kaptunk carId-t, akkor a publikus '/hirdetes/' útvonalat rakjuk össze.
+    // Ha nem, akkor marad a jelenlegi oldal URL-je.
+    const baseUrl = window.location.origin // pl: https://dynamicsense.hu
+    const shareUrl = carId 
+      ? `${baseUrl}/hirdetes/${carId}` 
+      : window.location.href
 
     const shareData = {
       title: title || 'Nézd meg ezt az autót a DynamicSense-en!',
-      text: 'Találtam egy érdekes autót, csekkold le a teljes szerviztörténetét:',
+      text: 'Találtam egy érdekes autót, nézd meg a részleteket:',
       url: shareUrl,
     }
 
+    // Mobilos natív megosztás
     if (navigator.share) {
       try {
         await navigator.share(shareData)
@@ -27,6 +36,7 @@ export default function ShareButton({ title, carId }: { title?: string, carId: s
       }
     }
 
+    // Asztali gép / vágólapra másolás
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true)
@@ -39,17 +49,19 @@ export default function ShareButton({ title, carId }: { title?: string, carId: s
   return (
     <button 
       onClick={handleShare}
-      className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-sm font-bold transition-colors"
+      className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full text-sm font-bold transition-all active:scale-95"
+      title="Publikus link megosztása"
     >
       {copied ? (
         <>
           <Check className="w-4 h-4 text-emerald-500" />
-          <span className="text-emerald-600">Link másolva!</span>
+          <span className="text-emerald-600 hidden sm:inline">Link másolva!</span>
         </>
       ) : (
         <>
           <Share2 className="w-4 h-4" />
-          <span>Megosztás</span>
+          <span className="hidden sm:inline">Megosztás</span>
+          <span className="sm:hidden">Link</span>
         </>
       )}
     </button>
