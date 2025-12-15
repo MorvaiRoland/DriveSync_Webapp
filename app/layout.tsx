@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner"; 
 import CookieBanner from '@/components/CookieBanner'
 import InstallPrompt from '@/components/InstallPrompt'
+import 'mapbox-gl/dist/mapbox-gl.css' 
 
 export const viewport: Viewport = {
   themeColor: "#0f172a",
