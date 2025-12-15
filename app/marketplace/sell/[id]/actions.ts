@@ -12,23 +12,34 @@ export async function publishListing(formData: FormData) {
     const price = parseInt(formData.get('price') as string)
     const description = formData.get('description') as string
     const contactPhone = formData.get('contact_phone') as string
-    const isPublic = formData.get('is_public') === 'on' // Checkbox
+    const location = formData.get('location') as string
+    const isPublic = formData.get('is_public') === 'on'
+    
+    // Extrák parsolása
+    const featuresJson = formData.get('features') as string
+    let features: string[] = []
+    try {
+        features = JSON.parse(featuresJson)
+    } catch (e) {
+        features = []
+    }
 
-    // Biztonsági ellenőrzés: Useré az autó?
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return redirect('/login')
 
+    // Adatbázis frissítés
     const { error } = await supabase
         .from('cars')
         .update({
-            price: price,
-            description: description, // Feltételezve, hogy van ilyen mező a 'cars' táblában. Ha nincs, add hozzá!
-            // Ha nincs 'description' meződ, akkor csinálj egy 'marketplace_listings' táblát, de egyszerűbb a 'cars'-ba tenni.
+            price,
+            description,
             is_listed_on_marketplace: isPublic,
-            contact_phone: contactPhone // Ezt is add hozzá a táblához ha nincs
+            contact_phone: contactPhone,
+            location,
+            features // Mentsük az extrákat is!
         })
         .eq('id', carId)
-        .eq('user_id', user.id) // Fontos! Csak a sajátját szerkesztheti
+        .eq('user_id', user.id)
 
     if (error) {
         console.error('Hiba:', error)
@@ -36,9 +47,8 @@ export async function publishListing(formData: FormData) {
     }
 
     revalidatePath('/marketplace')
-    revalidatePath('/marketplace/sell')
+    revalidatePath(`/marketplace/${carId}`)
     
-    // Ha publikáltuk, vigyük a piactérre, hogy lássa
     if (isPublic) {
         return redirect('/marketplace')
     } else {
