@@ -86,13 +86,16 @@ export async function resetPassword(formData: FormData) {
   const requestHeaders = await headers()
   const origin = requestHeaders.get('origin')
   
-  const siteUrl = origin || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  // Fontos: Élesben a 'origin' a https://dynamicsense.hu lesz.
+  // Ha valamiért null, akkor fallback a környezeti változóra.
+  const siteUrl = origin || process.env.NEXT_PUBLIC_SITE_URL || 'https://dynamicsense.hu'
 
   if (!email) {
     return encodedRedirect('/login', 'Email megadása kötelező')
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    // Dinamikusan az aktuális oldalra irányít vissza
     redirectTo: `${siteUrl}/auth/callback?next=/update-password`,
   })
 
@@ -103,7 +106,6 @@ export async function resetPassword(formData: FormData) {
 
   return encodedRedirect('/login', 'Ha létezik a fiók, elküldtük a visszaállító linket.')
 }
-
 // --- 5. ÚJ JELSZÓ MENTÉSE ---
 export async function updateNewPassword(formData: FormData) {
   const supabase = await createClient()
