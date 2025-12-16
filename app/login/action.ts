@@ -4,6 +4,11 @@ import { headers } from 'next/headers'
 import { createClient } from 'supabase/server'
 import { redirect } from 'next/navigation'
 
+// Segédfüggvény a kód tisztábbá tételéhez
+function encodedRedirect(path: string, message: string) {
+  return redirect(`${path}?message=${encodeURIComponent(message)}`)
+}
+
 // --- 1. BELÉPÉS EMAIL CÍMMEL ---
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -17,7 +22,7 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    return redirect('/login?message=Helytelen email vagy jelszó')
+    return encodedRedirect('/login', 'Helytelen email vagy jelszó')
   }
 
   return redirect('/')
@@ -43,10 +48,10 @@ export async function signup(formData: FormData) {
 
   if (error) {
     console.error(error)
-    return redirect('/login?message=Hiba történt a regisztráció során')
+    return encodedRedirect('/login', 'Hiba történt a regisztráció során')
   }
 
-  return redirect('/login?message=Sikeres regisztráció! Kérjük, erősítsd meg az email címedet.')
+  return encodedRedirect('/login', 'Sikeres regisztráció! Kérjük, erősítsd meg az email címedet.')
 }
 
 // --- 3. GOOGLE BELÉPÉS ---
@@ -65,7 +70,7 @@ export async function signInWithGoogle() {
 
   if (error) {
     console.error(error)
-    return redirect('/login?message=Hiba a Google bejelentkezésnél')
+    return encodedRedirect('/login', 'Hiba a Google bejelentkezésnél')
   }
 
   if (data.url) {
@@ -84,7 +89,7 @@ export async function resetPassword(formData: FormData) {
   const siteUrl = origin || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
   if (!email) {
-    return redirect('/login?message=Email megadása kötelező')
+    return encodedRedirect('/login', 'Email megadása kötelező')
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -93,10 +98,10 @@ export async function resetPassword(formData: FormData) {
 
   if (error) {
     console.error('Reset error:', error.message)
-    return redirect('/login?message=Hiba történt a kérés során')
+    return encodedRedirect('/login', 'Hiba történt a kérés során')
   }
 
-  return redirect('/login?message=Ha létezik a fiók, elküldtük a visszaállító linket.')
+  return encodedRedirect('/login', 'Ha létezik a fiók, elküldtük a visszaállító linket.')
 }
 
 // --- 5. ÚJ JELSZÓ MENTÉSE ---
@@ -107,11 +112,11 @@ export async function updateNewPassword(formData: FormData) {
   const confirmPassword = formData.get('confirmPassword') as string
 
   if (!password || !confirmPassword) {
-    return redirect('/update-password?message=Minden mező kitöltése kötelező')
+    return encodedRedirect('/update-password', 'Minden mező kitöltése kötelező')
   }
 
   if (password !== confirmPassword) {
-    return redirect('/update-password?message=A két jelszó nem egyezik')
+    return encodedRedirect('/update-password', 'A két jelszó nem egyezik')
   }
 
   const { error } = await supabase.auth.updateUser({
@@ -120,13 +125,13 @@ export async function updateNewPassword(formData: FormData) {
 
   if (error) {
     console.error('Update password error:', error)
-    return redirect('/update-password?message=Nem sikerült módosítani a jelszót')
+    return encodedRedirect('/update-password', 'Nem sikerült módosítani a jelszót')
   }
 
-  return redirect('/login?message=Jelszó sikeresen módosítva! Jelentkezz be.')
+  return encodedRedirect('/login', 'Jelszó sikeresen módosítva! Jelentkezz be.')
 }
 
-// --- 6. KIJELENTKEZÉS (EZ HIÁNYZOTT) ---
+// --- 6. KIJELENTKEZÉS ---
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
