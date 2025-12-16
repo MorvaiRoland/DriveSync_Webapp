@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   // { role: 'user', content: [ { type: 'text', text: '...' }, { type: 'image', image: 'base64...' } ] }
   
   const result = streamText({
-    model: google('gemini-2.5-flash'), // A flash modell gyors és jó képekkel
+    model: google('gemini-2.0-flash-lite-001'), // A flash modell gyors és jó képekkel
     system: contextText,
     messages, // A frontend által küldött teljes tömböt átadjuk
   });
