@@ -32,7 +32,6 @@ export async function POST(req: Request) {
   const cars = carsRes.data || [];
   const events = eventsRes.data || [];
 
-  // --- 1. Rendszer üzenet (Szigorúbb magyar nyelvvel) ---
   const contextText = `
     SYSTEM ROLE:
     Te a DriveSync alkalmazás profi autószerelő AI asszisztense vagy.
@@ -42,44 +41,58 @@ export async function POST(req: Request) {
     Szerviznapló: ${JSON.stringify(events)}
     
     INSTRUCTIONS:
-    1. **LANGUAGE: ONLY HUNGARIAN.** Mindenre MAGYARUL válaszolj! Még ha angolul is kapsz bemenetet, te akkor is MAGYARUL válaszolj.
-    2. IMAGE ANALYSIS: Ha képet látsz, elemezd szakmailag.
-    3. TONE: Segítőkész, szakmai, de közérthető.
+    1. **LANGUAGE: ONLY HUNGARIAN.** Mindenre MAGYARUL válaszolj!
+    2. Ha képet látsz, elemezd szakmailag.
+    3. Légy tömör, szakmai.
   `;
 
-  // --- 2. Üzenetek tisztítása (A HIBA JAVÍTÁSA) ---
-  // A Groq API elutasítja a kérést, ha a korábbi üzenetekben (history) benne marad a base64 kép.
-  // Ezért végigmegyünk a tömbön, és a régebbi üzenetekből kivesszük a képet, csak a szöveget hagyjuk meg.
-  
+  // --- AGRESSZÍV ÜZENET TISZTÍTÁS (A megoldás kulcsa) ---
   const processedMessages = messages.map((m: any, index: number) => {
-    // Megnézzük, hogy ez az utolsó üzenet-e?
     const isLastMessage = index === messages.length - 1;
+    
+    // 1. lépés: Tartalom normalizálása
+    let content = m.content;
 
-    // Ha ez egy KORÁBBI üzenet, és van benne tartalom tömb (tehát kép is)...
-    if (!isLastMessage && Array.isArray(m.content)) {
-      // ...akkor kiválogatjuk belőle CSAK a szöveget.
-      // Így a history-ban megmarad, hogy mit kérdeztél ("Mi ez?"), de a hatalmas képfájl nem.
-      const textOnlyContent = m.content
-        .filter((part: any) => part.type === 'text')
-        .map((part: any) => part.text)
-        .join('\n');
+    // Ha a tartalom tömb (akár szöveg, akár kép van benne)
+    if (Array.isArray(content)) {
+      // Megnézzük, van-e benne kép
+      const hasImage = content.some((part: any) => part.type === 'image');
+
+      if (isLastMessage && hasImage) {
+        // HA ez az utolsó üzenet ÉS van benne kép: Hagyjuk meg tömbnek (ez kell a Vision-nek)
+        // De biztosítjuk, hogy csak a támogatott mezők maradjanak
+        return {
+          role: m.role,
+          content: content.map((c: any) => {
+             if(c.type === 'text') return { type: 'text', text: c.text };
+             if(c.type === 'image') return { type: 'image', image: c.image };
+             return null;
+          }).filter(Boolean)
+        };
+      } else {
+        // MINDEN MÁS ESETBEN (History, vagy kép nélküli utolsó üzenet):
+        // Lapítsuk ki sima stringgé! A Groq ezt szereti a legjobban.
+        const textParts = content
+          .filter((part: any) => part.type === 'text')
+          .map((part: any) => part.text)
+          .join('\n');
         
-      return {
-        role: m.role,
-        content: textOnlyContent || "Kép feltöltve", // Ha nem volt mellette szöveg
-      };
+        content = textParts || (hasImage ? "[Kép feltöltve]" : ""); // Fallback, ha üres lenne
+      }
     }
 
-    // Az utolsó üzenetet (amit most küldtél) békén hagyjuk, abban maradhat a kép.
-    return m;
+    // 2. lépés: Új objektum visszaadása (kiszűrve minden extra "szemetet" amit a frontend küldhet)
+    return {
+      role: m.role,
+      content: content // Itt már vagy string, vagy a kép objektum
+    };
   });
 
-  // --- 3. Küldés a Groq-nak ---
+  // --- Küldés ---
   const result = streamText({
-    // Jelenleg ez a stabil Vision modell a Groq-nál:
     model: groq('meta-llama/llama-4-scout-17b-16e-instruct'), 
     system: contextText,
-    messages: processedMessages, // A tisztított listát küldjük!
+    messages: processedMessages,
   });
 
   return result.toTextStreamResponse();
