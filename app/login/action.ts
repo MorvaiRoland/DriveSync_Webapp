@@ -79,23 +79,27 @@ export async function signInWithGoogle() {
 }
 
 // --- 4. JELSZÓ VISSZAÁLLÍTÁS KÉRÉSE ---
+// app/login/action.ts
+
 export async function resetPassword(formData: FormData) {
   const supabase = await createClient()
   const email = formData.get('email') as string
   
-  const requestHeaders = await headers()
-  const origin = requestHeaders.get('origin')
+  // FIX: Hardcode-oljuk a címet, hogy biztosan egyezzen a böngészővel
+  // Ha a böngészőben www.dynamicsense.hu-t látsz, akkor IDE IS AZT ÍRD!
+  // Ha sima dynamicsense.hu-t használsz, akkor vedd ki a www-t.
+  const productionUrl = 'https://www.dynamicsense.hu' 
   
-  // Fontos: Élesben a 'origin' a https://dynamicsense.hu lesz.
-  // Ha valamiért null, akkor fallback a környezeti változóra.
-  const siteUrl = origin || process.env.NEXT_PUBLIC_SITE_URL || 'https://dynamicsense.hu'
+  const siteUrl = process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:3000' 
+    : productionUrl
 
   if (!email) {
     return encodedRedirect('/login', 'Email megadása kötelező')
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    // Dinamikusan az aktuális oldalra irányít vissza
+    // Itt a kulcs: a siteUrl-nek egyeznie kell azzal, ahol a user épp van
     redirectTo: `${siteUrl}/auth/callback?next=/update-password`,
   })
 
