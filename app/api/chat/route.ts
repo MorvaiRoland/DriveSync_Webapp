@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
   try {
       const result = streamText({
-        model: google('gemini-1.5-flash'), // Válts vissza 1.5-flash-re, az stabilabb ingyen!
+        model: google('gemini-2.5-flash'), // Válts vissza 1.5-flash-re, az stabilabb ingyen!
         system: contextText,
         messages,
         onFinish: async ({ usage }) => {
