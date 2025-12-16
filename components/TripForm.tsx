@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
-import { addTrip } from '@/app/cars/[id]/actions'
+import { addTrip } from '@/app/cars/[id]/actions' // Ellenőrizd az útvonalat!
 import LocationAutocomplete from '@/components/LocationAutocomplete'
 
+// Térkép dinamikus betöltése - Fontos a "loading" állapot!
 const TripMap = dynamic(() => import('@/components/TripMap'), {
   ssr: false,
   loading: () => (
@@ -14,7 +15,8 @@ const TripMap = dynamic(() => import('@/components/TripMap'), {
   ),
 })
 
-export default function TripForm({ carId }: { carId: string }) {
+// JAVÍTÁS: defaultDate prop felvétele
+export default function TripForm({ carId, defaultDate }: { carId: string, defaultDate?: string }) {
   const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [endCoords, setEndCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [calculatedDistance, setCalculatedDistance] = useState('')
@@ -26,6 +28,8 @@ export default function TripForm({ carId }: { carId: string }) {
   ) => {
     try {
       const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+      if (!token) return; // Ha nincs token, ne fusson hibára
+
       const res = await fetch(
         `https://api.mapbox.com/directions/v5/mapbox/driving/${start.lng},${start.lat};${end.lng},${end.lat}?geometries=geojson&overview=full&access_token=${token}`
       )
@@ -76,12 +80,13 @@ export default function TripForm({ carId }: { carId: string }) {
       >
         <input type="hidden" name="car_id" value={carId} />
 
-        {/* BAL OLDAL */}
+        {/* BAL OLDAL - INPUTOK */}
         <div className="md:col-span-6 space-y-4">
           <input
             type="date"
             name="trip_date"
-            defaultValue={new Date().toISOString().split('T')[0]}
+            // JAVÍTÁS: A propból kapott dátumot használjuk a "new Date()" helyett!
+            defaultValue={defaultDate || ''}
             className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm"
             required
           />
@@ -124,13 +129,14 @@ export default function TripForm({ carId }: { carId: string }) {
             <option value="personal">Magán 🏠</option>
           </select>
 
-          <button className="w-full bg-slate-900 text-white font-bold py-2.5 rounded-lg">
+          <button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-lg transition-colors">
             Rögzítés
           </button>
         </div>
 
         {/* JOBB OLDAL – MAP */}
-        <div className="md:col-span-6 relative h-[400px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900">
+        {/* JAVÍTÁS: w-full hozzáadva, hogy mobilon ne legyen 0 szélességű */}
+        <div className="md:col-span-6 w-full relative h-[300px] md:h-[400px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900">
           <TripMap
             startPos={startCoords ? [startCoords.lat, startCoords.lng] : null}
             endPos={endCoords ? [endCoords.lat, endCoords.lng] : null}
@@ -139,7 +145,7 @@ export default function TripForm({ carId }: { carId: string }) {
 
           {!startCoords && !endCoords && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <span className="text-sm text-slate-400 bg-black/40 px-3 py-1 rounded-full">
+              <span className="text-sm text-slate-400 bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">
                 Válassz indulási és érkezési pontot
               </span>
             </div>
