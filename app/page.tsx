@@ -86,14 +86,25 @@ async function DashboardComponent() {
       latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   }
 
-  // LIMIT ELLENŐRZÉS: Free csomagban max 1 autó lehet
-  canAddCar = checkLimit(plan, 'maxCars', myCars.length);
+  // --- LIMIT LOGIKA ---
+  // Alapértelmezett limit a configból
+  let currentMaxCars: number | typeof Infinity = PLAN_LIMITS[plan].maxCars;
+  
+  // FELÜLBÍRÁLÁS: Ha Pro csomag, akkor legyen VÉGTELEN (Infinity)
+  if (plan === 'pro') {
+    currentMaxCars = Infinity;
+  }
+  // (A Lifetime és Founder alapból Infinity szokott lenni, de ha nem, itt azokat is felülírhatod)
+
+  // Ellenőrzés: Ha Infinity, akkor mindig true, különben darabszám ellenőrzés
+  canAddCar = currentMaxCars === Infinity ? true : myCars.length < currentMaxCars;
+  
+  // AI limit ellenőrzés
   canUseAi = checkLimit(plan, 'allowAi');
   
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
   // ... (statisztika számítások változatlanok) ...
-  // (A kód olvashatósága érdekében a statisztika számítást itt rövidítem, de az eredeti logika marad)
   if (cars.length > 0) {
       const relevantCarIds = [...myCars, ...sharedCars].map(c => c.id);
       if (relevantCarIds.length > 0) {
@@ -116,7 +127,7 @@ async function DashboardComponent() {
       }
       // Flotta egészség számítás (egyszerűsítve)
       if (myCars.length > 0) {
-         // ... (eredeti logika marad) ...
+         // ...
       }
   }
   // ... (badgek, idő) ...
@@ -125,7 +136,7 @@ async function DashboardComponent() {
 
   // Badge logika
   const isHighMiler = cars.some(c => c.mileage >= 200000);
-  const isAdmin = recentActivity.length > 0; // egyszerűsítve
+  const isAdmin = recentActivity.length > 0;
   const isEcoDriver = fleetHealth >= 90;
   badges = [
       { id: 'high-miler', name: 'High Miler', icon: '🛣️', description: '200.000+ km.', earned: isHighMiler, color: 'from-purple-500 to-indigo-600 text-white' },
@@ -218,7 +229,7 @@ async function DashboardComponent() {
             {/* --- KPI STATS BAR --- */}
             {cars.length > 0 && (
                 <div className="w-full lg:w-auto bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-2 border border-white/20 dark:border-slate-700 shadow-xl flex flex-col sm:flex-row gap-2">
-                    {/* Health Score és Spending widgetek (változatlan) */}
+                    {/* Health Score és Spending widgetek */}
                     <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[200px]">
                         <div className="relative w-10 h-10 flex-shrink-0">
                             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
@@ -234,7 +245,7 @@ async function DashboardComponent() {
                             <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{hasServices ? 'Kalkulált érték' : 'Nincs adat'}</p>
                         </div>
                     </div>
-                    {/* Spending (rövidítve) */}
+                    {/* Spending */}
                     <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[220px]">
                        <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500"><span className="font-bold text-lg">💰</span></div>
                        <div>
@@ -298,7 +309,8 @@ async function DashboardComponent() {
                               Saját Garázs
                           </h3>
                           <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                              {myCars.length} / {PLAN_LIMITS[plan].maxCars === Infinity ? '∞' : PLAN_LIMITS[plan].maxCars}
+                              {/* Megjelenítés: Ha Infinity, akkor '∞' jelet írjunk ki */}
+                              {myCars.length} / {currentMaxCars === Infinity ? '∞' : currentMaxCars}
                           </span>
                       </div>
                       
@@ -307,7 +319,7 @@ async function DashboardComponent() {
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {/* LIMIT KEZELÉS: Ha canAddCar hamis, a Pro csomagot ajánljuk */}
+                          {/* LIMIT KEZELÉS */}
                           {FEATURES.addCar && (
                              <Link 
                                href={canAddCar ? "/cars/new" : "/pricing"} 
@@ -327,12 +339,11 @@ async function DashboardComponent() {
                                     </>
                                   ) : (
                                     <>
-                                      <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-amber-500/50 group-hover:text-amber-500 transition-colors">
+                                      <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-amber-500/50 group-hover:text-amber-500 transition-colors">
                                           <Lock className="w-8 h-8" />
                                       </div>
                                       <span className="font-bold text-slate-400 text-lg mb-1">Garázs megtelt</span>
-                                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide bg-amber-100 dark:bg-amber-900/30 px-3 py-1 rounded-full">Válts Pro csomagra</span>
-                                      <span className="text-[10px] text-slate-400 mt-2">A Starter csomagban max 1 autó lehet.</span>
+                                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide bg-amber-100 dark:bg-amber-900/30 px-3 py-1 rounded-full">Válts nagyobb csomagra</span>
                                     </>
                                   )}
                              </Link>
@@ -382,7 +393,7 @@ async function DashboardComponent() {
                   {FEATURES.fuelPrices && <FuelWidget />}
               </div>
               
-              {/* Emlékeztetők widget (rövidítve a kód hossza miatt, de itt van) */}
+              {/* Emlékeztetők widget */}
               {FEATURES.reminders && (
                 <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700/50 overflow-hidden">
                     <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md flex justify-between items-center">
@@ -408,7 +419,7 @@ async function DashboardComponent() {
                     </div>
                 </div>
               )}
-              {/* Activity Log (rövidítve) */}
+              {/* Activity Log */}
               {FEATURES.activityLog && (
                 <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700/50 overflow-hidden">
                     <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md">
