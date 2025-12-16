@@ -188,7 +188,7 @@ async function DashboardComponent() {
       <ReminderChecker />
 
       {/* --- NAVBAR (LIQUID GLASS STYLE & STICKY FIX) --- */}
-      <nav className="sticky top-4 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <nav className="fixed top-4 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
            <div className="flex items-center gap-6"> 
              <Link href="/" className="flex items-center gap-3 group">
