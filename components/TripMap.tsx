@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
 
-// Mapbox token beállítása
+// CSS importálása HELYETT dinamikusan injektáljuk, vagy Link taget használunk
+// Ez megoldja a build és betöltési hibákat mobilon
+
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
 interface TripMapProps {
@@ -16,141 +17,99 @@ interface TripMapProps {
 export default function TripMap({ startPos, endPos, routeGeoJson }: TripMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  // Ellenőrizzük a WebGL támogatást
-  useEffect(() => {
-    if (!mapboxgl.supported()) {
-      setError('A böngésződ nem támogatja a WebGL-t, így a térkép nem jeleníthető meg.')
-    }
-  }, [])
+  // Alapból true, amíg be nem tölt
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (error || !mapContainer.current) return
+    if (!mapContainer.current) return
 
-    // Térkép inicializálása
     try {
-        if (map.current) return // Ha már létezik, ne hozza létre újra
+        if (map.current) return
 
         map.current = new mapboxgl.Map({
             container: mapContainer.current,
-            style: 'mapbox://styles/mapbox/streets-v12', // Vagy a te saját stílusod
-            center: [19.0402, 47.4979], // Budapest alapértelmezett
+            style: 'mapbox://styles/mapbox/streets-v11', // v11 stabilabb mobilon mint a v12
+            center: [19.0402, 47.4979],
             zoom: 10,
-            attributionControl: false, // Mobil nézet tisztítása
+            cooperativeGestures: true, // Mobilon segít a görgetésben
+            attributionControl: false
         })
 
-        // Navigációs gombok hozzáadása (jobb alsó sarok)
         map.current.addControl(new mapboxgl.NavigationControl(), 'bottom-right')
 
-        // Hiba kezelés (pl. ha blokkolva van a hálózat)
-        map.current.on('error', (e) => {
-            console.warn('Mapbox error:', e)
-            // Nem állítunk be fatal errort, hagyjuk futni a térképet, hátha csak egy tile nem töltött be
+        map.current.on('load', () => {
+            setLoading(false)
+            // Átméretezés kényszerítése betöltéskor
+            map.current?.resize()
         })
 
     } catch (e) {
-        console.error('Térkép inicializálási hiba:', e)
-        setError('Hiba történt a térkép betöltésekor.')
+        console.error('Mapbox init error:', e)
     }
 
     return () => {
-        // Cleanup: térkép törlése komponens levételkor
         map.current?.remove()
         map.current = null
     }
-  }, [error])
+  }, [])
 
-  // Markerek és Útvonal frissítése
+  // Markerek és útvonal frissítése
   useEffect(() => {
-    if (!map.current) return
-
+    if (!map.current || loading) return
     const currentMap = map.current
 
-    // Segédfüggvény markerek kezelésére
-    const updateMarkers = () => {
-        // Töröljük a régi markereket (ez egy egyszerűsített megoldás, 
-        // profibb lenne tárolni a markereket ref-ben, de így biztosan tiszta)
-        const markers = document.getElementsByClassName('mapboxgl-marker')
-        while(markers.length > 0){
-            markers[0].remove();
-        }
+    // Markerek törlése és újrarajzolása
+    const markers = document.getElementsByClassName('mapboxgl-marker')
+    while(markers.length > 0) markers[0].remove()
 
-        const bounds = new mapboxgl.LngLatBounds()
+    const bounds = new mapboxgl.LngLatBounds()
+    let hasPoints = false
 
-        if (startPos) {
-            new mapboxgl.Marker({ color: '#22c55e' }) // Zöld
-                .setLngLat([startPos[1], startPos[0]])
-                .addTo(currentMap)
-            bounds.extend([startPos[1], startPos[0]])
-        }
-
-        if (endPos) {
-            new mapboxgl.Marker({ color: '#ef4444' }) // Piros
-                .setLngLat([endPos[1], endPos[0]])
-                .addTo(currentMap)
-            bounds.extend([endPos[1], endPos[0]])
-        }
-
-        // Zoomolás, hogy minden beleférjen
-        if (startPos || endPos) {
-            currentMap.fitBounds(bounds, { padding: 50, maxZoom: 15 })
-        }
+    if (startPos) {
+        new mapboxgl.Marker({ color: '#22c55e' }).setLngLat([startPos[1], startPos[0]]).addTo(currentMap)
+        bounds.extend([startPos[1], startPos[0]])
+        hasPoints = true
+    }
+    if (endPos) {
+        new mapboxgl.Marker({ color: '#ef4444' }).setLngLat([endPos[1], endPos[0]]).addTo(currentMap)
+        bounds.extend([endPos[1], endPos[0]])
+        hasPoints = true
     }
 
-    // Útvonal kirajzolása
-    const updateRoute = () => {
-        if (!currentMap.getSource('route')) {
-             // Ha még nincs hozzáadva a forrás
-             if (currentMap.isStyleLoaded()) {
-                 addRouteLayer()
-             } else {
-                 currentMap.once('load', addRouteLayer)
-             }
-        } else {
-            // Ha már van, csak frissítjük az adatot
-            (currentMap.getSource('route') as mapboxgl.GeoJSONSource).setData(
-                routeGeoJson || { type: 'FeatureCollection', features: [] }
-            )
-        }
-    }
-
-    const addRouteLayer = () => {
-        if (!currentMap.getSource('route')) {
-            currentMap.addSource('route', {
+    // Útvonal
+    if (currentMap.getSource('route')) {
+        (currentMap.getSource('route') as mapboxgl.GeoJSONSource).setData(routeGeoJson || { type: 'FeatureCollection', features: [] })
+    } else if (routeGeoJson) {
+        currentMap.addLayer({
+            id: 'route',
+            type: 'line',
+            source: {
                 type: 'geojson',
-                data: routeGeoJson || { type: 'FeatureCollection', features: [] },
-            })
-
-            currentMap.addLayer({
-                id: 'route',
-                type: 'line',
-                source: 'route',
-                layout: {
-                    'line-join': 'round',
-                    'line-cap': 'round',
-                },
-                paint: {
-                    'line-color': '#3b82f6', // Kék
-                    'line-width': 5,
-                    'line-opacity': 0.75
-                },
-            })
-        }
+                data: routeGeoJson
+            },
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': '#3b82f6', 'line-width': 5, 'line-opacity': 0.75 }
+        })
     }
 
-    updateMarkers()
-    if (routeGeoJson) updateRoute()
+    if (hasPoints) {
+        currentMap.fitBounds(bounds, { padding: 50, maxZoom: 15, animate: false })
+    }
+  }, [startPos, endPos, routeGeoJson, loading])
 
-  }, [startPos, endPos, routeGeoJson])
-
-  if (error) {
-    return (
-        <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 text-sm text-center p-4">
-            {error}
-        </div>
-    )
-  }
-
-  return <div ref={mapContainer} className="w-full h-full" />
+  return (
+    <>
+      {/* CSS betöltése közvetlenül a komponensben */}
+      <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+      
+      <div className="relative w-full h-full min-h-[300px]">
+        <div ref={mapContainer} className="absolute inset-0 rounded-xl" />
+        {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-900 z-10">
+                <span className="text-xs text-slate-500 animate-pulse">Térkép betöltése...</span>
+            </div>
+        )}
+      </div>
+    </>
+  )
 }
