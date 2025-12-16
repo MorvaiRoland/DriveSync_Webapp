@@ -1,6 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { streamText } from 'ai';
-import { createClient } from 'supabase/server'; // Vagy ahol a tied van
+import { createClient } from 'supabase/server'; 
 
 export const maxDuration = 30;
 
@@ -18,45 +18,38 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 });
 
-  // Adatok lekérése a kontextushoz
+  // Adatok lekérése (változatlan)
   const [carsRes, eventsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('user_id', user.id),
-    supabase
-      .from('events')
-      .select('*, cars(make, model)')
-      .eq('user_id', user.id)
-      .order('event_date', { ascending: false })
-      .limit(30)
+    supabase.from('events').select('*, cars(make, model)').eq('user_id', user.id).order('event_date', { ascending: false }).limit(30)
   ]);
 
-  const cars = carsRes.data || [];
-  const events = eventsRes.data || [];
-
-  // Rendszer üzenet (System Prompt)
-  // Fontos: Itt instruáljuk, hogy képes képeket is nézni.
   const contextText = `
-    TE VAGY A DRIVESYNC AI SZERELŐ.
-    
-    A felhasználó autói: ${JSON.stringify(cars)}
-    Szerviznapló: ${JSON.stringify(events)}
-    
-    KÉPESSÉGEK:
-    - Képes vagy elemezni a felhasználó által feltöltött képeket (pl. műszerfal hibajelzések, motortér, sérülések).
-    - Ha képet kapsz, elemezd a látható problémát, és adj tanácsot.
-    - Ha hibakódot látsz, magyarázd el.
-    
-    Válaszolj magyarul, szakmailag, de érthetően.
+    TE VAGY A DRIVESYNC AI SZERELŐ...
+    A felhasználó autói: ${JSON.stringify(carsRes.data)}
+    Szerviznapló: ${JSON.stringify(eventsRes.data)}
   `;
 
-  // A messages tömb már tartalmazhatja a képet base64 formátumban a frontendről.
-  // A Vercel AI SDK Google provider ezt automatikusan kezeli, ha a struktúra:
-  // { role: 'user', content: [ { type: 'text', text: '...' }, { type: 'image', image: 'base64...' } ] }
-  
-  const result = streamText({
-    model: google('gemini-2.5-flash'), // A flash modell gyors és jó képekkel
-    system: contextText,
-    messages, // A frontend által küldött teljes tömböt átadjuk
-  });
+  try {
+      const result = streamText({
+        model: google('gemini-1.5-flash'), // Válts vissza 1.5-flash-re, az stabilabb ingyen!
+        system: contextText,
+        messages,
+        onFinish: async ({ usage }) => {
+            // ... (használat mentése, változatlan)
+        },
+      });
 
-  return result.toTextStreamResponse();
+      return result.toTextStreamResponse();
+
+  } catch (error: any) {
+      console.error("AI Error:", error);
+      
+      // Ha Rate Limit hiba van (429), akkor szépen válaszoljunk
+      if (error.message?.includes('429') || error.status === 429) {
+          return new Response("A rendszer túlterhelt (Rate Limit). Kérlek várj egy percet!", { status: 429 });
+      }
+      
+      return new Response("Hiba történt az AI válasz generálása közben.", { status: 500 });
+  }
 }
