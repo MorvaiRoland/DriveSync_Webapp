@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
 
-// 1. Lépés: Definiáljuk a szigorú CSP-t egy változóban, hogy átlátható legyen
-// A "frame-ancestors 'none'" javítja a ClickJacking hibát.
-// Az "object-src 'none'" és "base-uri 'self'" javítja a "No Fallback" hibát.
+// 1. Lépés: Definiáljuk a szigorú CSP-t
+// JAVÍTÁS: Hozzáadtuk a 'https://api.mapbox.com'-ot a style-src-hoz
+// JAVÍTÁS: Hozzáadtuk a 'worker-src'-t a térkép stabilitásához
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline';
-    style-src 'self' 'unsafe-inline' fonts.googleapis.com;
+    style-src 'self' 'unsafe-inline' fonts.googleapis.com https://api.mapbox.com;
     img-src 'self' blob: data: https:;
     font-src 'self' fonts.gstatic.com data:;
     object-src 'none';
@@ -14,12 +14,14 @@ const cspHeader = `
     form-action 'self';
     frame-ancestors 'none';
     connect-src 'self' https:;
+    worker-src 'self' blob:;
     upgrade-insecure-requests;
-`.replace(/\s{2,}/g, ' ').trim(); // Kiveszi a felesleges szóközöket/sortöréseket
+`.replace(/\s{2,}/g, ' ').trim();
 
 const nextConfig = {
-  
   poweredByHeader: false,
+  
+  // Ez a sor kritikus a mobilos "Application error" elkerüléséhez:
   transpilePackages: ['react-map-gl', 'mapbox-gl'],
   
   experimental: {
@@ -30,17 +32,23 @@ const nextConfig = {
   
   images: {
     remotePatterns: [
+      // Supabase képek
       {
         protocol: 'https',
-        hostname: '**',
         hostname: '**.supabase.co',
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
+      // Google profilképek
       {
         protocol: 'https',
-        hostname: '**.googleusercontent.com', // Ez kezeli a Google profilképeket
+        hostname: '**.googleusercontent.com',
       },
+      // Minden más külső kép (ha szükséges, különben törölhető a biztonság növeléséhez)
+      {
+        protocol: 'https',
+        hostname: '**',
+      }
     ],
   },
 
@@ -49,14 +57,13 @@ const nextConfig = {
       {
         source: '/:path*',
         headers: [
-          // --- Biztonsági Fejlécek ---
           {
             key: 'Content-Security-Policy',
-            value: cspHeader, // Itt adjuk át a fenti szigorú szabályokat
+            value: cspHeader,
           },
           {
             key: 'X-Frame-Options',
-            value: 'DENY', // Régi böngészőknek (ClickJacking védelem 1. szint)
+            value: 'DENY',
           },
           {
             key: 'X-Content-Type-Options',
@@ -74,10 +81,9 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
-          // --- CORS Beállítások (CORS Misconfiguration hiba javítása) ---
           {
             key: 'Access-Control-Allow-Origin',
-            value: '*', // Vagy a saját domain-ed, ha szigorúbb akarsz lenni (pl. https://dynamicsense.hu)
+            value: '*',
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -101,4 +107,3 @@ const withPWA = require('next-pwa')({
 });
 
 module.exports = withPWA(nextConfig);
-
