@@ -1,6 +1,6 @@
-import { groq } from '@ai-sdk/groq'; // Google helyett Groq import
+import { google } from '@ai-sdk/google';
 import { streamText } from 'ai';
-import { createClient } from 'supabase/server'; // Ellenőrizd az útvonalat!
+import { createClient } from 'supabase/server'; // Vagy ahol a tied van
 
 export const maxDuration = 30;
 
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 });
 
-  // Adatok lekérése a kontextushoz (Változatlan)
+  // Adatok lekérése a kontextushoz
   const [carsRes, eventsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('user_id', user.id),
     supabase
@@ -33,6 +33,7 @@ export async function POST(req: Request) {
   const events = eventsRes.data || [];
 
   // Rendszer üzenet (System Prompt)
+  // Fontos: Itt instruáljuk, hogy képes képeket is nézni.
   const contextText = `
     TE VAGY A DRIVESYNC AI SZERELŐ.
     
@@ -47,26 +48,15 @@ export async function POST(req: Request) {
     Válaszolj magyarul, szakmailag, de érthetően.
   `;
 
-  try {
-      const result = streamText({
-        // FONTOS: A 'llama-3.2-90b-vision-preview' modellt használjuk.
-        // Ez az egyetlen a Groq-on, ami látja a képeket (Vision) és elég okos (90b).
-        model: groq('llama-3.2-11b-vision-preview'), 
-        
-        system: contextText,
-        messages, // A képeket (base64) a Vercel SDK automatikusan átadja a Groq-nak
-      });
+  // A messages tömb már tartalmazhatja a képet base64 formátumban a frontendről.
+  // A Vercel AI SDK Google provider ezt automatikusan kezeli, ha a struktúra:
+  // { role: 'user', content: [ { type: 'text', text: '...' }, { type: 'image', image: 'base64...' } ] }
+  
+  const result = streamText({
+    model: google('gemini-2.5-flash'), // A flash modell gyors és jó képekkel
+    system: contextText,
+    messages, // A frontend által küldött teljes tömböt átadjuk
+  });
 
-      return result.toTextStreamResponse();
-
-  } catch (error: any) {
-      console.error("Groq AI Error:", error);
-      
-      // Hibakezelés
-      if (error.status === 429) {
-          return new Response("Túl sok kérés a Groq felé. Várj egy picit!", { status: 429 });
-      }
-
-      return new Response("AI Hiba történt: " + error.message, { status: 500 });
-  }
+  return result.toTextStreamResponse();
 }
