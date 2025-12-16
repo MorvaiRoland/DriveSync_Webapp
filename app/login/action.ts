@@ -86,8 +86,6 @@ export async function resetPassword(formData: FormData) {
   const email = formData.get('email') as string
   
   // FIX: Hardcode-oljuk a címet, hogy biztosan egyezzen a böngészővel
-  // Ha a böngészőben www.dynamicsense.hu-t látsz, akkor IDE IS AZT ÍRD!
-  // Ha sima dynamicsense.hu-t használsz, akkor vedd ki a www-t.
   const productionUrl = 'https://www.dynamicsense.hu' 
   
   const siteUrl = process.env.NODE_ENV === 'development' 
@@ -98,9 +96,14 @@ export async function resetPassword(formData: FormData) {
     return encodedRedirect('/login', 'Email megadása kötelező')
   }
 
+  // JAVÍTÁS ITT:
+  // Összerakjuk a teljes visszatérési URL-t, hogy a paraméterek ne vesszenek el
+  const callbackUrl = `${siteUrl}/auth/callback?next=/update-password`
+  
+  console.log("Küldés erre az URL-re:", callbackUrl) // Debug log
+
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    // Itt a kulcs: a siteUrl-nek egyeznie kell azzal, ahol a user épp van
-    redirectTo: `${siteUrl}/auth/callback?next=/update-password`,
+    redirectTo: callbackUrl,
   })
 
   if (error) {
