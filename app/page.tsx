@@ -188,8 +188,10 @@ async function DashboardComponent() {
       <ReminderChecker />
 
       {/* --- NAVBAR (LIQUID GLASS STYLE & STICKY FIX) --- */}
-      <nav className="fixed top-4 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* --- NAVBAR (FIXED POZÍCIÓ) --- */}
+      <nav className="fixed top-4 left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
+           {/* ... a belső tartalom változatlan ... */}
            <div className="flex items-center gap-6"> 
              <Link href="/" className="flex items-center gap-3 group">
                <div className="relative w-8 h-8 group-hover:rotate-12 transition-transform duration-500">
