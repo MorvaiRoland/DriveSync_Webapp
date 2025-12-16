@@ -1,14 +1,14 @@
 import { createClient } from '@/supabase/server'
 
-// 1. Csomag típusok
-export type SubscriptionPlan = 'free' | 'pro' | 'lifetime';
+// 1. Csomag típusok (Hozzáadtam a 'founder'-t a biztonság kedvéért)
+export type SubscriptionPlan = 'free' | 'pro' | 'lifetime' | 'founder';
 
 // 2. Beállítások interface
 interface PlanConfig {
   maxCars: number;
   allowDocuments: boolean;
   allowExport: boolean;
-  allowAi: boolean; // <--- EZT KERESSÜK MAJD
+  allowAi: boolean;
   allowReminders: boolean;
 }
 
@@ -18,37 +18,54 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanConfig> = {
     maxCars: 1,
     allowDocuments: false,
     allowExport: false,
-    allowAi: false, // Ingyenes csomagban tiltva
+    allowAi: false,
     allowReminders: true, 
   },
   pro: {
-    maxCars: 10,
+    maxCars: Infinity, // JAVÍTVA: 999 helyett Infinity a ∞ jelhez
     allowDocuments: true,
     allowExport: true,
-    allowAi: true, // Pro csomagban engedélyezve
+    allowAi: true,
     allowReminders: true,
   },
   lifetime: {
-    maxCars: 999,
+    maxCars: Infinity, // JAVÍTVA
     allowDocuments: true,
     allowExport: true,
-    allowAi: true, // Founder csomagban engedélyezve
+    allowAi: true,
+    allowReminders: true,
+  },
+  founder: { // JAVÍTVA: Kompatibilitás a régi felhasználókkal
+    maxCars: Infinity,
+    allowDocuments: true,
+    allowExport: true,
+    allowAi: true,
     allowReminders: true,
   }
 };
 
 export async function getSubscriptionStatus(userId: string): Promise<SubscriptionPlan> {
   const supabase = await createClient();
-  const { data } = await supabase
+  
+  // Hibakezelés: maybeSingle() biztonságosabb, ha véletlenül nincs rekord
+  const { data, error } = await supabase
     .from('subscriptions')
     .select('status, plan_type')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
-  const isActive = data?.status === 'active' || data?.status === 'trialing';
-  const planType = data?.plan_type as SubscriptionPlan;
+  if (error || !data) {
+    return 'free';
+  }
 
-  if (isActive && (planType === 'pro' || planType === 'lifetime')) {
+  const isActive = data.status === 'active' || data.status === 'trialing';
+  // Itt a 'plan_type' stringet kényszerítjük a típusunkra
+  const planType = data.plan_type as SubscriptionPlan;
+
+  // Ellenőrizzük, hogy a planType érvényes-e a mi rendszerünkben
+  const validPlans: SubscriptionPlan[] = ['pro', 'lifetime', 'founder'];
+
+  if (isActive && validPlans.includes(planType)) {
       return planType;
   }
 
@@ -63,9 +80,10 @@ export function checkLimit(
   const limits = PLAN_LIMITS[plan];
   
   if (feature === 'maxCars') {
+    // Infinity esetén ez mindig true lesz, ami helyes
     return currentCount < limits.maxCars;
   }
   
-  // Minden más feature boolean
+  // Minden más feature boolean, de a biztonság kedvéért boolean-ra castoljuk
   return !!limits[feature]; 
 }

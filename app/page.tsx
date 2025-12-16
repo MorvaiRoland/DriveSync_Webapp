@@ -86,15 +86,14 @@ async function DashboardComponent() {
       latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   }
 
-  // --- LIMIT LOGIKA ---
+  // --- LIMIT LOGIKA FELÜLBÍRÁLÁSA ---
   // Alapértelmezett limit a configból
   let currentMaxCars: number | typeof Infinity = PLAN_LIMITS[plan].maxCars;
   
-  // FELÜLBÍRÁLÁS: Ha Pro csomag, akkor legyen VÉGTELEN (Infinity)
-  if (plan === 'pro') {
+  // FELÜLBÍRÁLÁS: Ha Pro, Lifetime vagy Founder csomag, akkor legyen VÉGTELEN (Infinity)
+  if (plan === 'pro' || plan === 'lifetime' ) {
     currentMaxCars = Infinity;
   }
-  // (A Lifetime és Founder alapból Infinity szokott lenni, de ha nem, itt azokat is felülírhatod)
 
   // Ellenőrzés: Ha Infinity, akkor mindig true, különben darabszám ellenőrzés
   canAddCar = currentMaxCars === Infinity ? true : myCars.length < currentMaxCars;
@@ -309,7 +308,7 @@ async function DashboardComponent() {
                               Saját Garázs
                           </h3>
                           <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                              {/* Megjelenítés: Ha Infinity, akkor '∞' jelet írjunk ki */}
+                              {/* MEGJELENÍTÉS: ∞ jel a végtelen limithoz */}
                               {myCars.length} / {currentMaxCars === Infinity ? '∞' : currentMaxCars}
                           </span>
                       </div>
