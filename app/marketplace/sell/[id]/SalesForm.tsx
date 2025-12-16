@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { publishListing } from './actions'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr' // FONTOS: Ez kell a feltöltéshez!
+import { createBrowserClient } from '@supabase/ssr'
 
 // --- KONFIGURÁCIÓ: EXTRÁK LISTÁJA ---
 const CAR_FEATURES = {
@@ -38,11 +38,19 @@ export default function SalesForm({ car }: { car: any }) {
     const [selectedFeatures, setSelectedFeatures] = useState<string[]>(car.features || [])
     const [featureSearch, setFeatureSearch] = useState('')
 
-    // Kép State
-    const [selectedImages, setSelectedImages] = useState<File[]>([])
-    const [previews, setPreviews] = useState<string[]>([])
+    // --- KÉPEK KEZELÉSE (Javított) ---
+    // 1. Meglévő képek (amik már az adatbázisban vannak)
+    // Kezeljük azt is, ha a DB-ben null, vagy ha csak image_url van
+    const initialImages = Array.isArray(car.images) && car.images.length > 0 
+        ? car.images 
+        : (car.image_url ? [car.image_url] : []);
+
+    const [existingImages, setExistingImages] = useState<string[]>(initialImages)
+
+    // 2. Új feltöltésre váró képek
+    const [newImages, setNewImages] = useState<File[]>([])
+    const [newImagePreviews, setNewImagePreviews] = useState<string[]>([])
     
-    // Feltöltés státusz jelző
     const [uploadStatus, setUploadStatus] = useState<string | null>(null)
 
     // --- FÜGGVÉNYEK ---
@@ -55,113 +63,97 @@ export default function SalesForm({ car }: { car: any }) {
         )
     }
 
-    // Új képek hozzáadása a listához
+    // ÚJ KÉP KIVÁLASZTÁSA
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const files = Array.from(e.target.files)
-            
-            // Hozzáadjuk a meglévőkhöz
-            setSelectedImages(prev => [...prev, ...files])
-            
-            // Létrehozzuk az előnézeti képeket
+            setNewImages(prev => [...prev, ...files])
             const newPreviews = files.map(file => URL.createObjectURL(file))
-            setPreviews(prev => [...prev, ...newPreviews])
-            
-            // Input mező törlése, hogy ugyanazt a fájlt újra ki lehessen választani ha kell
+            setNewImagePreviews(prev => [...prev, ...newPreviews])
             if (fileInputRef.current) fileInputRef.current.value = ''
         }
     }
 
-    // Kép törlése a listából (Mielőtt feltöltenénk)
-    const removeImage = (index: number) => {
-        // Memória felszabadítása
-        URL.revokeObjectURL(previews[index])
-        
-        // Eltávolítás a state-ből
-        setPreviews(prev => prev.filter((_, i) => i !== index))
-        setSelectedImages(prev => prev.filter((_, i) => i !== index))
+    // MEGLÉVŐ KÉP TÖRLÉSE
+    const removeExistingImage = (index: number) => {
+        setExistingImages(prev => prev.filter((_, i) => i !== index))
     }
 
-    // --- A FŐ LOGIKA: FELTÖLTÉS ÉS MENTÉS ---
+    // ÚJ (MÉG NEM FELTÖLTÖTT) KÉP TÖRLÉSE
+    const removeNewImage = (index: number) => {
+        URL.revokeObjectURL(newImagePreviews[index])
+        setNewImagePreviews(prev => prev.filter((_, i) => i !== index))
+        setNewImages(prev => prev.filter((_, i) => i !== index))
+    }
+
+    // --- SUBMIT ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
-        // 1. Státusz beállítása
         setUploadStatus('Képek előkészítése...')
         
-        // Supabase kliens inicializálása (Kliens oldali)
         const supabase = createBrowserClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         )
 
-        const uploadedUrls: string[] = []
+        const uploadedNewUrls: string[] = []
         const BUCKET_NAME = 'car-images'
 
-        // 2. Képek feltöltése egyesével (ha van kiválasztva)
-        if (selectedImages.length > 0) {
-            for (let i = 0; i < selectedImages.length; i++) {
-                const file = selectedImages[i]
-                setUploadStatus(`Kép feltöltése (${i + 1} / ${selectedImages.length})...`)
+        // 1. Új képek feltöltése (ha vannak)
+        if (newImages.length > 0) {
+            for (let i = 0; i < newImages.length; i++) {
+                const file = newImages[i]
+                setUploadStatus(`Új kép feltöltése (${i + 1} / ${newImages.length})...`)
 
-                // Fájlnév generálás: carID / timestamp-index.kiterjesztés
                 const fileExt = file.name.split('.').pop()
                 const cleanName = file.name.replace(/[^a-zA-Z0-9]/g, '')
                 const fileName = `${car.id}/${Date.now()}-${i}.${fileExt}`
 
-                // Feltöltés Supabase Storage-ba
                 const { error: uploadError } = await supabase.storage
                     .from(BUCKET_NAME)
                     .upload(fileName, file)
 
                 if (uploadError) {
-                    console.error('Hiba a feltöltésnél:', uploadError)
-                    alert(`Hiba a(z) ${file.name} feltöltésekor.`)
-                    continue // Ha egy kép nem sikerül, a többit még megpróbáljuk
+                    console.error('Hiba:', uploadError)
+                    continue
                 }
 
-                // Publikus URL lekérése
                 const { data: { publicUrl } } = supabase.storage
                     .from(BUCKET_NAME)
                     .getPublicUrl(fileName)
                 
-                uploadedUrls.push(publicUrl)
+                uploadedNewUrls.push(publicUrl)
             }
         }
 
-        // 3. Adatok elküldése a szervernek (Actions)
-        setUploadStatus('Adatok mentése...')
+        // 2. Végleges lista összeállítása (Megmaradt régiek + Sikeresen feltöltött újak)
+        const finalImageList = [...existingImages, ...uploadedNewUrls]
+
+        // 3. Adatok küldése a szervernek
+        setUploadStatus('Mentés folyamatban...')
 
         const formData = new FormData()
         
-        // Szöveges adatok
         formData.append('car_id', car.id)
         formData.append('price', price.toString())
         formData.append('description', description)
         formData.append('contact_phone', phone)
         formData.append('location', location)
-        
-        // Extrák JSON-ben
         formData.append('features', JSON.stringify(selectedFeatures))
 
-        // Kapcsolók
         if (isPublic) formData.append('is_public', 'on')
         if (hideServiceCosts) formData.append('hide_service_costs', 'on')
         if (hidePrices) formData.append('hide_prices', 'on')
 
-        // FONTOS: Nem a fájlokat küldjük, hanem a kész URL-eket!
-        if (uploadedUrls.length > 0) {
-            formData.append('uploaded_image_urls', JSON.stringify(uploadedUrls))
-        }
+        // Itt a kulcs: elküldjük a teljes, végleges listát JSON-ként
+        formData.append('final_images_json', JSON.stringify(finalImageList))
 
-        // 4. Server Action hívása
         startTransition(async () => {
             await publishListing(formData)
             setUploadStatus(null)
         })
     }
 
-    // Segédfüggvény: van-e aktív folyamat?
     const isProcessing = isPending || uploadStatus !== null
 
     return (
@@ -214,7 +206,7 @@ export default function SalesForm({ car }: { car: any }) {
                 </div>
             </div>
 
-            {/* 2. SZEKCIÓ: FELSZERELTSÉG */}
+            {/* 2. SZEKCIÓ: FELSZERELTSÉG (Rövidítve a példában, de a tiedben hagyd benne) */}
             <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -271,24 +263,42 @@ export default function SalesForm({ car }: { car: any }) {
                     ></textarea>
                 </div>
 
-                {/* KÉPFELTÖLTÉS RÉSZ */}
+                {/* KÉPEK KEZELÉSE */}
                 <div className="space-y-3 pt-4">
-                    <label className="text-xs font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2"><UploadCloud className="w-4 h-4" /> További Fotók</label>
+                    <label className="text-xs font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2"><UploadCloud className="w-4 h-4" /> Fotók kezelése</label>
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         
-                        {/* Előnézeti képek */}
-                        {previews.map((src, idx) => (
-                            <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-slate-200 dark:border-slate-700">
-                                <img src={src} alt="Preview" className="w-full h-full object-cover" />
-                                
-                                {/* TÖRLÉS GOMB - ITT TÖRTÉNIK A VARÁZSLAT */}
+                        {/* 1. MEGLÉVŐ KÉPEK LISTÁZÁSA */}
+                        {existingImages.map((src, idx) => (
+                            <div key={`existing-${idx}`} className="relative aspect-square rounded-xl overflow-hidden group border border-slate-200 dark:border-slate-700">
+                                <img src={src} alt="Existing" className="w-full h-full object-cover" />
+                                {/* Törlés gomb (Meglévő) */}
                                 <button 
                                     type="button" 
-                                    onClick={() => removeImage(idx)} 
-                                    className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 z-10"
+                                    onClick={() => removeExistingImage(idx)} 
+                                    className="absolute top-1 right-1 bg-slate-900/80 hover:bg-red-600 text-white p-1.5 rounded-full transition-colors z-10"
+                                    title="Kép törlése"
                                 >
                                     <X className="w-3.5 h-3.5" />
                                 </button>
+                                <div className="absolute bottom-0 w-full bg-black/50 text-white text-[10px] text-center py-1 font-mono">Mentett</div>
+                            </div>
+                        ))}
+
+                        {/* 2. ÚJ (PREVIEW) KÉPEK LISTÁZÁSA */}
+                        {newImagePreviews.map((src, idx) => (
+                            <div key={`new-${idx}`} className="relative aspect-square rounded-xl overflow-hidden group border-2 border-amber-500/50">
+                                <img src={src} alt="New Preview" className="w-full h-full object-cover opacity-80" />
+                                {/* Törlés gomb (Új) */}
+                                <button 
+                                    type="button" 
+                                    onClick={() => removeNewImage(idx)} 
+                                    className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full shadow-sm hover:bg-red-600 z-10"
+                                    title="Feltöltés visszavonása"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                                <div className="absolute bottom-0 w-full bg-amber-500 text-white text-[10px] text-center py-1 font-bold uppercase">Új</div>
                             </div>
                         ))}
                         
@@ -299,18 +309,13 @@ export default function SalesForm({ car }: { car: any }) {
                         </button>
                     </div>
                     
-                    {/* Rejtett input */}
                     <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageChange} />
                 </div>
             </div>
 
             {/* 4. SZEKCIÓ: ADATVÉDELEM ÉS PUBLIKÁLÁS */}
             <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
-                
-                {/* Adatvédelmi Kapcsolók */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
-                    {/* Szervizköltség Rejtése */}
                     <div 
                         className={`cursor-pointer p-4 rounded-xl border transition-all flex items-center justify-between ${hideServiceCosts ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800'}`}
                         onClick={() => setHideServiceCosts(!hideServiceCosts)}
@@ -329,7 +334,6 @@ export default function SalesForm({ car }: { car: any }) {
                         </div>
                     </div>
 
-                    {/* Eladási Ár Rejtése */}
                     <div 
                         className={`cursor-pointer p-4 rounded-xl border transition-all flex items-center justify-between ${hidePrices ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800'}`}
                         onClick={() => setHidePrices(!hidePrices)}
@@ -349,7 +353,6 @@ export default function SalesForm({ car }: { car: any }) {
                     </div>
                 </div>
 
-                {/* Publikálás Kapcsoló */}
                 <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 flex items-center justify-between cursor-pointer hover:border-amber-500/30 transition-colors" onClick={() => setIsPublic(!isPublic)}>
                     <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${isPublic ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'}`}>
@@ -372,7 +375,6 @@ export default function SalesForm({ car }: { car: any }) {
                     className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-lg font-black py-5 rounded-2xl shadow-xl shadow-orange-500/20 transform hover:-translate-y-1 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                 >
                     {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
-                    {/* Itt jelenik meg a státusz szöveg (pl. Kép feltöltése...) */}
                     {uploadStatus ? uploadStatus : (isPublic ? 'Hirdetés Publikálása' : 'Mentés Piszkozatként')}
                 </button>
             </div>

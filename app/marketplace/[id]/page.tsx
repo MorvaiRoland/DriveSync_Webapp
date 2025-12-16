@@ -1,9 +1,9 @@
-import { createClient } from '@/supabase/server'
+import { createClient } from 'supabase/server' // Figyelj az elérési útra, ha utilsban van!
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { 
   ArrowLeft, MapPin, Calendar, Gauge, Fuel, 
-  CheckCircle2, AlertTriangle, Zap, Settings, Info, CalendarClock, Scale
+  CheckCircle2, AlertTriangle, Zap, Settings, Info, CalendarClock, Scale, 
 } from 'lucide-react'
 import ContactButton from '@/components/ContactButton'
 import ServiceHistoryList from '@/components/ServiceHistoryList'
@@ -19,7 +19,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
 
   // 1. ADATLEKÉRÉS
   const { data: car } = await supabase
-    .from('marketplace_view')
+    .from('marketplace_view') // Biztosítsd, hogy a view tartalmazza az 'images' oszlopot!
     .select('*')
     .eq('id', carId)
     .single()
@@ -53,7 +53,6 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
                 <span>Vissza a listához</span>
             </Link>
             
-            {/* JAVÍTÁS: Átadjuk az ID-t, hogy publikus linket generáljon */}
             <ShareButton 
                 title={`${car.make} ${car.model} - ${car.year}`} 
                 carId={car.id} 
@@ -62,18 +61,19 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
       </div>
 
       <div className="max-w-7xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-        {/* ... A kód többi része változatlan ... */}
         
         {/* --- BAL OLDAL --- */}
         <div className="lg:col-span-8 space-y-10">
+            {/* GALÉRIA JAVÍTVA */}
             <div className="relative aspect-[16/9] w-full bg-slate-200 dark:bg-slate-800 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
                 <ImageGallery 
-                    mainImage={car.image_url} 
-                    alt={`${car.make} ${car.model}`}
-                />
+    mainImage={car.image_url} 
+    images={((car as any).images as string[]) || []} 
+    alt={`${car.make} ${car.model}`}
+/>
             </div>
             
-            {/* ... SpecCardok, Leírás, Szervizkönyv ... */}
+            {/* Specifikáció kártyák */}
              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <SpecCard icon={<Calendar className="text-blue-500" />} label="Évjárat" value={car.year} />
                 <SpecCard icon={<Gauge className="text-amber-500" />} label="Futás" value={`${car.mileage?.toLocaleString()} km`} />
@@ -81,6 +81,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
                 <SpecCard icon={<MapPin className="text-red-500" />} label="Helyszín" value={car.location || 'Nincs megadva'} />
             </div>
             
+            {/* Technikai Adatok */}
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
                 <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                     <span className="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg text-lg">⚙️</span> 
@@ -105,6 +106,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
                 </div>
             </div>
 
+            {/* Felszereltség */}
              {car.features && car.features.length > 0 && (
                 <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
                     <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2">
@@ -122,6 +124,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
                 </div>
             )}
 
+            {/* Leírás */}
              <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
                 <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                     <span className="bg-slate-100 dark:bg-slate-800 p-2 rounded-lg text-lg">📝</span> 
@@ -134,6 +137,7 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
                 </div>
             </div>
             
+            {/* Szervizkönyv */}
              <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden relative">
                 <div className="flex items-center justify-between mb-8">
                     <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -209,7 +213,6 @@ export default async function AdDetailsPage(props: { params: Promise<{ id: strin
   )
 }
 
-// ... SpecCard és DetailRow változatlan ...
 function SpecCard({ icon, label, value }: { icon: any, label: string, value: string | number }) {
     return (
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow flex flex-col items-center text-center gap-3 group">
