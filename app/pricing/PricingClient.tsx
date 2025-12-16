@@ -116,7 +116,6 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
           {/* --- BILLING TOGGLE --- */}
           <div className="flex justify-center">
             <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl relative inline-flex">
-                {/* Csúszka háttér */}
                 <div 
                     className={`absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-slate-100 dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-all duration-300 ease-in-out z-0`}
                     style={{ 
@@ -147,31 +146,38 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
         {/* --- PRICING CARDS GRID --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           
-          {/* 1. STARTER CSOMAG */}
+          {/* 1. STARTER CSOMAG (Ingyenes) */}
           <PricingCard 
             title="Starter" 
             price="0 Ft" 
             desc="Kezdő autósoknak, az alapokhoz."
-            features={['1 Autó kezelése', 'Alap szerviznapló', 'Tankolás követés', 'Emlékeztetők (max 3)']}
+            features={[
+                '1 db Autó kezelése', 
+                'Korlátlan szerviznapló', 
+                'Tankolás követés', 
+                'Alap emlékeztetők',
+                'Gumi hotel'
+            ]}
             buttonText={isActive('free') ? "Jelenlegi csomag" : "Visszaváltás"}
             disabled={true} 
             isCurrent={isActive('free')}
             delay={100}
           />
 
-          {/* 2. PRO CSOMAG (Kiemelt) */}
+          {/* 2. PRO CSOMAG (Fizetős) */}
           <PricingCard 
             title="Pro" 
             price={billingCycle === 'monthly' ? '1.490 Ft' : '8.999 Ft'} 
             period={billingCycle === 'monthly' ? '/ hó' : '/ év'}
-            desc="Komoly tulajdonosoknak, akik mindent látni akarnak."
+            desc="Komoly tulajdonosoknak, minden okos funkcióval."
             highlight={true}
             features={[
-              'Korlátlan autó', 
-              'AI Szerelő (Gemini-2.5-flash) 🤖', 
+              'Korlátlan Garázs', 
+              'AI Szerelő (Gemini 2.5) 🤖', 
+              'Prediktív Karbantartás 🔮', 
               'Digitális Kesztyűtartó 📂', 
-              'Részletes statisztikák 📊', 
-              'Excel & PDF Exportálás'
+              'Eladási Adatlap generálás 💰',
+              'Teljes Analitika & Export 📊'
             ]}
             buttonText={
                 isActive('pro') ? "Jelenlegi csomag" : 
@@ -187,11 +193,11 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
             delay={200}
           />
 
-          {/* 3. LIFETIME CSOMAG */}
+          {/* 3. LIFETIME CSOMAG (Örökös) */}
           <PricingCard 
             title="Lifetime" 
             price="14.999 Ft" 
-            desc="Egyszeri befektetés. Nincs több havidíj soha."
+            desc="Egyszeri befektetés. Minden Pro funkció örökre."
             period=""
             features={[
               'Minden Pro funkció örökre', 
@@ -234,7 +240,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
   )
 }
 
-// --- SEGÉD KOMPONENS: PRICING CARD (DESIGN FRISSÍTVE) ---
+// --- SEGÉD KOMPONENS: PRICING CARD ---
 function PricingCard({ 
   title, 
   price, 
@@ -322,8 +328,8 @@ function PricingCard({
             disabled={loadingManage}
             className="w-full py-2 mb-6 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5"
           >
-             {loadingManage ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
-             Előfizetés kezelése / Lemondás
+              {loadingManage ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
+              Előfizetés kezelése / Lemondás
           </button>
       )}
       

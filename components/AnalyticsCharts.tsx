@@ -16,7 +16,7 @@ const COLORS = {
   grid: '#334155'     // Slate-700
 }
 
-export default function AnalyticsCharts({ events }: { events: any[] }) {
+export default function AnalyticsCharts({ events }: { events: any[];isPro?: boolean; }) {
   const [activeTab, setActiveTab] = useState<'trend' | 'distribution'>('trend')
 
   // --- ADATFELDOLGOZÁS ---

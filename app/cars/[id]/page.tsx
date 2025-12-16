@@ -2,7 +2,7 @@ import { createClient } from '@/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
-import { deleteEvent, deleteReminder, resetServiceCounter } from './actions'
+import { deleteEvent, deleteReminder } from './actions'
 import DocumentManager from './DocumentManager'
 import ExportMenu from '@/components/ExportMenu'
 import LockedFeature from '@/components/LockedFeature'
@@ -35,13 +35,7 @@ type Car = {
 }
 
 const getExpiryStatus = (dateString: string | null) => {
-  if (!dateString) return { 
-      label: 'Nincs megadva', 
-      status: 'Kitöltés...', 
-      alert: false, 
-      color: 'text-slate-400', 
-      bg: 'bg-slate-50 dark:bg-slate-800/50 border-dashed'
-  };
+  if (!dateString) return { label: 'Nincs megadva', status: 'Kitöltés...', alert: false, color: 'text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800/50 border-dashed'};
   const today = new Date();
   const expiry = new Date(dateString);
   const diffTime = expiry.getTime() - today.getTime();
@@ -78,9 +72,10 @@ export default async function CarDetailsPage(props: Props) {
   const safeVignettes = vigRes.data || []
   const activeParking = parkingRes.data || null
 
+  // PRO CSOMAG ELLENŐRZÉSE
   let plan: SubscriptionPlan = 'free';
   if (user) plan = await getSubscriptionStatus(user.id);
-  const isPro = plan === 'pro' || plan === 'lifetime';
+  const isPro = plan === 'pro' || plan === 'lifetime' ;
 
   // --- Calculations ---
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)
@@ -110,7 +105,6 @@ export default async function CarDetailsPage(props: Props) {
   const kmRemaining = nextServiceKm - car.mileage;
   const kmSinceService = car.mileage - baseKm;
 
-  // Státusz logika (HealthStatus)
   let healthStatus = { text: "Kiváló", color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", dot: "bg-emerald-500" };
   if (kmRemaining <= 0) healthStatus = { text: "Szerviz Most!", color: "text-red-500 bg-red-500/10 border-red-500/20", dot: "bg-red-500 animate-pulse" };
   else if (kmRemaining < 2000) healthStatus = { text: "Hamarosan", color: "text-amber-500 bg-amber-500/10 border-amber-500/20", dot: "bg-amber-500" };
@@ -134,16 +128,27 @@ export default async function CarDetailsPage(props: Props) {
   const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost, isElectric }
   const carIdString = car.id.toString();
 
-  // --- WIDGET DEFINITIONS ---
+  // --- WIDGET LOGIKA (FREE vs PRO) ---
   const WidgetParking = <SmartParkingWidget carId={carIdString} activeSession={activeParking} />;
   const WidgetHealth = <CarHealthWidget {...healthProps} />;
-  const WidgetPrediction = isPro ? <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} /> : null;
+  
+  // 1. Prediktív Karbantartás: Csak Pro-nak, különben teaser
+  const WidgetPrediction = isPro 
+    ? <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} /> 
+    : <PredictionTeaser />;
+    
   const WidgetCost = <CostCard {...costProps} />;
-  const WidgetSales = isPro ? <SalesWidget car={car} /> : <ProTeaser />;
+  
+  // 2. Eladás Widget: Csak Pro-nak, különben teaser
+  const WidgetSales = isPro 
+    ? <SalesWidget car={car} /> 
+    : <ProTeaser />;
+    
   const WidgetSpecs = <TechnicalSpecs {...techProps} />;
   const WidgetVignette = <VignetteManager carId={carIdString} vignettes={safeVignettes} />;
   const WidgetTires = <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />;
   
+  // 3. Dokumentumok: Csak Pro-nak
   const WidgetDocs = isPro ? <DocumentManager carId={carIdString} documents={safeDocs} /> : (
     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
         <div className="flex justify-between items-center mb-4">
@@ -156,9 +161,15 @@ export default async function CarDetailsPage(props: Props) {
     </div>
   );
 
-  const WidgetTips = isPro ? <SmartTipsCard tips={smartTips} /> : null;
+  // 4. Okos Tippek: Csak Pro-nak
+  const WidgetTips = isPro ? <SmartTipsCard tips={smartTips} /> : <TipsTeaser />;
+  
   const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
-  const WidgetCharts = <AnalyticsCharts events={safeEvents} />;
+  
+  // 5. Grafikonok: Ingyeneseknek csak az utolsó 5 esemény
+  const chartEvents = isPro ? safeEvents : safeEvents.slice(0, 5);
+  const WidgetCharts = <AnalyticsCharts events={chartEvents} isPro={isPro} />;
+  
   const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
 
   // --- MOBILE TABS CONTENT ---
@@ -205,7 +216,7 @@ export default async function CarDetailsPage(props: Props) {
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
       
-      {/* HEADER SECTION (Liquid Style) */}
+      {/* HEADER SECTION */}
       <HeaderSection 
         car={car} 
         healthStatus={healthStatus} 
@@ -243,8 +254,8 @@ function ProTeaser() {
                 <div className="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30 text-white transform group-hover:scale-110 transition-transform duration-300">
                     <Sparkles className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-1">AI Asszisztens</h3>
-                <p className="text-sm text-indigo-200/80 mb-5 leading-relaxed">Generálj eladási adatlapot és kapj személyre szabott tippeket.</p>
+                <h3 className="text-lg font-bold text-white mb-1">AI Eladási Asszisztens</h3>
+                <p className="text-sm text-indigo-200/80 mb-5 leading-relaxed">Generálj profi eladási adatlapot és növeld az autód értékét.</p>
                 <Link href="/pricing" className="inline-flex items-center gap-2 bg-white text-indigo-900 hover:bg-indigo-50 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5">
                     <Lock className="w-4 h-4" /> Előfizetés
                 </Link>
@@ -253,10 +264,42 @@ function ProTeaser() {
     )
 }
 
+function PredictionTeaser() {
+    return (
+        <div className="relative group overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 p-6 opacity-80 hover:opacity-100 transition-opacity">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-slate-400" /> Jövőbeli Hibák
+                </h3>
+                <Lock className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="flex flex-col items-center text-center py-4">
+                <p className="text-sm text-slate-500 mb-4">Tudd meg előre, mi romolhat el az autódban a kilométeróra állása alapján.</p>
+                <Link href="/pricing" className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full hover:bg-amber-100 transition-colors">
+                    Pro funkció feloldása
+                </Link>
+            </div>
+        </div>
+    )
+}
+
+function TipsTeaser() {
+    return (
+        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-dashed border-slate-200 dark:border-slate-800 text-center">
+            <p className="text-xs font-bold text-slate-400 mb-2">Személyre szabott AI tippek</p>
+            <Link href="/pricing" className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center justify-center gap-1">
+                <Lock className="w-3 h-3" /> Csak Pro tagoknak
+            </Link>
+        </div>
+    )
+}
+
+// ... HeaderSection, StatBadge, MobileBottomNav, DesktopActionGrid, CostCard, CostItem, SmartTipsCard, RemindersList, TechnicalSpecs, TireHotelCard, EventLog komponensek változatlanok (az előző üzenetből) ...
+// (A kód teljessége érdekében itt szerepelniük kellene, de a karakterszám miatt a fenti "változatlan" komment jelzi a helyüket. A felhasználó eredeti kódját be kell másolni ide.)
+
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
         <div className="relative bg-slate-900 w-full overflow-hidden shadow-2xl shrink-0 group min-h-[22rem] md:h-[28rem]">
-            {/* Background Image with Blur */}
             {car.image_url && (
                 <div className="absolute inset-0 z-0">
                     <Image src={car.image_url} alt="Background" fill className="object-cover opacity-50 blur-xl scale-110" priority />
@@ -312,7 +355,7 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                             <p className="text-slate-300/80 font-mono text-lg md:text-xl tracking-widest">{car.plate}</p>
                         </div>
 
-                        {/* Badge-ek - Mobilon középen, PC-n balra igazítva */}
+                        {/* Badge-ek */}
                         <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-1 w-full">
                             <StatBadge label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
                             <StatBadge label="Szervizig" value={`${kmRemaining.toLocaleString()} km`} valueColor={kmRemaining <= 1000 ? 'text-red-400' : 'text-emerald-400'} />
@@ -481,63 +524,29 @@ function RemindersList({ reminders, carId }: any) {
 }
 
 function TechnicalSpecs({ car, avgConsumption }: any) {
-    // Üzemanyag fordítás
     const fuelTranslations: Record<string, string> = { 
-        'petrol': 'Benzin', 
-        'diesel': 'Dízel', 
-        'electric': 'Elektromos', 
-        'hybrid': 'Hibrid', 
-        'plug-in hybrid': 'Plug-in Hybrid',
-        'lpg': 'Gáz (LPG)', 
-        'cng': 'Gáz (CNG)' 
+        'petrol': 'Benzin', 'diesel': 'Dízel', 'electric': 'Elektromos', 'hybrid': 'Hibrid', 'plug-in hybrid': 'Plug-in Hybrid', 'lpg': 'Gáz (LPG)', 'cng': 'Gáz (CNG)' 
     };
-
-    // Váltó fordítás
     const transmissionTranslations: Record<string, string> = {
-        'manual': 'Manuális',
-        'automatic': 'Automata',
-        'cvt': 'Fokozatmentes',
-        'robotized': 'Robotizált'
+        'manual': 'Manuális', 'automatic': 'Automata', 'cvt': 'Fokozatmentes', 'robotized': 'Robotizált'
     };
-
     const displayFuel = fuelTranslations[car.fuel_type?.toLowerCase()] || car.fuel_type || '-';
     const displayTransmission = transmissionTranslations[car.transmission?.toLowerCase()] || car.transmission || '-';
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
             <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
-                <Gauge className="w-5 h-5 text-slate-400" />
-                Specifikációk
+                <Gauge className="w-5 h-5 text-slate-400" /> Specifikációk
             </h3>
-            
             <div className="grid grid-cols-2 gap-x-4 gap-y-6">
-                {/* 1. Alapadatok */}
                 <DataPoint label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
                 <DataPoint label="Évjárat" value={car.year} />
-
-                {/* 2. Motor és Teljesítmény (ÚJ) */}
-                <DataPoint 
-                    label="Motor (ccm)" 
-                    value={car.engine_size ? `${car.engine_size} cm³` : '-'} 
-                />
-                <DataPoint 
-                    label="Teljesítmény" 
-                    value={car.power_hp ? `${car.power_hp} LE` : '-'} 
-                />
-
-                {/* 3. Hajtáslánc (ÚJ) */}
+                <DataPoint label="Motor (ccm)" value={car.engine_size ? `${car.engine_size} cm³` : '-'} />
+                <DataPoint label="Teljesítmény" value={car.power_hp ? `${car.power_hp} LE` : '-'} />
                 <DataPoint label="Sebességváltó" value={displayTransmission} />
                 <DataPoint label="Üzemanyag" value={displayFuel} capitalize />
-
-                {/* 4. Egyéb */}
                 <DataPoint label="Szín" value={car.color || '-'} />
-                <DataPoint 
-                    label="Átlagfogyasztás" 
-                    value={avgConsumption === 'Nincs adat' ? '-' : avgConsumption} 
-                    highlight 
-                />
-
-                {/* 5. Azonosító (Teljes szélességben mobilon, ha kell) */}
+                <DataPoint label="Átlagfogyasztás" value={avgConsumption === 'Nincs adat' ? '-' : avgConsumption} highlight />
                 <div className="col-span-2 border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
                     <DataPoint label="VIN / Alvázszám" value={car.vin || 'Nincs rögzítve'} mono />
                 </div>
@@ -603,7 +612,6 @@ function EventLog({ events, carId }: any) {
                     <div className="relative border-l-2 border-slate-100 dark:border-slate-800 ml-3 space-y-8">
                         {events.map((event: any, index: number) => (
                             <div key={event.id} className="relative pl-8 group">
-                                {/* Idővonal pötty */}
                                 <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white dark:border-slate-900 ${
                                     event.type === 'fuel' ? 'bg-amber-500' : 
                                     event.type === 'service' ? 'bg-indigo-500' : 'bg-slate-400'
