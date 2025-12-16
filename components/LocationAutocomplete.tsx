@@ -1,102 +1,128 @@
-// components/LocationAutocomplete.tsx
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Loader2 } from 'lucide-react' // Vagy a te ikonjaid
+import { MapPin, Loader2 } from 'lucide-react'
 
-interface Props {
+interface LocationAutocompleteProps {
   label: string
   namePrefix: string
   placeholder: string
-  onSelect: (lat: number, lng: number, placeName: string) => void
   required?: boolean
+  onSelect: (lat: number, lng: number, placeName: string) => void
 }
 
-export default function LocationAutocomplete({ label, namePrefix, placeholder, onSelect, required }: Props) {
+export default function LocationAutocomplete({
+  label,
+  namePrefix,
+  placeholder,
+  required,
+  onSelect,
+}: LocationAutocompleteProps) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<any[]>([])
+  const [suggestions, setSuggestions] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false) // Ez a kulcs a hibádhoz!
   const wrapperRef = useRef<HTMLDivElement>(null)
 
-  // Keresés debounce-al
+  // Keresés debounce-al (hogy ne minden leütésre keressen azonnal)
   useEffect(() => {
     const timer = setTimeout(async () => {
-      if (query.length > 2) {
+      if (query.length > 2 && isOpen) { // Csak akkor keresünk, ha NYITVA van (tehát gépelünk)
         setLoading(true)
         try {
           const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+          if (!token) return
+
           const res = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&types=place,address&language=hu&country=hu`
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+              query
+            )}.json?access_token=${token}&autocomplete=true&types=place,address,poi&country=hu`
           )
           const data = await res.json()
-          setResults(data.features || [])
-          setIsOpen(true)
+          setSuggestions(data.features || [])
         } catch (error) {
-          console.error('Geocoding error:', error)
+          console.error('Keresési hiba:', error)
+          setSuggestions([])
         } finally {
           setLoading(false)
         }
-      } else {
-        setResults([])
-        setIsOpen(false)
+      } else if (query.length <= 2) {
+        setSuggestions([])
       }
-    }, 500) // 500ms várakozás gépelés után
+    }, 300) // 300ms késleltetés
 
     return () => clearTimeout(timer)
-  }, [query])
+  }, [query, isOpen])
 
-  // Klikk kívülre bezárja a listát
+  // Kattintás kezelése a listán kívül (hogy bezáródjon, ha mellé kattintasz)
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleSelect = (feature: any) => {
-    const [lng, lat] = feature.center
-    const name = feature.place_name
-    setQuery(name)
+  const handleSelect = (place: any) => {
+    // 1. Beírjuk a teljes nevet
+    setQuery(place.place_name)
+    
+    // 2. FONTOS: Azonnal bezárjuk a listát és töröljük a javaslatokat
     setIsOpen(false)
-    onSelect(lat, lng, name)
+    setSuggestions([])
+
+    // 3. Visszaadjuk az adatokat a szülőnek
+    const [lng, lat] = place.center
+    onSelect(lat, lng, place.place_name)
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value)
+    setIsOpen(true) // Ha gépel, nyissa ki újra
   }
 
   return (
-    <div className="space-y-1 relative" ref={wrapperRef}>
-      <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">{label}</label>
-      
+    <div className="relative" ref={wrapperRef}>
+      {/* Rejtett inputok, hogy a form data működjön (Next.js Server Actions-höz) */}
       <input type="hidden" name={`${namePrefix}_location`} value={query} />
-      <input type="hidden" id={`${namePrefix}_lat_input`} name={`${namePrefix}_lat`} />
-      <input type="hidden" id={`${namePrefix}_lng_input`} name={`${namePrefix}_lng`} />
-
+      
+      {/* Látható input */}
+      {label && <label className="block text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">{label}</label>}
       <div className="relative">
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleInputChange}
+          onFocus={() => {
+             if (query.length > 2) setIsOpen(true)
+          }}
           placeholder={placeholder}
           required={required}
-          className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm py-2 px-3 pl-9 shadow-sm focus:border-amber-500 focus:ring-amber-500 transition-colors"
+          className="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 pl-9 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
           autoComplete="off"
         />
-        <div className="absolute left-2.5 top-2.5 text-slate-400">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-        </div>
+        <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        
+        {loading && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+            </div>
+        )}
       </div>
 
-      {isOpen && results.length > 0 && (
-        <ul className="absolute z-50 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1">
-          {results.map((feature) => (
+      {/* Javaslatok Lista */}
+      {isOpen && suggestions.length > 0 && (
+        <ul className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+          {suggestions.map((place) => (
             <li
-              key={feature.id}
-              onClick={() => handleSelect(feature)}
-              className="px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer text-sm text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700 last:border-0"
+              key={place.id}
+              onClick={() => handleSelect(place)}
+              className="px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer border-b border-slate-100 dark:border-slate-700/50 last:border-0 flex items-start gap-2 group transition-colors"
             >
-              {feature.place_name}
+              <MapPin className="w-4 h-4 text-slate-400 mt-0.5 group-hover:text-blue-500 transition-colors shrink-0" />
+              <span className="text-slate-700 dark:text-slate-200">{place.place_name}</span>
             </li>
           ))}
         </ul>
