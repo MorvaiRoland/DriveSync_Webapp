@@ -50,7 +50,7 @@ ${JSON.stringify(eventsRes.data, null, 2)}
   try {
     const result = streamText({
       // ✅ STABIL, STREAMING-KOMPATIBILIS MODELL
-      model: google('gemini-1.5-flash'),
+      model: google('gemini-1.5-flash-001'),
 
       system: contextText,
       messages,
