@@ -44,7 +44,7 @@ ${JSON.stringify(eventsRes.data, null, 2)}
 
   try {
     const result = await generateText({
-      model: google('gemini-1.5-flash'), // ✅ NAGY KVÓTA
+      model: google('gemini-2.0-flash'), // ✅ NAGY KVÓTA
 
       system: contextText,
       messages,
