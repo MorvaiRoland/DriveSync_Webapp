@@ -1,19 +1,14 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Camera, X, Send, Sparkles, Image as ImageIcon, Bot, Wrench, BarChart3, Trash2, Minimize2, ChevronRight } from 'lucide-react'
+import { Camera, X, Send, Sparkles, Image as ImageIcon, Bot, Car, Wrench, BarChart3, Trash2, Minimize2, ChevronRight } from 'lucide-react'
 
 // --- TÍPUSOK ---
-// A Vercel AI SDK elvárja ezt a struktúrát a multimodalitáshoz
-type MessagePart = 
-  | { type: 'text'; text: string }
-  | { type: 'image'; image: string }; // Base64 data URL
-
 type Message = {
   id: string;
   role: 'user' | 'assistant';
-  content: string | MessagePart[]; // Lehet sima string vagy objektumok tömbje
-  attachment?: string; // Csak a UI megjelenítéshez tároljuk külön
+  content: string;
+  attachment?: string; 
 }
 
 // --- KÉP TÖMÖRÍTŐ SEGÉDFÜGGVÉNY ---
@@ -26,9 +21,8 @@ const compressImage = (file: File): Promise<string> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        // Kicsit lejjebb vesszük a felbontást a gyorsabb küldés érdekében (Llama Visionnek elég ez is)
-        const MAX_WIDTH = 800; 
-        const MAX_HEIGHT = 800;
+        const MAX_WIDTH = 1024;
+        const MAX_HEIGHT = 1024;
         let width = img.width;
         let height = img.height;
 
@@ -42,8 +36,7 @@ const compressImage = (file: File): Promise<string> => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        // JPEG tömörítés 0.6 minőségre
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
         resolve(dataUrl);
       };
       img.onerror = (err) => reject(err);
@@ -62,14 +55,14 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Automatikus görgetés az új üzeneteknél
+  // Automatikus görgetés
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, isThinking, isOpen, selectedImage])
 
-  // Fájl kiválasztása és tömörítése
+  // Fájlkezelés
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -80,67 +73,53 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
       try {
         const compressedBase64 = await compressImage(file);
         setSelectedImage(compressedBase64);
-        // Reset input value so same file can be selected again if needed
-        e.target.value = ''; 
       } catch (error) {
-        console.error("Hiba a képfeldolgozásban:", error);
+        console.error("Hiba:", error);
       }
     }
   };
 
   // Üzenet küldése
-  const sendMessage = async (contentInput: string) => {
+  const sendMessage = async (content: string) => {
     if (!isPro) return;
-    if (!contentInput.trim() && !selectedImage) return
+    if (!content.trim() && !selectedImage) return
 
-    const currentImage = selectedImage;
-    const currentText = contentInput.trim();
-
-    // 1. UI frissítése azonnal (Optimistic UI)
     const userMsg: Message = { 
       id: Date.now().toString(), 
       role: 'user', 
-      content: currentText, // A UI-on sima szövegként jelenítjük meg
-      attachment: currentImage || undefined
+      content,
+      attachment: selectedImage || undefined
     }
     
     setMessages(prev => [...prev, userMsg])
     setIsThinking(true)
     setInputValue('')
-    setSelectedImage(null)
+    
+    const imageToSend = selectedImage;
+    setSelectedImage(null);
 
     try {
-      // 2. Adatok előkészítése a Backend számára
-      // A teljes előzményt elküldjük, de az utolsó üzenetet speciálisan formázzuk a kép miatt
-      const messagesPayload = messages.map(m => ({
-        role: m.role,
-        content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) 
-      }));
-
-      // Az aktuális üzenet összeállítása (Multimodal struktúra)
-      const currentPayloadContent: MessagePart[] = [];
-      if (currentText) {
-        currentPayloadContent.push({ type: 'text', text: currentText });
-      }
-      if (currentImage) {
-        currentPayloadContent.push({ type: 'image', image: currentImage }); // Base64 Data URL megy fel
-      }
-
-      const payload = [
-        ...messagesPayload,
-        { role: 'user', content: currentPayloadContent }
-      ];
-
-      // 3. API hívás
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: payload }),
+        body: JSON.stringify({
+          messages: [...messages, userMsg].map(m => {
+             if (m.id === userMsg.id && imageToSend) {
+                return {
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: m.content },
+                        { type: 'image', image: imageToSend }
+                    ]
+                };
+             }
+             return { role: m.role, content: m.content };
+          })
+        }),
       })
 
-      if (!response.ok) throw new Error('Hiba a szerver válaszában')
+      if (!response.ok) throw new Error('Hiba a válaszban')
       
-      // 4. Stream olvasása
       const aiMsgId = (Date.now() + 1).toString()
       setMessages(prev => [...prev, { id: aiMsgId, role: 'assistant', content: '' }])
 
@@ -165,8 +144,7 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
         })
       }
     } catch (error) {
-      console.error(error);
-      setMessages(prev => [...prev, { id: 'err', role: 'assistant', content: 'Sajnálom, hiba történt a kommunikációban. Próbáld újra.' }])
+      setMessages(prev => [...prev, { id: 'err', role: 'assistant', content: 'Hiba történt a kommunikációban.' }])
     } finally {
       setIsThinking(false)
     }
@@ -177,16 +155,11 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
     sendMessage(inputValue)
   }
 
-  // Helper a tartalom megjelenítéséhez (ha véletlenül objektum lenne a content a historyban)
-  const renderContent = (content: string | MessagePart[]) => {
-    if (typeof content === 'string') return content;
-    // Ha objektum (ritka a UI state-ben, de biztos ami biztos), csak a szöveges részt írjuk ki
-    return content.filter(c => c.type === 'text').map(c => c.text).join(' ');
-  };
-
+  // --- JAVASLATOK A KEZDŐKÉPERNYŐHÖZ ---
   const suggestions = [
     { icon: <Wrench className="w-4 h-4 text-amber-500" />, text: "Mit jelent a P0300 hibakód?", category: "Hiba" },
-    { icon: <BarChart3 className="w-4 h-4 text-emerald-500" />, text: "Hogyan csökkenthetem a fogyasztást?", category: "Tipp" },
+    { icon: <BarChart3 className="w-4 h-4 text-emerald-500" />, text: "Mennyit költöttem idén tankolásra?", category: "Garázs" },
+    { icon: <Car className="w-4 h-4 text-blue-500" />, text: "Mikor volt utoljára szervizelve az Audi?", category: "Garázs" },
     { icon: <ImageIcon className="w-4 h-4 text-purple-500" />, text: "Feltöltök egy képet a műszerfalról", category: "Fotó", action: () => fileInputRef.current?.click() },
   ];
 
@@ -211,7 +184,7 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
 
       {/* --- CHAT ABLAK --- */}
       {isOpen && (
-        <div className="fixed inset-0 z-[100] md:inset-auto md:bottom-6 md:right-6 md:w-[450px] md:h-[750px] flex flex-col shadow-2xl overflow-hidden bg-slate-50 dark:bg-slate-900 md:rounded-[2rem] border-0 md:border md:border-slate-200/50 dark:md:border-slate-700/50 animate-in slide-in-from-bottom-10 fade-in duration-300 font-sans">
+        <div className="fixed inset-0 z-[100] md:inset-auto md:bottom-6 md:right-6 md:w-[450px] md:h-[750px] flex flex-col shadow-2xl overflow-hidden bg-slate-50 dark:bg-slate-900 md:rounded-[2rem] border-0 md:border md:border-slate-200/50 dark:md:border-slate-700/50 animate-in slide-in-from-bottom-10 fade-in duration-300">
           
           {/* 1. FEJLÉC */}
           <div className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 p-0.5 shrink-0">
@@ -226,7 +199,7 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
                    <div>
                       <h3 className="text-white font-bold text-base leading-tight">AI Szerelő</h3>
                       <p className="text-indigo-100/80 text-xs font-medium flex items-center gap-1">
-                         <Sparkles className="w-3 h-3" /> Groq Vision Engine
+                         <Sparkles className="w-3 h-3" /> Saját flotta hozzáféréssel
                       </p>
                    </div>
                 </div>
@@ -250,19 +223,21 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
           {/* 2. ÜZENETEK LISTÁJA */}
           <div className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth bg-[#f8fafc] dark:bg-[#0f172a]" ref={scrollRef}>
              
-             {/* START KÉPERNYŐ */}
+             {/* --- START KÉPERNYŐ (HA NINCS ÜZENET) --- */}
              {messages.length === 0 && (
                 <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                   
                    <div className="flex-1 flex flex-col items-center justify-center text-center mt-4">
                       <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-white dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-lg flex items-center justify-center mb-6 rotate-3 border border-indigo-50 dark:border-slate-600">
                          <Bot className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
                       </div>
-                      <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Szia! Miben segíthetek?</h2>
+                      <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Miben segíthetek?</h2>
                       <p className="text-sm text-slate-500 dark:text-slate-400 max-w-[280px] leading-relaxed">
-                         Küldj fotót a problémáról, vagy kérdezz a karbantartásról.
+                         Ismerem a garázsodban lévő autókat, szervizeket és költségeket. De diagnosztikában is profi vagyok.
                       </p>
                    </div>
 
+                   {/* Javaslatok kategóriák szerint */}
                    <div className="mt-auto space-y-2 pb-2">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Javasolt kérdések</p>
                       <div className="grid gap-2">
@@ -291,12 +266,12 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
                 <div key={index} className={`flex w-full ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
                    <div className={`flex max-w-[85%] flex-col gap-1 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                       {m.attachment && (
-                         <div className="mb-1 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-700 shadow-sm w-48 bg-slate-100">
+                         <div className="mb-1 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-700 shadow-sm w-48">
                             <img src={m.attachment} alt="Feltöltés" className="w-full h-auto object-cover" />
                          </div>
                       )}
                       <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm relative ${m.role === 'user' ? 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-none'}`}>
-                         <div className="whitespace-pre-wrap">{renderContent(m.content)}</div>
+                         <div className="whitespace-pre-wrap">{m.content}</div>
                       </div>
                    </div>
                 </div>
@@ -324,7 +299,7 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
                       </div>
                       <div className="flex-1 min-w-0">
                          <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">Kép csatolva</p>
-                         <p className="text-[10px] text-slate-500">Llama Vision elemzésre kész</p>
+                         <p className="text-[10px] text-slate-500">Kész a küldésre</p>
                       </div>
                       <button onClick={() => setSelectedImage(null)} className="p-1.5 hover:bg-red-100 text-slate-400 hover:text-red-500 rounded-lg transition-colors">
                          <Trash2 className="w-4 h-4" />
@@ -334,8 +309,8 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
 
                 <form onSubmit={handleSubmit} className="flex items-end gap-2">
                    <input type="file" accept="image/*" capture="environment" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
-                   <button type="button" onClick={() => fileInputRef.current?.click()} className={`h-11 w-11 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors flex-shrink-0 ${selectedImage ? 'text-indigo-600 bg-indigo-50 ring-2 ring-indigo-500/20' : ''}`}>
-                      {selectedImage ? <ImageIcon className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
+                   <button type="button" onClick={() => fileInputRef.current?.click()} className="h-11 w-11 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-colors flex-shrink-0">
+                      {selectedImage ? <ImageIcon className="w-5 h-5 text-indigo-500" /> : <Camera className="w-5 h-5" />}
                    </button>
                    <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center border border-transparent focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
                       <input className="w-full bg-transparent px-4 py-3 text-sm focus:outline-none text-slate-900 dark:text-white placeholder:text-slate-400" placeholder="Írj üzenetet..." value={inputValue} onChange={(e) => setInputValue(e.target.value)} disabled={isThinking} />
