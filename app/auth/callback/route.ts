@@ -1,6 +1,5 @@
-// app/auth/callback/route.ts
+import { createClient } from 'supabase/server' // Vagy ahol a server cliented van
 import { NextResponse } from 'next/server'
-import { createClient } from '@/supabase/server'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -12,17 +11,21 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
-      // Siker! Irány a jelszócsere oldal
-      // Biztosítjuk, hogy a www.dynamicsense.hu-ra menjen
-      const targetBase = origin.includes('localhost') ? origin : 'https://dynamicsense.hu'
-      return NextResponse.redirect(`${targetBase}${next}`)
-    } else {
-        console.error('Auth error:', error)
+      // Ha sikeres a csere, a felhasználó be van lépve.
+      // Továbbítjuk a 'next' paraméterre (esetedben: /update-password)
+      const forwardedHost = request.headers.get('x-forwarded-host') // Load balancer támogatás
+      const isLocalEnv = process.env.NODE_ENV === 'development'
+      
+      if (isLocalEnv) {
+        return NextResponse.redirect(`${origin}${next}`)
+      } else if (forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${next}`)
+      } else {
+        return NextResponse.redirect(`${origin}${next}`)
+      }
     }
   }
 
-  // Ha hiba van, akkor is engedjük rá a jelszócsere oldalra, de üzenettel
-  // Ez azért fontos, mert néha a session létrejön, csak a kód beváltás dob hibát
-  // De a legbiztosabb, ha újra kérjük a folyamatot
-  return NextResponse.redirect(`${origin}/login?message=A biztonsági kód lejárt. Kérlek, kezd újra a folyamatot.`)
+  // Ha hiba volt, visszaküldjük a login oldalra hibaüzenettel
+  return NextResponse.redirect(`${origin}/login?message=Lejárt vagy érvénytelen link`)
 }
