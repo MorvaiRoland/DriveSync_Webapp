@@ -7,7 +7,7 @@ export const maxDuration = 30;
 // Groq kliens konfigurálása
 const groq = createOpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
-  apiKey: process.env.GROQ_API_KEY, // Győződj meg róla, hogy ez be van állítva az .env fájlban
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 export async function POST(req: Request) {
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 });
 
-  // Adatok lekérése a kontextushoz
+  // --- ADATOK LEKÉRÉSE ---
   const [carsRes, eventsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('user_id', user.id),
     supabase
@@ -38,26 +38,46 @@ export async function POST(req: Request) {
   const cars = carsRes.data || [];
   const events = eventsRes.data || [];
 
-  // Rendszer üzenet (System Prompt)
+  // --- RENDSZER ÜZENET MEGERŐSÍTÉSE ---
   const contextText = `
-    TE VAGY A DRIVESYNC AI SZERELŐ.
+    TE EGY PROFI MAGYAR AUTÓSZERELŐ MESTERSÉGES INTELLIGENCIA VAGY (DRIVESYNC AI).
     
-    A felhasználó autói: ${JSON.stringify(cars)}
-    Szerviznapló: ${JSON.stringify(events)}
+    FELADATOD:
+    Segíteni a felhasználónak az autóival kapcsolatos problémákban, hibakódokban és karbantartásban.
     
-    KÉPESSÉGEK:
-    - Képes vagy elemezni a felhasználó által feltöltött képeket (pl. műszerfal hibajelzések, motortér, sérülések).
-    - Ha képet kapsz, elemezd a látható problémát, és adj tanácsot.
-    - Ha hibakódot látsz, magyarázd el.
+    A FELHASZNÁLÓ AUTÓI: ${JSON.stringify(cars)}
+    SZERVIZNAPLÓ: ${JSON.stringify(events)}
     
-    Válaszolj magyarul, szakmailag, de érthetően.
+    FONTOS SZABÁLYOK:
+    1. MINDIG ÉS KIZÁRÓLAG MAGYAR NYELVEN VÁLASZOLJ! (Speak only in Hungarian).
+    2. Ha képet kapsz, elemezd részletesen a látott hibát vagy alkatrészt.
+    3. Légy tömör, szakmai, de segítőkész.
   `;
 
-  // A Groq Llama 3.2 Vision modelljét használjuk
+  // --- ÜZENETEK TISZTÍTÁSA (CRITICAL FIX) ---
+  // A Groq Vision modellek gyakran "kiakadnak", ha a history-ban base64 kép van.
+  // Ezért csak az UTOLSÓ üzenetben hagyjuk meg a képet, a régiekből kivesszük.
+  const processedMessages = messages.map((m: any, index: number) => {
+    // Ha nem az utolsó üzenet, és tömb a tartalma (tehát van benne kép)...
+    if (index !== messages.length - 1 && Array.isArray(m.content)) {
+      return {
+        ...m,
+        // ...akkor csak a szöveges részt tartjuk meg
+        content: m.content
+          .filter((c: any) => c.type === 'text')
+          .map((c: any) => c.text)
+          .join('\n')
+      };
+    }
+    return m;
+  });
+
+  // --- HÍVÁS ---
   const result = streamText({
-    model: groq('meta-llama/llama-4-scout-17b-16e-instruct'), // Ez a modell támogatja a képeket (Vision)
+    // A logjaid alapján ez a helyes, támogatott Vision modell most:
+    model: groq('meta-llama/llama-4-scout-17b-16e-instruct'), 
     system: contextText,
-    messages, 
+    messages: processedMessages, // A tisztított listát küldjük
   });
 
   return result.toTextStreamResponse();
