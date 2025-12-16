@@ -1,4 +1,3 @@
-// app/marketplace/sell/[id]/SalesForm.tsx
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
@@ -8,8 +7,9 @@ import {
 } from 'lucide-react'
 import { publishListing } from './actions'
 import { useRouter } from 'next/navigation'
+import { createBrowserClient } from '@supabase/ssr' // FONTOS: Ez kell a feltöltéshez!
 
-// --- KONFIGURÁCIÓ: EXTRÁK LISTÁJA (Változatlan) ---
+// --- KONFIGURÁCIÓ: EXTRÁK LISTÁJA ---
 const CAR_FEATURES = {
     "Biztonság": ["ABS (blokkolásgátló)", "ESP (menetstabilizátor)", "ASR (kipörgésgátló)", "ISOFIX rendszer", "Vezetőoldali légzsák", "Utasoldali légzsák", "Oldallégzsák", "Függönylégzsák", "Térdlégzsák", "Guminyomás-ellenőrző", "Sávtartó rendszer", "Holttér-figyelő", "Táblafelismerő"],
     "Kényelem": ["Automata klíma", "Digitális klíma", "Manuális klíma", "Tempomat", "Adaptív tempomat", "Ülésfűtés", "Üléshűtés/szellőztetés", "Masszírozós ülés", "Elektromos ablak elöl", "Elektromos ablak hátul", "Elektromos tükör", "Fűthető tükör", "Elektromos ülésállítás", "Memóriás vezetőülés", "Bőr belső", "Multikormány", "Keyless Go (kulcsnélküli indítás)"],
@@ -31,16 +31,19 @@ export default function SalesForm({ car }: { car: any }) {
     
     // BEÁLLÍTÁSOK STATE
     const [isPublic, setIsPublic] = useState(car.is_listed_on_marketplace || false)
-    const [hideServiceCosts, setHideServiceCosts] = useState(car.hide_service_costs || false) // ÚJ!
-    const [hidePrices, setHidePrices] = useState(car.hide_prices || false) // Opcionális: Ár rejtése
+    const [hideServiceCosts, setHideServiceCosts] = useState(car.hide_service_costs || false)
+    const [hidePrices, setHidePrices] = useState(car.hide_prices || false)
 
-    // Extrák State (Tömb)
+    // Extrák State
     const [selectedFeatures, setSelectedFeatures] = useState<string[]>(car.features || [])
     const [featureSearch, setFeatureSearch] = useState('')
 
     // Kép State
     const [selectedImages, setSelectedImages] = useState<File[]>([])
     const [previews, setPreviews] = useState<string[]>([])
+    
+    // Feltöltés státusz jelző
+    const [uploadStatus, setUploadStatus] = useState<string | null>(null)
 
     // --- FÜGGVÉNYEK ---
 
@@ -52,52 +55,119 @@ export default function SalesForm({ car }: { car: any }) {
         )
     }
 
+    // Új képek hozzáadása a listához
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const files = Array.from(e.target.files)
+            
+            // Hozzáadjuk a meglévőkhöz
             setSelectedImages(prev => [...prev, ...files])
+            
+            // Létrehozzuk az előnézeti képeket
             const newPreviews = files.map(file => URL.createObjectURL(file))
             setPreviews(prev => [...prev, ...newPreviews])
+            
+            // Input mező törlése, hogy ugyanazt a fájlt újra ki lehessen választani ha kell
+            if (fileInputRef.current) fileInputRef.current.value = ''
         }
     }
 
+    // Kép törlése a listából (Mielőtt feltöltenénk)
     const removeImage = (index: number) => {
+        // Memória felszabadítása
         URL.revokeObjectURL(previews[index])
+        
+        // Eltávolítás a state-ből
         setPreviews(prev => prev.filter((_, i) => i !== index))
         setSelectedImages(prev => prev.filter((_, i) => i !== index))
     }
 
+    // --- A FŐ LOGIKA: FELTÖLTÉS ÉS MENTÉS ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        
+        // 1. Státusz beállítása
+        setUploadStatus('Képek előkészítése...')
+        
+        // Supabase kliens inicializálása (Kliens oldali)
+        const supabase = createBrowserClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
+
+        const uploadedUrls: string[] = []
+        const BUCKET_NAME = 'car-images'
+
+        // 2. Képek feltöltése egyesével (ha van kiválasztva)
+        if (selectedImages.length > 0) {
+            for (let i = 0; i < selectedImages.length; i++) {
+                const file = selectedImages[i]
+                setUploadStatus(`Kép feltöltése (${i + 1} / ${selectedImages.length})...`)
+
+                // Fájlnév generálás: carID / timestamp-index.kiterjesztés
+                const fileExt = file.name.split('.').pop()
+                const cleanName = file.name.replace(/[^a-zA-Z0-9]/g, '')
+                const fileName = `${car.id}/${Date.now()}-${i}.${fileExt}`
+
+                // Feltöltés Supabase Storage-ba
+                const { error: uploadError } = await supabase.storage
+                    .from(BUCKET_NAME)
+                    .upload(fileName, file)
+
+                if (uploadError) {
+                    console.error('Hiba a feltöltésnél:', uploadError)
+                    alert(`Hiba a(z) ${file.name} feltöltésekor.`)
+                    continue // Ha egy kép nem sikerül, a többit még megpróbáljuk
+                }
+
+                // Publikus URL lekérése
+                const { data: { publicUrl } } = supabase.storage
+                    .from(BUCKET_NAME)
+                    .getPublicUrl(fileName)
+                
+                uploadedUrls.push(publicUrl)
+            }
+        }
+
+        // 3. Adatok elküldése a szervernek (Actions)
+        setUploadStatus('Adatok mentése...')
+
         const formData = new FormData()
         
+        // Szöveges adatok
         formData.append('car_id', car.id)
         formData.append('price', price.toString())
         formData.append('description', description)
         formData.append('contact_phone', phone)
         formData.append('location', location)
         
-        // Extrák küldése JSON stringként
+        // Extrák JSON-ben
         formData.append('features', JSON.stringify(selectedFeatures))
 
-        // Beállítások küldése
+        // Kapcsolók
         if (isPublic) formData.append('is_public', 'on')
-        if (hideServiceCosts) formData.append('hide_service_costs', 'on') // ÚJ!
+        if (hideServiceCosts) formData.append('hide_service_costs', 'on')
         if (hidePrices) formData.append('hide_prices', 'on')
 
-        selectedImages.forEach((file) => {
-            formData.append('images', file)
-        })
+        // FONTOS: Nem a fájlokat küldjük, hanem a kész URL-eket!
+        if (uploadedUrls.length > 0) {
+            formData.append('uploaded_image_urls', JSON.stringify(uploadedUrls))
+        }
 
+        // 4. Server Action hívása
         startTransition(async () => {
-            await publishListing(formData) 
+            await publishListing(formData)
+            setUploadStatus(null)
         })
     }
+
+    // Segédfüggvény: van-e aktív folyamat?
+    const isProcessing = isPending || uploadStatus !== null
 
     return (
         <form onSubmit={handleSubmit} className="space-y-12">
             
-            {/* 1. SZEKCIÓ: ÁR ÉS ALAPADATOK (Változatlan) */}
+            {/* 1. SZEKCIÓ: ÁR ÉS ALAPADATOK */}
             <div className="space-y-6">
                 <div className="space-y-3">
                     <label className="text-xs font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2">
@@ -144,7 +214,7 @@ export default function SalesForm({ car }: { car: any }) {
                 </div>
             </div>
 
-            {/* 2. SZEKCIÓ: FELSZERELTSÉG (Változatlan, csak rövidítve itt a példában) */}
+            {/* 2. SZEKCIÓ: FELSZERELTSÉG */}
             <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -161,7 +231,7 @@ export default function SalesForm({ car }: { car: any }) {
                         />
                     </div>
                 </div>
-                {/* ... (Az extrák listázása ugyanaz marad, mint az előző válaszban) ... */}
+                
                 <div className="space-y-8">
                     {Object.entries(CAR_FEATURES).map(([category, items]) => {
                         const filteredItems = items.filter(i => i.toLowerCase().includes(featureSearch.toLowerCase()));
@@ -186,7 +256,7 @@ export default function SalesForm({ car }: { car: any }) {
                 </div>
             </div>
 
-            {/* 3. SZEKCIÓ: LEÍRÁS ÉS KÉPEK (Változatlan) */}
+            {/* 3. SZEKCIÓ: LEÍRÁS ÉS KÉPEK */}
             <div className="space-y-6 pt-8 border-t border-slate-100 dark:border-slate-800">
                 <div className="space-y-3">
                     <label className="text-xs font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2">
@@ -200,26 +270,41 @@ export default function SalesForm({ car }: { car: any }) {
                         className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-base text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all resize-none leading-relaxed"
                     ></textarea>
                 </div>
-                {/* ... (Képfeltöltés logika ugyanaz) ... */}
+
+                {/* KÉPFELTÖLTÉS RÉSZ */}
                 <div className="space-y-3 pt-4">
                     <label className="text-xs font-bold uppercase text-slate-400 tracking-wider flex items-center gap-2"><UploadCloud className="w-4 h-4" /> További Fotók</label>
                     <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        
+                        {/* Előnézeti képek */}
                         {previews.map((src, idx) => (
                             <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group border border-slate-200 dark:border-slate-700">
                                 <img src={src} alt="Preview" className="w-full h-full object-cover" />
-                                <button type="button" onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"><X className="w-3 h-3" /></button>
+                                
+                                {/* TÖRLÉS GOMB - ITT TÖRTÉNIK A VARÁZSLAT */}
+                                <button 
+                                    type="button" 
+                                    onClick={() => removeImage(idx)} 
+                                    className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 z-10"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
                             </div>
                         ))}
+                        
+                        {/* Hozzáadás gomb */}
                         <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-amber-500/50 hover:bg-amber-50 dark:hover:bg-amber-900/10 flex flex-col items-center justify-center text-slate-400 transition-all group">
                             <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-2 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/30 transition-colors"><Plus className="w-5 h-5 group-hover:text-amber-500" /></div>
                             <span className="text-xs font-bold">Kép csatolása</span>
                         </button>
                     </div>
+                    
+                    {/* Rejtett input */}
                     <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageChange} />
                 </div>
             </div>
 
-            {/* 4. SZEKCIÓ: ADATVÉDELEM ÉS PUBLIKÁLÁS (ÚJ RÉSZ) */}
+            {/* 4. SZEKCIÓ: ADATVÉDELEM ÉS PUBLIKÁLÁS */}
             <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6">
                 
                 {/* Adatvédelmi Kapcsolók */}
@@ -244,7 +329,7 @@ export default function SalesForm({ car }: { car: any }) {
                         </div>
                     </div>
 
-                    {/* Eladási Ár Rejtése (Opcionális) */}
+                    {/* Eladási Ár Rejtése */}
                     <div 
                         className={`cursor-pointer p-4 rounded-xl border transition-all flex items-center justify-between ${hidePrices ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800'}`}
                         onClick={() => setHidePrices(!hidePrices)}
@@ -283,11 +368,12 @@ export default function SalesForm({ car }: { car: any }) {
 
                 <button 
                     type="submit" 
-                    disabled={isPending}
+                    disabled={isProcessing}
                     className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-lg font-black py-5 rounded-2xl shadow-xl shadow-orange-500/20 transform hover:-translate-y-1 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                 >
-                    {isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
-                    {isPublic ? 'Hirdetés Publikálása' : 'Mentés Piszkozatként'}
+                    {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
+                    {/* Itt jelenik meg a státusz szöveg (pl. Kép feltöltése...) */}
+                    {uploadStatus ? uploadStatus : (isPublic ? 'Hirdetés Publikálása' : 'Mentés Piszkozatként')}
                 </button>
             </div>
         </form>
