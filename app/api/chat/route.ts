@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 });
 
-  // Adatok lekérése (változatlan)
+  // Adatok lekérése
   const [carsRes, eventsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('user_id', user.id),
     supabase.from('events').select('*, cars(make, model)').eq('user_id', user.id).order('event_date', { ascending: false }).limit(30)
@@ -32,24 +32,42 @@ export async function POST(req: Request) {
 
   try {
       const result = streamText({
-        model: google('gemini-2.5-flash'), // Válts vissza 1.5-flash-re, az stabilabb ingyen!
+        // JAVÍTÁS: A stabil 1.5-ös modellt használjuk a túlterhelt 2.5 helyett
+        // Ez sokkal megbízhatóbb production környezetben.
+        model: google('gemini-1.5-flash'), 
+        
         system: contextText,
         messages,
         onFinish: async ({ usage }) => {
-            // ... (használat mentése, változatlan)
+             // Statisztika mentése (opcionális)
+             /* if (usage) {
+                await supabase.from('ai_usage').insert({
+                    user_id: user.id,
+                    prompt_tokens: usage.promptTokens,
+                    completion_tokens: usage.completionTokens,
+                    total_tokens: usage.totalTokens,
+                    model: 'gemini-1.5-flash'
+                });
+             }
+             */
         },
       });
 
       return result.toTextStreamResponse();
 
   } catch (error: any) {
-      console.error("AI Error:", error);
+      console.error("AI Error Detailed:", error);
       
-      // Ha Rate Limit hiba van (429), akkor szépen válaszoljunk
-      if (error.message?.includes('429') || error.status === 429) {
-          return new Response("A rendszer túlterhelt (Rate Limit). Kérlek várj egy percet!", { status: 429 });
+      // Túlterhelés (Overloaded) hiba kezelése (503)
+      if (error.message?.includes('overloaded') || error.status === 503) {
+          return new Response("A Google AI szerverei jelenleg túlterheltek. Kérlek próbáld újra 1-2 perc múlva!", { status: 503 });
       }
-      
+
+      // Rate Limit hiba (429)
+      if (error.message?.includes('429') || error.status === 429) {
+          return new Response("Túl sok kérés egyszerre. Kérlek várj egy kicsit!", { status: 429 });
+      }
+
       return new Response("Hiba történt az AI válasz generálása közben.", { status: 500 });
   }
 }
