@@ -1,16 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ArrowLeft, Loader2, Sparkles, ShieldCheck, Zap, XCircle, CreditCard } from 'lucide-react'
+import { Check, ArrowLeft, Loader2, Sparkles, ShieldCheck, Zap, XCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 
-// --- STRIPE PRICING ID-K ---
+// --- KONFIGURÁCIÓ: FIZETÉSI LINKEK ---
+const STRIPE_LINKS = {
+  // 7 napos Trial (Havi)
+  pro_monthly: 'https://buy.stripe.com/eVqcN7bkV9HW8r0eGWds400', 
+  // Limitált Lifetime (Örökös)
+  lifetime: 'https://buy.stripe.com/7sYfZj74FaM0cHggP4ds402'
+}
+
 const PRICES = {
-  monthly: 'price_1Sd8zXRbHGQdHUF4vMQbDKjt', 
+  // Az éves csomaghoz marad az API ID (vagy ide is tehetsz linket később)
   yearly: 'price_1Sd8zyRbHGQdHUF4mutCgwbV',  
-  lifetime: 'price_1Sd90LRbHGQdHUF4SWmp0rJM' 
 }
 
 interface PricingClientProps {
@@ -25,8 +31,23 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
 
   const isLifetimeUser = initialPlan === 'lifetime' || initialPlan === 'founder';
 
+  // --- FIZETÉSI LOGIKA ---
   const handleCheckout = async (priceId: string, mode: 'subscription' | 'payment') => {
     setLoadingId(priceId)
+    
+    // 1. ESET: Havi Pro csomag -> Direkt Link (Trial)
+    if (priceId === 'DIRECT_LINK_PRO_MONTHLY') {
+        window.location.href = STRIPE_LINKS.pro_monthly;
+        return;
+    }
+
+    // 2. ESET: Lifetime csomag -> Direkt Link (Limitált)
+    if (priceId === 'DIRECT_LINK_LIFETIME') {
+        window.location.href = STRIPE_LINKS.lifetime;
+        return;
+    }
+
+    // 3. ESET: Minden más (pl. Éves csomag, vagy ha később API-t akarsz)
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -40,8 +61,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
       console.error(error)
       alert("Hiba: " + error.message)
       if (error.message === 'Nincs bejelentkezve') router.push('/login')
-    } finally {
-      setLoadingId(null)
+      setLoadingId(null) // Csak hiba esetén vesszük le a töltést, különben redirect van
     }
   }
 
@@ -55,7 +75,6 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
     } catch (error: any) {
       console.error(error)
       alert('Hiba: ' + error.message)
-    } finally {
       setLoadingPortal(false)
     }
   }
@@ -182,15 +201,23 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
             buttonText={
                 isActive('pro') ? "Jelenlegi csomag" : 
                 isLifetimeUser ? "Örökös csomagod van 🚀" : 
-                "Kipróbálom"
+                (billingCycle === 'monthly' ? "7 napig ingyen, utána 1.490 Ft" : "Kipróbálom")
             }
             disabled={isActive('pro') || isLifetimeUser} 
             isCurrent={isActive('pro')}
-            isLoading={loadingId === (billingCycle === 'monthly' ? PRICES.monthly : PRICES.yearly)}
-            onClick={() => handleCheckout(billingCycle === 'monthly' ? PRICES.monthly : PRICES.yearly, 'subscription')}
+            // Loading state: Havi -> DIRECT LINK, Éves -> API
+            isLoading={loadingId === (billingCycle === 'monthly' ? 'DIRECT_LINK_PRO_MONTHLY' : PRICES.yearly)}
+            
+            // Klikk logika: Havi -> Link, Éves -> API
+            onClick={() => handleCheckout(
+                billingCycle === 'monthly' ? 'DIRECT_LINK_PRO_MONTHLY' : PRICES.yearly, 
+                'subscription'
+            )}
+            
             onManage={manageSubscription} 
             loadingManage={loadingPortal}
             delay={200}
+            trialNote={billingCycle === 'monthly' ? "Nincs kockázat, bármikor lemondható." : undefined}
           />
 
           {/* 3. LIFETIME CSOMAG (Örökös) */}
@@ -209,12 +236,19 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
             buttonText={isActive('lifetime') ? "Megvásárolva ✅" : "Megveszem örökre"}
             disabled={isActive('lifetime')}
             isCurrent={isActive('lifetime')}
-            isLoading={loadingId === PRICES.lifetime}
-            onClick={() => handleCheckout(PRICES.lifetime, 'payment')}
+            
+            // Itt most már a 'DIRECT_LINK_LIFETIME'-ot figyeljük
+            isLoading={loadingId === 'DIRECT_LINK_LIFETIME'}
+            
+            // Klikk logika: Direkt Link
+            onClick={() => handleCheckout('DIRECT_LINK_LIFETIME', 'payment')}
+            
             onManage={manageSubscription}
             loadingManage={loadingPortal}
             delay={300}
             specialBorder={true}
+            limited={true}
+            badge="EARLY BIRD - CSAK 100 DB!"
           />
         </div>
         
@@ -256,19 +290,23 @@ function PricingCard({
   delay, 
   specialBorder, 
   onManage, 
-  loadingManage 
+  loadingManage,
+  trialNote, // Új prop
+  limited,   // Új prop
+  badge      // Új prop
 }: any) {
   return (
     <div 
         className={`
           relative p-8 rounded-[2.5rem] flex flex-col h-full transition-all duration-500 animate-in fade-in slide-in-from-bottom-8 fill-mode-forwards group
           ${highlight 
-              ? 'bg-white dark:bg-slate-900 border-2 border-amber-500 shadow-2xl shadow-amber-500/10 md:-mt-8 md:mb-8 z-10 scale-100 hover:scale-[1.02]' 
-              : specialBorder
-                  ? 'bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-900/50 border border-indigo-200 dark:border-indigo-500/30 hover:border-indigo-400 dark:hover:border-indigo-500/50 shadow-xl'
-                  : 'bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 backdrop-blur-md shadow-lg'
+            ? 'bg-white dark:bg-slate-900 border-2 border-amber-500 shadow-2xl shadow-amber-500/10 md:-mt-8 md:mb-8 z-10 scale-100 hover:scale-[1.02]' 
+            : specialBorder
+                ? 'bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-900/50 border border-indigo-200 dark:border-indigo-500/30 hover:border-indigo-400 dark:hover:border-indigo-500/50 shadow-xl'
+                : 'bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 backdrop-blur-md shadow-lg'
           }
           ${isCurrent ? 'ring-2 ring-emerald-500 shadow-emerald-500/10' : ''}
+          ${limited ? 'border-amber-400/50 dark:border-amber-400/30' : ''} 
         `}
         style={{ animationDelay: `${delay}ms` }}
     >
@@ -279,7 +317,14 @@ function PricingCard({
         </div>
       )}
 
-      {specialBorder && !isCurrent && (
+      {/* Early Bird / Limited Badge */}
+      {limited && !isCurrent && badge && (
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-500 text-white px-4 py-1 rounded-full text-[10px] font-bold animate-pulse shadow-lg whitespace-nowrap z-20">
+          {badge}
+        </div>
+      )}
+
+      {specialBorder && !isCurrent && !limited && (
         <div className="absolute -top-3 right-8 bg-indigo-100 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide">
             Best Value
         </div>
@@ -320,6 +365,20 @@ function PricingCard({
         {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
         {buttonText}
       </button>
+
+      {/* Kisbetűs rész a Trialhoz */}
+      {trialNote && (
+        <p className="mt-[-10px] mb-4 text-xs text-center text-slate-500 dark:text-slate-400">
+          {trialNote}
+        </p>
+      )}
+
+      {/* Kisbetűs rész a Lifetime limithez */}
+      {limited && (
+        <p className="mt-[-10px] mb-4 text-xs text-center text-amber-600 dark:text-amber-500 font-bold">
+          Hamarosan lezárjuk ezt az ajánlatot!
+        </p>
+      )}
 
       {/* Lemondás/Kezelés gomb */}
       {isCurrent && onManage && (
