@@ -189,7 +189,7 @@ async function DashboardComponent() {
 
       {/* --- NAVBAR (LIQUID GLASS STYLE & Absolute FIX) --- */}
      
-      <nav className="absolute top-4 left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <nav className="fixed top-4 left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
            {/* ... a belső tartalom változatlan ... */}
            <div className="flex items-center gap-6"> 
@@ -239,7 +239,7 @@ async function DashboardComponent() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-24">
         
         {/* --- HERO HEADER --- */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
