@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Camera, X, Send, Sparkles, Image as ImageIcon, Bot, Car, Wrench, BarChart3, Trash2, Minimize2, ChevronRight } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 // --- TÍPUSOK ---
 type Message = {
@@ -123,6 +125,7 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
       const aiMsgId = (Date.now() + 1).toString()
       setMessages(prev => [...prev, { id: aiMsgId, role: 'assistant', content: '' }])
 
+      // Stream olvasása
       const reader = response.body!.getReader()
       const decoder = new TextDecoder()
       let done = false
@@ -144,7 +147,8 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
         })
       }
     } catch (error) {
-      setMessages(prev => [...prev, { id: 'err', role: 'assistant', content: 'Hiba történt a kommunikációban.' }])
+      console.error(error)
+      setMessages(prev => [...prev, { id: 'err-' + Date.now(), role: 'assistant', content: 'Hiba történt a kommunikációban.' }])
     } finally {
       setIsThinking(false)
     }
@@ -264,14 +268,44 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
 
              {messages.map((m, index) => (
                 <div key={index} className={`flex w-full ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 fade-in duration-300`}>
-                   <div className={`flex max-w-[85%] flex-col gap-1 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                   <div className={`flex max-w-[90%] flex-col gap-1 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                       {m.attachment && (
                          <div className="mb-1 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-700 shadow-sm w-48">
                             <img src={m.attachment} alt="Feltöltés" className="w-full h-auto object-cover" />
                          </div>
                       )}
                       <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm relative ${m.role === 'user' ? 'bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-none'}`}>
-                         <div className="whitespace-pre-wrap">{m.content}</div>
+                         {/* --- ITT A JAVÍTÁS: ReactMarkdown használata --- */}
+                         {m.role === 'assistant' ? (
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                // Táblázat formázás
+                                table: ({node, ...props}) => <div className="overflow-x-auto my-3 rounded-lg border border-slate-200 dark:border-slate-700"><table className="w-full text-left border-collapse" {...props} /></div>,
+                                thead: ({node, ...props}) => <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-700 dark:text-slate-200" {...props} />,
+                                th: ({node, ...props}) => <th className="p-3 border-b border-slate-200 dark:border-slate-700 font-bold text-xs uppercase tracking-wider whitespace-nowrap" {...props} />,
+                                td: ({node, ...props}) => <td className="p-3 border-b border-slate-100 dark:border-slate-700/50 text-sm whitespace-nowrap" {...props} />,
+                                
+                                // Lista formázás
+                                ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1 my-2 pl-2" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-1 my-2 pl-2" {...props} />,
+                                li: ({node, ...props}) => <li className="pl-1" {...props} />,
+                                
+                                // Szöveg formázás
+                                strong: ({node, ...props}) => <span className="font-bold text-indigo-600 dark:text-indigo-400" {...props} />,
+                                p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                                
+                                // Címsorok
+                                h1: ({node, ...props}) => <h1 className="text-xl font-bold mt-4 mb-2 border-b pb-1" {...props} />,
+                                h2: ({node, ...props}) => <h2 className="text-lg font-bold mt-3 mb-2" {...props} />,
+                                h3: ({node, ...props}) => <h3 className="text-base font-bold mt-2 mb-1 uppercase tracking-wide text-slate-500" {...props} />,
+                              }}
+                            >
+                              {m.content}
+                            </ReactMarkdown>
+                         ) : (
+                            <div className="whitespace-pre-wrap">{m.content}</div>
+                         )}
                       </div>
                    </div>
                 </div>
