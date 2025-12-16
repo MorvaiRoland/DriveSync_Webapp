@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       const result = streamText({
         // JAVÍTÁS: A stabil 1.5-ös modellt használjuk a túlterhelt 2.5 helyett
         // Ez sokkal megbízhatóbb production környezetben.
-        model: google('gemini-1.5-flash-latest'), 
+        model: google('gemini-1.5-pro-002'), 
         
         system: contextText,
         messages,
