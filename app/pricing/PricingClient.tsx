@@ -155,7 +155,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
                 >
                     Éves 
                     <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-700/50 px-1.5 py-0.5 rounded uppercase tracking-wide leading-none font-black">
-                        -20%
+                        -50%
                     </span>
                 </button>
             </div>
