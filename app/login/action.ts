@@ -27,7 +27,6 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
   const supabase = await createClient()
   
-  // Next.js 15 JAVÍTÁS: Külön változóba tesszük az awaitelt headert
   const requestHeaders = await headers()
   const origin = requestHeaders.get('origin')
   
@@ -54,7 +53,6 @@ export async function signup(formData: FormData) {
 export async function signInWithGoogle() {
   const supabase = await createClient()
   
-  // Next.js 15 JAVÍTÁS
   const requestHeaders = await headers()
   const origin = requestHeaders.get('origin')
 
@@ -80,7 +78,6 @@ export async function resetPassword(formData: FormData) {
   const supabase = await createClient()
   const email = formData.get('email') as string
   
-  // Next.js 15 JAVÍTÁS: Először await, aztán .get()
   const requestHeaders = await headers()
   const origin = requestHeaders.get('origin')
   
@@ -127,4 +124,11 @@ export async function updateNewPassword(formData: FormData) {
   }
 
   return redirect('/login?message=Jelszó sikeresen módosítva! Jelentkezz be.')
+}
+
+// --- 6. KIJELENTKEZÉS (EZ HIÁNYZOTT) ---
+export async function signOut() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  return redirect('/login')
 }
