@@ -123,26 +123,73 @@ export default function AiMechanic({ isPro = false }: { isPro?: boolean }) {
       const aiMsgId = (Date.now() + 1).toString()
       setMessages(prev => [...prev, { id: aiMsgId, role: 'assistant', content: '' }])
 
-      const reader = response.body!.getReader()
-      const decoder = new TextDecoder()
-      let done = false
-      let fullText = ''
+      const sendMessage = async (content: string) => {
+  if (!isPro) return
+  if (!content.trim() && !selectedImage) return
 
-      while (!done) {
-        const { value, done: doneReading } = await reader.read()
-        done = doneReading
-        const chunkValue = decoder.decode(value, { stream: true })
-        fullText += chunkValue
+  const userMsg: Message = {
+    id: Date.now().toString(),
+    role: 'user',
+    content,
+    attachment: selectedImage || undefined,
+  }
 
-        setMessages(prev => {
-          const newMsgs = [...prev]
-          const lastMsg = newMsgs[newMsgs.length - 1]
-          if (lastMsg.role === 'assistant') {
-            lastMsg.content = fullText
+  setMessages(prev => [...prev, userMsg])
+  setIsThinking(true)
+  setInputValue('')
+
+  const imageToSend = selectedImage
+  setSelectedImage(null)
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [...messages, userMsg].map(m => {
+          if (m.id === userMsg.id && imageToSend) {
+            return {
+              role: 'user',
+              content: [
+                { type: 'text', text: m.content },
+                { type: 'image', image: imageToSend },
+              ],
+            }
           }
-          return newMsgs
-        })
-      }
+          return { role: m.role, content: m.content }
+        }),
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error('API hiba')
+    }
+
+    const data = await response.json()
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.text,
+      },
+    ])
+  } catch (error) {
+    console.error(error)
+    setMessages(prev => [
+      ...prev,
+      {
+        id: 'err-' + Date.now(),
+        role: 'assistant',
+        content: 'Hiba történt a válasz lekérése közben.',
+      },
+    ])
+  } finally {
+    setIsThinking(false)
+  }
+}
+
     } catch (error) {
       setMessages(prev => [...prev, { id: 'err', role: 'assistant', content: 'Hiba történt a kommunikációban.' }])
     } finally {

@@ -1,5 +1,5 @@
 import { google } from '@ai-sdk/google';
-import { streamText } from 'ai';
+import { generateText } from 'ai';
 import { createClient } from 'supabase/server';
 
 export const maxDuration = 30;
@@ -21,13 +21,8 @@ export async function POST(req: Request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  // Adatok lekérése
   const [carsRes, eventsRes] = await Promise.all([
-    supabase
-      .from('cars')
-      .select('*')
-      .eq('user_id', user.id),
-
+    supabase.from('cars').select('*').eq('user_id', user.id),
     supabase
       .from('events')
       .select('*, cars(make, model)')
@@ -38,9 +33,9 @@ export async function POST(req: Request) {
 
   const contextText = `
 TE VAGY A DRIVESYNC AI SZERELŐ.
-A válaszaid legyenek szakmailag pontosak, érthetők és felhasználóbarátok.
+Adj pontos, szakmailag helyes, érthető válaszokat.
 
-A felhasználó autói:
+Felhasználó autói:
 ${JSON.stringify(carsRes.data, null, 2)}
 
 Szerviznapló:
@@ -48,51 +43,28 @@ ${JSON.stringify(eventsRes.data, null, 2)}
 `;
 
   try {
-    const result = streamText({
-      // ✅ STABIL, STREAMING-KOMPATIBILIS MODELL
-      model: google('gemini-1.5-flash-001'),
+    const result = await generateText({
+      model: google('gemini-1.5-flash'), // ✅ NAGY KVÓTA
 
       system: contextText,
       messages,
 
-      onFinish: async ({ usage }) => {
-        // opcionális statisztika
-        /*
-        if (usage) {
-          await supabase.from('ai_usage').insert({
-            user_id: user.id,
-            prompt_tokens: usage.promptTokens,
-            completion_tokens: usage.completionTokens,
-            total_tokens: usage.totalTokens,
-            model: 'gemini-1.5-flash',
-          });
-        }
-        */
-      },
+      maxOutputTokens: 1024,
+
+      temperature: 0.4,
     });
 
-    return result.toTextStreamResponse();
+    return Response.json({
+      text: result.text,
+    });
 
   } catch (error: any) {
-    console.error('AI Error Detailed:', error);
+    console.error('AI Error:', error);
 
-    if (error.status === 503 || error.message?.includes('overloaded')) {
-      return new Response(
-        'A Google AI szerverei jelenleg túlterheltek. Próbáld újra 1-2 perc múlva.',
-        { status: 503 }
-      );
+    if (error.status === 429) {
+      return new Response('Túl sok kérés – próbáld újra később.', { status: 429 });
     }
 
-    if (error.status === 429 || error.message?.includes('429')) {
-      return new Response(
-        'Túl sok kérés rövid időn belül. Kérlek várj egy kicsit.',
-        { status: 429 }
-      );
-    }
-
-    return new Response(
-      'Hiba történt az AI válasz generálása közben.',
-      { status: 500 }
-    );
+    return new Response('AI hiba', { status: 500 });
   }
 }
