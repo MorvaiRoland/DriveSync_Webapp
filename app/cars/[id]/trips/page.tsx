@@ -9,14 +9,16 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
   const params = await props.params
   const supabase = await createClient()
 
+  // Fetch car details
   const { data: car } = await supabase
-    .from('cars') // Ellenőrizd a tábla nevét (cars vagy marketplace_view)
+    .from('cars')
     .select('*')
     .eq('id', params.id)
     .single()
   
   if (!car) return notFound()
 
+  // Fetch trips for the car
   const { data: trips } = await supabase
     .from('trips')
     .select('*')
@@ -25,24 +27,24 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
 
   const safeTrips = trips || []
 
-  // Statisztika
+  // Calculate statistics
   const totalBusinessKm = safeTrips.filter(t => t.purpose === 'business').reduce((sum, t) => sum + t.distance, 0)
   const totalPersonalKm = safeTrips.filter(t => t.purpose === 'personal').reduce((sum, t) => sum + t.distance, 0)
   const totalKm = totalBusinessKm + totalPersonalKm
   const businessRatio = totalKm > 0 ? Math.round((totalBusinessKm / totalKm) * 100) : 0
 
-  // JAVÍTÁS: A mai dátumot itt generáljuk a szerveren, hogy konzisztens legyen
+  // Generate today's date on the server to prevent hydration errors on the client
   const today = new Date().toISOString().split('T')[0]
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-20 transition-colors duration-500 overflow-x-hidden">
       
-      {/* HÁTTÉR */}
+      {/* Background Effects */}
       <div className="fixed inset-0 pointer-events-none">
           <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-[120px]"></div>
       </div>
 
-      {/* HEADER */}
+      {/* Header Section */}
       <div className="relative pt-8 pb-12 px-4">
         <div className="max-w-4xl mx-auto text-center relative z-10">
             <Link href={`/cars/${car.id}`} className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-6 text-sm font-bold bg-white/50 dark:bg-slate-800/50 px-4 py-2 rounded-full backdrop-blur-sm border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -53,9 +55,14 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
                 Út<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-600">nyilvántartás</span>
             </h1>
             
-            {/* STATISZTIKA GRID */}
+            <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-1.5 rounded-full text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                {car.make} {car.model} ({car.plate})
+            </div>
+
+            {/* Statistics Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                {/* Üzleti */}
+                {/* Business Trips */}
                 <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-5 border border-white/40 dark:border-slate-700/50 shadow-lg">
                     <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
                         <Briefcase className="w-4 h-4" />
@@ -63,7 +70,7 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
                     </div>
                     <p className="text-2xl font-black text-blue-600 dark:text-blue-400">{totalBusinessKm} km</p>
                 </div>
-                {/* Magán */}
+                {/* Personal Trips */}
                 <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-5 border border-white/40 dark:border-slate-700/50 shadow-lg">
                     <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
                         <Home className="w-4 h-4" />
@@ -71,7 +78,7 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
                     </div>
                     <p className="text-2xl font-black text-purple-600 dark:text-purple-400">{totalPersonalKm} km</p>
                 </div>
-                {/* Arány */}
+                {/* Business Ratio */}
                 <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-5 border border-white/40 dark:border-slate-700/50 shadow-lg flex flex-col justify-center">
                     <div className="flex justify-between items-end mb-2">
                         <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">Céges Arány</p>
@@ -87,12 +94,12 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
 
       <div className="max-w-4xl mx-auto px-4 -mt-4 relative z-20 space-y-8">
          
-         {/* ÚJ ÚT RÖGZÍTÉSE - Átadjuk a 'today' propot! */}
+         {/* Trip Form - Pass carId and today's date */}
          <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-1 border border-white/20 dark:border-slate-700 overflow-hidden">
              <TripForm carId={car.id} defaultDate={today} />
          </div>
 
-         {/* LISTA */}
+         {/* Trip List */}
          <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-[2.5rem] border border-white/40 dark:border-slate-700/50 shadow-xl overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
@@ -129,7 +136,7 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
                             <form action={deleteTrip} className="self-end sm:self-center">
                                 <input type="hidden" name="trip_id" value={trip.id} />
                                 <input type="hidden" name="car_id" value={car.id} />
-                                <button className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                                <button className="p-2 text-slate-400 hover:text-red-500 transition-colors" title="Törlés">
                                     <Trash2 className="w-5 h-5" />
                                 </button>
                             </form>
