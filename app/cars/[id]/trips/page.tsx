@@ -1,7 +1,7 @@
-import { createClient } from '@/supabase/server'
+import { createClient } from 'supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { deleteTrip } from '../actions'
+import { deleteTrip } from '../actions' // Ellenőrizd az útvonalat!
 import TripForm from '@/components/TripForm'
 import { Map, Briefcase, Home, ArrowLeft, Trash2, Route } from 'lucide-react'
 
@@ -9,7 +9,11 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
   const params = await props.params
   const supabase = await createClient()
 
-  const { data: car } = await supabase.from('cars').select('*').eq('id', params.id).single()
+  const { data: car } = await supabase
+    .from('cars') // Vagy 'marketplace_view', attól függ hol vannak az adatok
+    .select('*')
+    .eq('id', params.id)
+    .single()
   
   if (!car) return notFound()
 
@@ -52,10 +56,9 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
                 {car.make} {car.model} ({car.plate})
             </div>
 
-            {/* STATISZTIKA KÁRTYÁK (LIQUID STYLE) */}
+            {/* STATISZTIKA KÁRTYÁK */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-5 border border-white/40 dark:border-slate-700/50 shadow-lg relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl -mr-6 -mt-6 group-hover:bg-blue-500/20 transition-colors"></div>
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
                             <Briefcase className="w-4 h-4" />
@@ -66,7 +69,6 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
                 </div>
 
                 <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-5 border border-white/40 dark:border-slate-700/50 shadow-lg relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full blur-2xl -mr-6 -mt-6 group-hover:bg-purple-500/20 transition-colors"></div>
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400">
                             <Home className="w-4 h-4" />
@@ -91,8 +93,9 @@ export default async function TripLoggerPage(props: { params: Promise<{ id: stri
 
       <div className="max-w-4xl mx-auto px-4 -mt-4 relative z-20 space-y-8">
          
-         {/* ÚJ ÚT RÖGZÍTÉSE (FORM KOMPONENS BEÁGYAZÁSA) */}
-         <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-1 border border-white/20 dark:border-slate-700 overflow-hidden">
+         {/* ÚJ ÚT RÖGZÍTÉSE - Itt van a TripForm, ami a hibát okozhatja */}
+         <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-1 border border-white/20 dark:border-slate-700 overflow-hidden min-h-[100px]">
+             {/* Átadjuk az adatokat propként, hátha kell neki */}
              <TripForm carId={car.id} />
          </div>
 
