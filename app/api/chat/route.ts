@@ -55,7 +55,7 @@ export async function POST(req: Request) {
 
   // A Groq Llama 3.2 Vision modelljét használjuk
   const result = streamText({
-    model: groq('llama-3.2-11b-vision-preview'), // Ez a modell támogatja a képeket (Vision)
+    model: groq('meta-llama/llama-4-scout-17b-16e-instruct'), // Ez a modell támogatja a képeket (Vision)
     system: contextText,
     messages, 
   });
