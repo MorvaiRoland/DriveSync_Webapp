@@ -1,16 +1,22 @@
-import { google } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
-import { createClient } from 'supabase/server'; // Vagy ahol a tied van
+import { createClient } from 'supabase/server';
 
 export const maxDuration = 30;
+
+// Groq kliens konfigurálása
+const groq = createOpenAI({
+  baseURL: 'https://api.groq.com/openai/v1',
+  apiKey: process.env.GROQ_API_KEY, // Győződj meg róla, hogy ez be van állítva az .env fájlban
+});
 
 export async function POST(req: Request) {
   let messages;
   try {
-     const json = await req.json();
-     messages = json.messages;
+    const json = await req.json();
+    messages = json.messages;
   } catch (e) {
-     return new Response('Invalid JSON', { status: 400 });
+    return new Response('Invalid JSON', { status: 400 });
   }
 
   const supabase = await createClient();
@@ -33,7 +39,6 @@ export async function POST(req: Request) {
   const events = eventsRes.data || [];
 
   // Rendszer üzenet (System Prompt)
-  // Fontos: Itt instruáljuk, hogy képes képeket is nézni.
   const contextText = `
     TE VAGY A DRIVESYNC AI SZERELŐ.
     
@@ -48,14 +53,11 @@ export async function POST(req: Request) {
     Válaszolj magyarul, szakmailag, de érthetően.
   `;
 
-  // A messages tömb már tartalmazhatja a képet base64 formátumban a frontendről.
-  // A Vercel AI SDK Google provider ezt automatikusan kezeli, ha a struktúra:
-  // { role: 'user', content: [ { type: 'text', text: '...' }, { type: 'image', image: 'base64...' } ] }
-  
+  // A Groq Llama 3.2 Vision modelljét használjuk
   const result = streamText({
-    model: google('gemini-2.0-flash-lite-001'), // A flash modell gyors és jó képekkel
+    model: groq('llama-3.2-11b-vision-preview'), // Ez a modell támogatja a képeket (Vision)
     system: contextText,
-    messages, // A frontend által küldött teljes tömböt átadjuk
+    messages, 
   });
 
   return result.toTextStreamResponse();
