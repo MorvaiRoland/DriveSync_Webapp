@@ -10,7 +10,7 @@ const groq = createOpenAI({
 });
 
 export async function POST(req: Request) {
-  // 1. Validáció
+  // 1. Biztonságos hibakezelés az elején
   let messages;
   try {
     const json = await req.json();
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 });
 
-  // 2. Adatok lekérése (Ellenőrizzük a konzolon, hogy van-e adat!)
+  // 2. Adatok lekérése
   const [carsRes, eventsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('user_id', user.id),
     supabase.from('events').select('*, cars(make, model)').eq('user_id', user.id).order('event_date', { ascending: false }).limit(30)
@@ -33,79 +33,92 @@ export async function POST(req: Request) {
   const cars = carsRes.data || [];
   const events = eventsRes.data || [];
 
-  // Debuggolás: Látod a szerver logban, hogy tényleg megvannak-e az autók?
-  console.log(`User: ${user.id} | Cars found: ${cars.length} | Events found: ${events.length}`);
+  // 3. Adatok formázása szöveges listává (hogy az AI biztosan megértse)
+  const carDetails = cars.map((c: any) => 
+    `- ${c.make} ${c.model} (${c.year || '?'}. évjárat). Rendszám: ${c.license_plate || '-'}, Motor: ${c.engine || c.horsepower || 'Nincs adat'}, Alvázszám: ${c.vin || '-'}`
+  ).join('\n');
 
-  // 3. Adatbázis szövegesítése (Ezt fogjuk befecskendezni)
-  const databaseContext = `
-  --- ADATBÁZIS ADATOK (Ezek a felhasználó TÉNYLEGES adatai, használd őket a válaszhoz!): ---
-  JÁRMŰVEK LISTÁJA: ${cars.length > 0 ? JSON.stringify(cars) : "Nincs rögzített autó."}
-  SZERVIZ TÖRTÉNET: ${events.length > 0 ? JSON.stringify(events) : "Nincs rögzített szerviz."}
-  -------------------------------------------------------------------------------------------
+  const eventDetails = events.map((e: any) => 
+    `- Dátum: ${e.event_date}, Típus: ${e.event_type}, Leírás: ${e.description || '-'}, Autó: ${e.cars?.make || ''} ${e.cars?.model || ''}`
+  ).join('\n');
+
+  // 4. DINAMIKUS MODELL VÁLASZTÁS ÉS TARTALOM KEZELÉS
+  // Megnézzük az utolsó üzenetet: Van benne kép?
+  const lastMessage = messages[messages.length - 1];
+  const hasImage = Array.isArray(lastMessage.content) && lastMessage.content.some((c: any) => c.type === 'image');
+
+  // HA VAN KÉP -> Vision modell (90B Vision)
+  // HA NINCS KÉP -> A legerősebb Text modell (70B Versatile) - Ez sokkal okosabb adatbázis kérdésekben!
+  const activeModelId = hasImage 
+    ? 'llama-3.2-90b-vision-preview' 
+    : 'llama-3.3-70b-versatile'; 
+
+  console.log(`Using Model: ${activeModelId} | Has Image: ${hasImage}`);
+
+  // 5. System Prompt (Az adatokkal)
+  const systemPrompt = `
+    SZEREP: DriveSync profi magyar autószerelő AI.
+    
+    TÉNYEK A FELHASZNÁLÓRÓL (ADATBÁZIS):
+    JÁRMŰVEK:
+    ${carDetails || "Nincs rögzített jármű."}
+    
+    SZERVIZNAPLÓ:
+    ${eventDetails || "Nincs rögzített esemény."}
+    
+    SZABÁLYOK:
+    1. **CSAK MAGYARUL** válaszolj.
+    2. Ha a felhasználó a saját autójáról kérdez (pl. "Milyen autóm van?", "Mikor volt szervizben?"), a fenti "TÉNYEK" alapján válaszolj pontosan.
+    3. Ha hiányzik adat (pl. lóerő), jelezd udvariasan, és adj becslést a típus alapján.
+    4. Legyél tömör és segítőkész.
   `;
 
-  const systemInstructions = `
-    ROLE: Te a DriveSync app profi autószerelő AI asszisztense vagy.
-    GOAL: Segíts a felhasználónak a fenti adatbázis alapján.
-    LANGUAGE: KIZÁRÓLAG MAGYARUL VÁLASZOLJ!
-    TONE: Szakmai, segítőkész.
-  `;
-
-  // 4. Üzenetek tisztítása ÉS Adatbázis befecskendezése (INJECTION)
+  // 6. Üzenetek tisztítása (History Flattening)
+  // Ez elengedhetetlen, hogy a Groq ne akadjon ki a korábbi képektől vagy formátumoktól.
   const processedMessages = messages.map((m: any, index: number) => {
-    const isLastMessage = index === messages.length - 1;
+    const isLast = index === messages.length - 1;
     let content = m.content;
 
-    // --- A: TARTALOM NORMALIZÁLÁSA (Hogy a Groq ne akadjon ki) ---
     if (Array.isArray(content)) {
-      const hasImage = content.some((part: any) => part.type === 'image');
-      
-      if (isLastMessage && hasImage) {
-        // Ha ez az utolsó és képes üzenet, megőrizzük a struktúrát
-        content = content.map((c: any) => {
+      // Ha ez az utolsó üzenet és VAN benne kép -> Hagyjuk meg a struktúrát a Vision modellnek
+      if (isLast && hasImage) {
+        return {
+          role: m.role,
+          content: content.map((c: any) => {
              if(c.type === 'text') return { type: 'text', text: c.text };
-             if(c.type === 'image') return { type: 'image', image: c.image };
+             if(c.type === 'image') return { type: 'image', image: c.image }; // Base64 átengedése
              return null;
-        }).filter(Boolean);
-      } else {
-        // Minden más esetben stringesítünk
-        const textPart = content
-          .filter((part: any) => part.type === 'text')
-          .map((part: any) => part.text)
-          .join('\n');
-        content = textPart || (hasImage ? "[Kép csatolva]" : "");
-      }
+          }).filter(Boolean)
+        };
+      } 
+      
+      // Minden más esetben (History vagy sima szöveges üzenet) -> Sima stringgé alakítjuk
+      const textPart = content
+        .filter((c: any) => c.type === 'text')
+        .map((c: any) => c.text)
+        .join('\n');
+        
+      content = textPart || (content.some((c: any) => c.type === 'image') ? "[Kép feltöltve]" : "");
     }
 
-    // --- B: ADATOK BEFECSKENDEZÉSE (CSAK AZ UTOLSÓ ÜZENETBE) ---
-    // Ez a trükk: Az AI "orra alá toljuk" az adatokat közvetlenül a kérdés mellé.
-    if (isLastMessage) {
-      if (typeof content === 'string') {
-        // Ha szöveges a kérdés (pl. "Hány autóm van?")
-        content = content + "\n\n" + databaseContext;
-      } else if (Array.isArray(content)) {
-        // Ha képes a kérdés (hozzáadjuk a szöveges részhez)
-        content = content.map((c: any) => {
-          if (c.type === 'text') {
-            return { type: 'text', text: c.text + "\n\n" + databaseContext };
-          }
-          return c;
-        });
+    return { role: m.role, content: content };
+  });
+
+  // 7. API Hívás
+  try {
+    const result = streamText({
+      model: groq(activeModelId), // Itt váltunk a 70B (okos) és 90B (látó) között
+      system: systemPrompt,
+      messages: processedMessages,
+      onFinish: (ev) => {
+         // Opcionális: Logolhatod a használatot
       }
-    }
+    });
 
-    return {
-      role: m.role,
-      content: content
-    };
-  });
-
-  // 5. Küldés
-  const result = streamText({
-    model: groq('meta-llama/llama-4-scout-17b-16e-instruct'),
-    system: systemInstructions, // Itt csak a viselkedési szabályok maradnak
-    messages: processedMessages, // Az adatok itt utaznak, az utolsó üzenetbe rejtve
-  });
-
-  return result.toTextStreamResponse();
+    return result.toTextStreamResponse();
+    
+  } catch (error) {
+    console.error("Groq API Error:", error);
+    return new Response("Hiba történt a válasz generálása közben.", { status: 500 });
+  }
 }
