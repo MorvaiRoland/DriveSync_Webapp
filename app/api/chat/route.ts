@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       const result = streamText({
         // FONTOS: A 'llama-3.2-90b-vision-preview' modellt használjuk.
         // Ez az egyetlen a Groq-on, ami látja a képeket (Vision) és elég okos (90b).
-        model: groq('llama-3.2-11b-vision-preview'), 
+        model: groq('openai/gpt-oss-120b'), 
         
         system: contextText,
         messages, // A képeket (base64) a Vercel SDK automatikusan átadja a Groq-nak
