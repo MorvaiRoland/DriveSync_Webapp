@@ -23,62 +23,68 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 });
 
-  // --- ADATOK LEKÉRÉSE ---
+  // 1. ADATOK LEKÉRÉSE
   const [carsRes, eventsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('user_id', user.id),
     supabase.from('events').select('*, cars(make, model)').eq('user_id', user.id).order('event_date', { ascending: false }).limit(30)
   ]);
 
-  // --- ADATOK FORMÁZÁSA (Hogy az AI értse) ---
-  const carList = (carsRes.data || []).map((c: any) => 
-    `- ${c.make} ${c.model} (${c.year || '?'}). Motor: ${c.engine || c.horsepower || 'Nincs adat'}. Rendszám: ${c.license_plate}.`
-  ).join('\n');
+  const cars = carsRes.data || [];
+  const events = eventsRes.data || [];
 
-  const eventList = (eventsRes.data || []).map((e: any) => 
-    `- ${e.event_date}: ${e.event_type} (${e.description || '-'})`
-  ).join('\n');
+  // 2. ADATOK OLVASHATÓVÁ TÉTELE (Ez kritikus, hogy ne keverje össze)
+  const carsText = cars.length > 0 
+    ? cars.map(c => `- ${c.make} ${c.model} (Évjárat: ${c.year}, Rendszám: ${c.license_plate}, Motor/Adatok: ${JSON.stringify(c)})`).join('\n')
+    : "A felhasználónak nincs rögzített autója.";
 
-  // --- MODEL VÁLASZTÁS LOGIKA ---
-  // Megnézzük, van-e kép az utolsó üzenetben
-  const lastMessage = messages[messages.length - 1];
-  const hasImage = Array.isArray(lastMessage.content) && lastMessage.content.some((c: any) => c.type === 'image');
+  const eventsText = events.length > 0
+    ? events.map(e => `- ${e.event_date}: ${e.event_type} (${e.description}) - Autó: ${e.cars?.make} ${e.cars?.model}`).join('\n')
+    : "Nincs szervizelőzmény.";
 
-  // HA VAN KÉP -> Vision modell (Lát, de néha "kreatív")
-  // HA NINCS KÉP -> Versatile modell (Agytröszt - ez a legokosabb autószerelésben)
-  const activeModelId = hasImage 
-    ? 'llama-3.2-90b-vision-preview' 
-    : 'llama-3.3-70b-versatile';
-
-  // --- SZIGORÚ SYSTEM PROMPT ---
+  // 3. SYSTEM PROMPT - SZIGORÚ KARAKTER UTASÍTÁS
   const systemPrompt = `
-    ROLE: Te a DriveSync alkalmazás VEZETŐ AUTÓSZERELŐJE vagy. Nem vagy költő, nem vagy filozófus. Egy gyakorlatias szakember vagy.
+    SZEREP: Te a DriveSync alkalmazás VEZETŐ SZERELŐJE vagy.
     
-    TILTOTT DOLGOK (Guardrails):
-    - TILOS átvitt értelemben vagy metaforaként értelmezni a bemenetet (pl. "füstöl az autóm" = MOTORHIBA, nem érzelem!).
-    - TILOS nem autós témában válaszolni. Ha a felhasználó pizzáról kérdez, utasítsd vissza udvariasan.
-    - TILOS regényt írni. Tömör, pontokba szedett műszaki diagnózist adj.
-
-    A FELHASZNÁLÓ SAJÁT ADATAI (Használd ezeket!):
-    Járművek:
-    ${carList || "Nincs rögzített jármű."}
+    FONTOS SZABÁLYOK (Szigorúan tartsd be!):
+    1. NYELV: KIZÁRÓLAG MAGYARUL beszélj!
+    2. STÍLUS: Tömör, szakmai, lényegretörő. Nem vagy költő, nem vagy filozófus.
+    3. TILTÁS: SOHA ne értelmezz autós kifejezéseket átvitt értelemben!
+       - Példa: Ha a user azt írja "füstöl", az AZT JELENTI, hogy égéstermék távozik a kipufogóból vagy a motortérből. NEM azt jelenti, hogy "hidegen hagy".
+       - Példa: Ha a user azt írja "nem húz", az teljesítményvesztést jelent.
+    4. ADATBÁZIS HASZNÁLATA: A lenti "ADATOK" részből dolgozz. Ha a user kérdez (pl. "Milyen autóm van?"), pontosan ezeket sorold fel.
     
-    Szerviztörténet:
-    ${eventList || "Üres."}
-
-    UTASÍTÁSOK:
-    1. NYELV: KIZÁRÓLAG MAGYAR.
-    2. Ha a felhasználó homályosan fogalmaz (pl. "nem megy"), kérdezz vissza szakmailag (önindító teker? akku jó?).
-    3. Ha hibajelenséget ír (pl. "füstöl"), sorold fel a lehetséges mechanikai okokat (hengerfej, gyűrű, dús keverék).
+    ADATOK A FELHASZNÁLÓRÓL:
+    Autók:
+    ${carsText}
+    
+    Szerviznapló:
+    ${eventsText}
   `;
 
-  // --- ÜZENET TISZTÍTÁS (Groq Hiba Elkerülés) ---
-  const processedMessages = messages.map((m: any, index: number) => {
+  // 4. MODELL VÁLASZTÁS ÉS ÜZENET TISZTÍTÁS
+  // Megnézzük az utolsó üzenetet.
+  const lastMessage = messages[messages.length - 1];
+  
+  // Ellenőrizzük, hogy van-e benne kép
+  let hasImage = false;
+  if (Array.isArray(lastMessage.content)) {
+    hasImage = lastMessage.content.some((c: any) => c.type === 'image');
+  }
+
+  // DÖNTÉS:
+  // Ha van kép -> Vision modell (90B)
+  // Ha nincs kép -> Text modell (70B) - EZ A KULCS! A 70B Versatile sokkal okosabb, mint a Vision modell szöveges feladatokban.
+  const modelToUse = hasImage ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile';
+
+  // ÜZENETEK TISZTÍTÁSA (Groq kompatibilitás)
+  const formattedMessages = messages.map((m: any, index: number) => {
     const isLast = index === messages.length - 1;
     let content = m.content;
 
+    // Ha tömb a tartalom
     if (Array.isArray(content)) {
       if (isLast && hasImage) {
-        // Képes üzenet a Vision modellnek
+        // Ha ez az aktuális képes üzenet, és a Vision modellt használjuk, hagyjuk meg a struktúrát
         return {
           role: m.role,
           content: content.map((c: any) => {
@@ -89,24 +95,25 @@ export async function POST(req: Request) {
         };
       } 
       
-      // Szövegesítés a 70B modellnek (vagy history)
-      const textPart = content
+      // Minden más esetben (history, vagy szöveges mód) -> Stringgé alakítjuk
+      // KIVESSZÜK A KÉPET A HISTORYBÓL, hogy ne zavarja a 70B modellt
+      const textOnly = content
         .filter((c: any) => c.type === 'text')
         .map((c: any) => c.text)
         .join('\n');
-        
-      content = textPart || (content.some((c: any) => c.type === 'image') ? "[Kép csatolva volt]" : "");
+      
+      content = textOnly || "[Kép csatolva volt]";
     }
 
     return { role: m.role, content: content };
   });
 
-  // --- KÜLDÉS ---
+  // 5. KÜLDÉS
   const result = streamText({
-    model: groq(activeModelId), 
+    model: groq(modelToUse),
     system: systemPrompt,
-    messages: processedMessages,
-    temperature: 0.3, // ALACSONYRA VESSZÜK! (0.3 = Tényszerű, nem kreatív)
+    messages: formattedMessages,
+    temperature: 0.2, // ALACSONY HŐMÉRSÉKLET = Tények, nulla kreativitás
   });
 
   return result.toTextStreamResponse();
