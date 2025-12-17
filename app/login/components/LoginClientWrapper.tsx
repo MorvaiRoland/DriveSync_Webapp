@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { IntroLoader } from './IntroLoader';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -17,9 +17,9 @@ export const LoginClientWrapper = ({ children }: { children: React.ReactNode }) 
 
       {!isLoading && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} // Custom bezier a "snappy" érzethez
           className="w-full min-h-screen"
         >
           {children}
