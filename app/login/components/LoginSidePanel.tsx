@@ -28,7 +28,7 @@ export const LoginSidePanel = () => {
                    2. Ha a neve 'video.mp4', akkor az útvonal '/video.mp4'.
                    3. Nem kell kiírni, hogy 'public'.
                 */}
-                <source src="/video.mp4" type="video/mp4" />
+                <source src="/login.mp4" type="video/mp4" />
                 
                 {/* Fallback, ha valamiért nem töltene be */}
                 Your browser does not support the video tag.
