@@ -1,154 +1,132 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { Star, ShieldCheck, Zap, Server, Activity } from 'lucide-react';
-
-// --- 3D TILT CARD COMPONENT ---
-// Ez a kártya követi az egeret
-const TiltCard = ({ children }: { children: React.ReactNode }) => {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const mouseX = useSpring(x, { stiffness: 150, damping: 15 });
-  const mouseY = useSpring(y, { stiffness: 150, damping: 15 });
-
-  const rotateX = useTransform(mouseY, [-0.5, 0.5], ["7deg", "-7deg"]);
-  const rotateY = useTransform(mouseX, [-0.5, 0.5], ["-7deg", "7deg"]);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-    x.set(xPct);
-    y.set(yPct);
-  };
-
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <motion.div
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-      className="relative w-full max-w-lg cursor-default"
-    >
-      {children}
-    </motion.div>
-  );
-};
-
-// --- ANIMATED GRID BACKGROUND ---
-const AnimatedGrid = () => (
-  <div className="absolute inset-0 z-0 opacity-20 transform perspective-1000 rotate-x-60 scale-150 pointer-events-none">
-    <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] animate-pan-grid"></div>
-  </div>
-);
+import { motion } from 'framer-motion';
+import { Cpu, Zap, Shield } from 'lucide-react';
 
 export const LoginSidePanel = () => {
   return (
-    <div className="relative w-full h-full flex flex-col justify-center items-center overflow-hidden bg-slate-950 perspective-[2000px]">
-        {/* --- Background Layers --- */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none z-10"></div>
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-950 z-0"></div>
+    <div className="relative w-full h-full flex flex-col justify-between overflow-hidden bg-slate-950 font-sans">
         
-        {/* Grid Animation */}
-        <AnimatedGrid />
-
-        {/* Ambient Glows */}
-        <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-amber-500/5 rounded-full blur-[150px] pointer-events-none z-0"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-indigo-600/5 rounded-full blur-[150px] pointer-events-none z-0"></div>
-
-        {/* --- MAIN CONTENT (3D TILT) --- */}
-        <TiltCard>
-            <div className="relative bg-slate-900/40 backdrop-blur-md border border-white/5 p-10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] transform-gpu group">
+        {/* --- CINEMATIC VIDEO BACKGROUND --- */}
+        <div className="absolute inset-0 z-0">
+            {/* Sötétítő rétegek a jobb olvashatóságért */}
+            <div className="absolute inset-0 bg-slate-950/60 z-10 mix-blend-multiply"></div> 
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/80 z-10"></div>
+            
+            {/* HELYI VIDEÓ */}
+            <video 
+                autoPlay 
+                loop 
+                muted       // Ez némítja le a videót (kötelező az autoplay-hez)
+                playsInline // Mobilon ne nyissa meg teljes képernyőn
+                className="w-full h-full object-cover scale-105 blur-[2px]" // Enyhe blur a mélységért
+            >
+                {/* FONTOS: 
+                   1. A fájlnak a 'public' mappában kell lennie.
+                   2. Ha a neve 'video.mp4', akkor az útvonal '/video.mp4'.
+                   3. Nem kell kiírni, hogy 'public'.
+                */}
+                <source src="/video.mp4" type="video/mp4" />
                 
-                {/* Glass Reflection Effect */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent rounded-3xl pointer-events-none z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                {/* Fallback, ha valamiért nem töltene be */}
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        
+        {/* --- TECH OVERLAYS (HUD Elements) --- */}
+        <div className="absolute inset-0 z-20 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04]"></div>
+        
+        {/* Pásztázó fénycsík animáció */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent z-20 animate-scanline opacity-40"></div>
 
-                {/* Content Wrapper */}
-                <div className="relative z-20 flex flex-col items-center text-center">
-                    
-                    {/* Floating Logo Container */}
-                    <motion.div 
-                      initial={{ y: 0 }}
-                      animate={{ y: [0, -10, 0] }}
-                      transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                      className="relative w-48 h-48 mb-6"
-                    >
-                      <div className="absolute inset-0 bg-amber-500/10 blur-[50px] rounded-full animate-pulse"></div>
-                      <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.8)]" priority />
-                    </motion.div>
 
-                    {/* Typography */}
-                    <div className="space-y-4">
-                        <h1 className="text-5xl font-black text-white tracking-tighter">
-                            Dynamic<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Sense</span>
-                        </h1>
-                        <p className="text-lg text-slate-400 font-light max-w-sm mx-auto leading-relaxed">
-                            <span className="text-white font-medium">A jövő garázsa.</span><br/>
-                            Teljes körű diagnosztika és flotta menedzsment mesterséges intelligenciával.
-                        </p>
+        {/* --- TOP CONTENT: BRANDING --- */}
+        <div className="relative z-30 p-12 pt-16">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.5 }}
+              className="flex items-center gap-4 mb-6"
+            >
+                 <div className="relative w-14 h-14">
+                    {/* Forgó "reaktor" effekt a logó körül */}
+                    <div className="absolute inset-0 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin-slow"></div>
+                    <div className="absolute inset-2 rounded-full border border-indigo-500/30 border-b-indigo-500 animate-reverse-spin"></div>
+                    <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain p-2 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" priority />
+                 </div>
+                 <div>
+                    <h1 className="text-3xl font-black text-white tracking-widest uppercase">
+                        Dynamic<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]">Sense</span>
+                    </h1>
+                    <div className="text-[10px] text-amber-500/80 font-mono uppercase tracking-[0.3em]">
+                        Automotive Intelligence Core
                     </div>
+                 </div>
+            </motion.div>
 
-                    {/* Stats / Tech Badges */}
-                    <div className="grid grid-cols-3 gap-4 mt-10 w-full">
-                        <div className="bg-slate-800/50 border border-white/5 p-3 rounded-xl flex flex-col items-center gap-1 backdrop-blur-sm hover:bg-slate-800 transition-colors">
-                            <Server size={18} className="text-indigo-400" />
-                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Cloud</span>
-                        </div>
-                        <div className="bg-slate-800/50 border border-white/5 p-3 rounded-xl flex flex-col items-center gap-1 backdrop-blur-sm hover:bg-slate-800 transition-colors">
-                            <Zap size={18} className="text-amber-400" />
-                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">AI Core</span>
-                        </div>
-                        <div className="bg-slate-800/50 border border-white/5 p-3 rounded-xl flex flex-col items-center gap-1 backdrop-blur-sm hover:bg-slate-800 transition-colors">
-                            <ShieldCheck size={18} className="text-emerald-400" />
-                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Secure</span>
-                        </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1, delay: 0.8 }}
+              className="max-w-md"
+            >
+                <h2 className="text-4xl font-bold text-white mb-4 leading-tight">
+                    Az irányítás <br/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-300 to-slate-500">új dimenziója.</span>
+                </h2>
+                <p className="text-lg text-slate-300 font-light leading-relaxed border-l-2 border-amber-500/50 pl-4">
+                    Lépj be a járműved digitális idegközpontjába. 
+                    <span className="block mt-2 text-sm text-slate-400 font-mono">
+                        {`> AI Diagnosztika | > Valós idejű analitika | > Prediktív karbantartás`}
+                    </span>
+                </p>
+            </motion.div>
+        </div>
+
+        {/* --- BOTTOM CONTENT: TECH SPECS --- */}
+        <div className="relative z-30 p-12 pb-16">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 1.2 }}
+                className="grid grid-cols-3 gap-6 border-t border-white/10 pt-8"
+            >
+                {/* Spec 1 */}
+                <div className="flex flex-col gap-2 group cursor-default">
+                    <div className="flex items-center gap-2 text-amber-500/80 group-hover:text-amber-400 transition-colors">
+                        <Cpu size={18} />
+                        <span className="text-[10px] font-mono uppercase tracking-wider">Motor</span>
+                    </div>
+                    <span className="text-sm font-bold text-white">Gemini 2.5 AI</span>
+                    <div className="h-0.5 w-full bg-slate-800 rounded overflow-hidden">
+                        <div className="h-full w-3/4 bg-amber-500/50"></div>
                     </div>
                 </div>
-            </div>
-        </TiltCard>
-
-        {/* --- TESTIMONIAL (Floating below) --- */}
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 0.8 }}
-            className="absolute bottom-12 max-w-md w-full px-8 hidden xl:block z-20"
-        >
-            <div className="flex items-center gap-4 bg-slate-900/60 backdrop-blur-md border border-white/5 p-4 rounded-full shadow-lg">
-                <div className="flex -space-x-2">
-                    {[1,2,3].map(i => (
-                         <div key={i} className="w-8 h-8 rounded-full bg-slate-700 border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white">
-                             U{i}
-                         </div>
-                    ))}
+                {/* Spec 2 */}
+                <div className="flex flex-col gap-2 group cursor-default">
+                     <div className="flex items-center gap-2 text-indigo-500/80 group-hover:text-indigo-400 transition-colors">
+                        <Shield size={18} />
+                        <span className="text-[10px] font-mono uppercase tracking-wider">Védelem</span>
+                    </div>
+                    <span className="text-sm font-bold text-white">AES-256 Titkosítás</span>
+                    <div className="h-0.5 w-full bg-slate-800 rounded overflow-hidden">
+                        <div className="h-full w-full bg-indigo-500/50"></div>
+                    </div>
                 </div>
-                <div className="text-xs text-slate-400">
-                    <span className="text-white font-bold">1.200+</span> autótulajdonos már csatlakozott.
+                {/* Spec 3 */}
+                 <div className="flex flex-col gap-2 group cursor-default">
+                     <div className="flex items-center gap-2 text-emerald-500/80 group-hover:text-emerald-400 transition-colors">
+                        <Zap size={18} />
+                        <span className="text-[10px] font-mono uppercase tracking-wider">Sebesség</span>
+                    </div>
+                    <span className="text-sm font-bold text-white">&lt;50ms Válaszidő</span>
+                    <div className="h-0.5 w-full bg-slate-800 rounded overflow-hidden">
+                        <div className="h-full w-[90%] bg-emerald-500/50"></div>
+                    </div>
                 </div>
-                <div className="ml-auto flex gap-0.5 text-amber-500">
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                </div>
-            </div>
-        </motion.div>
-
-        {/* Footer Tech Text */}
-        <div className="absolute bottom-6 text-[10px] text-slate-600 font-mono z-20 uppercase tracking-widest opacity-60">
-            System Status: Online • Encrypted Connection
+            </motion.div>
         </div>
     </div>
   );
