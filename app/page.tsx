@@ -14,6 +14,7 @@ import FuelWidget from '@/components/FuelWidget';
 import LandingPage from '@/components/LandingPage';
 import CongratulationModal from '@/components/CongratulationModal';
 import MarketplaceSection from '@/components/MarketplaceSection'
+import CarHealthWidget from '@/components/CarHealthWidget' 
 
 const DEV_SECRET_KEY = "admin"; 
 const FEATURES = {
@@ -64,6 +65,9 @@ async function DashboardComponent() {
   let plan: SubscriptionPlan = 'free'; 
   let canAddCar = true;
   let canUseAi = false;
+  
+  // Widget Props előkészítése
+  let primaryCarHealthProps = null;
 
   // Előfizetés és limitek ellenőrzése
   plan = await getSubscriptionStatus(user.id);
@@ -87,23 +91,55 @@ async function DashboardComponent() {
   }
 
   // --- LIMIT LOGIKA FELÜLBÍRÁLÁSA ---
-  // Alapértelmezett limit a configból
   let currentMaxCars: number | typeof Infinity = PLAN_LIMITS[plan].maxCars;
-  
-  // FELÜLBÍRÁLÁS: Ha Pro, Lifetime vagy Founder csomag, akkor legyen VÉGTELEN (Infinity)
   if (plan === 'pro' || plan === 'lifetime' ) {
     currentMaxCars = Infinity;
   }
-
-  // Ellenőrzés: Ha Infinity, akkor mindig true, különben darabszám ellenőrzés
   canAddCar = currentMaxCars === Infinity ? true : myCars.length < currentMaxCars;
-  
-  // AI limit ellenőrzés
   canUseAi = checkLimit(plan, 'allowAi');
   
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
-  // ... (statisztika számítások változatlanok) ...
+  // --- CAR HEALTH WIDGET KALKULÁCIÓ ---
+  // Kiválasztjuk a legfrissebb saját autót (vagy az elsőt)
+  const primaryCar = myCars.length > 0 ? myCars[0] : null;
+
+  if (primaryCar) {
+    const isElectric = primaryCar.fuel_type === 'Elektromos';
+    
+    // Szerviz intervallum logika
+    const serviceIntervalKm = primaryCar.service_interval_km || (isElectric ? 30000 : 15000); 
+    
+    let baseKm = primaryCar.last_service_mileage || 0;
+    // Megnézzük, volt-e szerviz esemény, ami frissebb, mint az alap adat
+    if (primaryCar.events && primaryCar.events.length > 0) {
+        const lastServiceEvent = primaryCar.events.find((e: any) => e.type === 'service');
+        if (lastServiceEvent && lastServiceEvent.mileage > baseKm) {
+            baseKm = lastServiceEvent.mileage;
+        }
+    }
+    if (baseKm === 0) baseKm = primaryCar.mileage; 
+
+    const nextServiceKm = baseKm + serviceIntervalKm;
+    const kmRemaining = nextServiceKm - primaryCar.mileage;
+    const kmSinceService = primaryCar.mileage - baseKm;
+
+    // Százalék számítás
+    const percentageUsed = Math.min(100, Math.max(0, (kmSinceService / serviceIntervalKm) * 100));
+    const oilLife = 100 - percentageUsed;
+
+    primaryCarHealthProps = {
+        car: primaryCar,
+        kmRemaining,
+        serviceIntervalKm,
+        oilLife
+    };
+    
+    // Frissítjük a KPI mutatót is
+    fleetHealth = Math.round(oilLife);
+  }
+
+  // ... (statisztika számítások) ...
   if (cars.length > 0) {
       const relevantCarIds = [...myCars, ...sharedCars].map(c => c.id);
       if (relevantCarIds.length > 0) {
@@ -124,12 +160,8 @@ async function DashboardComponent() {
               else if (spentLast30Days > 0) spendingTrend = 100;
           }
       }
-      // Flotta egészség számítás (egyszerűsítve)
-      if (myCars.length > 0) {
-         // ...
-      }
   }
-  // ... (badgek, idő) ...
+
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
 
@@ -155,7 +187,6 @@ async function DashboardComponent() {
 
       <CongratulationModal currentPlan={subscription?.plan_type || 'free'} />
       
-      {/* AI Szerelő: Csak akkor jelenik meg, ha engedélyezett (Pro) */}
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       
       <ChangelogModal />
@@ -328,23 +359,23 @@ async function DashboardComponent() {
                                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 opacity-90'
                                }`}
                              >
-                                  {canAddCar ? (
-                                    <>
-                                      <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                                          <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" />
-                                      </div>
-                                      <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
-                                      <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-amber-500/50 group-hover:text-amber-500 transition-colors">
-                                          <Lock className="w-8 h-8" />
-                                      </div>
-                                      <span className="font-bold text-slate-400 text-lg mb-1">Garázs megtelt</span>
-                                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide bg-amber-100 dark:bg-amber-900/30 px-3 py-1 rounded-full">Válts nagyobb csomagra</span>
-                                    </>
-                                  )}
+                                   {canAddCar ? (
+                                     <>
+                                       <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                           <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" />
+                                       </div>
+                                       <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
+                                       <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat</span>
+                                     </>
+                                   ) : (
+                                     <>
+                                       <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-amber-500/50 group-hover:text-amber-500 transition-colors">
+                                           <Lock className="w-8 h-8" />
+                                       </div>
+                                       <span className="font-bold text-slate-400 text-lg mb-1">Garázs megtelt</span>
+                                       <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide bg-amber-100 dark:bg-amber-900/30 px-3 py-1 rounded-full">Válts nagyobb csomagra</span>
+                                     </>
+                                   )}
                              </Link>
                           )}
                       </div>
@@ -371,6 +402,14 @@ async function DashboardComponent() {
 
             {/* JOBB OLDAL (Widgetek) */}
             <div className="lg:col-span-4 space-y-8">
+              
+              {/* ÚJ: Car Health Widget a Dashboardon */}
+              {primaryCarHealthProps && (
+                  <div className="animate-in slide-in-from-right-8 duration-700 delay-200">
+                      <CarHealthWidget {...primaryCarHealthProps} />
+                  </div>
+              )}
+
               <Link href="/showroom" className="block relative group overflow-hidden rounded-3xl shadow-xl transition-transform hover:scale-[1.02]">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-600 to-red-700"></div>
                 <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>
