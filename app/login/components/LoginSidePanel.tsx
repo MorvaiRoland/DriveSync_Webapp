@@ -38,7 +38,7 @@ export const LoginSidePanel = () => {
                         Dynamic<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">Sense</span>
                     </h1>
                     <div className="text-[10px] text-amber-500/80 font-mono uppercase tracking-[0.35em] mt-1 ml-1">
-                        Automotive Intelligence
+                        Technologies
                     </div>
                  </div>
             </motion.div>

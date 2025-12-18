@@ -82,7 +82,7 @@ export default async function LoginPage(props: Props) {
 
             {/* 3. FOOTER (Nagyon diszkrét) */}
             <div className="h-[5%] lg:mt-8 flex justify-between items-end pb-2 text-[9px] text-slate-500 font-mono uppercase tracking-widest shrink-0 w-full max-w-[400px] mx-auto">
-                <span className="hover:text-slate-300 transition-colors cursor-default">v2.4.0 <span className="hidden sm:inline">Build 9420</span></span>
+                <span className="hover:text-slate-300 transition-colors cursor-default">v2.3.0 <span className="hidden sm:inline">Build 9420</span></span>
                 <span className="flex items-center gap-1 hover:text-emerald-400 transition-colors cursor-default"><Shield size={9} /> Encrypted</span>
             </div>
 
