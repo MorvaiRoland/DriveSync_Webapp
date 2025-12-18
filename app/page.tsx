@@ -125,9 +125,36 @@ async function DashboardComponent() {
           }
       }
       // Flotta egészség számítás (egyszerűsítve)
-      if (myCars.length > 0) {
-         // ...
-      }
+      // --- FLOTTA EGÉSZSÉG SZÁMÍTÁSA (JAVÍTÁS) ---
+  if (myCars.length > 0) {
+    const totalHealth = myCars.reduce((acc, car) => {
+      // Elektromos autók logikája (opcionális, ha nincs szerviz intervallum, 100%-nak vesszük)
+      if (car.fuel_type === 'Elektromos' && !car.service_interval) return acc + 100;
+
+      const interval = car.service_interval || 15000; // Alapértelmezett: 15.000 km
+      const lastService = car.last_service_mileage || 0;
+      const currentMileage = car.mileage || 0;
+
+      // Mennyit mentünk a szerviz óta?
+      const kmDrivenSinceService = currentMileage - lastService;
+      
+      // Mennyi van hátra?
+      const kmRemaining = interval - kmDrivenSinceService;
+
+      // Százalék számítása
+      let carHealth = (kmRemaining / interval) * 100;
+
+      // Határértékek (ne legyen negatív, se 100 feletti)
+      carHealth = Math.max(0, Math.min(100, carHealth));
+
+      return acc + carHealth;
+    }, 0);
+
+    // Átlagoljuk az autók számával
+    fleetHealth = Math.round(totalHealth / myCars.length);
+  } else {
+    fleetHealth = 100; // Ha nincs autó, legyen 100%
+  }
   }
   // ... (badgek, idő) ...
   const hour = new Date().getHours();
