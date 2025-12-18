@@ -1,88 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ArrowLeft, Loader2, Sparkles, ShieldCheck, Zap, XCircle } from 'lucide-react'
+import { Check, ArrowLeft, Loader2, Sparkles, ShieldCheck, Zap, XCircle, Rocket } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-
-// --- KONFIGURÁCIÓ: FIZETÉSI LINKEK ---
-const STRIPE_LINKS = {
-  // 7 napos Trial (Havi)
-  pro_monthly: 'https://buy.stripe.com/eVqcN7bkV9HW8r0eGWds400', 
-  // Limitált Lifetime (Örökös)
-  lifetime: 'https://buy.stripe.com/7sYfZj74FaM0cHggP4ds402'
-}
-
-const PRICES = {
-  // Az éves csomaghoz marad az API ID (vagy ide is tehetsz linket később)
-  yearly: 'price_1Sd8zyRbHGQdHUF4mutCgwbV',  
-}
 
 interface PricingClientProps {
   initialPlan: string // 'free' | 'pro' | 'lifetime' | 'founder'
 }
 
 export default function PricingClient({ initialPlan }: PricingClientProps) {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
-  const [loadingId, setLoadingId] = useState<string | null>(null)
-  const [loadingPortal, setLoadingPortal] = useState(false)
+  const [loading, setLoading] = useState<string | null>(null)
   const router = useRouter()
 
-  const isLifetimeUser = initialPlan === 'lifetime' || initialPlan === 'founder';
-
-  // --- FIZETÉSI LOGIKA ---
-  const handleCheckout = async (priceId: string, mode: 'subscription' | 'payment') => {
-    setLoadingId(priceId)
+  // --- AKTIVÁLÁSI LOGIKA (FIZETÉS HELYETT) ---
+  const handleSelectPlan = async (planName: string) => {
+    setLoading(planName)
     
-    // 1. ESET: Havi Pro csomag -> Direkt Link (Trial)
-    if (priceId === 'DIRECT_LINK_PRO_MONTHLY') {
-        window.location.href = STRIPE_LINKS.pro_monthly;
-        return;
-    }
-
-    // 2. ESET: Lifetime csomag -> Direkt Link (Limitált)
-    if (priceId === 'DIRECT_LINK_LIFETIME') {
-        window.location.href = STRIPE_LINKS.lifetime;
-        return;
-    }
-
-    // 3. ESET: Minden más (pl. Éves csomag, vagy ha később API-t akarsz)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, mode })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Hiba történt a fizetés indításakor.')
-      if (data.url) router.push(data.url)
-    } catch (error: any) {
-      console.error(error)
-      alert("Hiba: " + error.message)
-      if (error.message === 'Nincs bejelentkezve') router.push('/login')
-      setLoadingId(null) // Csak hiba esetén vesszük le a töltést, különben redirect van
-    }
-  }
-
-  const manageSubscription = async () => {
-    setLoadingPortal(true)
-    try {
-      const res = await fetch('/api/stripe/portal', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Hiba történt a portál betöltésekor.')
-      if (data.url) window.location.href = data.url
-    } catch (error: any) {
-      console.error(error)
-      alert('Hiba: ' + error.message)
-      setLoadingPortal(false)
-    }
+    // Szimulált töltés az élményért
+    setTimeout(() => {
+        router.push('/') // Visszairányít a Dashboardra, mivel mindenki Pro
+    }, 800)
   }
 
   const isActive = (planKey: string) => {
-      if (planKey === 'free' && initialPlan === 'free') return true;
-      if (planKey === 'pro' && initialPlan === 'pro') return true;
-      if (planKey === 'lifetime' && isLifetimeUser) return true;
+      // Mivel most mindenki "Pro", ezért a Pro-t jelöljük aktívnak, ha már bent van
+      if (planKey === 'pro') return true; 
       return false;
   }
 
@@ -119,57 +63,28 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
         
         {/* --- HERO HEADER --- */}
         <div className="text-center max-w-3xl mx-auto mb-20 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100/80 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm backdrop-blur-sm">
-             <Sparkles className="w-3 h-3" /> Prémium Tagság
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/80 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest mb-8 shadow-sm backdrop-blur-sm">
+             <Rocket className="w-3 h-3" /> Early Access Időszak
           </div>
           
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-6 tracking-tight leading-[1.1] text-slate-900 dark:text-white">
-            Válassz csomagot, <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">növeld az autód értékét.</span>
+            Most minden csomag <br className="hidden md:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">teljesen ingyenes.</span>
           </h1>
           
           <p className="text-slate-600 dark:text-slate-400 mb-12 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-medium">
-            A DynamicSense Pro nem csak kényelem, hanem befektetés. Egy pontosan vezetett digitális szervizkönyv milliókkal növelheti az eladási árat.
+            A DynamicSense bevezetési időszakában vagyunk. Használd a Pro funkciókat korlátok és bankkártya nélkül. Építsük együtt a jövő garázsát!
           </p>
-          
-          {/* --- BILLING TOGGLE --- */}
-          <div className="flex justify-center">
-            <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl relative inline-flex">
-                <div 
-                    className={`absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-slate-100 dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-all duration-300 ease-in-out z-0`}
-                    style={{ 
-                        left: billingCycle === 'monthly' ? '6px' : 'calc(50%)',
-                        width: 'calc(50% - 6px)'
-                    }}
-                ></div>
-                
-                <button 
-                    onClick={() => setBillingCycle('monthly')} 
-                    className={`relative z-10 px-8 py-3 rounded-xl text-sm font-bold transition-colors duration-300 min-w-[140px] ${billingCycle === 'monthly' ? 'text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                >
-                    Havi
-                </button>
-                <button 
-                    onClick={() => setBillingCycle('yearly')} 
-                    className={`relative z-10 px-8 py-3 rounded-xl text-sm font-bold transition-colors duration-300 min-w-[140px] flex items-center justify-center gap-2 ${billingCycle === 'yearly' ? 'text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                >
-                    Éves 
-                    <span className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-700/50 px-1.5 py-0.5 rounded uppercase tracking-wide leading-none font-black">
-                        -50%
-                    </span>
-                </button>
-            </div>
-          </div>
         </div>
 
         {/* --- PRICING CARDS GRID --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           
-          {/* 1. STARTER CSOMAG (Ingyenes) */}
+          {/* 1. STARTER CSOMAG (Összehasonlításnak) */}
           <PricingCard 
             title="Starter" 
             price="0 Ft" 
-            desc="Kezdő autósoknak, az alapokhoz."
+            desc="Az alapok, amikre minden autósnak szüksége van."
             features={[
                 '1 db Autó kezelése', 
                 'Korlátlan szerviznapló', 
@@ -177,18 +92,18 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
                 'Alap emlékeztetők',
                 'Gumi hotel'
             ]}
-            buttonText={isActive('free') ? "Jelenlegi csomag" : "Visszaváltás"}
+            buttonText="Alapértelmezett"
             disabled={true} 
-            isCurrent={isActive('free')}
+            isCurrent={false}
             delay={100}
           />
 
-          {/* 2. PRO CSOMAG (Fizetős) */}
+          {/* 2. PRO CSOMAG (A lényeg) */}
           <PricingCard 
             title="Pro" 
-            price={billingCycle === 'monthly' ? '1.490 Ft' : '8.999 Ft'} 
-            period={billingCycle === 'monthly' ? '/ hó' : '/ év'}
-            desc="Komoly tulajdonosoknak, minden okos funkcióval."
+            price="0 Ft" 
+            period="/ örökre"
+            desc="Minden okos funkció feloldva az Early Access alatt."
             highlight={true}
             features={[
               'Korlátlan Garázs', 
@@ -198,75 +113,44 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
               'Eladási Adatlap generálás 💰',
               'Teljes Analitika & Export 📊'
             ]}
-            buttonText={
-                isActive('pro') ? "Jelenlegi csomag" : 
-                isLifetimeUser ? "Örökös csomagod van 🚀" : 
-                (billingCycle === 'monthly' ? "7 napig ingyen, utána 1.490 Ft" : "Kipróbálom")
-            }
-            disabled={isActive('pro') || isLifetimeUser} 
-            isCurrent={isActive('pro')}
-            // Loading state: Havi -> DIRECT LINK, Éves -> API
-            isLoading={loadingId === (billingCycle === 'monthly' ? 'DIRECT_LINK_PRO_MONTHLY' : PRICES.yearly)}
-            
-            // Klikk logika: Havi -> Link, Éves -> API
-            onClick={() => handleCheckout(
-                billingCycle === 'monthly' ? 'DIRECT_LINK_PRO_MONTHLY' : PRICES.yearly, 
-                'subscription'
-            )}
-            
-            onManage={manageSubscription} 
-            loadingManage={loadingPortal}
+            buttonText={loading === 'pro' ? "Aktiválás..." : "Kiválasztom Ingyen"}
+            // Ha már "bent" van a rendszerben, akkor is engedjük, hogy rányomjon az élmény miatt
+            onClick={() => handleSelectPlan('pro')}
+            isLoading={loading === 'pro'}
             delay={200}
-            trialNote={billingCycle === 'monthly' ? "Nincs kockázat, bármikor lemondható." : undefined}
+            badge="EARLY ACCESS AJÁNDÉK"
+            limited={true}
           />
 
-          {/* 3. LIFETIME CSOMAG (Örökös) */}
+          {/* 3. LIFETIME CSOMAG (Jövőkép) */}
           <PricingCard 
             title="Lifetime" 
-            price="14.999 Ft" 
-            desc="Egyszeri befektetés. Minden Pro funkció örökre."
+            price="---" 
+            desc="Hamarosan érkezik a támogatói csomagok számára."
             period=""
             features={[
               'Minden Pro funkció örökre', 
-              'Örökös frissítések', 
-              'Nincs havidíj soha', 
-              'VIP Támogatás', 
-              'Egyedi "Lifetime" jelvény 🚀'
+              'Kiemelt VIP státusz', 
+              'Fejlesztői roadmap szavazás', 
+              'Dedikált support', 
+              'Egyedi jelvények 🚀'
             ]}
-            buttonText={isActive('lifetime') ? "Megvásárolva ✅" : "Megveszem örökre"}
-            disabled={isActive('lifetime')}
-            isCurrent={isActive('lifetime')}
-            
-            // Itt most már a 'DIRECT_LINK_LIFETIME'-ot figyeljük
-            isLoading={loadingId === 'DIRECT_LINK_LIFETIME'}
-            
-            // Klikk logika: Direkt Link
-            onClick={() => handleCheckout('DIRECT_LINK_LIFETIME', 'payment')}
-            
-            onManage={manageSubscription}
-            loadingManage={loadingPortal}
+            buttonText="Hamarosan"
+            disabled={true}
             delay={300}
             specialBorder={true}
-            limited={true}
-            badge="EARLY BIRD - CSAK 100 DB!"
           />
         </div>
         
         {/* --- TRUST BADGE FOOTER --- */}
         <div className="mt-24 text-center border-t border-slate-200 dark:border-slate-800 pt-12 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
-            <div className="flex justify-center gap-6 mb-6 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-                <div className="h-8 w-12 bg-white dark:bg-white/10 rounded border border-slate-200 dark:border-white/10 flex items-center justify-center text-[8px] font-bold shadow-sm text-slate-600 dark:text-white">VISA</div>
-                <div className="h-8 w-12 bg-white dark:bg-white/10 rounded border border-slate-200 dark:border-white/10 flex items-center justify-center text-[8px] font-bold shadow-sm text-slate-600 dark:text-white">MC</div>
-                <div className="h-8 w-12 bg-white dark:bg-white/10 rounded border border-slate-200 dark:border-white/10 flex items-center justify-center text-[8px] font-bold shadow-sm text-slate-600 dark:text-white">AMEX</div>
-            </div>
             <p className="text-slate-500 dark:text-slate-500 text-xs leading-relaxed flex flex-col items-center gap-2">
                 <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-400 font-bold">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    Biztonságos fizetés a Stripe rendszerén keresztül.
+                    Nem szükséges bankkártya.
                 </span>
-                A DynamicSense szerverei semmilyen bankkártyaadatot nem tárolnak. <br/>
-                Az előfizetés bármikor, egy kattintással lemondható a beállításokban.
-                A feltüntetett árak tartalmazzák az ÁFÁ-t.
+                A jelenlegi regisztrációval automatikusan megkapod a Pro jogosultságot.<br/>
+                Az Early Access időszak alatt a szolgáltatás teljes körűen ingyenes.
             </p>
         </div>
       </div>
@@ -289,11 +173,8 @@ function PricingCard({
   isCurrent, 
   delay, 
   specialBorder, 
-  onManage, 
-  loadingManage,
-  trialNote, // Új prop
-  limited,   // Új prop
-  badge      // Új prop
+  limited,   
+  badge      
 }: any) {
   return (
     <div 
@@ -302,38 +183,24 @@ function PricingCard({
           ${highlight 
             ? 'bg-white dark:bg-slate-900 border-2 border-amber-500 shadow-2xl shadow-amber-500/10 md:-mt-8 md:mb-8 z-10 scale-100 hover:scale-[1.02]' 
             : specialBorder
-                ? 'bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-900/50 border border-indigo-200 dark:border-indigo-500/30 hover:border-indigo-400 dark:hover:border-indigo-500/50 shadow-xl'
+                ? 'bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 opacity-75'
                 : 'bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 backdrop-blur-md shadow-lg'
           }
           ${isCurrent ? 'ring-2 ring-emerald-500 shadow-emerald-500/10' : ''}
-          ${limited ? 'border-amber-400/50 dark:border-amber-400/30' : ''} 
         `}
         style={{ animationDelay: `${delay}ms` }}
     >
       {/* Jelvények */}
-      {highlight && !isCurrent && (
+      {highlight && (
         <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-black px-6 py-2 rounded-full uppercase tracking-wider shadow-lg shadow-amber-500/30 whitespace-nowrap flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 fill-white" /> Legnépszerűbb
+            <Zap className="w-3.5 h-3.5 fill-white" /> Ajánlott
         </div>
       )}
 
-      {/* Early Bird / Limited Badge */}
-      {limited && !isCurrent && badge && (
-        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-amber-500 text-white px-4 py-1 rounded-full text-[10px] font-bold animate-pulse shadow-lg whitespace-nowrap z-20">
+      {limited && badge && (
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-[10px] font-bold animate-pulse shadow-lg whitespace-nowrap z-20">
           {badge}
         </div>
-      )}
-
-      {specialBorder && !isCurrent && !limited && (
-        <div className="absolute -top-3 right-8 bg-indigo-100 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-            Best Value
-        </div>
-      )}
-      
-      {isCurrent && (
-         <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg shadow-emerald-500/20 whitespace-nowrap flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 stroke-[3px]" /> Aktív Csomag
-         </div>
       )}
       
       {/* Kártya tartalma */}
@@ -346,7 +213,7 @@ function PricingCard({
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-4 font-medium leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-4">{desc}</p>
       </div>
       
-      {/* Fő gomb (Vásárlás/Váltás) */}
+      {/* Fő gomb */}
       <button 
         onClick={onClick}
         disabled={disabled || isLoading}
@@ -356,41 +223,13 @@ function PricingCard({
                 ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-default border border-slate-200 dark:border-slate-700' 
                 : highlight 
                     ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/30 active:scale-95' 
-                    : specialBorder 
-                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 active:scale-95'
-                        : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 active:scale-95 shadow-md'
+                    : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 active:scale-95 shadow-md'
             }
         `}
       >
         {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
         {buttonText}
       </button>
-
-      {/* Kisbetűs rész a Trialhoz */}
-      {trialNote && (
-        <p className="mt-[-10px] mb-4 text-xs text-center text-slate-500 dark:text-slate-400">
-          {trialNote}
-        </p>
-      )}
-
-      {/* Kisbetűs rész a Lifetime limithez */}
-      {limited && (
-        <p className="mt-[-10px] mb-4 text-xs text-center text-amber-600 dark:text-amber-500 font-bold">
-          Hamarosan lezárjuk ezt az ajánlatot!
-        </p>
-      )}
-
-      {/* Lemondás/Kezelés gomb */}
-      {isCurrent && onManage && (
-          <button 
-            onClick={onManage}
-            disabled={loadingManage}
-            className="w-full py-2 mb-6 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5"
-          >
-              {loadingManage ? <Loader2 className="w-3 h-3 animate-spin" /> : <XCircle className="w-3 h-3" />}
-              Előfizetés kezelése / Lemondás
-          </button>
-      )}
       
       {/* Feature lista */}
       <div className="space-y-4 flex-1">
@@ -398,12 +237,11 @@ function PricingCard({
           <div key={i} className="flex items-start gap-3 text-sm group/item">
             <div className={`
                 mt-0.5 rounded-full p-0.5 flex-shrink-0 transition-colors
-                ${highlight ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover/item:text-slate-700 dark:group-hover/item:text-slate-300'}
-                ${specialBorder ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : ''}
+                ${highlight ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}
             `}>
                 <Check className="w-3 h-3" strokeWidth={4} /> 
             </div>
-            <span className={`transition-colors ${highlight ? 'text-slate-700 dark:text-slate-200' : 'text-slate-600 dark:text-slate-400 group-hover/item:text-slate-900 dark:group-hover/item:text-slate-300'}`}>{f}</span>
+            <span className={`transition-colors ${highlight ? 'text-slate-700 dark:text-slate-200' : 'text-slate-600 dark:text-slate-400'}`}>{f}</span>
           </div>
         ))}
       </div>
