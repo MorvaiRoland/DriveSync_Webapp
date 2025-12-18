@@ -60,15 +60,16 @@ async function DashboardComponent() {
   let fleetHealth = 100 
   let latestCarId = null
   let badges: any[] = []
-  let subscription: any = null
-  let plan: SubscriptionPlan = 'free'; 
+  
+  // --- EARLY ACCESS / INGYENES MÓD ---
+  // Itt írjuk felül a logikát: mindenki 'lifetime' (vagy pro) felhasználó
+  let plan: SubscriptionPlan = 'lifetime'; 
+  let subscription: any = { plan_type: 'lifetime', status: 'active' };
+  
+  // Limitek kikapcsolása
+  let currentMaxCars: number | typeof Infinity = Infinity;
   let canAddCar = true;
-  let canUseAi = false;
-
-  // Előfizetés és limitek ellenőrzése
-  plan = await getSubscriptionStatus(user.id);
-  const { data: subData } = await supabase.from('subscriptions').select('status, plan_type').eq('user_id', user.id).single();
-  subscription = subData;
+  let canUseAi = true;
 
   const { data: carsData } = await supabase
       .from('cars')
@@ -86,21 +87,6 @@ async function DashboardComponent() {
       latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   }
 
-  // --- LIMIT LOGIKA FELÜLBÍRÁLÁSA ---
-  // Alapértelmezett limit a configból
-  let currentMaxCars: number | typeof Infinity = PLAN_LIMITS[plan].maxCars;
-  
-  // FELÜLBÍRÁLÁS: Ha Pro, Lifetime vagy Founder csomag, akkor legyen VÉGTELEN (Infinity)
-  if (plan === 'pro' || plan === 'lifetime' ) {
-    currentMaxCars = Infinity;
-  }
-
-  // Ellenőrzés: Ha Infinity, akkor mindig true, különben darabszám ellenőrzés
-  canAddCar = currentMaxCars === Infinity ? true : myCars.length < currentMaxCars;
-  
-  // AI limit ellenőrzés
-  canUseAi = checkLimit(plan, 'allowAi');
-  
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
   // ... (statisztika számítások változatlanok) ...
@@ -124,39 +110,26 @@ async function DashboardComponent() {
               else if (spentLast30Days > 0) spendingTrend = 100;
           }
       }
-      // Flotta egészség számítás (egyszerűsítve)
-      // --- FLOTTA EGÉSZSÉG SZÁMÍTÁSA (JAVÍTÁS) ---
-  // Flotta egészség számítás (TÉNYLEGES MŰKÖDÉS)
+      
+      // Flotta egészség számítás
       if (myCars.length > 0) {
          const totalHealth = myCars.reduce((sum, car) => {
-            // Elektromos autók kezelése
             if (car.fuel_type === 'Elektromos' && !car.service_interval) return sum + 100;
 
             const interval = car.service_interval || 15000;
             const currentMileage = car.mileage || 0;
 
-            // --- JAVÍTÁS: Szerviz események vizsgálata ---
-            // Megnézzük, van-e rögzített szerviz esemény, ami frissebb, mint a beállításokban lévő adat
             const serviceEvents = car.events?.filter((e: any) => e.type === 'service') || [];
             const lastEventMileage = serviceEvents.length > 0 
                 ? Math.max(...serviceEvents.map((e: any) => e.mileage)) 
                 : 0;
 
-            // Azt használjuk, amelyik nagyobb (frissebb): a statikus adat vagy a naplózott esemény
             const lastService = Math.max(car.last_service_mileage || 0, lastEventMileage);
-
-            // Ha a lastService még így is 0 (sosem volt állítva), és az autóban van km,
-            // akkor ne büntessük 0%-kal, hanem vegyük 100%-nak (friss import),
-            // VAGY számoljunk a jelenlegi futással (ez a szigorúbb). 
-            // A lenti logika a szigorú, de helyes számítás:
             
             const kmDrivenSinceService = currentMileage - lastService;
             const kmRemaining = interval - kmDrivenSinceService;
 
-            // Százalék számítása
             let healthPercent = (kmRemaining / interval) * 100;
-
-            // Határértékek kezelése
             healthPercent = Math.max(0, Math.min(100, healthPercent));
 
             return sum + healthPercent;
@@ -167,7 +140,7 @@ async function DashboardComponent() {
          fleetHealth = 100;
       }
     }
-  // ... (badgek, idő) ...
+
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
 
@@ -193,7 +166,7 @@ async function DashboardComponent() {
 
       <CongratulationModal currentPlan={subscription?.plan_type || 'free'} />
       
-      {/* AI Szerelő: Csak akkor jelenik meg, ha engedélyezett (Pro) */}
+      {/* AI Szerelő: Mindig megjelenik, mert canUseAi = true */}
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       
       <ChangelogModal />
@@ -220,19 +193,10 @@ async function DashboardComponent() {
            </div>
 
            <div className="flex items-center gap-3">
-             <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm ${
-                 subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime' 
-                   ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400' 
-                 : subscription?.plan_type === 'pro' 
-                   ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400' 
-                 : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
-             }`}>
-                 {(subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime') && <span className="text-sm">🚀</span>}
-                 {
-                   subscription?.plan_type === 'founder' ? 'Founder' : 
-                   subscription?.plan_type === 'lifetime' ? 'Lifetime' :
-                   subscription?.plan_type === 'pro' ? 'Pro' : 'Starter'
-                 }
+             {/* Early Access Badge */}
+             <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+                 <span className="text-sm">🚀</span>
+                 Early Access Pro
              </Link>
              
              <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
@@ -346,8 +310,7 @@ async function DashboardComponent() {
                               Saját Garázs
                           </h3>
                           <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                              {/* MEGJELENÍTÉS: ∞ jel a végtelen limithoz */}
-                              {myCars.length} / {currentMaxCars === Infinity ? '∞' : currentMaxCars}
+                              {myCars.length} / ∞
                           </span>
                       </div>
                       
@@ -356,33 +319,17 @@ async function DashboardComponent() {
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {/* LIMIT KEZELÉS */}
+                          {/* LIMIT KEZELÉS: Most mindig engedélyezve */}
                           {FEATURES.addCar && (
                              <Link 
-                               href={canAddCar ? "/cars/new" : "/pricing"} 
-                               className={`group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed transition-all duration-300 cursor-pointer overflow-hidden ${
-                                 canAddCar 
-                                   ? 'border-slate-300 dark:border-slate-700 bg-white/30 dark:bg-slate-800/30 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl'
-                                   : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 opacity-90'
-                               }`}
+                               href="/cars/new" 
+                               className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white/30 dark:bg-slate-800/30 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
                              >
-                                  {canAddCar ? (
-                                    <>
-                                      <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                                          <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" />
-                                      </div>
-                                      <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
-                                      <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-amber-500/50 group-hover:text-amber-500 transition-colors">
-                                          <Lock className="w-8 h-8" />
-                                      </div>
-                                      <span className="font-bold text-slate-400 text-lg mb-1">Garázs megtelt</span>
-                                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide bg-amber-100 dark:bg-amber-900/30 px-3 py-1 rounded-full">Válts nagyobb csomagra</span>
-                                    </>
-                                  )}
+                                <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                    <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" />
+                                </div>
+                                <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
+                                <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat ingyen</span>
                              </Link>
                           )}
                       </div>
@@ -484,7 +431,6 @@ async function DashboardComponent() {
   )
 }
 
-// ... CarCard komponens változatlan ...
 function CarCard({ car, shared }: { car: any, shared?: boolean }) {
   return (
     <div className={`relative group flex flex-col bg-white dark:bg-slate-800 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-slate-100 dark:border-slate-700 h-full ${shared ? 'ring-2 ring-blue-500/30' : ''}`}>

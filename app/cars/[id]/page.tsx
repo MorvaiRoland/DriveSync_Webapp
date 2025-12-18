@@ -72,10 +72,9 @@ export default async function CarDetailsPage(props: Props) {
   const safeVignettes = vigRes.data || []
   const activeParking = parkingRes.data || null
 
-  // PRO CSOMAG ELLENŐRZÉSE
-  let plan: SubscriptionPlan = 'free';
-  if (user) plan = await getSubscriptionStatus(user.id);
-  const isPro = plan === 'pro' || plan === 'lifetime' ;
+  // PRO CSOMAG ELLENŐRZÉSE - KÉNYSZERÍTVE
+  // Eredeti logika helyett mindenkit Pro-nak tekintünk
+  const isPro = true; 
 
   // --- Calculations ---
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)
@@ -128,47 +127,32 @@ export default async function CarDetailsPage(props: Props) {
   const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost, isElectric }
   const carIdString = car.id.toString();
 
-  // --- WIDGET LOGIKA (FREE vs PRO) ---
+  // --- WIDGET LOGIKA (MINDENKI PRO) ---
   const WidgetParking = <SmartParkingWidget carId={carIdString} activeSession={activeParking} />;
   const WidgetHealth = <CarHealthWidget {...healthProps} />;
   
-  // 1. Prediktív Karbantartás: Csak Pro-nak, különben teaser
-  const WidgetPrediction = isPro 
-    ? <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} /> 
-    : <PredictionTeaser />;
+  // 1. Prediktív Karbantartás: Mindig látható
+  const WidgetPrediction = <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} />;
     
   const WidgetCost = <CostCard {...costProps} />;
   
-  // 2. Eladás Widget: Csak Pro-nak, különben teaser
-  const WidgetSales = isPro 
-    ? <SalesWidget car={car} /> 
-    : <ProTeaser />;
+  // 2. Eladás Widget: Mindig látható
+  const WidgetSales = <SalesWidget car={car} />;
     
   const WidgetSpecs = <TechnicalSpecs {...techProps} />;
   const WidgetVignette = <VignetteManager carId={carIdString} vignettes={safeVignettes} />;
   const WidgetTires = <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />;
   
-  // 3. Dokumentumok: Csak Pro-nak
-  const WidgetDocs = isPro ? <DocumentManager carId={carIdString} documents={safeDocs} /> : (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
-        <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-slate-400" /> Digitális Kesztyűtartó
-            </h3>
-            <Lock className="w-4 h-4 text-amber-500" />
-        </div>
-        <LockedFeature label="dokumentum kezelés" />
-    </div>
-  );
+  // 3. Dokumentumok: Mindig látható
+  const WidgetDocs = <DocumentManager carId={carIdString} documents={safeDocs} />;
 
-  // 4. Okos Tippek: Csak Pro-nak
-  const WidgetTips = isPro ? <SmartTipsCard tips={smartTips} /> : <TipsTeaser />;
+  // 4. Okos Tippek: Mindig látható
+  const WidgetTips = <SmartTipsCard tips={smartTips} />;
   
   const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
   
-  // 5. Grafikonok: Ingyeneseknek csak az utolsó 5 esemény
-  const chartEvents = isPro ? safeEvents : safeEvents.slice(0, 5);
-  const WidgetCharts = <AnalyticsCharts events={chartEvents} isPro={isPro} />;
+  // 5. Grafikonok: Teljes verzió mindenkinek
+  const WidgetCharts = <AnalyticsCharts events={safeEvents} isPro={true} />;
   
   const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
 
@@ -223,7 +207,7 @@ export default async function CarDetailsPage(props: Props) {
         nextServiceKm={nextServiceKm} 
         kmRemaining={kmRemaining} 
         safeEvents={safeEvents} 
-        isPro={isPro} 
+        isPro={true} // Mindig Pro
       />
 
       {/* DESKTOP ACTION BAR */}
@@ -245,58 +229,6 @@ export default async function CarDetailsPage(props: Props) {
 
 // --- SUB-COMPONENTS ---
 
-function ProTeaser() {
-    return (
-        <div className="relative group overflow-hidden rounded-2xl border border-indigo-500/30 bg-slate-900 shadow-xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 opacity-100 transition-opacity group-hover:opacity-80"></div>
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/30 rounded-full blur-3xl"></div>
-            <div className="relative p-6 flex flex-col items-center text-center z-10">
-                <div className="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30 text-white transform group-hover:scale-110 transition-transform duration-300">
-                    <Sparkles className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-1">AI Eladási Asszisztens</h3>
-                <p className="text-sm text-indigo-200/80 mb-5 leading-relaxed">Generálj profi eladási adatlapot és növeld az autód értékét.</p>
-                <Link href="/pricing" className="inline-flex items-center gap-2 bg-white text-indigo-900 hover:bg-indigo-50 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5">
-                    <Lock className="w-4 h-4" /> Előfizetés
-                </Link>
-            </div>
-        </div>
-    )
-}
-
-function PredictionTeaser() {
-    return (
-        <div className="relative group overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 p-6 opacity-80 hover:opacity-100 transition-opacity">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-slate-400" /> Jövőbeli Hibák
-                </h3>
-                <Lock className="w-4 h-4 text-amber-500" />
-            </div>
-            <div className="flex flex-col items-center text-center py-4">
-                <p className="text-sm text-slate-500 mb-4">Tudd meg előre, mi romolhat el az autódban a kilométeróra állása alapján.</p>
-                <Link href="/pricing" className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full hover:bg-amber-100 transition-colors">
-                    Pro funkció feloldása
-                </Link>
-            </div>
-        </div>
-    )
-}
-
-function TipsTeaser() {
-    return (
-        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-dashed border-slate-200 dark:border-slate-800 text-center">
-            <p className="text-xs font-bold text-slate-400 mb-2">Személyre szabott AI tippek</p>
-            <Link href="/pricing" className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center justify-center gap-1">
-                <Lock className="w-3 h-3" /> Csak Pro tagoknak
-            </Link>
-        </div>
-    )
-}
-
-// ... HeaderSection, StatBadge, MobileBottomNav, DesktopActionGrid, CostCard, CostItem, SmartTipsCard, RemindersList, TechnicalSpecs, TireHotelCard, EventLog komponensek változatlanok (az előző üzenetből) ...
-// (A kód teljessége érdekében itt szerepelniük kellene, de a karakterszám miatt a fenti "változatlan" komment jelzi a helyüket. A felhasználó eredeti kódját be kell másolni ide.)
-
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
         <div className="relative bg-slate-900 w-full overflow-hidden shadow-2xl shrink-0 group min-h-[22rem] md:h-[28rem]">
@@ -316,13 +248,9 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                         <span className="hidden sm:inline font-bold text-sm">Garázs</span>
                     </Link>
                     <div className="flex items-center gap-3">
-                        {isPro ? (
-                             <ExportMenu car={car} events={safeEvents} />
-                        ) : (
-                            <Link href="/pricing" className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-950/40 border border-amber-500/30 px-3 py-2 rounded-full hover:bg-amber-900/50 transition-colors">
-                                <Lock className="w-3 h-3" /> Pro
-                            </Link>
-                        )}
+                        {/* Mivel mindenki Pro, csak az export menü jelenik meg */}
+                        <ExportMenu car={car} events={safeEvents} />
+                        
                         <Link href={`/cars/${car.id}/edit`} className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md transition-colors border border-white/10">
                             <Pencil className="w-4 h-4" />
                         </Link>

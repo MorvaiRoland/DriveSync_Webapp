@@ -7,7 +7,7 @@ import {
   ArrowRight, Sparkles, CheckCircle2, Calendar, 
   BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
   MessageCircle, HelpCircle, Server, Smartphone,
-  ChevronDown, Layers, Star, AlertTriangle, Cpu
+  ChevronDown, Layers, Star, AlertTriangle, Cpu, Gift
 } from 'lucide-react';
 import PromoModal from '@/components/PromoModal'; 
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
@@ -85,7 +85,7 @@ const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(245,15
   );
 };
 
-// TECH TRUST BAR (ÚJ: Vélemények helyett)
+// TECH TRUST BAR
 const TechTrustBar = () => {
   const specs = [
     { label: "Titkosítás", value: "AES-256 Banki Szint", icon: <Lock size={16} /> },
@@ -310,10 +310,10 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
   }, []);
 
   const faqs = [
+    { question: "Tényleg teljesen ingyenes?", answer: "Igen! Jelenleg 'Early Access' fázisban vagyunk. Szeretnénk, ha minél többen kipróbálnák a teljes prémium élményt korlátok nélkül." },
     { question: "Hogyan működik a Flotta Egészség mutató?", answer: "A rendszer egy intelligens algoritmus segítségével elemzi a szervizintervallumokat, a megtett kilométereket és a legutóbbi karbantartásokat. Ha minden zöld, az autód műszakilag rendben van." },
-    { question: "Tényleg felismeri az AI a hibakódokat?", answer: "Igen! A gemini-2.5-flash alapú AI Szerelőnk képes értelmezni a fotózott vagy beírt hibakódokat (pl. P0300), és magyar nyelven, érthetően elmagyarázza a probléma okát és a teendőket." },
-    { question: "Mi az a Gumihotel és Matrica menedzser?", answer: "Ezek a Utility Widgetek segítenek a kiegészítő adatok kezelésében. A Gumihotelben követheted, melyik abroncs van felszerelve és mennyit futott, a Matrica menedzser pedig figyelmeztet a pályamatrica lejártára." },
-    { question: "Ingyenes a használata?", answer: "A Starter csomag magánszemélyeknek 1 autóig teljesen ingyenes, ami tartalmazza a szervizkönyvet és költségkövetést. Több autóhoz és az AI funkciókhoz Pro előfizetés szükséges." }
+    { question: "Tényleg felismeri az AI a hibakódokat?", answer: "Igen! A Gemini 2.5 alapú AI Szerelőnk képes értelmezni a fotózott vagy beírt hibakódokat (pl. P0300), és magyar nyelven, érthetően elmagyarázza a probléma okát és a teendőket." },
+    { question: "Mi történik, ha vége az ingyenes időszaknak?", answer: "Aki most regisztrál, az 'Early Bird' státuszt kap, és a jövőben is kiemelt kedvezményeket vagy örökös hozzáférést biztosítunk az alapadatokhoz." }
   ];
 
   return (
@@ -341,14 +341,14 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             <a href="#gamification" className="text-sm font-medium text-slate-400 hover:text-white transition-colors relative group">
                 Közösség <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-500 transition-all group-hover:w-full"></span>
             </a>
-            <Link href="/pricing" className="text-sm font-medium text-amber-500 hover:text-amber-400 transition-colors">Árazás</Link>
+            
             <div className="h-4 w-px bg-slate-800"></div>
             
             <Link href="/login" className="text-sm font-bold text-white hover:text-amber-400 transition-colors">Belépés</Link>
             
             <Link href="/login" className="group relative overflow-hidden bg-white text-slate-950 px-6 py-2.5 rounded-full text-sm font-bold transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center gap-2">
                 <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-slate-200/50 to-transparent transform -skew-x-12 transition-all duration-1000 group-hover:left-[100%]" />
-                <span className="relative z-10">Kezdés</span> 
+                <span className="relative z-10">Ingyenes Start</span> 
                 <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -369,9 +369,8 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                     <div className="p-6 flex flex-col gap-4">
                         <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Funkciók</a>
                         <a href="#gamification" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Közösség</a>
-                        <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="text-amber-500 py-3 border-b border-slate-800 font-bold">Árazás</Link>
                         <Link href="/login" className="bg-amber-500 text-slate-950 text-center py-3 rounded-xl font-bold mt-2 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
-                            Fiók létrehozása
+                            Fiók létrehozása (Ingyenes)
                         </Link>
                     </div>
                 </motion.div>
@@ -394,7 +393,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                Rendszer Élesítve v2.3 • AI Integrációval
+                Early Access: Most minden funkció ingyenes!
             </motion.div>
 
             <motion.h1 
@@ -426,7 +425,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                   href="/login" 
                   className="group relative bg-amber-500 text-slate-950 text-lg font-bold px-10 py-5 rounded-2xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_40px_rgba(245,158,11,0.5)] flex items-center justify-center gap-2 overflow-hidden"
                 >
-                    <span className="relative">Ingyenes Regisztráció</span>
+                    <span className="relative">Kipróbálom Ingyen</span>
                     <ArrowRight className="relative w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </MagneticButton>
                 
@@ -441,7 +440,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             <DashboardPreview />
         </section>
 
-        {/* TECH TRUST BAR (REPLACED TESTIMONIALS) */}
+        {/* TECH TRUST BAR */}
         <TechTrustBar />
 
         {/* COMPARISON (Old vs New) */}
@@ -571,26 +570,27 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
         </section>
 
-        {/* PROMO BANNER */}
-        {promo && (
-           <div className="max-w-4xl mx-auto mb-32 w-full px-4">
-              <div className="relative overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-r from-purple-900/20 to-indigo-900/20 p-8 md:p-12 group hover:border-purple-500/50 transition-colors">
-                  <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-                  <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
-                      <div>
-                          <div className="inline-block px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold mb-4 uppercase tracking-wider border border-purple-500/30">
-                            Indulási Ajánlat
-                          </div>
-                          <h3 className="text-3xl font-bold text-white mb-2">{promo.title}</h3>
-                          <p className="text-purple-200/80 max-w-md">{promo.description}</p>
-                      </div>
-                      <Link href="/login" className="whitespace-nowrap bg-purple-600 hover:bg-purple-500 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_40px_rgba(147,51,234,0.5)] transform hover:scale-105">
-                          Kérem az ajánlatot
-                      </Link>
-                  </div>
-              </div>
+        {/* WHY FREE SECTION */}
+        <section className="max-w-4xl mx-auto mb-32 w-full px-4">
+           <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-900/20 to-slate-900/50 p-8 md:p-12 text-center">
+               <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl animate-pulse"></div>
+               
+               <div className="inline-block p-3 bg-emerald-500/10 rounded-2xl mb-6 text-emerald-400">
+                  <Gift size={32} />
+               </div>
+               
+               <h2 className="text-3xl font-bold text-white mb-4">Miért ingyenes a Pro csomag is?</h2>
+               <p className="text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">
+                  Hiszünk abban, hogy a legjobb terméket a közösséggel együtt építhetjük fel. 
+                  Jelenleg a növekedési fázisban vagyunk, ezért <strong className="text-white">minden korlátot feloldottunk</strong>. 
+                  Nincs limitált autó szám, nincs letiltott AI funkció. Használd, teszteld, és élvezd!
+               </p>
+               
+               <Link href="/login" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-emerald-500/30">
+                   Regisztrálok az Early Access-re
+               </Link>
            </div>
-        )}
+        </section>
 
         {/* FAQ SECTION */}
         <section id="faq" className="max-w-3xl mx-auto w-full mb-32 px-4">
@@ -687,7 +687,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                  <h4 className="text-white font-bold mb-6 tracking-wide">Termék</h4>
                  <ul className="space-y-4 text-sm text-slate-400">
                      <li><a href="#features" className="hover:text-amber-500 transition-colors">Funkciók</a></li>
-                     <li><Link href="/pricing" className="hover:text-amber-500 transition-colors">Csomagok & Árak</Link></li>
                      <li><a href="#gamification" className="hover:text-amber-500 transition-colors">Közösség</a></li>
                      <li>
                         <Link href="/changelog" className="hover:text-amber-500 transition-colors flex items-center gap-2 group">
