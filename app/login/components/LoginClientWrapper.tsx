@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { IntroLoader } from './IntroLoader'; // Feltételezem, hogy az előzőleg megírt "fullos" loadered használod
+import { IntroLoader } from './IntroLoader'; // Feltételezem ez megvan
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const LoginClientWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -15,18 +15,18 @@ export const LoginClientWrapper = ({ children }: { children: React.ReactNode }) 
         )}
       </AnimatePresence>
 
+      {/* Nem rendereljük a children-t amíg tölt, 
+         hogy ne villanjon be a tartalom a loader alatt.
+      */}
       {!isLoading && (
-        <motion.div
-          // Kezdeti állapot: kicsit nagyítva és homályosan
-          initial={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
-          // Végállapot: élesen, normál méretben
+        <motion.main
+          initial={{ opacity: 0, scale: 1.02, filter: "blur(12px)" }}
           animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          // Nagyon finom, "cinematic" lassú átmenet
-          transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }} 
-          className="w-full min-h-screen"
+          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }} 
+          className="w-full h-[100dvh]"
         >
           {children}
-        </motion.div>
+        </motion.main>
       )}
     </>
   );
