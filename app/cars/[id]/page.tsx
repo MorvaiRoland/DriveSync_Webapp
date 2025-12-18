@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { deleteEvent, deleteReminder } from './actions'
 import DocumentManager from './DocumentManager'
 import ExportMenu from '@/components/ExportMenu'
-import PublicToggle from '@/components/PublicToggle' // Importálva
+import PublicToggle from '@/components/PublicToggle' // Biztosítsd, hogy ez a path jó legyen!
 import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
 import VignetteManager from '@/components/VignetteManager'
 import SmartParkingWidget from '@/components/SmartParkingWidget' 
@@ -32,7 +32,7 @@ type Car = {
   color: string | null; vin: string | null; share_token?: string | null; 
   is_for_sale?: boolean | null; hide_prices?: boolean | null; hide_sensitive?: boolean | null;
   transmission?: string | null; engine_size?: number | null; power_hp?: number | null;
-  is_public_history?: boolean; // Hozzáadva a típushoz
+  is_public_history?: boolean; 
 }
 
 const getExpiryStatus = (dateString: string | null) => {
@@ -125,7 +125,7 @@ export default async function CarDetailsPage(props: Props) {
   const techProps = { car, avgConsumption, isElectric }
   const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost, isElectric }
   const carIdString = car.id.toString();
-  const isPublic = car.is_public_history || false; // Olvassuk ki az adatbázisból
+  const isPublic = car.is_public_history || false; 
 
   // --- WIDGET LOGIKA (MINDENKI PRO) ---
   const WidgetParking = <SmartParkingWidget carId={carIdString} activeSession={activeParking} />;
@@ -146,7 +146,7 @@ export default async function CarDetailsPage(props: Props) {
   const mobileTabs = {
     overview: (
         <div className="space-y-6">
-            {/* Mobilon is megjelenjen a kapcsoló */}
+            {/* Mobilon is megjelenjen a fekete-fehér kapcsoló */}
             <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
             {WidgetParking}{WidgetHealth}{WidgetPrediction}{WidgetCost}{WidgetSales}
         </div>
@@ -160,7 +160,7 @@ export default async function CarDetailsPage(props: Props) {
     <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
         <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
             
-            {/* ÚJ: Publikus kapcsoló */}
+            {/* Fekete-fehér kapcsoló Desktopon */}
             <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

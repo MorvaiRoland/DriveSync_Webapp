@@ -175,3 +175,28 @@ export async function togglePublicHistory(carId: string, isPublic: boolean) {
 
   revalidatePath(`/cars/${carId}`)
 }
+
+export async function toggleCarVisibility(carId: string, isPublic: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Unauthorized' }
+  }
+
+  // Ellenőrizzük, hogy a useré-e az autó, és frissítjük
+  const { error } = await supabase
+    .from('cars')
+    .update({ is_public_history: isPublic })
+    .eq('id', carId)
+    .eq('user_id', user.id) // Fontos biztonsági ellenőrzés!
+
+  if (error) {
+    console.error('Error toggling visibility:', error)
+    return { error: error.message }
+  }
+
+  // Újratöltjük az oldalt, hogy a UI frissüljön
+  revalidatePath(`/cars/${carId}`)
+  return { success: true }
+}

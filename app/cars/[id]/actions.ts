@@ -804,3 +804,4 @@ export async function toggleSaleMode(formData: FormData) {
     return { success: false, error: error.message || 'Hiba történt a mentés során' }
   }
 }
+
