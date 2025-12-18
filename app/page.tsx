@@ -14,6 +14,7 @@ import FuelWidget from '@/components/FuelWidget';
 import LandingPage from '@/components/LandingPage';
 import CongratulationModal from '@/components/CongratulationModal';
 import MarketplaceSection from '@/components/MarketplaceSection'
+import VinCheckPage from '@/app/check/page' // Importáljuk be a lekérdezőt!
 
 const DEV_SECRET_KEY = "admin"; 
 const FEATURES = {
@@ -60,16 +61,20 @@ async function DashboardComponent() {
   let fleetHealth = 100 
   let latestCarId = null
   let badges: any[] = []
-  
-  // --- EARLY ACCESS / INGYENES MÓD ---
-  // Itt írjuk felül a logikát: mindenki 'lifetime' (vagy pro) felhasználó
-  let plan: SubscriptionPlan = 'lifetime'; 
-  let subscription: any = { plan_type: 'lifetime', status: 'active' };
-  
-  // Limitek kikapcsolása
-  let currentMaxCars: number | typeof Infinity = Infinity;
+  let subscription: any = null
+  let plan: SubscriptionPlan = 'free'; 
   let canAddCar = true;
-  let canUseAi = true;
+  let canUseAi = false;
+
+  // Előfizetés és limitek ellenőrzése
+  // MOST MINDENKI PRO
+  plan = 'lifetime';
+  subscription = { plan_type: 'lifetime', status: 'active' };
+  
+  // Limit felülírása
+  let currentMaxCars: number | typeof Infinity = Infinity;
+  canAddCar = true;
+  canUseAi = true;
 
   const { data: carsData } = await supabase
       .from('cars')
@@ -156,7 +161,7 @@ async function DashboardComponent() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
-      
+      {/* ... Dashboard Renderelése (Változatlan) ... */}
       {/* HÁTTÉR EFFEKTEK */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
@@ -165,14 +170,10 @@ async function DashboardComponent() {
       </div>
 
       <CongratulationModal currentPlan={subscription?.plan_type || 'free'} />
-      
-      {/* AI Szerelő: Mindig megjelenik, mert canUseAi = true */}
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
-      
       <ChangelogModal />
       <ReminderChecker />
 
-      {/* --- NAVBAR --- */}
       <nav className="absolute top-4 left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
            <div className="flex items-center gap-6"> 
@@ -193,14 +194,10 @@ async function DashboardComponent() {
            </div>
 
            <div className="flex items-center gap-3">
-             {/* Early Access Badge */}
              <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-                 <span className="text-sm">🚀</span>
-                 Early Access Pro
+                 <span className="text-sm">🚀</span> Early Access Pro
              </Link>
-             
              <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-
              <Link href="/settings" className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Beállítások">
                <Settings className="w-5 h-5" />
              </Link>
@@ -214,23 +211,17 @@ async function DashboardComponent() {
       </nav>
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-24">
-        
-        {/* --- HERO HEADER --- */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                  {greeting},
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> {greeting},
               </h2>
               <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
                   {user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]}
               </h1>
             </div>
-
-            {/* --- KPI STATS BAR --- */}
             {cars.length > 0 && (
                 <div className="w-full lg:w-auto bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-2 border border-white/20 dark:border-slate-700 shadow-xl flex flex-col sm:flex-row gap-2">
-                    {/* Health Score és Spending widgetek */}
                     <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[200px]">
                         <div className="relative w-10 h-10 flex-shrink-0">
                             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
@@ -246,7 +237,6 @@ async function DashboardComponent() {
                             <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{hasServices ? 'Kalkulált érték' : 'Nincs adat'}</p>
                         </div>
                     </div>
-                    {/* Spending */}
                     <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[220px]">
                        <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500"><span className="font-bold text-lg">💰</span></div>
                        <div>
@@ -258,18 +248,12 @@ async function DashboardComponent() {
             )}
         </div>
 
-        {/* --- MAIN GRID CONTENT --- */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {/* BAL OLDAL (Fő funkciók) */}
             <div className="lg:col-span-8 space-y-8">
-              
-              {/* 1. GYORS KM NAPLÓZÁS WIDGET */}
               {FEATURES.mileageLog && myCars.length > 0 && (
                   <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xl p-6 sm:p-8 group border border-slate-200 dark:border-slate-800">
                       <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-colors duration-700"></div>
                       <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-600/5 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
-
                       <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
                           <div className="flex items-center gap-4 w-full md:w-auto">
                               <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-inner">
@@ -280,7 +264,6 @@ async function DashboardComponent() {
                                   <p className="text-slate-500 dark:text-slate-400 text-sm">Frissítsd az óraállást egy kattintással.</p>
                               </div>
                           </div>
-
                           <form action={logCurrentMileage} className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                               <div className="relative group/input">
                                   <select name="car_id" className="w-full sm:w-48 pl-4 pr-10 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none appearance-none cursor-pointer transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white" defaultValue={latestCarId || ""}>
@@ -301,7 +284,6 @@ async function DashboardComponent() {
                   </div>
               )}
 
-              {/* 2. SAJÁT AUTÓK */}
               {(myCars.length > 0 || FEATURES.addCar || sharedCars.length > 0) && (
                   <div className="space-y-6">
                       <div className="flex items-center justify-between px-2">
@@ -319,7 +301,6 @@ async function DashboardComponent() {
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {/* LIMIT KEZELÉS: Most mindig engedélyezve */}
                           {FEATURES.addCar && (
                              <Link 
                                href="/cars/new" 
@@ -336,7 +317,6 @@ async function DashboardComponent() {
                   </div>
               )}
 
-              {/* 3. MEGOSZTOTT AUTÓK */}
               {FEATURES.sharedCars && sharedCars.length > 0 && (
                   <div className="space-y-6 pt-8 border-t border-slate-200 dark:border-slate-800">
                       <div className="flex items-center justify-between px-2">
@@ -354,7 +334,6 @@ async function DashboardComponent() {
               )}
             </div>
 
-            {/* JOBB OLDAL (Widgetek) */}
             <div className="lg:col-span-4 space-y-8">
               <Link href="/showroom" className="block relative group overflow-hidden rounded-3xl shadow-xl transition-transform hover:scale-[1.02]">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-600 to-red-700"></div>
@@ -377,7 +356,6 @@ async function DashboardComponent() {
                   {FEATURES.fuelPrices && <FuelWidget />}
               </div>
               
-              {/* Emlékeztetők widget */}
               {FEATURES.reminders && (
                 <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700/50 overflow-hidden">
                     <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md flex justify-between items-center">
@@ -403,7 +381,7 @@ async function DashboardComponent() {
                     </div>
                 </div>
               )}
-              {/* Activity Log */}
+              
               {FEATURES.activityLog && (
                 <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700/50 overflow-hidden">
                     <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md">
@@ -483,10 +461,17 @@ export default async function Page({
     return <DashboardComponent />
   }
 
+  // --- ÚJ RÉSZ: CHECK PARAMÉTER KEZELÉSE ---
+  const params = await searchParams
+  if (params.check !== undefined) {
+      // Ha van "check" paraméter, akkor irány a vin check oldal
+      return redirect('/check')
+  }
+  // -----------------------------------------
+
   const { data: activePromo } = await supabase.from('promotions').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle()
   const { data: updates } = await supabase.from('release_notes').select('*').order('release_date', { ascending: false }).limit(5);
 
-  const params = await searchParams
   const secret = params.dev
   if (secret === DEV_SECRET_KEY) {
     return <DashboardComponent />

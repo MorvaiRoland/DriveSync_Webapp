@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { deleteEvent, deleteReminder } from './actions'
 import DocumentManager from './DocumentManager'
 import ExportMenu from '@/components/ExportMenu'
-import LockedFeature from '@/components/LockedFeature'
+import PublicToggle from '@/components/PublicToggle' // Importálva
 import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
 import VignetteManager from '@/components/VignetteManager'
 import SmartParkingWidget from '@/components/SmartParkingWidget' 
@@ -17,7 +17,7 @@ import CarHealthWidget from '@/components/CarHealthWidget'
 
 import { 
   Fuel, Wrench, Bell, Map, Package, Warehouse, 
-  Lock, Pencil, Activity, FileText, 
+  Pencil, FileText, Lock, 
   ShieldCheck, Disc, Snowflake, Sun, Wallet, Banknote, 
   Sparkles, Lightbulb, Plus, Trash2, Gauge, History, 
   ChevronRight, CarFront, Zap
@@ -32,6 +32,7 @@ type Car = {
   color: string | null; vin: string | null; share_token?: string | null; 
   is_for_sale?: boolean | null; hide_prices?: boolean | null; hide_sensitive?: boolean | null;
   transmission?: string | null; engine_size?: number | null; power_hp?: number | null;
+  is_public_history?: boolean; // Hozzáadva a típushoz
 }
 
 const getExpiryStatus = (dateString: string | null) => {
@@ -72,8 +73,6 @@ export default async function CarDetailsPage(props: Props) {
   const safeVignettes = vigRes.data || []
   const activeParking = parkingRes.data || null
 
-  // PRO CSOMAG ELLENŐRZÉSE - KÉNYSZERÍTVE
-  // Eredeti logika helyett mindenkit Pro-nak tekintünk
   const isPro = true; 
 
   // --- Calculations ---
@@ -126,39 +125,32 @@ export default async function CarDetailsPage(props: Props) {
   const techProps = { car, avgConsumption, isElectric }
   const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost, isElectric }
   const carIdString = car.id.toString();
+  const isPublic = car.is_public_history || false; // Olvassuk ki az adatbázisból
 
   // --- WIDGET LOGIKA (MINDENKI PRO) ---
   const WidgetParking = <SmartParkingWidget carId={carIdString} activeSession={activeParking} />;
   const WidgetHealth = <CarHealthWidget {...healthProps} />;
-  
-  // 1. Prediktív Karbantartás: Mindig látható
   const WidgetPrediction = <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} />;
-    
   const WidgetCost = <CostCard {...costProps} />;
-  
-  // 2. Eladás Widget: Mindig látható
   const WidgetSales = <SalesWidget car={car} />;
-    
   const WidgetSpecs = <TechnicalSpecs {...techProps} />;
   const WidgetVignette = <VignetteManager carId={carIdString} vignettes={safeVignettes} />;
   const WidgetTires = <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />;
-  
-  // 3. Dokumentumok: Mindig látható
   const WidgetDocs = <DocumentManager carId={carIdString} documents={safeDocs} />;
-
-  // 4. Okos Tippek: Mindig látható
   const WidgetTips = <SmartTipsCard tips={smartTips} />;
-  
   const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
-  
-  // 5. Grafikonok: Teljes verzió mindenkinek
   const WidgetCharts = <AnalyticsCharts events={safeEvents} isPro={true} />;
-  
   const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
 
   // --- MOBILE TABS CONTENT ---
   const mobileTabs = {
-    overview: <div className="space-y-6">{WidgetParking}{WidgetHealth}{WidgetPrediction}{WidgetCost}{WidgetSales}</div>,
+    overview: (
+        <div className="space-y-6">
+            {/* Mobilon is megjelenjen a kapcsoló */}
+            <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
+            {WidgetParking}{WidgetHealth}{WidgetPrediction}{WidgetCost}{WidgetSales}
+        </div>
+    ),
     services: <div className="space-y-6">{WidgetSpecs}{WidgetVignette}{WidgetTires}{WidgetDocs}</div>,
     log: <div className="space-y-6">{WidgetTips}{WidgetReminders}{WidgetCharts}{WidgetLog}</div>
   };
@@ -167,6 +159,10 @@ export default async function CarDetailsPage(props: Props) {
   const DesktopLayout = (
     <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
         <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
+            
+            {/* ÚJ: Publikus kapcsoló */}
+            <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
+
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                  <div className="space-y-6">
                     {WidgetHealth}
@@ -207,7 +203,7 @@ export default async function CarDetailsPage(props: Props) {
         nextServiceKm={nextServiceKm} 
         kmRemaining={kmRemaining} 
         safeEvents={safeEvents} 
-        isPro={true} // Mindig Pro
+        isPro={true} 
       />
 
       {/* DESKTOP ACTION BAR */}
@@ -248,7 +244,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                         <span className="hidden sm:inline font-bold text-sm">Garázs</span>
                     </Link>
                     <div className="flex items-center gap-3">
-                        {/* Mivel mindenki Pro, csak az export menü jelenik meg */}
                         <ExportMenu car={car} events={safeEvents} />
                         
                         <Link href={`/cars/${car.id}/edit`} className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md transition-colors border border-white/10">

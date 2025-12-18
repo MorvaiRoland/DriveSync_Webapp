@@ -355,7 +355,7 @@ function CarForm() {
                             </SelectGroup>
                         </div>
                         
-                        <InputGroup label="Alvázszám (VIN)" name="vin" placeholder="Opcionális" uppercase />
+                        <InputGroup label="Alvázszám (VIN)" name="vin" placeholder="pl. WVWZZZ..." uppercase required />
                     </div>
                 </FormSection>
 
