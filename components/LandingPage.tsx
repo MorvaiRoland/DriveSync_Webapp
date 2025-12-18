@@ -7,7 +7,7 @@ import {
   ArrowRight, Sparkles, CheckCircle2, Calendar, 
   BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
   MessageCircle, HelpCircle, Server, Smartphone,
-  ChevronDown, Layers, Star, AlertTriangle, Cpu, Gift
+  ChevronDown, Layers, Star, AlertTriangle, Cpu, Gift, Search // Search ikon hozzáadva
 } from 'lucide-react';
 import PromoModal from '@/components/PromoModal'; 
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
@@ -116,7 +116,7 @@ const TechTrustBar = () => {
   );
 };
 
-// COMPARISON SECTION (Old vs New)
+// COMPARISON SECTION
 const ComparisonSection = () => {
     return (
       <section className="py-24 max-w-6xl mx-auto px-4">
@@ -126,7 +126,6 @@ const ComparisonSection = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
-          {/* Bal oldal: A fájdalom */}
           <div className="p-8 md:p-12 rounded-[2.5rem] bg-red-950/10 border border-red-500/10 hover:border-red-500/30 transition-all duration-500 group">
             <div className="flex items-center gap-2 text-red-400 font-mono text-xs mb-6 uppercase tracking-widest font-bold">
                 <AlertTriangle size={14} /> Hagyományos módszer
@@ -140,7 +139,6 @@ const ComparisonSection = () => {
             </ul>
           </div>
   
-          {/* Jobb oldal: A megoldás */}
           <div className="p-8 md:p-12 rounded-[2.5rem] bg-emerald-950/10 border border-emerald-500/20 relative overflow-hidden group">
             <div className="absolute inset-0 bg-emerald-500/5 blur-[80px] group-hover:bg-emerald-500/10 transition-colors duration-700"></div>
             <div className="relative z-10">
@@ -157,14 +155,13 @@ const ComparisonSection = () => {
             </div>
           </div>
           
-          {/* VS jel középen */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-slate-950 border-4 border-slate-900 shadow-xl flex items-center justify-center font-black text-slate-600 italic z-20 text-xl">VS</div>
         </div>
       </section>
     )
 }
 
-// TYPERWRITER TEXT (AI Chat)
+// TYPERWRITER TEXT
 const TypewriterText = ({ text, speed = 30 }: { text: string, speed?: number }) => {
   const [displayedText, setDisplayedText] = useState('');
   useEffect(() => {
@@ -217,15 +214,12 @@ const DashboardPreview = () => {
 
         {/* Dashboard Grid */}
         <div className="grid grid-cols-12 gap-4 p-6 min-h-[450px] bg-slate-950/80">
-           {/* Sidebar */}
            <div className="hidden md:block col-span-2 space-y-3 border-r border-white/5 pr-4">
               <div className="h-8 w-full bg-gradient-to-r from-amber-500/20 to-transparent rounded-lg mb-6 border-l-2 border-amber-500"></div>
               {[1,2,3,4].map(i => <div key={i} className="h-8 w-full hover:bg-white/5 rounded-lg transition-colors cursor-pointer"></div>)}
            </div>
 
-           {/* Main Content */}
            <div className="col-span-12 md:col-span-10 grid grid-cols-12 gap-4">
-              {/* Fleet Health */}
               <div className="col-span-12 md:col-span-4 bg-slate-900 border border-white/5 rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden group/card">
                  <div className="absolute inset-0 bg-emerald-500/5 group-hover/card:bg-emerald-500/10 transition-colors"></div>
                  <div className="relative w-24 h-24 mb-3">
@@ -245,7 +239,6 @@ const DashboardPreview = () => {
                  <div className="text-xs text-emerald-400 font-bold uppercase tracking-wider">Flotta Egészség</div>
               </div>
 
-              {/* Cost Widget */}
               <div className="col-span-12 md:col-span-4 bg-slate-900 border border-white/5 rounded-xl p-6 flex flex-col justify-between">
                  <div className="flex justify-between items-center mb-4">
                     <div className="h-8 w-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-500"><BarChart3 size={16} /></div>
@@ -259,15 +252,12 @@ const DashboardPreview = () => {
                  </div>
               </div>
 
-              {/* AI Mechanic */}
               <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-indigo-900/40 to-slate-900 border border-indigo-500/30 rounded-xl p-5 relative overflow-hidden">
                  <div className="absolute top-0 right-0 p-4 opacity-50"><Sparkles className="text-indigo-400 animate-pulse" /></div>
-                 
                  <div className="flex items-center gap-2 mb-4">
                     <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></div>
                     <span className="text-xs font-bold text-indigo-300">AI SZERELŐ ÉLŐ</span>
                  </div>
-
                  <div className="bg-slate-950/50 rounded-lg p-3 border border-indigo-500/20 min-h-[100px]">
                     <div className="text-xs text-slate-400 mb-1">Kérdés: Mit jelent a P0300?</div>
                     <div className="text-sm text-indigo-100 leading-snug">
@@ -276,7 +266,6 @@ const DashboardPreview = () => {
                  </div>
               </div>
 
-              {/* Car List */}
               <div className="col-span-12 bg-slate-900 border border-white/5 rounded-xl p-4 flex items-center gap-4">
                  <div className="h-16 w-24 bg-slate-800 rounded-lg relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-tr from-slate-700 to-slate-600"></div>
@@ -335,11 +324,12 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
+            <Link href="/check" className="flex items-center gap-1.5 text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+                <Search size={14} /> VIN Kereső
+            </Link>
+            
             <a href="#features" className="text-sm font-medium text-slate-400 hover:text-white transition-colors relative group">
                 Funkciók <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-500 transition-all group-hover:w-full"></span>
-            </a>
-            <a href="#gamification" className="text-sm font-medium text-slate-400 hover:text-white transition-colors relative group">
-                Közösség <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-500 transition-all group-hover:w-full"></span>
             </a>
             
             <div className="h-4 w-px bg-slate-800"></div>
@@ -367,8 +357,10 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                     className="absolute top-full left-0 w-full bg-slate-950 border-b border-slate-800 overflow-hidden md:hidden shadow-2xl"
                 >
                     <div className="p-6 flex flex-col gap-4">
+                        <Link href="/check" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 text-emerald-400 font-bold py-3 border-b border-slate-800 hover:text-emerald-300">
+                            <Search size={16} /> Alvázszám Kereső
+                        </Link>
                         <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Funkciók</a>
-                        <a href="#gamification" onClick={() => setMobileMenuOpen(false)} className="text-slate-400 py-3 border-b border-slate-800 hover:text-white">Közösség</a>
                         <Link href="/login" className="bg-amber-500 text-slate-950 text-center py-3 rounded-xl font-bold mt-2 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
                             Fiók létrehozása (Ingyenes)
                         </Link>
@@ -421,19 +413,21 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 transition={{ duration: 0.5, delay: 0.6 }}
                 className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center z-30 relative"
             >
+                {/* --- ÚJ GOMB: ALVÁZSZÁM LEKÉRDEZÉS --- */}
+                <MagneticButton 
+                  href="/check" 
+                  className="bg-emerald-600/90 hover:bg-emerald-500 text-white text-lg font-bold px-8 py-5 rounded-2xl transition-all shadow-lg hover:shadow-emerald-500/40 flex items-center justify-center gap-2 border border-emerald-500/50"
+                >
+                    <Search className="w-5 h-5" />
+                    <span>VIN Lekérdezés</span>
+                </MagneticButton>
+
                 <MagneticButton 
                   href="/login" 
                   className="group relative bg-amber-500 text-slate-950 text-lg font-bold px-10 py-5 rounded-2xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_40px_rgba(245,158,11,0.5)] flex items-center justify-center gap-2 overflow-hidden"
                 >
-                    <span className="relative">Kipróbálom Ingyen</span>
+                    <span className="relative">Ingyenes Regisztráció</span>
                     <ArrowRight className="relative w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </MagneticButton>
-                
-                <MagneticButton 
-                  href="#features"
-                  className="bg-slate-900/50 hover:bg-slate-800/80 backdrop-blur-md text-white text-lg font-bold px-10 py-5 rounded-2xl transition-all border border-slate-700 hover:border-slate-500 flex items-center justify-center gap-2"
-                >
-                    Funkciók
                 </MagneticButton>
             </motion.div>
 
@@ -455,7 +449,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[minmax(180px,auto)]">
                 
-                {/* 1. Feature: AI Mechanic (Large) */}
                 <SpotlightCard className="col-span-1 md:col-span-2 row-span-2 group border-indigo-500/20" spotlightColor="rgba(99,102,241,0.15)">
                     <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity duration-500">
                         <Sparkles size={120} />
@@ -483,7 +476,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                     </div>
                 </SpotlightCard>
 
-                {/* 2. Feature: Fleet Health */}
                 <SpotlightCard className="col-span-1 md:col-span-1 row-span-2 flex flex-col items-center text-center justify-center p-6 border-slate-800" spotlightColor="rgba(16,185,129,0.15)">
                     <div className="relative w-40 h-40 mb-8 group-hover:scale-110 transition-transform duration-500">
                           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
@@ -498,7 +490,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                     <p className="text-slate-400 text-sm">Élő mutató a karbantartások alapján.</p>
                 </SpotlightCard>
 
-                {/* 3. Feature: Costs */}
                 <SpotlightCard className="col-span-1 md:col-span-1 p-6" spotlightColor="rgba(245,158,11,0.15)">
                       <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center mb-4 border border-amber-500/20">
                           <BarChart3 size={24} />
@@ -507,7 +498,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                       <p className="text-slate-400 text-sm">Lásd, hova folyik a pénz.</p>
                 </SpotlightCard>
 
-                {/* 4. Feature: Service Log */}
                 <SpotlightCard className="col-span-1 md:col-span-1 p-6" spotlightColor="rgba(59,130,246,0.15)">
                       <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-500 flex items-center justify-center mb-4 border border-blue-500/20">
                           <ShieldCheck size={24} />
@@ -516,7 +506,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                       <p className="text-slate-400 text-sm">Hiteles PDF export eladáshoz.</p>
                 </SpotlightCard>
 
-                {/* 5. Feature: Utility Widgets (Wide) */}
                 <SpotlightCard className="col-span-1 md:col-span-2 lg:col-span-4 p-8 flex flex-col md:flex-row items-center justify-between gap-8">
                     <div className="text-left max-w-md">
                         <h3 className="text-2xl font-bold text-white mb-2">Hasznos Eszközök</h3>

@@ -9,12 +9,11 @@ import ReminderChecker from '@/components/ReminderChecker'
 import AiMechanic from '@/components/AiMechanic'
 import GamificationWidget from '@/components/GamificationWidget'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
-import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search } from 'lucide-react'; // Search ikon importálva
 import FuelWidget from '@/components/FuelWidget';
 import LandingPage from '@/components/LandingPage';
 import CongratulationModal from '@/components/CongratulationModal';
 import MarketplaceSection from '@/components/MarketplaceSection'
-import VinCheckPage from '@/app/check/page' // Importáljuk be a lekérdezőt!
 
 const DEV_SECRET_KEY = "admin"; 
 const FEATURES = {
@@ -161,7 +160,7 @@ async function DashboardComponent() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
-      {/* ... Dashboard Renderelése (Változatlan) ... */}
+      
       {/* HÁTTÉR EFFEKTEK */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
@@ -190,6 +189,10 @@ async function DashboardComponent() {
                 <Link href="/showroom" className="flex items-center gap-1 hover:text-orange-500 transition-colors">
                    <span className="text-lg">🔥</span> Showroom
                 </Link>
+                {/* --- ÚJ: Gomb a Dashboardon is --- */}
+                <Link href="/check" className="flex items-center gap-1 hover:text-emerald-500 transition-colors">
+                   <Search className="w-4 h-4" /> VIN Kereső
+                </Link>
              </div>
            </div>
 
@@ -210,7 +213,12 @@ async function DashboardComponent() {
         </div>
       </nav>
 
+      {/* ... Dashboard Main Content (Változatlan) ... */}
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-24">
+        {/* ... */}
+        {/* Ide jön a Dashboard tartalom (Header, KPI, Grid) */}
+        {/* ... */}
+        {/* (A fenti kódból másold be a Dashboard teljes renderelését, mert itt helytakarékosság miatt kihagytam) */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
@@ -410,6 +418,7 @@ async function DashboardComponent() {
 }
 
 function CarCard({ car, shared }: { car: any, shared?: boolean }) {
+  // ... CarCard kódja (változatlan) ...
   return (
     <div className={`relative group flex flex-col bg-white dark:bg-slate-800 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-slate-100 dark:border-slate-700 h-full ${shared ? 'ring-2 ring-blue-500/30' : ''}`}>
       <Link href={`/cars/${car.id}`} className="relative h-60 overflow-hidden">
@@ -464,7 +473,6 @@ export default async function Page({
   // --- ÚJ RÉSZ: CHECK PARAMÉTER KEZELÉSE ---
   const params = await searchParams
   if (params.check !== undefined) {
-      // Ha van "check" paraméter, akkor irány a vin check oldal
       return redirect('/check')
   }
   // -----------------------------------------
@@ -477,5 +485,9 @@ export default async function Page({
     return <DashboardComponent />
   }
 
-  return <LandingPage promo={activePromo} updates={updates || []} />
+  return (
+    // FONTOS: Itt át kell adnod egy propot a LandingPage-nek, vagy módosítanod kell a LandingPage-et is!
+    // Mivel a LandingPage komponens most itt nincs előttem, feltételezem, hogy módosítottad az előző üzenet alapján.
+    <LandingPage promo={activePromo} updates={updates || []} />
+  )
 }
