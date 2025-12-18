@@ -13,7 +13,7 @@ export const LoginSidePanel = () => {
         <div className="absolute inset-0 z-0">
             <div className="absolute inset-0 bg-slate-950/70 z-10 mix-blend-multiply" /> 
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/60 z-10" />
-            <video autoPlay loop muted playsInline className="w-full h-full object-cover scale-105 blur-[2px]">
+            <video autoPlay loop muted playsInline className="w-full h-full object-cover scale-100 ">
                 <source src="/login.mp4" type="video/mp4" />
             </video>
         </div>
