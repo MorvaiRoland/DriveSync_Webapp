@@ -114,53 +114,50 @@ async function DashboardComponent() {
               else if (spentLast30Days > 0) spendingTrend = 100;
           }
       }
-     if (myCars.length > 0) {
+    if (myCars.length > 0) {
          const totalHealth = myCars.reduce((sum, car) => {
-            // 1. Elektromos autók kezelése: Mivel nincs motorolaj, alapértelmezetten 100%-nak vesszük,
-            // hogy ne húzza le az átlagot, hacsak nincs más beállítva.
+            // 1. Elektromos autók: Ha nincs motorolaj, az 100%-os egészségnek számít
             if (car.fuel_type === 'Elektromos') {
                  return sum + 100;
             }
 
-            // 2. Szervizintervallum (alapértelmezett: 15.000 km)
-            const interval = car.service_interval || 15000;
+            // 2. Ciklus meghatározása (FONTOS: service_interval_km a helyes mezőnév!)
+            // Ha nincs megadva, 15 000 km az alapértelmezett
+            const interval = car.service_interval_km || 15000;
             
-            // 3. Utolsó szerviz meghatározása
-            // Megnézzük a beállított értéket (last_service_mileage)
+            // 3. Utolsó szerviz km meghatározása (Adatbázis mező vagy Események)
             let lastServiceKm = car.last_service_mileage || 0;
 
-            // ÉS megnézzük a rögzített 'service' eseményeket is, hátha volt frissebb
+            // Megnézzük a rögzített 'service' eseményeket, hátha van frissebb adat
             if (car.events && Array.isArray(car.events)) {
                 const serviceEvents = car.events.filter((e: any) => e.type === 'service');
                 if (serviceEvents.length > 0) {
                     const maxEventKm = Math.max(...serviceEvents.map((e: any) => e.mileage));
-                    // Ha a rögzített szerviz esemény frissebb, mint az alapbeállítás, akkor azt használjuk
                     if (maxEventKm > lastServiceKm) {
                         lastServiceKm = maxEventKm;
                     }
                 }
             }
 
-            // 4. Jelenlegi km állás
+            // 4. Számítás
             const currentKm = car.mileage || 0;
-
-            // Ha valamiért a szerviz km nagyobb lenne, mint a jelenlegi (pl. elírás), akkor 0 a futás
             const kmDrivenSinceService = Math.max(0, currentKm - lastServiceKm);
             
-            // 5. Százalék számítás
-            // (Intervallum - Megtett) / Intervallum * 100
+            // Ha többet mentünk, mint az intervallum (Túlfutás), akkor a hátralévő 0%
+            // Képlet: (Intervallum - Megtett) / Intervallum * 100
             let healthPercent = ((interval - kmDrivenSinceService) / interval) * 100;
 
-            // Határok közé szorítjuk (ne legyen negatív, se 100 feletti)
+            // 5. Korrekció: 0 és 100 közé szorítjuk
+            // Így a "Túlfutás" (ami negatív lenne) pontosan 0-ként adódik hozzá, ahogy a képen is látszik
             healthPercent = Math.max(0, Math.min(100, healthPercent));
 
             return sum + healthPercent;
          }, 0);
 
-         // Átlagolás: Összes százalék / autók száma
+         // Átlagolás: Összes százalék összege / autók száma
          fleetHealth = Math.round(totalHealth / myCars.length);
       } else {
-         fleetHealth = 100; // Ha nincs autó, akkor 100% az egészség
+         fleetHealth = 100; // Ha nincs autó, 100% az alapállapot
       }
     }
   const hour = new Date().getHours();
