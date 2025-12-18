@@ -200,7 +200,7 @@ async function DashboardComponent() {
                </span>
              </Link>
              <div className="hidden md:flex items-center gap-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-                <Link href="/pricing" className="hover:text-amber-500 transition-colors">Csomagok</Link>
+               
                 <Link href="/showroom" className="flex items-center gap-1 hover:text-orange-500 transition-colors">
                    <span className="text-lg">🔥</span> Showroom
                 </Link>
