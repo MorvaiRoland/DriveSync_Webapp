@@ -7,7 +7,7 @@ import {
   ArrowRight, Sparkles, CheckCircle2, Calendar, 
   BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
   MessageCircle, HelpCircle, Server, Smartphone,
-  ChevronDown, Layers, Star, AlertTriangle
+  ChevronDown, Layers, Star, AlertTriangle, Cpu
 } from 'lucide-react';
 import PromoModal from '@/components/PromoModal'; 
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion';
@@ -85,46 +85,35 @@ const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(245,15
   );
 };
 
-// INFINITE TESTIMONIALS (Social Proof)
-const InfiniteTestimonials = () => {
-    const testimonials = [
-      { name: "K. Dávid", role: "Flottakezelő", text: "Végre nem Excelben kell vezetnem a 15 autót." },
-      { name: "B. Anna", role: "Magánszemély", text: "A P0420 hibakódot azonnal lefordította magyarra." },
-      { name: "T. Gábor", role: "Sofőr", text: "A matrica figyelmeztetés mentett meg 50 ezer büntetéstől." },
-      { name: "S. Péter", role: "Autószerelő", text: "Az ügyfeleimnek is ezt ajánlom a szervizkönyv miatt." },
-      { name: "N. Eszter", role: "Cégvezető", text: "Átlátható költségek, kevesebb adminisztráció." },
-    ];
-  
-    return (
-      <div className="w-full bg-slate-950 border-y border-white/5 py-10 overflow-hidden relative z-10">
-         <div className="absolute inset-y-0 left-0 w-40 bg-gradient-to-r from-slate-950 to-transparent z-10" />
-         <div className="absolute inset-y-0 right-0 w-40 bg-gradient-to-l from-slate-950 to-transparent z-10" />
-         
-         <motion.div 
-           className="flex gap-6 w-max"
-           animate={{ x: "-50%" }}
-           transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-         >
-           {[...testimonials, ...testimonials, ...testimonials].map((t, i) => (
-             <div key={i} className="w-[300px] p-6 rounded-2xl bg-slate-900/40 border border-slate-800 backdrop-blur-sm flex flex-col justify-between">
-               <div className="flex gap-1 mb-3">
-                 {[1,2,3,4,5].map(star => <Star key={star} size={14} className="fill-amber-500 text-amber-500" />)}
-               </div>
-               <p className="text-slate-300 text-sm mb-4 leading-relaxed">"{t.text}"</p>
-               <div className="flex items-center gap-3 mt-auto">
-                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-slate-700 to-slate-600 flex items-center justify-center font-bold text-white text-xs border border-white/10">
-                   {t.name.charAt(0)}
-                 </div>
-                 <div>
-                   <div className="text-white font-bold text-sm">{t.name}</div>
-                   <div className="text-slate-500 text-xs">{t.role}</div>
-                 </div>
-               </div>
-             </div>
-           ))}
-         </motion.div>
-      </div>
-    );
+// TECH TRUST BAR (ÚJ: Vélemények helyett)
+const TechTrustBar = () => {
+  const specs = [
+    { label: "Titkosítás", value: "AES-256 Banki Szint", icon: <Lock size={16} /> },
+    { label: "Adatfeldolgozás", value: "Gemini 2.5 Flash AI", icon: <Cpu size={16} /> },
+    { label: "Rendelkezésre állás", value: "99.9% Uptime", icon: <Server size={16} /> },
+    { label: "Kompatibilitás", value: "OBDII Szabvány", icon: <CheckCircle2 size={16} /> },
+  ];
+
+  return (
+    <div className="w-full border-y border-white/5 bg-slate-900/30 py-8 relative z-10 overflow-hidden backdrop-blur-sm">
+       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
+       <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-wrap justify-center md:justify-around items-center gap-8 md:gap-12">
+             {specs.map((spec, i) => (
+                <div key={i} className="flex items-center gap-3 group cursor-default">
+                   <div className="text-slate-600 group-hover:text-emerald-500 transition-colors duration-500 bg-slate-950/50 p-2.5 rounded-xl border border-white/5 shadow-inner">
+                      {spec.icon}
+                   </div>
+                   <div className="flex flex-col">
+                      <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">{spec.label}</span>
+                      <span className="text-sm font-bold text-slate-300 group-hover:text-white transition-colors">{spec.value}</span>
+                   </div>
+                </div>
+             ))}
+          </div>
+       </div>
+    </div>
+  );
 };
 
 // COMPARISON SECTION (Old vs New)
@@ -452,10 +441,10 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             <DashboardPreview />
         </section>
 
-        {/* SOCIAL PROOF / INFINITE LOGOS */}
-        <InfiniteTestimonials />
+        {/* TECH TRUST BAR (REPLACED TESTIMONIALS) */}
+        <TechTrustBar />
 
-        {/* COMPARISON (Old vs New) - NEW SECTION */}
+        {/* COMPARISON (Old vs New) */}
         <ComparisonSection />
 
         {/* BENTO GRID FEATURES */}
@@ -479,7 +468,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                             </div>
                             <h3 className="text-3xl font-bold text-white mb-3">AI Szerelő</h3>
                             <p className="text-slate-400 leading-relaxed text-lg">
-                                Fotózd le a hibakódot, vagy írd be a tüneteket. A GPT-4o alapú asszisztensünk azonnal elemzi a problémát.
+                                Fotózd le a hibakódot, vagy írd be a tüneteket. A Gemini alapú asszisztensünk azonnal elemzi a problémát.
                             </p>
                         </div>
                         <div className="mt-8 bg-slate-950/80 rounded-xl p-5 border border-white/10 backdrop-blur-md">
