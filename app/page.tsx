@@ -129,33 +129,42 @@ async function DashboardComponent() {
   // Flotta egészség számítás (TÉNYLEGES MŰKÖDÉS)
       if (myCars.length > 0) {
          const totalHealth = myCars.reduce((sum, car) => {
-            // Elektromos autók kezelése (ha nincs szervizintervallum, akkor 100%)
+            // Elektromos autók kezelése
             if (car.fuel_type === 'Elektromos' && !car.service_interval) return sum + 100;
 
-            // Adatok betöltése biztonsági alapértelmezésekkel
             const interval = car.service_interval || 15000;
-            const lastService = car.last_service_mileage || 0;
             const currentMileage = car.mileage || 0;
 
-            // Megtett út az utolsó szerviz óta
-            const kmDrivenSinceService = currentMileage - lastService;
+            // --- JAVÍTÁS: Szerviz események vizsgálata ---
+            // Megnézzük, van-e rögzített szerviz esemény, ami frissebb, mint a beállításokban lévő adat
+            const serviceEvents = car.events?.filter((e: any) => e.type === 'service') || [];
+            const lastEventMileage = serviceEvents.length > 0 
+                ? Math.max(...serviceEvents.map((e: any) => e.mileage)) 
+                : 0;
+
+            // Azt használjuk, amelyik nagyobb (frissebb): a statikus adat vagy a naplózott esemény
+            const lastService = Math.max(car.last_service_mileage || 0, lastEventMileage);
+
+            // Ha a lastService még így is 0 (sosem volt állítva), és az autóban van km,
+            // akkor ne büntessük 0%-kal, hanem vegyük 100%-nak (friss import),
+            // VAGY számoljunk a jelenlegi futással (ez a szigorúbb). 
+            // A lenti logika a szigorú, de helyes számítás:
             
-            // Hátralévő út
+            const kmDrivenSinceService = currentMileage - lastService;
             const kmRemaining = interval - kmDrivenSinceService;
 
             // Százalék számítása
             let healthPercent = (kmRemaining / interval) * 100;
 
-            // Határértékek kezelése (ne legyen negatív, se 100 feletti)
+            // Határértékek kezelése
             healthPercent = Math.max(0, Math.min(100, healthPercent));
 
             return sum + healthPercent;
          }, 0);
 
-         // Átlagolás az autók számával
          fleetHealth = Math.round(totalHealth / myCars.length);
       } else {
-         fleetHealth = 100; // Ha nincs autó, alapértelmezett 100%
+         fleetHealth = 100;
       }
     }
   // ... (badgek, idő) ...
