@@ -6,15 +6,19 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 
-export default function PricingClient() {
+// --- EZT A RÉSZT HAGYTAM KI ELŐBB, EZÉRT VOLT A HIBA ---
+interface PricingClientProps {
+  initialPlan: string // 'free' | 'pro' | 'lifetime' | 'founder'
+}
+
+export default function PricingClient({ initialPlan }: PricingClientProps) {
   const [loading, setLoading] = useState<string | null>(null)
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly') // Vizuális elem
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const router = useRouter()
 
   const handleClaimAccess = async () => {
     setLoading('pro')
-    // Itt hívhatnál szerver action-t, hogy beállítsd a usernek a 'pro' flag-et
-    // Most szimuláljuk:
+    // Szimulált töltés és átirányítás
     setTimeout(() => {
         router.push('/')
     }, 1500)
