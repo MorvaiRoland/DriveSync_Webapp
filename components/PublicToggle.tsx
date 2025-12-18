@@ -62,12 +62,14 @@ export default function PublicToggle({ carId, isPublicInitial }: PublicTogglePro
             )}
           </div>
 
-          <div className="text-left">
+         <div className="text-left max-w-[200px] leading-tight">
             <p className={`text-sm font-bold transition-colors duration-300 ${isPublic ? 'text-white dark:text-slate-900' : 'text-slate-900 dark:text-white'}`}>
-              {isPublic ? 'Nyilvános adatlap' : 'Privát adatlap'}
+              {isPublic ? 'Nyilvános & Kereshető' : 'Privát adatlap'}
             </p>
-            <p className={`text-[11px] font-medium transition-colors duration-300 ${isPublic ? 'text-slate-400 dark:text-slate-500' : 'text-slate-500'}`}>
-              {isPublic ? 'Bárki láthatja a linkkel' : 'Csak te látod az adatokat'}
+            <p className={`text-[10px] font-medium mt-0.5 transition-colors duration-300 ${isPublic ? 'text-slate-400 dark:text-slate-500' : 'text-slate-500'}`}>
+              {isPublic 
+                ? 'Hozzájárulok, hogy alvázszám alapján bárki lekérdezhesse az autót.' 
+                : 'Az autó rejtett, nem kereshető alvázszám alapján.'}
             </p>
           </div>
         </div>
