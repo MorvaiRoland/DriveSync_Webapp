@@ -3,7 +3,7 @@ import { createClient } from '@/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { CarFront, CheckCircle2, AlertCircle, ArrowRight, PlusCircle } from 'lucide-react'
+import { CarFront, CheckCircle2, AlertCircle, ArrowRight, PlusCircle, ArrowLeft } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +24,16 @@ export default async function SellCarSelectorPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         
+        {/* ÚJ: VISSZA GOMB */}
+        <div className="mb-8">
+            <Link 
+                href="/" 
+                className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 px-4 py-2 rounded-full"
+            >
+                <ArrowLeft className="w-4 h-4" /> Vissza a főoldalra
+            </Link>
+        </div>
+
         {/* FEJLÉC */}
         <div className="text-center mb-16">
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6 tracking-tight">
