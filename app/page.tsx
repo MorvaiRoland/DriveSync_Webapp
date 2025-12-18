@@ -126,36 +126,38 @@ async function DashboardComponent() {
       }
       // Flotta egészség számítás (egyszerűsítve)
       // --- FLOTTA EGÉSZSÉG SZÁMÍTÁSA (JAVÍTÁS) ---
-  if (myCars.length > 0) {
-    const totalHealth = myCars.reduce((acc, car) => {
-      // Elektromos autók logikája (opcionális, ha nincs szerviz intervallum, 100%-nak vesszük)
-      if (car.fuel_type === 'Elektromos' && !car.service_interval) return acc + 100;
+  // Flotta egészség számítás (TÉNYLEGES MŰKÖDÉS)
+      if (myCars.length > 0) {
+         const totalHealth = myCars.reduce((sum, car) => {
+            // Elektromos autók kezelése (ha nincs szervizintervallum, akkor 100%)
+            if (car.fuel_type === 'Elektromos' && !car.service_interval) return sum + 100;
 
-      const interval = car.service_interval || 15000; // Alapértelmezett: 15.000 km
-      const lastService = car.last_service_mileage || 0;
-      const currentMileage = car.mileage || 0;
+            // Adatok betöltése biztonsági alapértelmezésekkel
+            const interval = car.service_interval || 15000;
+            const lastService = car.last_service_mileage || 0;
+            const currentMileage = car.mileage || 0;
 
-      // Mennyit mentünk a szerviz óta?
-      const kmDrivenSinceService = currentMileage - lastService;
-      
-      // Mennyi van hátra?
-      const kmRemaining = interval - kmDrivenSinceService;
+            // Megtett út az utolsó szerviz óta
+            const kmDrivenSinceService = currentMileage - lastService;
+            
+            // Hátralévő út
+            const kmRemaining = interval - kmDrivenSinceService;
 
-      // Százalék számítása
-      let carHealth = (kmRemaining / interval) * 100;
+            // Százalék számítása
+            let healthPercent = (kmRemaining / interval) * 100;
 
-      // Határértékek (ne legyen negatív, se 100 feletti)
-      carHealth = Math.max(0, Math.min(100, carHealth));
+            // Határértékek kezelése (ne legyen negatív, se 100 feletti)
+            healthPercent = Math.max(0, Math.min(100, healthPercent));
 
-      return acc + carHealth;
-    }, 0);
+            return sum + healthPercent;
+         }, 0);
 
-    // Átlagoljuk az autók számával
-    fleetHealth = Math.round(totalHealth / myCars.length);
-  } else {
-    fleetHealth = 100; // Ha nincs autó, legyen 100%
-  }
-  }
+         // Átlagolás az autók számával
+         fleetHealth = Math.round(totalHealth / myCars.length);
+      } else {
+         fleetHealth = 100; // Ha nincs autó, alapértelmezett 100%
+      }
+    }
   // ... (badgek, idő) ...
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
