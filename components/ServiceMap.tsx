@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import { Search, MapPin, Phone, Globe, Wrench, Car, Zap, Droplets, Plus } from 'lucide-react'
-import { createClient } from '@/supabase/client' // Vagy a te kliens oldali importod
+import { Search, MapPin, Phone, Wrench, Car, Zap, Droplets, Plus } from 'lucide-react'
+import { createClient } from '@/supabase/client' // Ellenőrizd: nálad ez lehet máshol van, pl. '@/utils/supabase/client'
 
-// --- Ikon hiba javítása Next.js-ben ---
+// --- Ikon hiba javítása Next.js-ben (Leaflet bug fix) ---
 const iconUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png';
 const iconRetinaUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png';
 const shadowUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png';
@@ -82,6 +82,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
             setNewServiceCoords(null)
             alert('Szerviz sikeresen hozzáadva!')
         } else {
+            console.error(error)
             alert('Hiba történt a mentéskor.')
         }
     }
@@ -90,8 +91,8 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
         <div className="relative w-full h-screen flex flex-col md:flex-row">
             
             {/* --- SIDEBAR / FILTER --- */}
-            <div className="w-full md:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col z-20 shadow-xl">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+            <div className="w-full md:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col z-20 shadow-xl order-2 md:order-1 h-1/3 md:h-auto">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 hidden md:block">
                     <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Szerviz Térkép</h1>
                     <p className="text-sm text-slate-500">Keress megbízható partnert vagy regisztráld a sajátod.</p>
                 </div>
@@ -99,16 +100,18 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                 <div className="p-4 flex-1 overflow-y-auto">
                     <div className="space-y-2 mb-6">
                         <p className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Szűrés</p>
-                        {CATEGORIES.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setFilter(cat.id)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${filter === cat.id ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-                            >
-                                <cat.icon className="w-4 h-4" />
-                                {cat.label}
-                            </button>
-                        ))}
+                        <div className="flex md:flex-col overflow-x-auto gap-2 md:gap-0 pb-2 md:pb-0">
+                            {CATEGORIES.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setFilter(cat.id)}
+                                    className={`flex-shrink-0 w-auto md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${filter === cat.id ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                >
+                                    <cat.icon className="w-4 h-4" />
+                                    <span className="whitespace-nowrap">{cat.label}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -124,7 +127,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
             </div>
 
             {/* --- TÉRKÉP --- */}
-            <div className="flex-1 relative z-10">
+            <div className="flex-1 relative z-10 order-1 md:order-2 h-2/3 md:h-auto">
                 <MapContainer center={[47.4979, 19.0402]} zoom={12} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
                     <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -137,14 +140,13 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                         <Marker key={partner.id} position={[partner.latitude, partner.longitude]}>
                             <Popup>
                                 <div className="min-w-[200px]">
-                                    <h3 className="font-bold text-lg">{partner.name}</h3>
+                                    <h3 className="font-bold text-lg text-slate-900">{partner.name}</h3>
                                     <p className="text-xs font-bold uppercase text-amber-600 mb-2">{CATEGORIES.find(c => c.id === partner.category)?.label || partner.category}</p>
                                     <p className="text-sm text-slate-600 mb-2">{partner.description}</p>
                                     <div className="space-y-1 text-sm">
                                         <div className="flex items-center gap-2 text-slate-500"><MapPin className="w-3 h-3"/> {partner.address}</div>
                                         {partner.phone && <div className="flex items-center gap-2 text-slate-500"><Phone className="w-3 h-3"/> {partner.phone}</div>}
                                     </div>
-                                    <button className="mt-3 w-full bg-slate-900 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800">Időpontfoglalás</button>
                                 </div>
                             </Popup>
                         </Marker>
@@ -153,19 +155,19 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                     {/* Új partner pozíció jelölő */}
                     {newServiceCoords && (
                         <Marker position={[newServiceCoords.lat, newServiceCoords.lng]}>
-                             <Popup minWidth={300}>
+                             <Popup minWidth={300} keepInView>
                                 <form action={saveService} className="space-y-3 p-1">
-                                    <h3 className="font-bold border-b pb-2">Új Szerviz Regisztrálása</h3>
-                                    <input name="name" placeholder="Szerviz neve" required className="w-full border p-2 rounded text-sm" />
-                                    <select name="category" className="w-full border p-2 rounded text-sm">
+                                    <h3 className="font-bold border-b pb-2 text-slate-900">Új Szerviz Regisztrálása</h3>
+                                    <input name="name" placeholder="Szerviz neve" required className="w-full border p-2 rounded text-sm text-slate-900" />
+                                    <select name="category" className="w-full border p-2 rounded text-sm text-slate-900">
                                         <option value="mechanic">Autószerelő</option>
                                         <option value="tire">Gumizás</option>
                                         <option value="wash">Autómosó</option>
                                         <option value="electric">Villamosság</option>
                                     </select>
-                                    <input name="address" placeholder="Cím" required className="w-full border p-2 rounded text-sm" />
-                                    <input name="phone" placeholder="Telefonszám" className="w-full border p-2 rounded text-sm" />
-                                    <textarea name="description" placeholder="Rövid leírás" className="w-full border p-2 rounded text-sm"></textarea>
+                                    <input name="address" placeholder="Cím" required className="w-full border p-2 rounded text-sm text-slate-900" />
+                                    <input name="phone" placeholder="Telefonszám" className="w-full border p-2 rounded text-sm text-slate-900" />
+                                    <textarea name="description" placeholder="Rövid leírás" className="w-full border p-2 rounded text-sm text-slate-900"></textarea>
                                     <button type="submit" className="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">Mentés és Beküldés</button>
                                 </form>
                              </Popup>
