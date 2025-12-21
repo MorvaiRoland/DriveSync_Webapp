@@ -23,25 +23,41 @@ export default function PWAInstallPrompt() {
 
     // Check if app is already installed
     const isAppInstalled =
-      window.matchMedia('(display-mode: standalone)').matches ||
+      (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) ||
       (window.navigator as any).standalone === true;
 
     if (isAppInstalled) {
       return;
     }
 
+    // --- SEGÉDFÜGGVÉNY: Ellenőrizzük, hogy elrejtette-e a felhasználó ---
+    const shouldShowPrompt = () => {
+      const hideUntil = localStorage.getItem('pwa-install-hide-until');
+      if (hideUntil && new Date(hideUntil) > new Date()) {
+        return false;
+      }
+      return true;
+    };
+
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsVisible(true);
+      
+      // JAVÍTÁS: Csak akkor mutatjuk, ha a felhasználó nem tiltotta le
+      if (shouldShowPrompt()) {
+        setIsVisible(true);
+      }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Store visibility preference
-    const hideUntil = localStorage.getItem('pwa-install-hide-until');
-    if (hideUntil && new Date(hideUntil) > new Date()) {
-      setIsVisible(false);
+    // iOS esetében (ahol nincs beforeinstallprompt), külön kell ellenőrizni
+    if (isIOSDevice && shouldShowPrompt()) {
+         // Itt lehet egy kis késleltetést tenni, vagy csak akkor mutatni, ha interakció van
+         // De a jelenlegi logikád szerint iOS-en ez a rész most nem állítja true-ra a visibility-t automatikusan
+         // Ha azt akarod, hogy iOS-en is megjelenjen, itt kell setIsVisible(true)-t hívni.
+         // A biztonság kedvéért:
+         // setTimeout(() => setIsVisible(true), 2000); 
     }
 
     return () => {
@@ -71,7 +87,7 @@ export default function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setIsVisible(false);
-    // Hide for 7 days
+    // Elrejtés 7 napra (vagy amennyire szeretnéd)
     const hideUntil = new Date();
     hideUntil.setDate(hideUntil.getDate() + 7);
     localStorage.setItem('pwa-install-hide-until', hideUntil.toISOString());
@@ -80,6 +96,8 @@ export default function PWAInstallPrompt() {
   if (!isVisible || (!deferredPrompt && !isIOS)) {
     return null;
   }
+
+  // ... A renderelési rész (JSX) változatlan maradhat, de bemásolom a teljesség kedvéért ...
 
   if (isIOS) {
     return (
