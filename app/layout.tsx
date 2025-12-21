@@ -2,9 +2,11 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "sonner"; 
+import { Toaster } from "sonner";
 import CookieBanner from '@/components/CookieBanner'
 import InstallPrompt from '@/components/InstallPrompt'
+import PWAInstallPrompt from '@/components/PWAInstallPrompt'
+import OfflineIndicator from '@/components/OfflineIndicator'
 import 'mapbox-gl/dist/mapbox-gl.css' 
 
 export const viewport: Viewport = {
@@ -93,6 +95,8 @@ export default function RootLayout({
             <Toaster position="top-center" richColors closeButton />
             <CookieBanner />
             <InstallPrompt />
+            <PWAInstallPrompt />
+            <OfflineIndicator />
             <RegisterSW />
         </ThemeProvider>
       </body>
