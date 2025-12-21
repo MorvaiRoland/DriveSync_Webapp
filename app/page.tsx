@@ -14,6 +14,7 @@ import FuelWidget from '@/components/FuelWidget';
 import LandingPage from '@/components/LandingPage';
 import CongratulationModal from '@/components/CongratulationModal';
 import MarketplaceSection from '@/components/MarketplaceSection'
+import QuickCostOverview from '@/components/QuickCostOverview';
 
 const DEV_SECRET_KEY = "admin"; 
 const FEATURES = {
@@ -64,6 +65,7 @@ async function DashboardComponent() {
   let plan: SubscriptionPlan = 'free'; 
   let canAddCar = true;
   let canUseAi = false;
+  let totalCostAllTime = 0;
 
   // Előfizetés és limitek ellenőrzése
   // MOST MINDENKI PRO
@@ -112,6 +114,8 @@ async function DashboardComponent() {
               const spentPrev30Days = allCosts.filter(e => { const d = new Date(e.event_date); return d >= sixtyDaysAgo && d < thirtyDaysAgo; }).reduce((sum, e) => sum + (e.cost || 0), 0);
               if (spentPrev30Days > 0) spendingTrend = Math.round(((spentLast30Days - spentPrev30Days) / spentPrev30Days) * 100);
               else if (spentLast30Days > 0) spendingTrend = 100;
+              // Összes költség az idők kezdete óta
+              totalCostAllTime = allCosts.reduce((sum, e) => sum + (e.cost || 0), 0);
           }
       }
     if (myCars.length > 0) {
@@ -201,6 +205,9 @@ async function DashboardComponent() {
              </Link>
              <div className="hidden md:flex items-center gap-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                
+                <Link href="/analytics" className="flex items-center gap-1 hover:text-blue-500 transition-colors">
+                   <Gauge className="w-4 h-4" /> Költség
+                </Link>
                 <Link href="/showroom" className="flex items-center gap-1 hover:text-orange-500 transition-colors">
                    <span className="text-lg">🔥</span> Showroom
                 </Link>
@@ -377,8 +384,16 @@ async function DashboardComponent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
                   {FEATURES.weather && <WeatherWidget />}
                   {FEATURES.fuelPrices && <FuelWidget />}
+                  {/* --- KÖLTSÉG GYORS ELŐNÉZET --- */}
+              {cars.length > 0 && (
+                <QuickCostOverview 
+                  spentLast30Days={spentLast30Days} 
+                  spendingTrend={spendingTrend} 
+                  totalSpent={totalCostAllTime}
+                />
+              )}
               </div>
-              
+
               {FEATURES.reminders && (
                 <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700/50 overflow-hidden">
                     <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md flex justify-between items-center">
