@@ -9,7 +9,7 @@ import ReminderChecker from '@/components/ReminderChecker'
 import AiMechanic from '@/components/AiMechanic'
 import GamificationWidget from '@/components/GamificationWidget'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
-import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search } from 'lucide-react'; // Search ikon importálva
+import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map } from 'lucide-react'; // Search ikon importálva
 import FuelWidget from '@/components/FuelWidget';
 import LandingPage from '@/components/LandingPage';
 import CongratulationModal from '@/components/CongratulationModal';
@@ -211,6 +211,9 @@ async function DashboardComponent() {
                 <Link href="/showroom" className="flex items-center gap-1 hover:text-orange-500 transition-colors">
                    <span className="text-lg">🔥</span> Showroom
                 </Link>
+                <Link href="/services" className="flex items-center gap-1 hover:text-blue-500 transition-colors">
+   <Map className="w-4 h-4" /> Szerviz Térkép
+</Link>
                 {/* --- ÚJ: Gomb a Dashboardon is --- */}
                 <Link href="/check" className="flex items-center gap-1 hover:text-emerald-500 transition-colors">
                    <Search className="w-4 h-4" /> VIN Kereső
