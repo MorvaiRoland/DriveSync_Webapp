@@ -3,19 +3,23 @@ import { signOut } from './login/action'
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
-import ChangelogModal from '@/components/ChangelogModal'
+import dynamic from 'next/dynamic'
 import { WeatherWidget } from '@/components/DashboardWidgets'
 import ReminderChecker from '@/components/ReminderChecker'
-import AiMechanic from '@/components/AiMechanic'
-import GamificationWidget from '@/components/GamificationWidget'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
-import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map } from 'lucide-react'; // Search ikon importálva
+import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map } from 'lucide-react';
 import FuelWidget from '@/components/FuelWidget';
 import LandingPage from '@/components/LandingPage';
-import CongratulationModal from '@/components/CongratulationModal';
 import MarketplaceSection from '@/components/MarketplaceSection'
 import QuickCostOverview from '@/components/QuickCostOverview';
 import HeaderNav from '@/components/HeaderNav';
+import PageTransition from '@/components/PageTransition';
+
+// Dynamic imports for heavy components
+const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { ssr: false });
+const AiMechanic = dynamic(() => import('@/components/AiMechanic'), { ssr: false });
+const CongratulationModal = dynamic(() => import('@/components/CongratulationModal'), { ssr: false });
+const GamificationWidget = dynamic(() => import('@/components/GamificationWidget'), { ssr: false });
 
 const DEV_SECRET_KEY = "admin"; 
 const FEATURES = {
@@ -179,16 +183,17 @@ async function DashboardComponent() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
-      
-      {/* HÁTTÉR EFFEKTEK */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px]"></div>
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
-      </div>
+    <PageTransition>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
+        
+        {/* HÁTTÉR EFFEKTEK */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px]"></div>
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
+        </div>
 
-      <CongratulationModal currentPlan={subscription?.plan_type || 'free'} />
+        <CongratulationModal currentPlan={subscription?.plan_type || 'free'} />
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       <ChangelogModal />
       
@@ -432,6 +437,7 @@ async function DashboardComponent() {
         </div>
       </div>
     </div>
+    </PageTransition>
   )
 }
 

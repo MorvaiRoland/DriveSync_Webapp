@@ -30,16 +30,16 @@ export default function HeaderNav() {
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-          <Link href="/analytics" className="flex items-center gap-1 hover:text-blue-500 transition-colors">
+          <Link href="/analytics" prefetch className="flex items-center gap-1 hover:text-blue-500 transition-colors">
             <Gauge className="w-4 h-4" /> Költség
           </Link>
-          <Link href="/showroom" className="flex items-center gap-1 hover:text-orange-500 transition-colors">
+          <Link href="/showroom" prefetch className="flex items-center gap-1 hover:text-orange-500 transition-colors">
             <span className="text-lg">🔥</span> Showroom
           </Link>
-          <Link href="/services" className="flex items-center gap-1 hover:text-blue-500 transition-colors">
+          <Link href="/services" prefetch className="flex items-center gap-1 hover:text-blue-500 transition-colors">
             <Map className="w-4 h-4" /> Szerviz Térkép
           </Link>
-          <Link href="/check" className="flex items-center gap-1 hover:text-emerald-500 transition-colors">
+          <Link href="/check" prefetch className="flex items-center gap-1 hover:text-emerald-500 transition-colors">
             <Search className="w-4 h-4" /> VIN Kereső
           </Link>
         </div>
@@ -78,27 +78,27 @@ export default function HeaderNav() {
             </div>
 
             <nav className="grid gap-3">
-              <Link href="/check" onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+              <Link href="/check" prefetch onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                 <Search className="w-5 h-5 text-emerald-500" />
                 <span className="font-semibold">Alvázszám kereső</span>
               </Link>
 
-              <Link href="/showroom" onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+              <Link href="/showroom" prefetch onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                 <span className="text-lg">🔥</span>
                 <span className="font-semibold">Showroom</span>
               </Link>
 
-              <Link href="/services" onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+              <Link href="/services" prefetch onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                 <Map className="w-5 h-5 text-slate-600" />
                 <span className="font-semibold">Szerviz Térkép</span>
               </Link>
 
-              <Link href="/analytics" onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+              <Link href="/analytics" prefetch onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                 <Gauge className="w-5 h-5 text-amber-500" />
                 <span className="font-semibold">Költség</span>
               </Link>
 
-              <Link href="/pricing" onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+              <Link href="/pricing" prefetch onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                 <FileText className="w-5 h-5 text-amber-500" />
                 <span className="font-semibold">Árazás</span>
               </Link>

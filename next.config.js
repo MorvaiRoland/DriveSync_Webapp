@@ -24,10 +24,21 @@ const nextConfig = {
   // Ez a sor kritikus a mobilos "Application error" elkerüléséhez:
   transpilePackages: ['react-map-gl', 'mapbox-gl'],
   
+  // Performance optimization
+  compress: true,
+  productionBrowserSourceMaps: false,
+  optimizeFonts: true,
+  swcMinify: true,
+  
   experimental: {
     serverActions: {
       bodySizeLimit: '20mb',
     },
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui',
+      'framer-motion',
+    ],
   },
   
   images: {
