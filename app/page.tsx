@@ -197,7 +197,7 @@ async function DashboardComponent() {
       <ChangelogModal />
       
 
-  <nav className="absolute top-4 left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+  <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 'env(safe-area-inset-top, 1rem)' }}>
     <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
 
       {/* Left: HeaderNav (desktop + mobile) */}
@@ -228,7 +228,7 @@ async function DashboardComponent() {
   </nav>
 
       {/* ... Dashboard Main Content (Változatlan) ... */}
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-32 md:pt-24">
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-32 md:pt-24" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 2rem)' }}>
         {/* ... */}
         {/* Ide jön a Dashboard tartalom (Header, KPI, Grid) */}
         {/* ... */}
