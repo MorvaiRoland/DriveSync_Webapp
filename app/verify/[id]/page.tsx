@@ -18,7 +18,7 @@ export default async function VerifyPage(props: { params: Promise<{ id: string }
   )
 
   // 1. Adatlekérés (Autó + Szervizek)
-  const [carRes, historyRes] = await Promise.all([
+const [carRes, historyRes] = await Promise.all([
     supabaseAdmin
       .from('cars')
       .select('*')
@@ -26,7 +26,7 @@ export default async function VerifyPage(props: { params: Promise<{ id: string }
       .single(),
     supabaseAdmin
       .from('events')
-      .select('id, event_date, title, mileage, cost, type, notes, location, description')
+      .select('id, event_date, title, mileage, cost, type, location, description, liters') // Kivettem a notes-t, opcionálisan hozzáadtam a liters-t
       .eq('car_id', carId)
       .order('event_date', { ascending: false })
   ])
