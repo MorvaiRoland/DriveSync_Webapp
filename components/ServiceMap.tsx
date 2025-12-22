@@ -79,6 +79,17 @@ function MapController({ onMapClick, userLocation }: { onMapClick: (lat: number,
     return null;
 }
 
+// --- Térkép FlyTo Komponens ---
+function MapFlyTo({ position }: { position: [number, number] | null }) {
+    const map = useMap();
+    useEffect(() => {
+        if (position) {
+            map.flyTo(position, 16, { duration: 1.5 });
+        }
+    }, [position, map]);
+    return null;
+}
+
 // === FŐ KOMPONENS ===
 export default function ServiceMap({ initialPartners, user }: { initialPartners: any[], user: any }) {
     const [partners, setPartners] = useState(initialPartners)
@@ -90,7 +101,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
     const [toast, setToast] = useState<{msg: string, type: 'success'|'error'} | null>(null)
     const [addressInput, setAddressInput] = useState('')
     const [addressLoading, setAddressLoading] = useState(false)
-    const mapRef = useRef<L.Map | null>(null)
+    // const mapRef = useRef<L.Map | null>(null) // Eltávolítva
 
     const supabase = createClient()
     const filteredPartners = filter === 'all' ? partners : partners.filter(p => p.category === filter)
@@ -135,10 +146,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                 const { lat, lon } = data[0]
                 setNewServiceCoords({ lat: parseFloat(lat), lng: parseFloat(lon) })
                 setToast({msg: 'Cím megtalálva, térkép odanagyít!', type: 'success'})
-                // Move map if possible
-                if (mapRef.current && mapRef.current.flyTo) {
-                    mapRef.current.flyTo([parseFloat(lat), parseFloat(lon)], 16, { duration: 1.5 })
-                }
+                // A térkép mozgatását a MapFlyTo komponens végzi
             } else {
                 setToast({msg: 'Nem található ilyen cím.', type: 'error'})
             }
@@ -337,13 +345,13 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                     zoomControl={false}
                     style={{ height: "100%", width: "100%", outline: "none" }}
                     className="bg-neutral-100 dark:bg-black"
-                    ref={mapRef}
                 >
                     <TileLayer
                         attribution='© OSM & CartoDB'
                         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                     />
                     <MapController onMapClick={handleMapClick} userLocation={userLocation} />
+                    <MapFlyTo position={newServiceCoords ? [newServiceCoords.lat, newServiceCoords.lng] : null} />
                     {/* User Marker */}
                     {userLocation && (
                         <Marker position={userLocation} icon={L.divIcon({

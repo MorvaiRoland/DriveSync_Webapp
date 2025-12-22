@@ -516,8 +516,12 @@ export default async function Page({
   }
 
   return (
-    // FONTOS: Itt át kell adnod egy propot a LandingPage-nek, vagy módosítanod kell a LandingPage-et is!
-    // Mivel a LandingPage komponens most itt nincs előttem, feltételezem, hogy módosítottad az előző üzenet alapján.
-    <LandingPage promo={activePromo} updates={updates || []} />
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
+      <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
+        <div className="w-full flex flex-col items-center justify-center py-12 md:py-24">
+          <LandingPage promo={activePromo} updates={updates || []} />
+        </div>
+      </div>
+    </div>
   )
 }
