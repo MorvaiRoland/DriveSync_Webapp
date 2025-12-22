@@ -80,7 +80,7 @@ function MapController({ onMapClick, userLocation }: { onMapClick: (lat: number,
 }
 
 // === FŐ KOMPONENS ===
-
+export default function ServiceMap({ initialPartners, user }: { initialPartners: any[], user: any }) {
     const [partners, setPartners] = useState(initialPartners)
     const [filter, setFilter] = useState('all')
     const [isAdding, setIsAdding] = useState(false)
@@ -90,7 +90,7 @@ function MapController({ onMapClick, userLocation }: { onMapClick: (lat: number,
     const [toast, setToast] = useState<{msg: string, type: 'success'|'error'} | null>(null)
     const [addressInput, setAddressInput] = useState('')
     const [addressLoading, setAddressLoading] = useState(false)
-    const mapRef = useRef<any>(null)
+    const mapRef = useRef<L.Map | null>(null)
 
     const supabase = createClient()
     const filteredPartners = filter === 'all' ? partners : partners.filter(p => p.category === filter)
@@ -337,7 +337,7 @@ function MapController({ onMapClick, userLocation }: { onMapClick: (lat: number,
                     zoomControl={false}
                     style={{ height: "100%", width: "100%", outline: "none" }}
                     className="bg-neutral-100 dark:bg-black"
-                    whenCreated={mapInstance => { mapRef.current = mapInstance; }}
+                    ref={mapRef}
                 >
                     <TileLayer
                         attribution='© OSM & CartoDB'
