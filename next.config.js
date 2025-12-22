@@ -27,8 +27,6 @@ const nextConfig = {
   // Performance optimization
   compress: true,
   productionBrowserSourceMaps: false,
-  optimizeFonts: true,
-  swcMinify: true,
   
   experimental: {
     serverActions: {

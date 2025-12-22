@@ -16,10 +16,10 @@ import HeaderNav from '@/components/HeaderNav';
 import PageTransition from '@/components/PageTransition';
 
 // Dynamic imports for heavy components
-const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { ssr: false });
-const AiMechanic = dynamic(() => import('@/components/AiMechanic'), { ssr: false });
-const CongratulationModal = dynamic(() => import('@/components/CongratulationModal'), { ssr: false });
-const GamificationWidget = dynamic(() => import('@/components/GamificationWidget'), { ssr: false });
+const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'));
+const AiMechanic = dynamic(() => import('@/components/AiMechanic'));
+const CongratulationModal = dynamic(() => import('@/components/CongratulationModal'));
+const GamificationWidget = dynamic(() => import('@/components/GamificationWidget'));
 
 const DEV_SECRET_KEY = "admin"; 
 const FEATURES = {
