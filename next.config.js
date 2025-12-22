@@ -21,25 +21,17 @@ const cspHeader = `
 const nextConfig = {
   poweredByHeader: false,
   
-  // Ez a sor kritikus a mobilos "Application error" elkerüléséhez:
+  // Mobile optimization
   transpilePackages: ['react-map-gl', 'mapbox-gl'],
-  
-  // Performance optimization
   compress: true,
   productionBrowserSourceMaps: false,
   
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '20mb',
-    },
-    optimizePackageImports: [
-      'lucide-react',
-      '@radix-ui',
-      'framer-motion',
-    ],
-  },
-  
+  // Image optimization for mobile
   images: {
+    formats: ['image/webp'],
+    minimumCacheTTL: 60,
+    deviceSizes: [320, 375, 425, 640],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       // Supabase képek
       {
@@ -59,6 +51,12 @@ const nextConfig = {
         hostname: '**',
       }
     ],
+  },
+  
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '20mb',
+    },
   },
 
   async headers() {
@@ -113,6 +111,31 @@ const withPWA = require('next-pwa')({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
+  // Mobile optimization
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-fonts',
+        expiration: {
+          maxEntries: 20,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+        },
+      },
+    },
+    {
+      urlPattern: /^https:\/\/.+\.supabase\.co\/.*/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'supabase-api',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60, // 1 hour
+        },
+      },
+    },
+  ],
 });
 
 module.exports = withPWA(nextConfig);

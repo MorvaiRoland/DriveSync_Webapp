@@ -4,22 +4,22 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { WeatherWidget } from '@/components/DashboardWidgets'
-import ReminderChecker from '@/components/ReminderChecker'
 import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
+import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
 import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map } from 'lucide-react';
-import FuelWidget from '@/components/FuelWidget';
-import LandingPage from '@/components/LandingPage';
-import MarketplaceSection from '@/components/MarketplaceSection'
-import QuickCostOverview from '@/components/QuickCostOverview';
 import HeaderNav from '@/components/HeaderNav';
-import PageTransition from '@/components/PageTransition';
 
-// Dynamic imports for heavy components
-const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'));
-const AiMechanic = dynamic(() => import('@/components/AiMechanic'));
-const CongratulationModal = dynamic(() => import('@/components/CongratulationModal'));
-const GamificationWidget = dynamic(() => import('@/components/GamificationWidget'));
+// Dynamic imports - everything except critical path
+const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { loading: () => null });
+const AiMechanic = dynamic(() => import('@/components/AiMechanic'), { loading: () => null });
+const CongratulationModal = dynamic(() => import('@/components/CongratulationModal'), { loading: () => null });
+const GamificationWidget = dynamic(() => import('@/components/GamificationWidget'), { loading: () => null });
+const ReminderChecker = dynamic(() => import('@/components/ReminderChecker'), { loading: () => null });
+const WeatherWidget = dynamic(() => import('@/components/DashboardWidgets').then(m => ({ default: m.WeatherWidget })), { loading: () => null });
+const FuelWidget = dynamic(() => import('@/components/FuelWidget'), { loading: () => null });
+const MarketplaceSection = dynamic(() => import('@/components/MarketplaceSection'), { loading: () => null });
+const QuickCostOverview = dynamic(() => import('@/components/QuickCostOverview'), { loading: () => null });
+const LandingPage = dynamic(() => import('@/components/LandingPage'), { ssr: true });
 
 const DEV_SECRET_KEY = "admin"; 
 const FEATURES = {
@@ -183,17 +183,16 @@ async function DashboardComponent() {
   ];
 
   return (
-    <PageTransition>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
-        
-        {/* HÁTTÉR EFFEKTEK */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px]"></div>
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
-        </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
+      
+      {/* HÁTTÉR EFFEKTEK */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px]"></div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
+      </div>
 
-        <CongratulationModal currentPlan={subscription?.plan_type || 'free'} />
+      <CongratulationModal currentPlan={subscription?.plan_type || 'free'} />
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       <ChangelogModal />
       
@@ -437,7 +436,6 @@ async function DashboardComponent() {
         </div>
       </div>
     </div>
-    </PageTransition>
   )
 }
 
@@ -447,7 +445,15 @@ function CarCard({ car, shared }: { car: any, shared?: boolean }) {
     <div className={`relative group flex flex-col bg-white dark:bg-slate-800 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-slate-100 dark:border-slate-700 h-full ${shared ? 'ring-2 ring-blue-500/30' : ''}`}>
       <Link href={`/cars/${car.id}`} className="relative h-60 overflow-hidden">
          {car.image_url ? (
-            <Image src={car.image_url} alt={`${car.make} ${car.model}`} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
+            <Image 
+              src={car.image_url} 
+              alt={`${car.make} ${car.model}`} 
+              fill 
+              className="object-cover group-hover:scale-105 transition-transform duration-700" 
+              loading="lazy"
+              sizes={MOBILE_CARD_SIZES}
+              quality={75}
+            />
          ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-700">
                 <CarFront className="w-16 h-16 text-slate-300 dark:text-slate-600" />

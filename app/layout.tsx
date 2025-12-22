@@ -6,8 +6,7 @@ import { Toaster } from "sonner";
 import CookieBanner from '@/components/CookieBanner'
 import InstallPrompt from '@/components/InstallPrompt'
 import PWAInstallPrompt from '@/components/PWAInstallPrompt'
-import OfflineIndicator from '@/components/OfflineIndicator'
-import 'mapbox-gl/dist/mapbox-gl.css' 
+import OfflineIndicator from '@/components/OfflineIndicator' 
 
 export const viewport: Viewport = {
   themeColor: "#0f172a",
@@ -15,6 +14,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
