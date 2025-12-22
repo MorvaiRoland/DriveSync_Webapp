@@ -17,8 +17,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// --- KATEGÓRIÁK (Monokróm edition) ---
-// Minden szín fekete/fehér/szürke gradiensre cserélve
+// --- KATEGÓRIÁK (Monokróm stílus) ---
 const CATEGORIES = [
     { id: 'all', label: 'Összes', icon: Search, color: 'from-neutral-800 to-black', ring: 'ring-neutral-500' },
     { id: 'mechanic', label: 'Szerelő', icon: Wrench, color: 'from-neutral-700 to-neutral-900', ring: 'ring-neutral-700' },
@@ -27,18 +26,18 @@ const CATEGORIES = [
     { id: 'electric', label: 'Villamosság', icon: Zap, color: 'from-neutral-400 to-neutral-600', ring: 'ring-neutral-400' },
 ]
 
-// --- Marker Generátor (Fekete-Fehér stílus) ---
+// --- Marker Generátor ---
 const createCustomIcon = (categoryId: string) => {
     const category = CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[0];
     const IconComponent = category.icon;
     
     const iconHtml = renderToStaticMarkup(
         <div className="relative group">
-            {/* Fehér keret, Fekete belső - klasszikus kontraszt */}
+            {/* Marker Test */}
             <div className={`relative flex items-center justify-center w-10 h-10 rounded-full border-[3px] border-white dark:border-neutral-900 shadow-2xl bg-gradient-to-br ${category.color} transform transition-transform group-hover:scale-110`}>
                 <IconComponent className="w-5 h-5 text-white" />
             </div>
-            {/* Tüske alul */}
+            {/* Tüske */}
             <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-3 h-3 bg-gradient-to-br ${category.color} rotate-45 border-r border-b border-white dark:border-neutral-900 -z-10`}></div>
             {/* Árnyék */}
             <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-1.5 bg-black/40 blur-[2px] rounded-full"></div>
@@ -53,7 +52,7 @@ const createCustomIcon = (categoryId: string) => {
     });
 }
 
-// --- Toast Értesítés (Minimalista) ---
+// --- Toast Komponens ---
 const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => (
     <motion.div 
         initial={{ opacity: 0, y: -50, scale: 0.9 }}
@@ -61,7 +60,6 @@ const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 
         exit={{ opacity: 0, y: -20, scale: 0.9 }}
         className={cn(
             "fixed top-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-6 py-4 rounded-full shadow-2xl backdrop-blur-xl border border-white/10",
-            // Fekete háttér, fehér szöveg (Inverted look)
             "bg-neutral-900/90 text-white"
         )}
     >
@@ -71,7 +69,7 @@ const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 
     </motion.div>
 )
 
-// --- Térkép vezérlő ---
+// --- Térkép Logika ---
 function MapController({ onMapClick, userLocation }: { onMapClick: (lat: number, lng: number) => void, userLocation: [number, number] | null }) {
     const map = useMap();
     useEffect(() => {
@@ -81,6 +79,7 @@ function MapController({ onMapClick, userLocation }: { onMapClick: (lat: number,
     return null;
 }
 
+// === FŐ KOMPONENS ===
 export default function ServiceMap({ initialPartners, user }: { initialPartners: any[], user: any }) {
     const [partners, setPartners] = useState(initialPartners)
     const [filter, setFilter] = useState('all')
@@ -93,6 +92,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
     const supabase = createClient()
     const filteredPartners = filter === 'all' ? partners : partners.filter(p => p.category === filter)
 
+    // Toast auto-eltüntetés
     useEffect(() => {
         if (toast) {
             const timer = setTimeout(() => setToast(null), 4000)
@@ -100,6 +100,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
         }
     }, [toast])
 
+    // Pozíció lekérés
     const handleLocateMe = () => {
         setLoadingLocation(true)
         if (navigator.geolocation) {
@@ -113,10 +114,12 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
         }
     }
 
+    // Térkép kattintás
     const handleMapClick = (lat: number, lng: number) => {
         if (isAdding) setNewServiceCoords({ lat, lng })
     }
 
+    // Űrlap beküldése
     const submitServiceRequest = async (formData: FormData) => {
         if (!newServiceCoords || !user) return;
         
@@ -147,18 +150,19 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
     return (
         <div className="relative w-full h-screen flex flex-col md:flex-row overflow-hidden font-sans bg-neutral-100 dark:bg-black">
             
+            {/* Toast értesítések helye */}
             <AnimatePresence>
                 {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
             </AnimatePresence>
             
-            {/* --- MOBIL VISSZA GOMB --- */}
+            {/* Mobil Vissza Gomb */}
             <motion.div initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} className="md:hidden absolute top-4 left-4 z-[1000]">
                 <Link href="/" className="flex items-center justify-center w-10 h-10 bg-white/90 dark:bg-black/90 backdrop-blur-md rounded-full shadow-lg border border-neutral-200 dark:border-neutral-800">
                     <ArrowLeft className="w-5 h-5 text-black dark:text-white" />
                 </Link>
             </motion.div>
 
-            {/* --- SIDEBAR (Üveghatás + Fekete/Fehér) --- */}
+            {/* --- BAL OLDALI PANEL (Sidebar) --- */}
             <div className="absolute md:top-6 md:left-6 bottom-0 w-full md:w-[400px] md:h-auto z-[1000] pointer-events-none flex flex-col justify-end md:justify-start">
                 
                 <motion.div 
@@ -168,7 +172,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                     className="pointer-events-auto bg-white/80 dark:bg-black/80 backdrop-blur-3xl border-t md:border border-white/40 dark:border-white/10 shadow-2xl rounded-t-[32px] md:rounded-[32px] flex flex-col overflow-hidden max-h-[75vh] md:max-h-[85vh]"
                 >
                     
-                    {/* Header */}
+                    {/* Fejléc */}
                     <div className="p-6 pb-4 border-b border-neutral-200/50 dark:border-white/5">
                         <div className="hidden md:flex mb-4 items-center gap-2">
                              <Link href="/" className="group flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all text-xs font-bold text-neutral-600 dark:text-neutral-400">
@@ -190,14 +194,13 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                                     {filteredPartners.length} partner elérhető
                                 </p>
                             </div>
-                            {/* Locate Button: Fekete gomb */}
                             <button onClick={handleLocateMe} className="group p-3 bg-black dark:bg-white text-white dark:text-black rounded-2xl shadow-xl hover:scale-110 transition-all active:scale-95">
                                 <Locate className={`w-5 h-5 ${loadingLocation ? 'animate-spin' : ''}`} />
                             </button>
                         </div>
                     </div>
 
-                    {/* Filter Scroll */}
+                    {/* Filterek */}
                     <div className="px-6 py-4">
                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
                             {CATEGORIES.map(cat => {
@@ -227,7 +230,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                         </div>
                     </div>
 
-                    {/* Lista */}
+                    {/* Szerviz Lista */}
                     <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3 min-h-[150px] relative">
                         <AnimatePresence mode='wait'>
                             {filteredPartners.length === 0 ? (
@@ -249,7 +252,6 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                                                 <h3 className="font-bold text-black dark:text-white text-base">{partner.name}</h3>
                                                 <p className="text-xs text-neutral-500 mt-0.5 line-clamp-1">{partner.description || 'Nincs leírás'}</p>
                                             </div>
-                                            {/* Kis ikon a lista elemen: Fekete */}
                                             <div className="p-2 rounded-xl bg-black dark:bg-white text-white dark:text-black">
                                                 {(() => {
                                                     const CatIcon = CATEGORIES.find(c=>c.id === partner.category)?.icon || Search
@@ -266,15 +268,15 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                         </AnimatePresence>
                     </div>
 
-                    {/* Submit Button Area */}
+                    {/* Hozzáadás Gomb */}
                     <div className="p-4 border-t border-neutral-200/50 dark:border-white/5 bg-white/50 dark:bg-black/50 backdrop-blur-md">
                          <button 
                             onClick={() => { setIsAdding(!isAdding); setNewServiceCoords(null); }}
                             className={cn(
                                 "w-full py-4 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg transform active:scale-95",
                                 isAdding 
-                                    ? "bg-white border-2 border-black text-black hover:bg-neutral-100" // Mégse gomb (Inverz)
-                                    : "bg-black text-white dark:bg-white dark:text-black hover:shadow-xl hover:-translate-y-1" // Hozzáadás gomb (Fekete)
+                                    ? "bg-white border-2 border-black text-black hover:bg-neutral-100" // Mégse
+                                    : "bg-black text-white dark:bg-white dark:text-black hover:shadow-xl hover:-translate-y-1" // Hozzáadás
                             )}
                         >
                             {isAdding ? <><X className="w-5 h-5"/> Mégse</> : <><Plus className="w-5 h-5" /> Szerviz Ajánlása</>}
@@ -299,18 +301,17 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                 </motion.div>
             </div>
 
-            {/* --- TÉRKÉP (Szürkeárnyalatos csempékkel) --- */}
+            {/* --- TÉRKÉP --- */}
             <div className={`flex-1 relative z-0 transition-all duration-500 ${isAdding ? 'cursor-crosshair' : ''}`}>
                 <MapContainer center={[47.4979, 19.0402]} zoom={13} scrollWheelZoom={true} zoomControl={false} style={{ height: "100%", width: "100%", outline: "none" }} className="bg-neutral-100 dark:bg-black">
-                    {/* CartoDB Dark Matter (Sötét mód) vagy Positron (Világos mód) lenne a legjobb, itt a Positron-t használjuk alapnak a tiszta B&W hatáshoz */}
                     <TileLayer 
-                        attribution='&copy; OSM & CartoDB'
-                        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" // VAGY: dark_all ha sötét térkép kell
+                        attribution='© OSM & CartoDB'
+                        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" // Világos/Szürke térkép
                     />
                     
                     <MapController onMapClick={handleMapClick} userLocation={userLocation} />
                     
-                    {/* User Marker: Fekete/Szürke pulzálás */}
+                    {/* User Marker */}
                     {userLocation && (
                         <Marker position={userLocation} icon={L.divIcon({ 
                             html: `
@@ -324,12 +325,12 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                         })} />
                     )}
                     
+                    {/* Partnerek listázása */}
                     {filteredPartners.map((partner) => (
                         <Marker key={partner.id} position={[partner.latitude, partner.longitude]} icon={createCustomIcon(partner.category)}>
                             <Popup className="glass-popup" closeButton={false}>
                                 <div className="p-2 min-w-[240px]">
                                     <div className="flex items-center gap-2 mb-3">
-                                        {/* Kategória jelző a popupban: Fekete */}
                                         <div className="p-1.5 rounded-lg bg-black text-white">
                                             {(() => { const I = CATEGORIES.find(c=>c.id === partner.category)?.icon || Search; return <I className="w-3.5 h-3.5"/> })()}
                                         </div>
@@ -356,44 +357,45 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                         </Marker>
                     ))}
 
-                    {/* BEKÜLDÉS FORM POPUP */}
+                    {/* ÚJ SZERVIZ ŰRLAP (Megnövelt méret!) */}
                     {newServiceCoords && (
                         <Marker position={[newServiceCoords.lat, newServiceCoords.lng]} icon={createCustomIcon('all')}>
-                             <Popup minWidth={340} closeButton={false} className="glass-popup">
+                             {/* minWidth=400 - szélesebb popup */}
+                             <Popup minWidth={400} closeButton={false} className="glass-popup">
                                 <motion.form 
-                                    initial={{opacity: 0, scale: 0.9}} animate={{opacity: 1, scale: 1}}
+                                    initial={{opacity: 0, scale: 0.95}} animate={{opacity: 1, scale: 1}}
                                     action={submitServiceRequest} 
-                                    className="p-1 space-y-3"
+                                    className="p-4 space-y-4" // Nagyobb térközök
                                 >
-                                    <div className="flex items-center justify-between border-b pb-2 mb-2 border-neutral-200">
+                                    <div className="flex items-center justify-between border-b pb-3 mb-2 border-neutral-200">
                                         <div>
-                                            <h3 className="font-bold text-black">Új Szerviz</h3>
-                                            <p className="text-[10px] text-neutral-400 font-medium">Moderációra vár.</p>
+                                            <h3 className="text-lg font-black text-black">Új Szerviz</h3>
+                                            <p className="text-xs text-neutral-500 font-medium">Moderációra vár.</p>
                                         </div>
-                                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white">
-                                            <Plus className="w-4 h-4" />
+                                        <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white shadow-lg">
+                                            <Plus className="w-5 h-5" />
                                         </div>
                                     </div>
                                     
-                                    <div className="space-y-2">
-                                        <input name="name" placeholder="Szerviz neve" required className="w-full bg-neutral-50 border border-neutral-200 focus:border-black p-2.5 rounded-xl text-sm outline-none transition-all" />
+                                    <div className="space-y-3">
+                                        <input name="name" placeholder="Szerviz neve" required className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all placeholder:text-neutral-400" />
                                         
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div className="relative">
-                                                <select name="category" className="w-full appearance-none bg-neutral-50 border border-neutral-200 p-2.5 rounded-xl text-sm outline-none">
+                                                <select name="category" className="w-full appearance-none bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all">
                                                     {CATEGORIES.slice(1).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                                                 </select>
-                                                <div className="absolute right-2 top-3 pointer-events-none text-neutral-400"><ArrowLeft className="w-3 h-3 -rotate-90"/></div>
+                                                <div className="absolute right-3 top-4 pointer-events-none text-neutral-500"><ArrowLeft className="w-3.5 h-3.5 -rotate-90"/></div>
                                             </div>
-                                            <input name="phone" placeholder="Tel. szám" className="w-full bg-neutral-50 border border-neutral-200 p-2.5 rounded-xl text-sm outline-none" />
+                                            <input name="phone" placeholder="Tel. szám" className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all placeholder:text-neutral-400" />
                                         </div>
 
-                                        <input name="address" placeholder="Cím" required className="w-full bg-neutral-50 border border-neutral-200 p-2.5 rounded-xl text-sm outline-none" />
-                                        <textarea name="description" placeholder="Leírás..." rows={2} className="w-full bg-neutral-50 border border-neutral-200 p-2.5 rounded-xl text-sm resize-none outline-none"></textarea>
+                                        <input name="address" placeholder="Cím" required className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all placeholder:text-neutral-400" />
+                                        <textarea name="description" placeholder="Rövid leírás a szolgáltatásokról..." rows={3} className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium resize-none outline-none transition-all placeholder:text-neutral-400"></textarea>
                                     </div>
                                     
-                                    <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-bold text-sm hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 shadow-lg">
-                                        <Send className="w-3.5 h-3.5" /> Beküldés
+                                    <button type="submit" className="w-full bg-black text-white py-4 rounded-xl font-bold text-base hover:bg-neutral-800 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95">
+                                        <Send className="w-4 h-4" /> Beküldés Ellenőrzésre
                                     </button>
                                 </motion.form>
                              </Popup>
@@ -402,18 +404,29 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                 </MapContainer>
             </div>
             
+            {/* CSS Overrides */}
             <style jsx global>{`
                 .custom-marker-icon { background: transparent; border: none; }
+                
                 .leaflet-popup-content-wrapper { 
-                    background: rgba(255, 255, 255, 0.95); 
-                    backdrop-filter: blur(20px); 
-                    border-radius: 24px; 
+                    background: rgba(255, 255, 255, 0.98); 
+                    backdrop-filter: blur(24px); 
+                    border-radius: 28px; 
                     padding: 0; 
-                    box-shadow: 0 20px 50px -12px rgba(0,0,0,0.2);
-                    border: 1px solid rgba(0,0,0,0.05);
+                    box-shadow: 0 30px 60px -15px rgba(0,0,0,0.25);
+                    border: 1px solid rgba(0,0,0,0.08);
+                    
+                    /* Mobilon ne lógjon le, ha a képernyő keskenyebb mint 400px */
+                    max-width: 90vw;
+                    width: auto;
                 }
-                .leaflet-popup-content { margin: 16px; width: auto !important; }
-                .leaflet-popup-tip { background: rgba(255, 255, 255, 0.95); }
+                
+                .leaflet-popup-content { 
+                    margin: 0 !important; 
+                    width: 100% !important; 
+                }
+                
+                .leaflet-popup-tip { background: rgba(255, 255, 255, 0.98); }
                 .scrollbar-hide::-webkit-scrollbar { display: none; }
             `}</style>
         </div>
