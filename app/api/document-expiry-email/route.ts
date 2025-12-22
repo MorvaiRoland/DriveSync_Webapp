@@ -13,8 +13,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Render the email template to HTML string
-    const html = render(
+
+    // Render the email template to HTML string (await Promise)
+    const html = await render(
       React.createElement(DocumentExpiryEmail, { userName, docType, expiryDate })
     );
 
