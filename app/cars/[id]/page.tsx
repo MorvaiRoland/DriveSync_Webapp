@@ -210,7 +210,7 @@ export default async function CarDetailsPage(props: Props) {
       <DesktopActionGrid carId={carIdString} isElectric={isElectric} />
 
       {/* MAIN CONTENT */}
-      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
+    <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 3.5rem)' }}>
         <ResponsiveDashboard 
             mobileTabs={mobileTabs}
             desktopContent={DesktopLayout}

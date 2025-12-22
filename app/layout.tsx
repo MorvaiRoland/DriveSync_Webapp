@@ -84,20 +84,29 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="hu" suppressHydrationWarning>
-      <body className="antialiased bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
+      <body
+        className="antialiased bg-slate-50 dark:bg-slate-950 transition-colors duration-300 min-h-screen flex flex-col"
+        style={{
+          minHeight: '100dvh',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <main className="flex-1 flex flex-col w-full max-w-full">
             {children}
-            <Toaster position="top-center" richColors closeButton />
-            <CookieBanner />
-            <InstallPrompt />
-            <PWAInstallPrompt />
-            <OfflineIndicator />
-            <RegisterSW />
+          </main>
+          <Toaster position="top-center" richColors closeButton />
+          <CookieBanner />
+          <InstallPrompt />
+          <PWAInstallPrompt />
+          <OfflineIndicator />
+          <RegisterSW />
         </ThemeProvider>
       </body>
     </html>
