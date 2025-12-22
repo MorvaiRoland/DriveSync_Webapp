@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -80,7 +80,7 @@ function MapController({ onMapClick, userLocation }: { onMapClick: (lat: number,
 }
 
 // === FŐ KOMPONENS ===
-export default function ServiceMap({ initialPartners, user }: { initialPartners: any[], user: any }) {
+
     const [partners, setPartners] = useState(initialPartners)
     const [filter, setFilter] = useState('all')
     const [isAdding, setIsAdding] = useState(false)
@@ -88,7 +88,10 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
     const [loadingLocation, setLoadingLocation] = useState(false)
     const [toast, setToast] = useState<{msg: string, type: 'success'|'error'} | null>(null)
-    
+    const [addressInput, setAddressInput] = useState('')
+    const [addressLoading, setAddressLoading] = useState(false)
+    const mapRef = useRef<any>(null)
+
     const supabase = createClient()
     const filteredPartners = filter === 'all' ? partners : partners.filter(p => p.category === filter)
 
@@ -119,10 +122,35 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
         if (isAdding) setNewServiceCoords({ lat, lng })
     }
 
+    // Cím keresése és geokódolás
+    const handleAddressSearch = async () => {
+        if (!addressInput.trim()) return;
+        setAddressLoading(true)
+        try {
+            // Nominatim OpenStreetMap API
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressInput)}`
+            const res = await fetch(url)
+            const data = await res.json()
+            if (data && data.length > 0) {
+                const { lat, lon } = data[0]
+                setNewServiceCoords({ lat: parseFloat(lat), lng: parseFloat(lon) })
+                setToast({msg: 'Cím megtalálva, térkép odanagyít!', type: 'success'})
+                // Move map if possible
+                if (mapRef.current && mapRef.current.flyTo) {
+                    mapRef.current.flyTo([parseFloat(lat), parseFloat(lon)], 16, { duration: 1.5 })
+                }
+            } else {
+                setToast({msg: 'Nem található ilyen cím.', type: 'error'})
+            }
+        } catch (e) {
+            setToast({msg: 'Hiba a cím keresésekor.', type: 'error'})
+        }
+        setAddressLoading(false)
+    }
+
     // Űrlap beküldése
     const submitServiceRequest = async (formData: FormData) => {
         if (!newServiceCoords || !user) return;
-        
         const data = {
             user_id: user.id,
             name: formData.get('name'),
@@ -134,12 +162,11 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
             longitude: newServiceCoords.lng,
             status: 'pending'
         }
-
         const { error } = await supabase.from('service_requests').insert(data)
-        
         if (!error) {
             setIsAdding(false)
             setNewServiceCoords(null)
+            setAddressInput('')
             setToast({msg: "Sikeres beküldés! Ellenőrzés után megjelenik.", type: 'success'})
         } else {
             console.error(error)
@@ -303,28 +330,33 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
 
             {/* --- TÉRKÉP --- */}
             <div className={`flex-1 relative z-0 transition-all duration-500 ${isAdding ? 'cursor-crosshair' : ''}`}>
-                <MapContainer center={[47.4979, 19.0402]} zoom={13} scrollWheelZoom={true} zoomControl={false} style={{ height: "100%", width: "100%", outline: "none" }} className="bg-neutral-100 dark:bg-black">
-                    <TileLayer 
+                <MapContainer
+                    center={[47.4979, 19.0402]}
+                    zoom={13}
+                    scrollWheelZoom={true}
+                    zoomControl={false}
+                    style={{ height: "100%", width: "100%", outline: "none" }}
+                    className="bg-neutral-100 dark:bg-black"
+                    whenCreated={mapInstance => { mapRef.current = mapInstance; }}
+                >
+                    <TileLayer
                         attribution='© OSM & CartoDB'
-                        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" // Világos/Szürke térkép
+                        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                     />
-                    
                     <MapController onMapClick={handleMapClick} userLocation={userLocation} />
-                    
                     {/* User Marker */}
                     {userLocation && (
-                        <Marker position={userLocation} icon={L.divIcon({ 
+                        <Marker position={userLocation} icon={L.divIcon({
                             html: `
                                 <div class="relative flex items-center justify-center w-6 h-6">
                                     <div class="absolute w-full h-full bg-black rounded-full animate-ping opacity-30"></div>
                                     <div class="relative w-4 h-4 bg-black rounded-full border-2 border-white shadow-lg"></div>
                                 </div>
-                            `, 
+                            `,
                             className: 'bg-transparent',
                             iconSize: [24, 24]
                         })} />
                     )}
-                    
                     {/* Partnerek listázása */}
                     {filteredPartners.map((partner) => (
                         <Marker key={partner.id} position={[partner.latitude, partner.longitude]} icon={createCustomIcon(partner.category)}>
@@ -338,10 +370,8 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                                             {CATEGORIES.find(c => c.id === partner.category)?.label}
                                         </span>
                                     </div>
-                                    
                                     <h3 className="font-black text-lg text-black leading-tight mb-1">{partner.name}</h3>
                                     <p className="text-xs text-neutral-500 mb-3 leading-relaxed">{partner.description || "Nincs leírás megadva."}</p>
-                                    
                                     <div className="flex gap-2">
                                         <a href={`https://www.google.com/maps/dir/?api=1&destination=${partner.latitude},${partner.longitude}`} target="_blank" className="flex-1 flex items-center justify-center gap-2 text-xs font-bold text-white bg-black p-2.5 rounded-xl hover:bg-neutral-800 transition-all shadow-lg">
                                             <Navigation className="w-3 h-3"/> Útvonal
@@ -356,50 +386,73 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                             </Popup>
                         </Marker>
                     ))}
-
-                    {/* ÚJ SZERVIZ ŰRLAP (Megnövelt méret!) */}
-                    {newServiceCoords && (
-                        <Marker position={[newServiceCoords.lat, newServiceCoords.lng]} icon={createCustomIcon('all')}>
-                             {/* minWidth=400 - szélesebb popup */}
-                             <Popup minWidth={400} closeButton={false} className="glass-popup">
-                                <motion.form 
-                                    initial={{opacity: 0, scale: 0.95}} animate={{opacity: 1, scale: 1}}
-                                    action={submitServiceRequest} 
-                                    className="p-4 space-y-4" // Nagyobb térközök
-                                >
-                                    <div className="flex items-center justify-between border-b pb-3 mb-2 border-neutral-200">
-                                        <div>
-                                            <h3 className="text-lg font-black text-black">Új Szerviz</h3>
-                                            <p className="text-xs text-neutral-500 font-medium">Moderációra vár.</p>
-                                        </div>
-                                        <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white shadow-lg">
-                                            <Plus className="w-5 h-5" />
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="space-y-3">
-                                        <input name="name" placeholder="Szerviz neve" required className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all placeholder:text-neutral-400" />
-                                        
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="relative">
-                                                <select name="category" className="w-full appearance-none bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all">
-                                                    {CATEGORIES.slice(1).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                                                </select>
-                                                <div className="absolute right-3 top-4 pointer-events-none text-neutral-500"><ArrowLeft className="w-3.5 h-3.5 -rotate-90"/></div>
-                                            </div>
-                                            <input name="phone" placeholder="Tel. szám" className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all placeholder:text-neutral-400" />
-                                        </div>
-
-                                        <input name="address" placeholder="Cím" required className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all placeholder:text-neutral-400" />
-                                        <textarea name="description" placeholder="Rövid leírás a szolgáltatásokról..." rows={3} className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium resize-none outline-none transition-all placeholder:text-neutral-400"></textarea>
-                                    </div>
-                                    
-                                    <button type="submit" className="w-full bg-black text-white py-4 rounded-xl font-bold text-base hover:bg-neutral-800 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95">
-                                        <Send className="w-4 h-4" /> Beküldés Ellenőrzésre
+                    {/* ÚJ SZERVIZ: Cím kereső input + marker popup */}
+                    {isAdding && (
+                        <>
+                        {/* Cím kereső overlay (csak ha nincs marker) */}
+                        {!newServiceCoords && (
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1200] w-[90vw] max-w-md bg-white/90 dark:bg-black/90 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 p-3 flex flex-col gap-2 items-center">
+                                <div className="w-full flex gap-2">
+                                    <input
+                                        type="text"
+                                        className="flex-1 px-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm text-black dark:text-white outline-none focus:border-black focus:ring-1 focus:ring-black"
+                                        placeholder="Írd be a címet (pl. Budapest, Andrássy út 1)"
+                                        value={addressInput}
+                                        onChange={e => setAddressInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') handleAddressSearch() }}
+                                        disabled={addressLoading}
+                                    />
+                                    <button
+                                        onClick={handleAddressSearch}
+                                        className="px-4 py-2 rounded-xl bg-black text-white dark:bg-white dark:text-black font-bold text-sm flex items-center gap-2 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-all disabled:opacity-60"
+                                        disabled={addressLoading || !addressInput.trim()}
+                                    >
+                                        {addressLoading ? <span className="animate-spin"><Search className="w-4 h-4" /></span> : <Search className="w-4 h-4" />} Keresés
                                     </button>
-                                </motion.form>
-                             </Popup>
-                        </Marker>
+                                </div>
+                                <div className="text-xs text-neutral-500 mt-1">Vagy kattints a térképre a helyszínhez!</div>
+                            </div>
+                        )}
+                        {/* Marker + popup, ha már van koordináta */}
+                        {newServiceCoords && (
+                            <Marker position={[newServiceCoords.lat, newServiceCoords.lng]} icon={createCustomIcon('all')}>
+                                <Popup minWidth={400} closeButton={false} className="glass-popup">
+                                    <motion.form
+                                        initial={{opacity: 0, scale: 0.95}} animate={{opacity: 1, scale: 1}}
+                                        action={submitServiceRequest}
+                                        className="p-4 space-y-4"
+                                    >
+                                        <div className="flex items-center justify-between border-b pb-3 mb-2 border-neutral-200">
+                                            <div>
+                                                <h3 className="text-lg font-black text-black">Új Szerviz</h3>
+                                                <p className="text-xs text-neutral-500 font-medium">Moderációra vár.</p>
+                                            </div>
+                                            <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white shadow-lg">
+                                                <Plus className="w-5 h-5" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <input name="name" placeholder="Szerviz neve" required className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all placeholder:text-neutral-400" />
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="relative">
+                                                    <select name="category" className="w-full appearance-none bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all">
+                                                        {CATEGORIES.slice(1).map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                                    </select>
+                                                    <div className="absolute right-3 top-4 pointer-events-none text-neutral-500"><ArrowLeft className="w-3.5 h-3.5 -rotate-90"/></div>
+                                                </div>
+                                                <input name="phone" placeholder="Tel. szám" className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all placeholder:text-neutral-400" />
+                                            </div>
+                                            <input name="address" placeholder="Cím" required className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium outline-none transition-all placeholder:text-neutral-400" defaultValue={addressInput} />
+                                            <textarea name="description" placeholder="Rövid leírás a szolgáltatásokról..." rows={3} className="w-full bg-neutral-50 border border-neutral-200 focus:border-black focus:ring-1 focus:ring-black p-3.5 rounded-xl text-sm font-medium resize-none outline-none transition-all placeholder:text-neutral-400"></textarea>
+                                        </div>
+                                        <button type="submit" className="w-full bg-black text-white py-4 rounded-xl font-bold text-base hover:bg-neutral-800 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95">
+                                            <Send className="w-4 h-4" /> Beküldés Ellenőrzésre
+                                        </button>
+                                    </motion.form>
+                                </Popup>
+                            </Marker>
+                        )}
+                        </>
                     )}
                 </MapContainer>
             </div>
