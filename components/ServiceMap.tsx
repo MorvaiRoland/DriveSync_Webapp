@@ -173,7 +173,6 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
 
     return (
         <div className="relative w-full h-screen flex flex-col md:flex-row overflow-hidden font-sans bg-zinc-50 dark:bg-zinc-950">
-            
             {/* --- BAL OLDALI SIDEBAR --- */}
             <div className="absolute md:top-4 md:left-4 bottom-0 w-full md:w-[420px] z-[1000] pointer-events-none flex flex-col justify-end md:justify-start">
                 <motion.div 
@@ -182,7 +181,6 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                     className="pointer-events-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border-t md:border border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-t-[32px] md:rounded-[32px] flex flex-col overflow-hidden h-[60vh] md:h-[calc(100vh-2rem)] transition-all duration-500 ease-in-out"
                 >
                     <AnimatePresence mode="wait">
-                        
                         {/* 1. NÉZET: LISTA ÉS SZŰRÉS */}
                         {mode === 'view' && (
                             <motion.div 
@@ -205,9 +203,14 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                                             <Locate className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
                                         </button>
                                     </div>
-
+                                    {/* Vissza gomb (csak ha nem a fő nézetben vagyunk) */}
+                                    {mode !== 'view' && (
+                                        <button onClick={() => setMode('view')} className="mb-2 px-4 py-2 bg-zinc-200 dark:bg-zinc-800 rounded-full text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors">
+                                            <ArrowLeft className="inline w-4 h-4 mr-1" /> Vissza
+                                        </button>
+                                    )}
                                     {/* Kategória választó */}
-                                    <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x">
+                                    <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x category-drag-scroll">
                                         {CATEGORIES.map(cat => (
                                             <button
                                                 key={cat.id}

@@ -89,6 +89,10 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                 <button onClick={() => setActiveTab('billing')} className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-all ${activeTab === 'billing' ? 'bg-white dark:bg-slate-700 shadow-sm text-amber-500' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700/50'}`}>
                     <CreditCard className="w-4 h-4" /> Előfizetés
                 </button>
+                    {/* Hibabejelentés gomb */}
+                    <button onClick={() => window.open('/support', '_blank')} className="w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors mt-2">
+                        <CheckCircle className="w-4 h-4" /> Hibabejelentés / Support
+                    </button>
             </div>
 
             <button onClick={handleSignOut} className="w-full text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors mt-8">
@@ -251,7 +255,8 @@ export default function SettingsDashboard({ user, meta, settings, subscription }
                              <div>
                                  <p className="text-xs font-bold text-slate-400 uppercase mb-1">Jelenlegi Csomag</p>
                                  <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                                     {subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime' ? 'Lifetime 🚀' : 
+                                     {subscription?.plan_type === 'founder' || subscription?.plan_type === 'lifetime' ? 'Lifetime 🚀' :
+                                      subscription?.plan_type === 'pro' && subscription?.early_access ? 'Early Access Pro ⚡' :
                                       subscription?.plan_type === 'pro' ? 'Pro ⚡' : 'Starter'}
                                      <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${subscription?.status === 'active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-slate-200 text-slate-600'}`}>
                                          {subscription?.status || 'Active'}
