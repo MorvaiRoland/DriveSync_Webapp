@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const toArr = Array.isArray(to) ? to : [to];
 
     const result = await resend.emails.send({
-      from: 'DriveSync <noreply@drivesync.hu>',
+      from: 'DynamicSense <noreply@dynamicsense.hu>',
       to: toArr,
       subject: `Lejáró okirat: ${docType}`,
       html,
