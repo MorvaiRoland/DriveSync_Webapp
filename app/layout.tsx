@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
-import MobileNav from '@/components/MobileNav';
 import { Toaster } from "sonner";
 import CookieBanner from '@/components/CookieBanner'
 import InstallPrompt from '@/components/InstallPrompt'
@@ -92,7 +91,6 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <MobileNav />
             {children}
             <Toaster position="top-center" richColors closeButton />
             <CookieBanner />

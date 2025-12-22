@@ -56,11 +56,11 @@ export default function HeaderNav() {
         </button>
       </div>
 
-      {/* Mobile sheet */}
+      {/* Mobile sheet - opens downward */}
       <div className={`fixed inset-0 z-50 transition-opacity ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <div className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity ${open ? 'opacity-100' : 'opacity-0'}`} onClick={() => setOpen(false)} />
 
-        <div className={`absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-950 rounded-t-3xl border border-slate-200 dark:border-slate-800 shadow-2xl transform transition-transform ${open ? 'translate-y-0' : 'translate-y-1/2'} max-h-[80vh] overflow-auto`}>
+        <div className={`absolute top-16 left-0 right-0 mx-4 bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl transform transition-all origin-top ${open ? 'scale-y-100 opacity-100' : 'scale-y-95 opacity-0 pointer-events-none'} max-h-[calc(100vh-100px)] overflow-auto`}>
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -102,15 +102,6 @@ export default function HeaderNav() {
                 <FileText className="w-5 h-5 text-amber-500" />
                 <span className="font-semibold">Árazás</span>
               </Link>
-
-              <Link href="/profile" onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
-                <Users className="w-5 h-5 text-slate-700" />
-                <span className="font-semibold">Fiók</span>
-              </Link>
-
-              <div className="pt-4">
-                <Link href="/login" onClick={() => setOpen(false)} className="block text-center bg-amber-500 text-white py-3 rounded-2xl font-bold shadow-md">Ingyenes Regisztráció</Link>
-              </div>
             </nav>
           </div>
         </div>
