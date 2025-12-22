@@ -8,25 +8,41 @@ import {
   BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
   MessageCircle, HelpCircle, Server, Smartphone,
   ChevronDown, Layers, AlertTriangle, Cpu, Gift, Search,
-  Sun, Moon, Gauge, PenTool, History, Star
+  Sun, Moon, Gauge, PenTool, History
 } from 'lucide-react';
 import PromoModal from '@/components/PromoModal'; 
-import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionTemplate, useMotionValue } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionTemplate, useMotionValue } from 'framer-motion';
 
-// --- UI SEGÉDEK ---
+// --- TÍPUSOK JAVÍTÁSA (Ez oldja meg az aláhúzást) ---
+
+interface MagneticButtonProps {
+  children: React.ReactNode;
+  className?: string;
+  href?: string;
+  style?: React.CSSProperties; // EZT ADTUK HOZZÁ
+}
+
+interface SpotlightCardProps {
+  children: React.ReactNode;
+  className?: string;
+  spotlightColor?: string;
+  style?: React.CSSProperties; // EZT ADTUK HOZZÁ
+}
+
+// --- UI KOMPONENSEK ---
 
 // 1. AURORA HÁTTÉR (Élő, lélegző háttér)
 const AuroraBackground = () => (
-  <div className="fixed inset-0 w-full h-full -z-50 overflow-hidden pointer-events-none bg-slate-50 dark:bg-[#030712]">
+  <div className="fixed inset-0 w-full h-full -z-50 overflow-hidden pointer-events-none bg-slate-50 dark:bg-[#020617]">
     <div className="absolute top-[-10%] left-[-10%] w-[80vw] h-[80vw] bg-emerald-500/10 rounded-full blur-[100px] animate-pulse mix-blend-multiply dark:mix-blend-screen opacity-30" />
     <div className="absolute top-[20%] right-[-20%] w-[60vw] h-[60vw] bg-blue-600/10 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-30" />
     <div className="absolute bottom-[-20%] left-[20%] w-[70vw] h-[70vw] bg-indigo-500/10 rounded-full blur-[130px] mix-blend-multiply dark:mix-blend-screen opacity-20" />
-    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] mix-blend-overlay" />
+    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay" />
   </div>
 );
 
-// 2. SPOTLIGHT KÁRTYA (Profi hover effekt)
-const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(16, 185, 129, 0.15)" }: any) => {
+// 2. SPOTLIGHT KÁRTYA (Javítva a style prop miatt)
+const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(16, 185, 129, 0.15)", style }: SpotlightCardProps) => {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -38,8 +54,9 @@ const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(16, 18
 
   return (
     <div
-      className={`group relative border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden rounded-[2rem] ${className}`}
+      className={`group relative border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/40 overflow-hidden rounded-[2rem] ${className}`}
       onMouseMove={handleMouseMove}
+      style={style} // Itt adjuk át a stílust
     >
       <motion.div
         className="pointer-events-none absolute -inset-px rounded-[2rem] opacity-0 transition duration-300 group-hover:opacity-100"
@@ -58,7 +75,39 @@ const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(16, 18
   );
 };
 
-// 3. TÉMA VÁLTÓ
+// 3. MAGNETIC BUTTON (Javítva a style prop miatt)
+const MagneticButton = ({ children, className = "", href = "#", style }: MagneticButtonProps) => {
+  const ref = useRef<HTMLAnchorElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouse = (e: React.MouseEvent) => {
+    const { clientX, clientY } = e;
+    const { height, width, left, top } = ref.current!.getBoundingClientRect();
+    const middleX = clientX - (left + width / 2);
+    const middleY = clientY - (top + height / 2);
+    setPosition({ x: middleX * 0.2, y: middleY * 0.2 });
+  };
+
+  const reset = () => setPosition({ x: 0, y: 0 });
+  const { x, y } = position;
+
+  return (
+    <motion.div style={{ x, y }} transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}>
+      <Link 
+        ref={ref} 
+        onMouseMove={handleMouse} 
+        onMouseLeave={reset} 
+        href={href} 
+        className={className}
+        style={style} // Itt adjuk át a stílust a Link-nek
+      >
+        {children}
+      </Link>
+    </motion.div>
+  );
+};
+
+// 4. TÉMA VÁLTÓ
 const ThemeToggle = () => {
   const [isDark, setIsDark] = useState(true);
 
@@ -87,7 +136,7 @@ const ThemeToggle = () => {
   return (
     <button
       onClick={toggleTheme}
-      className="relative p-2.5 rounded-xl bg-white/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700 backdrop-blur-sm"
+      className="relative p-2.5 rounded-xl bg-white/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700 backdrop-blur-sm shadow-sm"
     >
       <AnimatePresence mode="wait">
         {isDark ? (
@@ -104,13 +153,13 @@ const ThemeToggle = () => {
   );
 };
 
-// 4. 3D INTERAKTÍV DASHBOARD
+// 5. 3D INTERAKTÍV DASHBOARD
 const DashboardMockup = () => {
   const { scrollY } = useScroll();
   const rotateX = useTransform(scrollY, [0, 600], [20, 0]);
   const scale = useTransform(scrollY, [0, 600], [0.9, 1]);
   const y = useTransform(scrollY, [0, 600], [60, 0]);
-  const opacity = useTransform(scrollY, [0, 300], [0.6, 1]);
+  const opacity = useTransform(scrollY, [0, 400], [0.6, 1]);
 
   return (
     <motion.div 
@@ -180,17 +229,41 @@ const DashboardMockup = () => {
   );
 };
 
+// 6. TYPERWRITER TEXT
+const TypewriterText = ({ text, speed = 30 }: { text: string, speed?: number }) => {
+  const [displayedText, setDisplayedText] = useState('');
+  useEffect(() => {
+    let index = 0;
+    setDisplayedText(''); 
+    const intervalId = setInterval(() => {
+      setDisplayedText((prev) => prev + text.charAt(index));
+      index++;
+      if (index === text.length) clearInterval(intervalId);
+    }, speed);
+    return () => clearInterval(intervalId);
+  }, [text, speed]);
+  return <span>{displayedText}<span className="animate-pulse text-amber-500 font-bold">|</span></span>;
+};
+
 // --- FŐ KOMPONENS ---
 
 export default function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const faqs = [
+    { question: "Tényleg teljesen ingyenes?", answer: "Igen! Jelenleg 'Early Access' fázisban vagyunk. Szeretnénk, ha minél többen kipróbálnák a teljes prémium élményt korlátok nélkül." },
+    { question: "Hogyan működik a Flotta Egészség mutató?", answer: "A rendszer egy intelligens algoritmus segítségével elemzi a szervizintervallumokat, a megtett kilométereket és a legutóbbi karbantartásokat. Ha minden zöld, az autód műszakilag rendben van." },
+    { question: "Tényleg felismeri az AI a hibakódokat?", answer: "Igen! A Gemini 2.5 alapú AI Szerelőnk képes értelmezni a fotózott vagy beírt hibakódokat (pl. P0300), és magyar nyelven, érthetően elmagyarázza a probléma okát és a teendőket." },
+    { question: "Mi történik, ha vége az ingyenes időszaknak?", answer: "Aki most regisztrál, az 'Early Bird' státuszt kap, és a jövőben is kiemelt kedvezményeket vagy örökös hozzáférést biztosítunk az alapadatokhoz." }
+  ];
 
   return (
     <div className="min-h-screen font-sans text-slate-900 dark:text-slate-100 selection:bg-emerald-500/30 overflow-x-hidden">
@@ -210,25 +283,23 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           
           {/* Logo Section */}
           <Link href="/" className="flex items-center gap-3 group relative z-50">
-             {/* Logo Kép (vagy Icon fallback) */}
              <div className="relative w-10 h-10 group-hover:scale-105 transition-transform duration-300">
-                {/* Itt próbáljuk betölteni a képet, ha nincs, akkor ikont mutatunk */}
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg opacity-0 group-hover:opacity-20 transition-opacity" />
                 <Image 
                   src="/DynamicSense-logo.png" 
                   alt="DynamicSense" 
                   width={40} 
                   height={40} 
-                  className="object-contain w-full h-full"
+                  className="object-contain w-full h-full drop-shadow-md"
                   onError={(e) => {
-                    // Ha nem töltődik be a kép, elrejtjük és az ikon látszik
+                    // Fallback logika: ha a kép nem tölt be, rejtjük és megjelenítjük az ikont
                     e.currentTarget.style.display = 'none';
                     const icon = document.getElementById('fallback-logo-icon');
                     if(icon) icon.style.display = 'flex';
                   }}
                 />
-                {/* Fallback Icon (alapból rejtve, ha a kép betölt, de itt most flex-ben hagyom hogy biztos látszódjon valami) */}
-                <div id="fallback-logo-icon" className="w-10 h-10 bg-gradient-to-br from-slate-900 to-slate-800 dark:from-white dark:to-slate-200 rounded-xl flex items-center justify-center text-white dark:text-slate-900 shadow-xl absolute inset-0 -z-10">
+                {/* Fallback Icon (hidden by default) */}
+                <div id="fallback-logo-icon" style={{display: 'none'}} className="w-10 h-10 bg-gradient-to-br from-slate-900 to-slate-800 dark:from-white dark:to-slate-200 rounded-xl items-center justify-center text-white dark:text-slate-900 shadow-xl absolute inset-0 -z-10">
                    <Gauge size={20} strokeWidth={2.5} />
                 </div>
              </div>
@@ -346,12 +417,24 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                transition={{ delay: 0.3 }}
                className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
-               <Link href="/login" className="w-full sm:w-auto px-10 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-lg hover:scale-105 active:scale-95 hover:shadow-2xl transition-all flex items-center justify-center gap-3 group">
-                  Ingyenes Start <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-               </Link>
-               <Link href="/check" className="w-full sm:w-auto px-10 py-5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center gap-3">
+               <MagneticButton 
+                 href="/login" 
+                 className="w-full sm:w-auto px-10 py-5 rounded-2xl font-black text-lg transition-all flex items-center justify-center gap-3 group text-white dark:text-slate-900"
+                 style={{ 
+                   background: 'var(--button-bg, #10b981)', // Fallback
+                   boxShadow: '0 10px 30px -10px rgba(16,185,129,0.5)'
+                 }}
+               >
+                  <span className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 absolute inset-0 rounded-2xl"></span>
+                  <span className="relative z-10 flex items-center gap-2">Ingyenes Start <ArrowRight className="group-hover:translate-x-1 transition-transform" /></span>
+               </MagneticButton>
+
+               <MagneticButton 
+                 href="/check" 
+                 className="w-full sm:w-auto px-10 py-5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center gap-3"
+               >
                   <Search size={20} /> VIN Kereső
-               </Link>
+               </MagneticButton>
             </motion.div>
 
             {/* 3D Dashboard */}
@@ -359,7 +442,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
          </div>
       </header>
 
-      {/* --- TECH SPECS (Infinite Scroll helyett statikus grid mobilon) --- */}
+      {/* --- TECH SPECS --- */}
       <div className="border-y border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] backdrop-blur-sm overflow-hidden py-10">
          <div className="max-w-7xl mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12">
@@ -507,6 +590,49 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                </SpotlightCard>
 
             </div>
+         </div>
+      </section>
+
+      {/* --- FAQ SECTION --- */}
+      <section id="faq" className="max-w-4xl mx-auto w-full mb-32 px-6">
+         <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">Gyakori Kérdések</h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400">Minden, amit tudni érdemes a rendszerről.</p>
+         </div>
+
+         <div className="space-y-4">
+            {faqs.map((faq, index) => (
+               <div 
+                  key={index} 
+                  className={`rounded-2xl transition-all duration-300 overflow-hidden ${
+                     openFaq === index 
+                        ? 'bg-white dark:bg-slate-900 border border-emerald-500/50 shadow-lg' 
+                        : 'bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/30'
+                  }`}
+               >
+                  <button 
+                     onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                     className="w-full text-left p-6 flex justify-between items-center focus:outline-none"
+                  >
+                     <span className="font-bold text-slate-900 dark:text-white text-lg pr-4">{faq.question}</span>
+                     <ChevronDown className={`text-emerald-500 transition-transform duration-300 flex-shrink-0 ${openFaq === index ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                     {openFaq === index && (
+                        <motion.div 
+                           initial={{ height: 0, opacity: 0 }}
+                           animate={{ height: "auto", opacity: 1 }}
+                           exit={{ height: 0, opacity: 0 }}
+                           className="overflow-hidden"
+                        >
+                           <div className="p-6 pt-0 text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800/50">
+                              {faq.answer}
+                           </div>
+                        </motion.div>
+                     )}
+                  </AnimatePresence>
+               </div>
+            ))}
          </div>
       </section>
 
