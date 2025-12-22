@@ -1,249 +1,169 @@
-'use client';
-
-import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { 
-  ArrowRight, Sparkles, CheckCircle2, Calendar, 
-  BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
-  MessageCircle, HelpCircle, Server, Smartphone,
-  ChevronDown, Layers, AlertTriangle, Cpu, Gift, Search,
-  Sun, Moon // Új ikonok
-} from 'lucide-react';
-import PromoModal from '@/components/PromoModal'; 
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-
-// --- 1. SPECIAL COMPONENTS ---
-
-// THEME TOGGLE BUTTON (Profi animált váltó)
-const ThemeToggle = () => {
-  const [isDark, setIsDark] = useState(true);
+export default function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
-    // Kezdeti állapot ellenőrzése a böngészőből
-    if (localStorage.getItem('theme') === 'light') {
-      setIsDark(false);
-      document.documentElement.classList.remove('dark');
-    } else {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    }
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const toggleTheme = () => {
-    const newStatus = !isDark;
-    setIsDark(newStatus);
-    
-    if (newStatus) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
-
-  return (
-    <button
-      onClick={toggleTheme}
-      className={`
-        relative flex items-center justify-between w-14 h-8 rounded-full p-1 transition-colors duration-500 mr-4
-        ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-slate-200 border border-slate-300'}
-      `}
-      aria-label="Téma váltás"
-    >
-      <span className="sr-only">Téma váltás</span>
-      
-      {/* Sun Icon (Light mode position) */}
-      <Sun size={14} className={`z-10 ml-1 transition-colors duration-300 ${isDark ? 'text-slate-500' : 'text-amber-500'}`} />
-      
-      {/* Moon Icon (Dark mode position) */}
-      <Moon size={14} className={`z-10 mr-1 transition-colors duration-300 ${isDark ? 'text-indigo-400' : 'text-slate-400'}`} />
-
-      {/* The Sliding Ball */}
-      <motion.div
-        className="absolute w-6 h-6 rounded-full shadow-md z-0"
-        initial={false}
-        animate={{
-          x: isDark ? 24 : 0,
-          backgroundColor: isDark ? '#0f172a' : '#ffffff'
-        }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      />
-    </button>
-  );
-};
-
-// MAGNETIC BUTTON
-const MagneticButton = ({ children, className = "", href = "#" }: { children: React.ReactNode, className?: string, href?: string }) => {
-  const ref = useRef<HTMLAnchorElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-
-  const handleMouse = (e: React.MouseEvent) => {
-    const { clientX, clientY } = e;
-    const { height, width, left, top } = ref.current!.getBoundingClientRect();
-    const middleX = clientX - (left + width / 2);
-    const middleY = clientY - (top + height / 2);
-    setPosition({ x: middleX * 0.15, y: middleY * 0.15 });
-  };
-
-  const reset = () => setPosition({ x: 0, y: 0 });
-
-  const { x, y } = position;
-
-  return (
-    <motion.div
-      style={{ x, y }}
-      transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
-    >
-      <Link 
-        href={href}
-        ref={ref}
-        onMouseMove={handleMouse}
-        onMouseLeave={reset}
-        className={className}
-      >
-        {children}
-      </Link>
-    </motion.div>
-  );
-};
-
-// SPOTLIGHT CARD (Light/Dark mode kompatibilis)
-const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(245,158,11,0.15)" }: any) => {
-  const divRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [opacity, setOpacity] = useState(0);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!divRef.current) return;
-    const rect = divRef.current.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  };
-
-  return (
-    <motion.div
-      ref={divRef}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setOpacity(1)}
-      onMouseLeave={() => setOpacity(0)}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.5 }}
-      className={`relative overflow-hidden rounded-[2rem] border transition-colors duration-300 
-        bg-white/60 dark:bg-slate-900/40 
-        border-slate-200 dark:border-slate-800 
-        backdrop-blur-sm ${className}`}
-    >
-      <div
-        className="pointer-events-none absolute -inset-px opacity-0 transition duration-300 z-10"
-        style={{
-          opacity,
-          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 40%)`,
-        }}
-      />
-      <div className="relative z-20 h-full">{children}</div>
-    </motion.div>
-  );
-};
-
-// TECH TRUST BAR
-const TechTrustBar = () => {
-  const specs = [
-    { label: "Titkosítás", value: "AES-256 Banki Szint", icon: <Lock size={16} /> },
-    { label: "Adatfeldolgozás", value: "Gemini 2.5 Flash AI", icon: <Cpu size={16} /> },
-    { label: "Rendelkezésre állás", value: "99.9% Uptime", icon: <Server size={16} /> },
-    { label: "Platform", value: "iOS / Android / Web", icon: <Smartphone size={16} /> },
+  const faqs = [
+    { question: "Tényleg teljesen ingyenes?", answer: "Igen! Jelenleg 'Early Access' fázisban vagyunk. Szeretnénk, ha minél többen kipróbálnák a teljes prémium élményt korlátok nélkül." },
+    { question: "Hogyan működik a Flotta Egészség mutató?", answer: "A rendszer egy intelligens algoritmus segítségével elemzi a szervizintervallumokat, a megtett kilométereket és a legutóbbi karbantartásokat. Ha minden zöld, az autód műszakilag rendben van." },
+    { question: "Tényleg felismeri az AI a hibakódokat?", answer: "Igen! A Gemini 2.5 alapú AI Szerelőnk képes értelmezni a fotózott vagy beírt hibakódokat (pl. P0300), és magyar nyelven, érthetően elmagyarázza a probléma okát és a teendőket." },
+    { question: "Mi történik, ha vége az ingyenes időszaknak?", answer: "Aki most regisztrál, az 'Early Bird' státuszt kap, és a jövőben is kiemelt kedvezményeket vagy örökös hozzáférést biztosítunk az alapadatokhoz." }
   ];
 
   return (
-    <div className="w-full border-y bg-white/50 dark:bg-slate-900/30 border-slate-200 dark:border-white/5 py-8 relative z-10 overflow-hidden backdrop-blur-sm transition-colors duration-500">
-       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
-       <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-wrap justify-center md:justify-around items-center gap-8 md:gap-12">
-             {specs.map((spec, i) => (
-                <div key={i} className="flex items-center gap-3 group cursor-default">
-                   <div className="text-slate-500 dark:text-slate-600 group-hover:text-emerald-500 transition-colors duration-500 bg-white dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-inner">
-                      {spec.icon}
-                   </div>
-                   <div className="flex flex-col">
-                      <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">{spec.label}</span>
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">{spec.value}</span>
-                   </div>
-                </div>
-             ))}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 overflow-x-hidden transition-colors duration-500" style={{ paddingBottom: 'env(safe-area-inset-bottom,0px)', paddingTop: 'env(safe-area-inset-top,0px)' }}>
+      {promo && <PromoModal promo={promo} />}
+      <BackgroundGlows />
+
+      {/* NAVBAR */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 py-3 sm:py-4 shadow-xl dark:shadow-2xl' : 'bg-transparent border-transparent py-4 sm:py-6'}`}
+        style={{ paddingTop: 'env(safe-area-inset-top,0px)' }}>
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 flex justify-between items-center">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300">
+              <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
+            </div>
+            <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase hidden sm:block group-hover:text-amber-500 transition-colors duration-300">
+              Dynamic{/* ...existing code... */}
+            </span>
+          </Link>
+          <div className="hidden md:flex items-center gap-4 lg:gap-8">
+            <Link href="/check" className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors bg-emerald-500/10 px-2.5 sm:px-3 py-1.5 rounded-full border border-emerald-500/20">
+              <Search size={14} /> VIN Kereső
+            </Link>
+            <a href="#features" className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors relative group">
+              Funkciók{/* ...existing code... */}
+            </a>
+            <div className="h-4 w-px bg-slate-300 dark:bg-slate-800"></div>
+            {/* ...existing code... */}
+            <ThemeToggle />
+            <Link href="/login" className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Belépés</Link>
+            <Link href="/login" className="group relative overflow-hidden bg-slate-900 dark:bg-white text-white dark:text-slate-950 px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center gap-2">
+              <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 dark:via-slate-200/50 to-transparent transform -skew-x-12 transition-all duration-1000 group-hover:left-[100%]" />
+              {/* ...existing code... */}
+              <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
-       </div>
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden text-slate-600 dark:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors">
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="absolute top-full left-0 w-full bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 overflow-hidden md:hidden shadow-2xl"
+              style={{ paddingBottom: 'env(safe-area-inset-bottom,0px)' }}
+            >
+              {/* ...existing code... */}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </nav>
+      <main className="relative z-10 flex-1 flex flex-col pt-24 sm:pt-32">
+        {/* HERO SECTION */}
+        <section className="flex flex-col items-center text-center max-w-6xl mx-auto mb-16 sm:mb-20 px-2 sm:px-4">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 mb-6 sm:mb-8 hover:border-amber-500/30 transition-colors cursor-default backdrop-blur-md shadow-sm dark:shadow-lg"
+          >
+            <span className="relative flex h-2 w-2">{/* ...existing code... */}</span>
+            Early Access: Most minden funkció ingyenes!
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-3xl xs:text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1] mb-4 sm:mb-6 drop-shadow-sm dark:drop-shadow-2xl"
+          >
+            Az autód <br className="hidden sm:block" />{/* ...existing code... */}
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.4 }}
+            className="text-base xs:text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed font-light max-w-2xl mx-auto mb-8 sm:mb-10"
+          >
+            A DynamicSense egy mesterséges intelligenciával támogatott, felhőalapú garázs. Költségkövetés, digitális szervizkönyv és flotta menedzsment egy helyen.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center z-30 relative"
+          >
+            {/* ...existing code... */}
+          </motion.div>
+          <DashboardPreview />
+        </section>
+        {/* TECH TRUST BAR */}
+        <TechTrustBar />
+        {/* COMPARISON (Old vs New) */}
+        <ComparisonSection />
+        {/* BENTO GRID FEATURES */}
+        <section id="features" className="max-w-7xl mx-auto mb-24 sm:mb-32 w-full px-2 sm:px-4 pt-8 sm:pt-10">
+          <div className="text-center mb-10 sm:mb-16">{/* ...existing code... */}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 auto-rows-[minmax(180px,auto)]">
+            {/* ...existing code... */}
+          </div>
+        </section>
+        {/* GAMIFICATION */}
+        <section id="gamification" className="max-w-5xl mx-auto mb-24 sm:mb-32 px-2 sm:px-4 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-8 sm:mb-12">Nem csak adminisztráció. Játék.</h2>
+          <div className="flex flex-wrap justify-center gap-6 sm:gap-8">{/* ...existing code... */}</div>
+        </section>
+        {/* WHY FREE SECTION */}
+        <section className="max-w-4xl mx-auto mb-24 sm:mb-32 w-full px-2 sm:px-4">
+          <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-50/80 to-white dark:from-emerald-900/20 dark:to-slate-900/50 p-6 sm:p-8 md:p-12 text-center shadow-xl">
+            {/* ...existing code... */}
+          </div>
+        </section>
+        {/* FAQ SECTION */}
+        <section id="faq" className="max-w-3xl mx-auto w-full mb-24 sm:mb-32 px-2 sm:px-4">
+          <div className="text-center mb-10 sm:mb-16">{/* ...existing code... */}</div>
+          <div className="space-y-4">{/* ...existing code... */}</div>
+        </section>
+        {/* BOTTOM CTA */}
+        <div className="max-w-4xl mx-auto w-full mb-16 sm:mb-20 px-2 sm:px-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-950 dark:from-slate-900 dark:to-slate-950 border border-slate-800 p-6 sm:p-12 rounded-[2.5rem] text-center relative overflow-hidden group shadow-2xl">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-amber-500/10 blur-[80px] sm:blur-[120px] rounded-full pointer-events-none group-hover:bg-amber-500/20 transition-colors duration-700" />
+            {/* ...existing code... */}
+          </div>
+        </div>
+      </main>
+      {/* FOOTER */}
+      <footer className="border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-12 sm:pt-20 pb-8 sm:pb-10 px-2 sm:px-6 relative z-10 transition-colors">
+        {/* Footer Glow Line */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 sm:gap-12 mb-10 sm:mb-16">
+          <div className="md:col-span-1">{/* ...existing code... */}</div>
+          <div>{/* ...existing code... */}</div>
+          <div>{/* ...existing code... */}</div>
+          <div>{/* ...existing code... */}</div>
+        </div>
+        <div className="border-t border-slate-200 dark:border-slate-900 pt-6 sm:pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+          <p className="text-slate-500 dark:text-slate-600 text-xs font-mono uppercase tracking-widest">
+            © {/* ...existing code... */} DynamicSense Technologies. Minden jog fenntartva.
+          </p>
+          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-600 font-mono bg-slate-100 dark:bg-slate-900/50 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-800">
+            {/* ...existing code... */}
+            Rendszer állapota: {/* ...existing code... */}
+          </div>
+        </div>
+      </footer>
     </div>
-  );
-};
-
-// COMPARISON SECTION
-const ComparisonSection = () => {
-    return (
-      <section className="py-24 max-w-6xl mx-auto px-4">
-        <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4 transition-colors">Ne vezess vakon.</h2>
-            <p className="text-slate-600 dark:text-slate-400">A különbség nem csak kényelmi, hanem pénzügyi.</p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
-          {/* Old Method */}
-          <div className="p-8 md:p-12 rounded-[2.5rem] bg-red-50 dark:bg-red-950/10 border border-red-200 dark:border-red-500/10 hover:border-red-500/30 transition-all duration-500 group">
-            <div className="flex items-center gap-2 text-red-500 dark:text-red-400 font-mono text-xs mb-6 uppercase tracking-widest font-bold">
-                <AlertTriangle size={14} /> Hagyományos módszer
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">A Kockás Füzet & Excel</h3>
-            <ul className="space-y-4 text-left text-slate-600 dark:text-slate-400">
-               <li className="flex gap-3 items-center"><div className="p-1 rounded bg-red-500/10 text-red-500"><X size={16} /></div> Elveszett szervizszámlák</li>
-               <li className="flex gap-3 items-center"><div className="p-1 rounded bg-red-500/10 text-red-500"><X size={16} /></div> "Mikor volt olajcsere?"</li>
-               <li className="flex gap-3 items-center"><div className="p-1 rounded bg-red-500/10 text-red-500"><X size={16} /></div> Érthetetlen hibakódok</li>
-               <li className="flex gap-3 items-center"><div className="p-1 rounded bg-red-500/10 text-red-500"><X size={16} /></div> Eladáskor bizalmatlan vevő</li>
-            </ul>
-          </div>
-  
-          {/* New Method */}
-          <div className="p-8 md:p-12 rounded-[2.5rem] bg-emerald-50 dark:bg-emerald-950/10 border border-emerald-200 dark:border-emerald-500/20 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-emerald-500/5 blur-[80px] group-hover:bg-emerald-500/10 transition-colors duration-700"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-mono text-xs mb-6 uppercase tracking-widest font-bold">
-                  <Sparkles size={14} /> DynamicSense
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Digitális Ökoszisztéma</h3>
-              <ul className="space-y-4 text-left text-emerald-900/80 dark:text-emerald-100/80">
-                  <li className="flex gap-3 items-center"><div className="p-1 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"><CheckCircle2 size={16} /></div> Kereshető, örök archívum</li>
-                  <li className="flex gap-3 items-center"><div className="p-1 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"><CheckCircle2 size={16} /></div> Automatikus értesítések</li>
-                  <li className="flex gap-3 items-center"><div className="p-1 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"><CheckCircle2 size={16} /></div> AI alapú diagnosztika</li>
-                  <li className="flex gap-3 items-center"><div className="p-1 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"><CheckCircle2 size={16} /></div> Hiteles PDF szervizkönyv</li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-white dark:bg-slate-950 border-4 border-slate-100 dark:border-slate-900 shadow-xl flex items-center justify-center font-black text-slate-400 dark:text-slate-600 italic z-20 text-xl transition-colors">VS</div>
-        </div>
-      </section>
-    )
+  )
 }
-
-// TYPERWRITER TEXT
-const TypewriterText = ({ text, speed = 30 }: { text: string, speed?: number }) => {
-  const [displayedText, setDisplayedText] = useState('');
-  useEffect(() => {
-    let index = 0;
-    setDisplayedText(''); 
-    const intervalId = setInterval(() => {
-      setDisplayedText((prev) => prev + text.charAt(index));
-      index++;
-      if (index === text.length) clearInterval(intervalId);
-    }, speed);
-    return () => clearInterval(intervalId);
-  }, [text, speed]);
-  return <span>{displayedText}<span className="animate-pulse text-amber-500 font-bold">|</span></span>;
-};
-
-// BACKGROUND GLOWS
-const BackgroundGlows = () => (
   <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
     <div className="absolute top-[-10%] left-[20%] w-[60vw] h-[60vw] bg-amber-600/5 rounded-full blur-[130px] animate-pulse mix-blend-multiply dark:mix-blend-screen" />
     <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-indigo-600/5 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen" />
