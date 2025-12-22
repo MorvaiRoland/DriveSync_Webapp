@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { Search, ShieldCheck, Calendar, Gauge, Wrench, AlertCircle, CheckCircle2, Info, Fuel, Zap, Settings, Tag, FileText, History, XCircle } from 'lucide-react'
+import { Search, ShieldCheck, Calendar, Gauge, Wrench, AlertCircle, CheckCircle2, Info, Fuel, Zap, Settings, Tag, History, ArrowLeft } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link' // Importáljuk a Link komponenst
 
 export default function VinCheckPage() {
   const [vin, setVin] = useState('')
@@ -77,13 +78,22 @@ export default function VinCheckPage() {
          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02]"></div>
       </div>
 
-      <div className="relative max-w-6xl mx-auto px-4 py-24">
+      {/* --- VISSZA GOMB ÉS HEADER KONTÉNER --- */}
+      <div className="relative max-w-6xl mx-auto px-4 py-8 md:py-24">
         
+        {/* VISSZA GOMB */}
+        <div className="absolute top-8 left-4 md:top-24 md:left-4 z-50">
+            <Link href="/" className="group flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 transition-all backdrop-blur-md shadow-lg text-slate-400 hover:text-white">
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                <span className="text-xs font-bold uppercase tracking-wider hidden md:inline">Vissza</span>
+            </Link>
+        </div>
+
         {/* Header */}
         <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-16"
+            className="text-center mb-16 pt-12 md:pt-0" // Extra padding mobilon, hogy ne csússzon rá a gombra
         >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/50 border border-slate-700/50 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-8 backdrop-blur-md shadow-lg">
                 <ShieldCheck className="w-3.5 h-3.5" /> Hitelesített Adatlap
@@ -218,7 +228,7 @@ export default function VinCheckPage() {
 
                     {/* --- TIMELINE SECTION --- */}
                     <div className="max-w-4xl mx-auto">
-                         <div className="flex items-center gap-6 mb-16 justify-center">
+                          <div className="flex items-center gap-6 mb-16 justify-center">
                             <div className="h-px w-24 bg-gradient-to-r from-transparent to-slate-800"></div>
                             <h3 className="text-3xl font-black text-white flex items-center gap-3">
                                 <History className="w-8 h-8 text-slate-600" /> 
