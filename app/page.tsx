@@ -228,7 +228,7 @@ async function DashboardComponent() {
   </nav>
 
       {/* ... Dashboard Main Content (Változatlan) ... */}
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-32 md:pt-24" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 2rem)' }}>
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-32 md:pt-24" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 4.5rem)' }}>
         {/* ... */}
         {/* Ide jön a Dashboard tartalom (Header, KPI, Grid) */}
         {/* ... */}

@@ -61,17 +61,21 @@ export default async function VerifyPage(props: { params: Promise<{ id: string }
       </div>
   )
 
-  return (
-    <div className="min-h-screen bg-[#0B0F19] text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden pb-20">
-      
-      {/* Background FX */}
-      <div className="fixed inset-0 pointer-events-none">
-         <div className="absolute top-[-20%] left-[-10%] w-[80vw] h-[80vw] bg-indigo-600/5 rounded-full blur-[150px]"></div>
-         <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-emerald-600/5 rounded-full blur-[150px]"></div>
-         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02]"></div>
-      </div>
+    // DEBUG: Log events query result for troubleshooting
+    if (!serviceHistory || serviceHistory.length === 0) {
+        console.warn('NINCS SZERVIZTÖRTÉNET! events query:', historyRes);
+    }
 
-      <div className="relative max-w-5xl mx-auto px-4 py-16">
+    return (
+        <div className="min-h-screen bg-[#0B0F19] text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden pb-20">
+            {/* Background FX */}
+            <div className="fixed inset-0 pointer-events-none">
+                 <div className="absolute top-[-20%] left-[-10%] w-[80vw] h-[80vw] bg-indigo-600/5 rounded-full blur-[150px]"></div>
+                 <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-emerald-600/5 rounded-full blur-[150px]"></div>
+                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02]"></div>
+            </div>
+
+            <div className="relative max-w-5xl mx-auto px-4 py-16" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 3.5rem)' }}>
         
         {/* FEJLÉC & STÁTUSZ */}
         <div className="text-center mb-16">
