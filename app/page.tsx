@@ -15,6 +15,7 @@ import LandingPage from '@/components/LandingPage';
 import CongratulationModal from '@/components/CongratulationModal';
 import MarketplaceSection from '@/components/MarketplaceSection'
 import QuickCostOverview from '@/components/QuickCostOverview';
+import HeaderNav from '@/components/HeaderNav';
 
 const DEV_SECRET_KEY = "admin"; 
 const FEATURES = {
@@ -192,59 +193,35 @@ async function DashboardComponent() {
       <ChangelogModal />
       
 
-   <nav className="absolute top-4 left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-  <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
-    
-    {/* --- BAL OLDAL: Logó és Menüpontok --- */}
-    <div className="flex items-center gap-6">
-      <Link href="/" className="flex items-center gap-3 group">
-        <div className="relative w-8 h-8 group-hover:rotate-12 transition-transform duration-500">
-          <Image src="/DynamicSense-logo.png" alt="DynamicSense" fill className="object-contain drop-shadow-md" priority />
-        </div>
-        <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white uppercase hidden sm:block">
-          Dynamic<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Sense</span>
-        </span>
-      </Link>
+  <nav className="absolute top-4 left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
 
-      <div className="hidden md:flex items-center gap-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-        <Link href="/analytics" className="flex items-center gap-1 hover:text-blue-500 transition-colors">
-          <Gauge className="w-4 h-4" /> Költség
-        </Link>
-        <Link href="/showroom" className="flex items-center gap-1 hover:text-orange-500 transition-colors">
-          <span className="text-lg">🔥</span> Showroom
-        </Link>
-        {/* Fontos: Itt ellenőrizd, hogy biztosan le van zárva a Link! */}
-        <Link href="/services" className="flex items-center gap-1 hover:text-blue-500 transition-colors">
-          <Map className="w-4 h-4" /> Szerviz Térkép
-        </Link>
-        <Link href="/check" className="flex items-center gap-1 hover:text-emerald-500 transition-colors">
-          <Search className="w-4 h-4" /> VIN Kereső
-        </Link>
+      {/* Left: HeaderNav (desktop + mobile) */}
+      <div className="flex items-center">
+        <HeaderNav />
       </div>
-    </div>
 
-    {/* --- JOBB OLDAL: Beállítások és User --- */}
-    <div className="flex items-center gap-3">
-      <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-        <span className="text-sm">🚀</span> Early Access Pro
-      </Link>
-      
-      <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-      
-      {/* Settings Gomb - Ennek most már jónak kell lennie */}
-      <Link href="/settings" className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Beállítások">
-        <Settings className="w-5 h-5" />
-      </Link>
-      
-      <form action={signOut}>
-        <button className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors" title="Kilépés">
-          <LogOut className="w-5 h-5" />
-        </button>
-      </form>
-    </div>
+      {/* Right controls remain server-side (settings, logout) */}
+      <div className="flex items-center gap-3">
+        <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+          <span className="text-sm">🚀</span> Early Access Pro
+        </Link>
+        
+        <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+        
+        <Link href="/settings" className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Beállítások">
+          <Settings className="w-5 h-5" />
+        </Link>
+        
+        <form action={signOut}>
+          <button className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors" title="Kilépés">
+            <LogOut className="w-5 h-5" />
+          </button>
+        </form>
+      </div>
 
-  </div>
-</nav>
+    </div>
+  </nav>
 
       {/* ... Dashboard Main Content (Változatlan) ... */}
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-24">
