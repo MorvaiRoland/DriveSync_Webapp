@@ -1,19 +1,48 @@
 'use client'
 
 import { createBrowserClient } from '@supabase/ssr'
-import { addEvent } from '../../actions'
+import { addEvent } from '../../actions' // Győződj meg róla, hogy ez az útvonal helyes
 import { scanReceipt } from '@/app/actions/scan-receipt'
 import imageCompression from 'browser-image-compression'
 import Link from 'next/link'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { useEffect, useState, Suspense, useRef,  } from 'react'
+import { useEffect, useState, Suspense, useRef } from 'react'
 import { 
   Fuel, Wrench, ScanLine, ArrowLeft, CheckCircle2, 
   MapPin, Calendar, FileText, Banknote, Gauge, 
   Loader2, AlertCircle, X, ChevronDown, Sparkles 
 } from 'lucide-react'
 
-// --- SEGÉDFÜGGVÉNY ---
+// --- TÍPUS DEFINÍCIÓK ---
+interface Car {
+  id: string
+  make: string
+  model: string
+  plate: string
+  mileage: number
+}
+
+interface ServiceType {
+  id: number
+  name: string
+}
+
+interface FormState {
+  event_date: string
+  mileage: string | number
+  title: string
+  cost: string | number
+  liters: string | number
+  location: string
+  description: string
+}
+
+interface ToastState {
+  message: string
+  type: 'success' | 'error'
+}
+
+// --- SEGÉDFÜGGVÉNYEK ---
 const getLocalToday = () => {
   const d = new Date()
   const year = d.getFullYear()
@@ -25,11 +54,12 @@ const getLocalToday = () => {
 function EventForm() {
   const params = useParams()
   const searchParams = useSearchParams()
-  const carId = params.id as string
   const router = useRouter()
+  const carId = params.id as string
   
+  // URL query alapján típus meghatározása (alapértelmezett: fuel)
   const defaultType = searchParams.get('type') === 'service' ? 'service' : 'fuel'
-  const [type, setType] = useState(defaultType)
+  const [type, setType] = useState<'service' | 'fuel'>(defaultType)
   const isFuel = type === 'fuel'
 
   const supabase = createBrowserClient(
@@ -37,19 +67,19 @@ function EventForm() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  const [car, setCar] = useState<any>(null)
-  const [serviceTypes, setServiceTypes] = useState<{id: number, name: string}[]>([])
+  // Statek
+  const [car, setCar] = useState<Car | null>(null)
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([])
   const [loading, setLoading] = useState(true)
-  
   const [scanning, setScanning] = useState(false) 
   const [saving, setSaving] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  
   const [aiFilled, setAiFilled] = useState<string[]>([])
   const [showAiDisclaimer, setShowAiDisclaimer] = useState(false)
-  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
+  const [toast, setToast] = useState<ToastState | null>(null)
+  
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormState>({
       event_date: getLocalToday(), 
       mileage: '',
       title: '',
@@ -59,27 +89,46 @@ function EventForm() {
       description: ''
   })
 
+  // Adatok betöltése
   useEffect(() => {
     async function fetchData() {
-      const { data: carData } = await supabase.from('cars').select('*').eq('id', carId).single()
-      if (carData) {
-          setCar(carData)
-          setFormData(prev => ({ ...prev, mileage: carData.mileage }))
-      }
+      try {
+        // Autó lekérése
+        const { data: carData, error: carError } = await supabase
+            .from('cars')
+            .select('*')
+            .eq('id', carId)
+            .single()
+        
+        if (carError) throw carError
+        if (carData) {
+            setCar(carData)
+            setFormData(prev => ({ ...prev, mileage: carData.mileage }))
+        }
 
-      const { data: services } = await supabase.from('service_types').select('*').order('name')
-      if (services) setServiceTypes(services)
-      
-      setLoading(false)
+        // Szerviz típusok lekérése
+        const { data: services } = await supabase
+            .from('service_types')
+            .select('*')
+            .order('name')
+        
+        if (services) setServiceTypes(services)
+      } catch (error) {
+        console.error('Hiba az adatok betöltésekor:', error)
+        showToast('Nem sikerült betölteni az autó adatait.', 'error')
+      } finally {
+        setLoading(false)
+      }
     }
     fetchData()
-  }, [carId])
+  }, [carId, supabase])
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 4000)
   }
 
+  // AI Számla szkennelés
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (!file) return
@@ -92,7 +141,8 @@ function EventForm() {
       try {
           const compressedFile = await imageCompression(file, {
               maxSizeMB: 1,
-              maxWidthOrHeight: 1920
+              maxWidthOrHeight: 1920,
+              useWebWorker: true
           })
 
           const data = new FormData()
@@ -103,23 +153,27 @@ function EventForm() {
           if (result.success && result.data) {
               const aiData = result.data
               
+              // Típus automatikus váltása, ha az AI felismeri
               if (aiData.type && (aiData.type === 'fuel' || aiData.type === 'service')) {
-                  setType(aiData.type)
+                  setType(aiData.type as 'fuel' | 'service')
               }
 
-              let newTitle = aiData.title || formData.title;
+              // Dátum formázás
               let newDate = formData.event_date;
               if (aiData.date) {
-                 if (aiData.date.includes('T')) {
-                     newDate = aiData.date.split('T')[0];
-                 } else if (aiData.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                     newDate = aiData.date;
+                 try {
+                     const parsedDate = new Date(aiData.date);
+                     if (!isNaN(parsedDate.getTime())) {
+                         newDate = parsedDate.toISOString().split('T')[0];
+                     }
+                 } catch (e) {
+                     console.warn("Dátum formázási hiba", e)
                  }
               }
 
               setFormData(prev => ({
                   ...prev,
-                  title: newTitle, 
+                  title: aiData.title || prev.title, 
                   event_date: newDate,
                   cost: aiData.cost || prev.cost,
                   location: aiData.location || prev.location,
@@ -128,6 +182,7 @@ function EventForm() {
                   mileage: aiData.mileage || prev.mileage 
               }))
 
+              // Kiemeljük a kitöltött mezőket
               const filledFields = []
               if (aiData.title) filledFields.push('title')
               if (aiData.date) filledFields.push('event_date')
@@ -152,9 +207,11 @@ function EventForm() {
       }
   }
 
+  // Űrlap beküldés
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
+    
     const submitData = new FormData(e.target as HTMLFormElement)
     submitData.set('type', type) 
 
@@ -162,17 +219,21 @@ function EventForm() {
         await addEvent(submitData)
         showToast('Esemény rögzítve!', 'success')
         router.refresh()
+        // Opcionális: Visszairányítás
+        // router.push(`/cars/${carId}`) 
     } catch (error: any) {
+        // Next.js redirect "error" kezelése (ez normális működés server actionnél)
         if (error.message === 'NEXT_REDIRECT') {
             showToast('Sikeres mentés! Visszatérés...', 'success')
             return 
         }
+        console.error(error)
         showToast('Hiba történt a mentéskor.', 'error')
         setSaving(false)
     }
   }
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target
       setFormData(prev => ({ ...prev, [name]: value }))
   }
@@ -338,6 +399,7 @@ function EventForm() {
                   icon={<Wrench className="w-5 h-5" />}
                >
                   <option value="" disabled>Válassz...</option>
+                  {/* Ha van olyan érték, ami nincs a listában (pl AI hozta), jelenjen meg */}
                   {formData.title && !serviceTypes.some(s => s.name === formData.title) && formData.title !== 'Egyéb' && (
                       <option value={formData.title}>{formData.title}</option>
                   )}
@@ -374,7 +436,7 @@ function EventForm() {
                     required 
                     icon={<Fuel className="w-5 h-5" />}
                     suffix="L"
-                 />
+                  />
                )}
             </div>
 
@@ -443,9 +505,23 @@ export default function NewEventPage() {
   )
 }
 
-// --- REUSABLE COMPONENTS ---
+// --- REUSABLE COMPONENTS (Típusosítva) ---
 
-function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight, icon, suffix }: any) {
+interface InputGroupProps {
+  label: string
+  name: string
+  type?: string
+  placeholder?: string
+  required?: boolean
+  step?: string
+  value: string | number
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  highlight?: boolean
+  icon?: React.ReactNode
+  suffix?: string
+}
+
+function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight, icon, suffix }: InputGroupProps) {
   const [focused, setFocused] = useState(false)
 
   return (
@@ -497,7 +573,18 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
   )
 }
 
-function SelectGroup({ label, name, value, onChange, required, highlight, icon, children }: any) {
+interface SelectGroupProps {
+    label: string
+    name: string
+    value: string | number
+    onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void
+    required?: boolean
+    highlight?: boolean
+    icon?: React.ReactNode
+    children: React.ReactNode
+}
+
+function SelectGroup({ label, name, value, onChange, required, highlight, icon, children }: SelectGroupProps) {
     const [focused, setFocused] = useState(false)
   
     return (
