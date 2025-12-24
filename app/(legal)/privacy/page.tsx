@@ -1,9 +1,9 @@
-import LegalLayout from '@/components/LegalLayout';
 import { Shield, User, Car, Mail, Info } from 'lucide-react';
 
 export default function PrivacyPage() {
+  // A Layoutot a Next.js automatikusan ráteszi, nem kell importálni!
   return (
-    <LegalLayout>
+    <>
        {/* Címsor */}
        <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center p-4 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-500 rounded-2xl mb-6">
@@ -88,6 +88,6 @@ export default function PrivacyPage() {
              </div>
           </section>
        </div>
-    </LegalLayout>
+    </>
   );
 }

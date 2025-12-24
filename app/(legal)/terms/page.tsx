@@ -1,9 +1,9 @@
-import LegalLayout from '@/components/LegalLayout';
 import { Scale, ShieldAlert, CheckCircle } from 'lucide-react';
 
 export default function TermsPage() {
+  // A Layoutot a Next.js automatikusan ráteszi, nem kell importálni!
   return (
-    <LegalLayout>
+    <>
        {/* Címsor */}
        <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center p-4 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 rounded-2xl mb-6">
@@ -73,6 +73,6 @@ export default function TermsPage() {
           </div>
 
        </div>
-    </LegalLayout>
+    </>
   );
 }
