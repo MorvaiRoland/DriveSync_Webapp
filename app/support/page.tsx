@@ -5,10 +5,12 @@ import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { 
   Bug, Lightbulb, CreditCard, HelpCircle, 
   UploadCloud, Send, CheckCircle2, 
-  Monitor, Loader2, Sparkles, Image as ImageIcon, X
+  Monitor, Loader2, Sparkles, Image as ImageIcon, X,
+  ArrowLeft 
 } from 'lucide-react';
 import { submitTicket } from './actions';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 // --- 3D KÁRTYA KOMPONENS (Téma-adaptív) ---
 const TiltCard = ({ children, isSelected, onClick, className }: any) => {
@@ -101,6 +103,8 @@ export default function SupportPage() {
     setIsSubmitting(true);
     formData.append('type', selectedCategory);
     formData.append('deviceInfo', JSON.stringify(deviceInfo));
+    // Itt kellene kezelni a fájl feltöltést a szerver felé is
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const result = await submitTicket(formData);
@@ -142,7 +146,7 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 p-4 md:p-8 font-sans selection:bg-amber-500/30 overflow-x-hidden transition-colors duration-500">
       
-      {/* Background Ambience - Light/Dark adaptív */}
+      {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-20%] left-[-10%] w-[60vw] h-[60vw] bg-indigo-600/5 rounded-full blur-[150px] animate-pulse mix-blend-multiply dark:mix-blend-screen" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-amber-600/5 rounded-full blur-[150px] mix-blend-multiply dark:mix-blend-screen" />
@@ -151,24 +155,41 @@ export default function SupportPage() {
 
       <div className="max-w-6xl mx-auto relative z-10 pt-10">
         
-        {/* Header */}
-        <motion.div initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8 }} className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-500 dark:text-slate-400 mb-6 backdrop-blur-md shadow-sm dark:shadow-none">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Support Center Live
+        {/* HEADER VISSZA GOMBBAL */}
+        <motion.div initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8 }} className="mb-12">
+          
+          <div className="flex justify-between items-center mb-8">
+             <Link href="/" className="group flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors py-2 px-4 rounded-full hover:bg-white/50 dark:hover:bg-slate-800/50 backdrop-blur-sm">
+                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                Vissza a főoldalra
+             </Link>
+
+             {/* Live jelvény (jobbra igazítva asztalon) */}
+             <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-500 dark:text-slate-400 backdrop-blur-md shadow-sm dark:shadow-none">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Support Center Live
+             </div>
           </div>
-          <h1 className="text-5xl md:text-6xl font-black text-slate-900 dark:text-white mb-6 tracking-tight drop-shadow-sm dark:drop-shadow-2xl">
-            Központ <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Vonalban.</span>
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 text-xl max-w-2xl mx-auto font-light">
-            Mondd el mi a gond, mi pedig megoldjuk. Az AI rendszerünk segít a kategorizálásban.
-          </p>
+
+          <div className="text-center">
+             <div className="md:hidden inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-500 dark:text-slate-400 mb-6 backdrop-blur-md shadow-sm dark:shadow-none">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Support Center Live
+             </div>
+
+             <h1 className="text-5xl md:text-6xl font-black text-slate-900 dark:text-white mb-6 tracking-tight drop-shadow-sm dark:drop-shadow-2xl">
+               Központ <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Vonalban.</span>
+             </h1>
+             <p className="text-slate-600 dark:text-slate-400 text-xl max-w-2xl mx-auto font-light">
+               Mondd el mi a gond, mi pedig megoldjuk. Az AI rendszerünk segít a kategorizálásban.
+             </p>
+          </div>
         </motion.div>
 
         <form action={handleSubmit}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* BAL OLDAL: KATEGÓRIÁK (GRID) */}
+            {/* BAL OLDAL: KATEGÓRIÁK */}
             <div className="lg:col-span-4 space-y-6">
               <div className="grid grid-cols-1 gap-4">
                 {categories.map((cat, i) => (
@@ -200,7 +221,7 @@ export default function SupportPage() {
                 ))}
               </div>
 
-              {/* Rendszer Info Panel */}
+              {/* Rendszer Info */}
               <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-100 to-white dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800/50 shadow-xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-slate-900 dark:text-white"><Monitor size={80} /></div>
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Rendszer Diagnosztika</p>
@@ -218,14 +239,13 @@ export default function SupportPage() {
               </div>
             </div>
 
-            {/* JOBB OLDAL: ŰRLAP (GLASS PANEL) */}
+            {/* JOBB OLDAL: ŰRLAP */}
             <div className="lg:col-span-8">
               <motion.div 
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border border-slate-200 dark:border-white/5 rounded-[2rem] p-8 shadow-2xl relative overflow-hidden"
               >
-                {/* Díszítő fénycsík */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-50" />
 
                 <div className="space-y-8">
@@ -240,7 +260,7 @@ export default function SupportPage() {
                     />
                   </div>
 
-                  {/* Leírás + AI Feedback */}
+                  {/* Leírás */}
                   <div className="relative">
                     <div className="flex justify-between items-center mb-2 ml-1">
                       <label className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Részletek</label>
@@ -259,7 +279,7 @@ export default function SupportPage() {
                     ></textarea>
                   </div>
 
-                  {/* Drag & Drop Fájl Feltöltés */}
+                  {/* Fájl Feltöltés */}
                   <div>
                     <label className="text-sm font-bold text-slate-500 dark:text-slate-400 ml-1 mb-2 block uppercase tracking-wider">Melléklet</label>
                     <div 
@@ -297,7 +317,7 @@ export default function SupportPage() {
                     </div>
                   </div>
 
-                  {/* Beküldés Gomb */}
+                  {/* Submit */}
                   <div className="pt-4">
                     <button 
                       type="submit" disabled={isSubmitting}
