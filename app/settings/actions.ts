@@ -112,24 +112,50 @@ export async function signOutAction() {
 // --- 4. FIÓK TÖRLÉSE ---
 export async function deleteAccountAction() {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
     
+    // 1. Felhasználó ellenőrzése
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return redirect('/login')
 
+    // 2. Admin kliens inicializálása (szükséges a törléshez és az RLS megkerüléséhez)
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceRoleKey) return redirect(`/settings?error=${encodeURIComponent('Config hiba')}`)
+    if (!serviceRoleKey) return redirect(`/settings?error=${encodeURIComponent('Szerver konfigurációs hiba (Service Role)')}`)
 
     const supabaseAdmin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
 
-    // Először kijelentkeztetjük a felhasználót
-    await supabase.auth.signOut()
+    try {
+        // 3. LÉNYEGES LÉPÉS: Az autók leválasztása a felhasználóról
+        // Feltételezzük, hogy a tábla neve 'vehicles'. Ha 'cars', írd át!
+        // A user_id-t NULL-ra állítjuk, így az autó megmarad, de nem lesz gazdája (árva rekord).
+        // Fontos: Az adatbázisban a 'user_id' oszlopnak engedélyeznie kell a NULL értéket (is_nullable: true).
+        const { error: unlinkError } = await supabaseAdmin
+            .from('cars') 
+            .update({ user_id: null }) 
+            .eq('user_id', user.id)
 
-    // Majd töröljük az Admin klienssel, ami megkerüli a RLS-t
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id)
-    
-    if (error) {
-        return redirect(`/login?message=${encodeURIComponent('Hiba a törlésnél')}`)
+        if (unlinkError) {
+            console.error('Hiba az autók leválasztásakor:', unlinkError)
+            // Ha nem sikerül leválasztani, megállítjuk a folyamatot, hogy ne vesszenek el az autók
+            return redirect(`/settings?error=${encodeURIComponent('Nem sikerült az autók mentése törlés előtt.')}`)
+        }
+
+        // 4. Kijelentkeztetés
+        await supabase.auth.signOut()
+
+        // 5. Felhasználó végleges törlése az Auth rendszerből
+        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
+        
+        if (deleteError) {
+            console.error('User delete error:', deleteError)
+            return redirect(`/login?message=${encodeURIComponent('Hiba a törlésnél, kérjük vedd fel a kapcsolatot az ügyfélszolgálattal.')}`)
+        }
+
+    } catch (err) {
+        console.error('Váratlan hiba:', err)
+        return redirect(`/settings?error=${encodeURIComponent('Váratlan hiba történt.')}`)
     }
 
-    return redirect(`/login?message=${encodeURIComponent('Fiók törölve')}`)
+    // 6. Siker esetén átirányítás
+    return redirect(`/login?message=${encodeURIComponent('A fiókod sikeresen törölve lett. Az autóid megmaradtak az adatbázisban.')}`)
 }
+
