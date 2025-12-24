@@ -2,6 +2,17 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  // --- JAVÍTÁS KEZDETE ---
+  // FONTOS: Ha a callback útvonalon vagyunk (jelszó reset vagy email megerősítés),
+  // akkor NE futtassuk le a Supabase logikát a middleware-ben!
+  // Hagyjuk, hogy a route handler (app/auth/callback/route.ts) végezze a dolgát.
+  if (path.startsWith('/auth/callback')) {
+    return NextResponse.next()
+  }
+  // --- JAVÍTÁS VÉGE ---
+
   // 1. Kezdeti válasz létrehozása
   let response = NextResponse.next({
     request: {
@@ -16,7 +27,7 @@ export async function updateSession(request: NextRequest) {
     return response 
   }
 
-  // 2. Supabase kliens inicializálása a cookie-k kezelésével
+  // 2. Supabase kliens inicializálása
   const supabase = createServerClient(
     supabaseUrl,
     supabaseKey,
@@ -42,18 +53,16 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // 3. Felhasználó lekérése (ez frissíti a tokent is ha kell)
+  // 3. Felhasználó lekérése
   const { data: { user }, error } = await supabase.auth.getUser()
 
-  const path = request.nextUrl.pathname;
-
-  // --- LOGIKA KEZDETE ---
+  // --- LOGIKA ---
 
   // A. Ha a felhasználó BE VAN JELENTKEZVE, és "auth" oldalakon van -> Irány a vezérlőpult
   if (user && !error) {
       if (path.startsWith('/login') || path.startsWith('/register')) {
         const url = request.nextUrl.clone()
-        url.pathname = '/' // Vagy '/marketplace', attól függ mi a főoldalad
+        url.pathname = '/' 
         const redirectResponse = NextResponse.redirect(url)
         copyCookies(response, redirectResponse)
         return redirectResponse
@@ -62,15 +71,13 @@ export async function updateSession(request: NextRequest) {
 
   // B. Ha a felhasználó NINCS BEJELENTKEZVE
   if (!user || error) {
-    // Itt soroljuk fel azokat az oldalakat, amiket NEM védünk le.
-    // Ha az útvonal NEM ezek valamelyike, akkor átirányítjuk a /login-ra.
     if (
         !path.startsWith('/login') && 
-        !path.startsWith('/register') &&          // ÚJ: A regisztráció is nyilvános
+        !path.startsWith('/register') && 
         !path.startsWith('/auth') && 
         !path.startsWith('/update-password') && 
-        !path.startsWith('/hirdetes') &&          // ÚJ: A publikus hirdetés nézet engedélyezése!
-        path !== '/'                              // A főoldal (landing page) is nyilvános
+        !path.startsWith('/hirdetes') && 
+        path !== '/' 
     ) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
@@ -83,7 +90,7 @@ export async function updateSession(request: NextRequest) {
   return response
 }
 
-// Segédfüggvény a cookie-k másolásához (Supabase SSR-hez szükséges)
+// Segédfüggvény
 function copyCookies(sourceResponse: NextResponse, targetResponse: NextResponse) {
     sourceResponse.cookies.getAll().forEach((cookie) => {
         targetResponse.cookies.set(cookie.name, cookie.value, {
