@@ -11,50 +11,57 @@ export async function GET(request: Request) {
   }
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  const radius = 5000; // 5km
+  const radius = 5000; // 5km-es körzet
 
-  // --- KATEGÓRIA TÉRKÉP (A lényeg itt van!) ---
-  // Ez mondja meg a Google-nek, mit keressen pontosan
-  let type = 'car_repair'; // Alapértelmezett
-  let keyword = '';       // Opcionális kulcsszó szűkítéshez
+  // --- KATEGÓRIA KONFIGURÁCIÓ (Magyarítva és pontosítva) ---
+  let type = 'car_repair'; // Alapértelmezett Google típus
+  let keyword = '';       // Kulcsszó a szűkítéshez
 
   switch (category) {
     case 'towing':
       type = 'towing_service';
+      keyword = 'autómentés autómentő'; // Két szót is megadhatunk a biztonság kedvéért
       break;
     case 'wash':
       type = 'car_wash';
+      keyword = 'autómosó';
       break;
     case 'gas':
       type = 'gas_station';
+      keyword = 'benzinkút';
       break;
     case 'electric':
       type = 'electric_vehicle_charging_station';
+      keyword = 'elektromos töltő';
       break;
     case 'parking':
       type = 'parking';
+      keyword = 'parkoló';
       break;
     case 'parts':
-      type = 'car_dealer'; // Vagy store, de autósboltokra nincs külön type, keyword kell
-      keyword = 'auto parts';
+      type = 'store'; // A 'car_dealer' helyett a 'store' jobb alkatrészboltra
+      keyword = 'autóalkatrész bárd unix'; // Beírhatsz nagy márkákat is a pontosságért
       break;
     case 'body':
       type = 'car_repair';
-      keyword = 'karosszéria';
+      keyword = 'karosszéria lakatos fényezés'; // Specifikus szűrés
       break;
     case 'tire':
       type = 'car_repair';
-      keyword = 'gumiszerviz';
+      keyword = 'gumiszerviz gumis'; // Így nem ad ki sima autószerelőt
       break;
     case 'mechanic':
     default:
       type = 'car_repair';
+      keyword = 'autószerelő szerviz'; // Így nem ad ki gumist vagy fényezőt
       break;
   }
 
-  // URL összeállítása (Ha van keyword, azt is beletesszük)
-  let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&key=${apiKey}`;
+  // URL összeállítása
+  // FONTOS: Hozzáadtuk a &language=hu paramétert!
+  let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&language=hu&key=${apiKey}`;
   
+  // Ha van kulcsszó, hozzáfűzzük. Ez a legfontosabb a pontossághoz.
   if (keyword) {
     url += `&keyword=${encodeURIComponent(keyword)}`;
   }
@@ -73,7 +80,7 @@ export async function GET(request: Request) {
       address: place.vicinity,
       latitude: place.geometry.location.lat,
       longitude: place.geometry.location.lng,
-      category: category, // Visszaküldjük az eredeti kategóriát
+      category: category, 
       rating: place.rating,
       user_ratings_total: place.user_ratings_total,
       open_now: place.opening_hours?.open_now
