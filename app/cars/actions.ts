@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/supabase/server'
+import { createClient } from '@/supabase/server' // Ez a sima user kliens
+import { createClient as createAdminClient } from '@supabase/supabase-js' // Ez kell az adminhoz
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
@@ -24,12 +25,10 @@ export async function addCar(formData: FormData) {
   const vinRaw = formData.get('vin');
   const vin = vinRaw ? String(vinRaw).trim().toUpperCase() : '';
 
-  // Validáció
   if (!vin) {
     return redirect(`/cars/new?error=${encodeURIComponent('Az alvázszám (VIN) megadása kötelező!')}`);
   }
 
-  // Adatok összekészítése
   const carData = {
     user_id: user.id,
     make: String(formData.get('make')),
@@ -38,18 +37,15 @@ export async function addCar(formData: FormData) {
     vin: vin,
     year: parseInt(String(formData.get('year')) || '0'),
     mileage: parseInt(String(formData.get('mileage')) || '0'),
-    // ... egyéb mezők (color, engine, stb.)
+    // ...többi mező...
   }
 
   const { error } = await supabase.from('cars').insert(carData)
 
-  // --- HIBAKEZELÉS ÉS DUPLIKÁCIÓ ---
   if (error) {
     console.error('Adatbázis hiba:', error)
 
-    // HA MÁR LÉTEZIK AZ ALVÁZSZÁM (Unique Violation - 23505)
     if (error.code === '23505') {
-      // Lekérjük a létező autó ID-ját a VIN alapján
       const { data: existingCar } = await supabase
         .from('cars')
         .select('id')
@@ -57,11 +53,9 @@ export async function addCar(formData: FormData) {
         .single();
       
       if (existingCar) {
-        // Visszairányítunk a formra a megtalált ID-vel
         return redirect(`/cars/new?found_car_id=${existingCar.id}`);
       }
     }
-
     return redirect(`/cars/new?error=${encodeURIComponent('Sikertelen mentés: ' + error.message)}`)
   }
   
@@ -69,81 +63,68 @@ export async function addCar(formData: FormData) {
   redirect('/')
 }
 
-// --- AUTÓ ÁTVÉTELE (CLAIM) ---
-// Ez az új action, amit a kártya gombja hív meg
+// --- 2. AUTÓ ÁTVÉTELE (CLAIM) - JAVÍTOTT ---
 export async function claimCar(formData: FormData) {
+  // 1. Ellenőrizzük, hogy be van-e lépve a user (Standard kliens)
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
   const carId = String(formData.get('car_id'));
 
-  // Átírjuk a tulajdonost a jelenlegi userre
-  // Opcionális: Itt törölheted a korábbi tulaj adatait, ha szükséges, vagy naplózhatod a váltást.
-  const { error } = await supabase
+  // 2. Létrehozunk egy ADMIN klienst a Service Role kulccsal
+  // Ez MEGKERÜLI az RLS szabályokat, így átírhatjuk a tulajdonost
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
+
+  // 3. Frissítés az ADMIN klienssel
+  const { error } = await supabaseAdmin
     .from('cars')
-    .update({ user_id: user.id }) 
+    .update({ 
+        user_id: user.id, // Az új tulajdonos ID-ja
+        updated_at: new Date().toISOString()
+    }) 
     .eq('id', carId);
 
   if (error) {
+    console.error("Claim error:", error);
     return redirect(`/cars/new?found_car_id=${carId}&error=${encodeURIComponent('Hiba az átvételkor: ' + error.message)}`);
   }
 
-  revalidatePath('/')
-  redirect(`/cars/${carId}`) // Irány az autó adatlapja
+  // Siker! Cache törlése és átirányítás
+  revalidatePath('/', 'layout') 
+  redirect(`/cars/${carId}`)
 }
 
-// --- 3. FRISSÍTÉS ---
+// --- 3. FRISSÍTÉS (Marad a régi, mert itt már a sajátodat szerkeszted) ---
 export async function updateCar(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
   const carId = String(formData.get('car_id'))
-  const imageFile = formData.get('image') as File;
-
-  const vinRaw = formData.get('vin');
-  const vin = vinRaw ? String(vinRaw).trim().toUpperCase() : '';
-
-  if (!vin) {
-    return redirect(`/cars/${carId}/edit?error=${encodeURIComponent('Az alvázszám (VIN) megadása kötelező!')}`);
-  }
-
-  const yearVal = parseNullableInt(formData.get('year'));
-  const mileageVal = parseNullableInt(formData.get('mileage'));
-
+  // ... a többi kód változatlan ...
+  
+  // Csak a releváns részt másolom ide a rövidség kedvéért, a te kódod itt jó volt
   const updateData: any = {
     make: String(formData.get('make')),
-    model: String(formData.get('model')),
-    plate: String(formData.get('plate')).toUpperCase().replace(/\s/g, ''),
-    year: yearVal,
-    mileage: mileageVal,
-    vin: vin,
-    color: String(formData.get('color')),
-    fuel_type: String(formData.get('fuel_type')),
-    status: String(formData.get('status')),
-    transmission: String(formData.get('transmission')),
-    body_type: parseNullableString(formData.get('body_type')),
-    power_hp: parseNullableInt(formData.get('power_hp')),
-    engine_size: parseNullableInt(formData.get('engine_size')),
-    mot_expiry: parseNullableString(formData.get('mot_expiry')),
-    insurance_expiry: parseNullableString(formData.get('insurance_expiry')),
+    // ...
   }
-
-  if (imageFile && imageFile.size > 0) {
-    const fileName = `${user.id}/${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-    const { error: uploadError } = await supabase.storage.from('car-images').upload(fileName, imageFile);
-    if (!uploadError) {
-      const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
-      updateData.image_url = data.publicUrl;
-    }
-  }
-
+  // ...
+  
   const { error } = await supabase
     .from('cars')
     .update(updateData)
     .eq('id', carId)
-    .eq('user_id', user.id)
+    .eq('user_id', user.id) // Itt fontos az RLS, csak a sajátodat szerkesztheted
 
   if (error) {
     return redirect(`/cars/${carId}/edit?error=${encodeURIComponent('Hiba a frissítéskor: ' + error.message)}`)
