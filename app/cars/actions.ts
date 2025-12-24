@@ -21,47 +21,59 @@ export async function addCar(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
-  // --- ALVÁZSZÁM VALIDÁCIÓ ÉS FORMÁZÁS ---
-  // Kiszedjük, levágjuk a felesleges szóközöket és nagybetűsítjük
+  // --- 1. VALIDÁCIÓK ---
+  
+  // Alvázszám (VIN) tisztítása és ellenőrzése
   const vinRaw = formData.get('vin');
   const vin = vinRaw ? String(vinRaw).trim().toUpperCase() : '';
 
-  // Ellenőrizzük, hogy megvan-e
-  if (!vin || vin.length === 0) {
-    return redirect('/cars/new?error=Az alvázszám (VIN) megadása kötelező!');
+  if (!vin) {
+    // encodeURIComponent védi a headert az ékezetektől!
+    return redirect(`/cars/new?error=${encodeURIComponent('Az alvázszám (VIN) megadása kötelező!')}`);
   }
-  // ---------------------------------------
 
+  // Évjárat és km óra biztonságos konvertálása (Hogy ne legyen NaN)
+  const yearVal = formData.get('year');
+  const mileageVal = formData.get('mileage');
+  
+  const year = yearVal ? parseInt(String(yearVal)) : 0;
+  const mileage = mileageVal ? parseInt(String(mileageVal)) : 0;
+
+  if (!year || !mileage) {
+     return redirect(`/cars/new?error=${encodeURIComponent('Az évjárat és a kilométeróra állás kötelező!')}`);
+  }
+
+  // --- 2. KÉPFELTÖLTÉS ---
   const imageFile = formData.get('image') as File;
   let image_url = null;
 
-  // Képfeltöltés logika (ha van fájl)
   if (imageFile && imageFile.size > 0) {
-    const fileName = `${user.id}/${Date.now()}_${imageFile.name.replace(/\s/g, '_')}`;
-    const { error: uploadError } = await supabase.storage.from('car-images').upload(fileName, imageFile);
+    // Fájlnév tisztítása az ékezetektől és szóközöktől a biztonság kedvéért
+    const cleanFileName = imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
+    const path = `${user.id}/${Date.now()}_${cleanFileName}`;
+    
+    const { error: uploadError } = await supabase.storage.from('car-images').upload(path, imageFile);
+    
     if (!uploadError) {
-      const { data } = supabase.storage.from('car-images').getPublicUrl(fileName);
+      const { data } = supabase.storage.from('car-images').getPublicUrl(path);
       image_url = data.publicUrl;
     }
   }
 
+  // --- 3. ADATBÁZIS MENTÉS ---
   const { error } = await supabase.from('cars').insert({
     user_id: user.id,
     make: String(formData.get('make')),
     model: String(formData.get('model')),
     plate: String(formData.get('plate')).toUpperCase().replace(/\s/g, ''),
-    
-    // Itt használjuk a már formázott és validált 'vin' változót
-    vin: vin, 
-    
-    year: parseInt(String(formData.get('year'))),
+    vin: vin,
+    year: year,
     color: parseNullableString(formData.get('color')),
     body_type: parseNullableString(formData.get('body_type')),
     status: String(formData.get('status')),
     image_url: image_url,
     
-    // Műszaki adatok
-    mileage: parseInt(String(formData.get('mileage'))),
+    mileage: mileage,
     fuel_type: String(formData.get('fuel_type')), 
     transmission: String(formData.get('transmission')),
     power_hp: parseNullableInt(formData.get('power_hp')),
@@ -70,9 +82,19 @@ export async function addCar(formData: FormData) {
     insurance_expiry: parseNullableString(formData.get('insurance_expiry')),
   })
 
+  // --- 4. HIBAKEZELÉS (SPECIFIKUS) ---
   if (error) {
     console.error('Adatbázis hiba:', error)
-    return redirect('/cars/new?error=Sikertelen mentés: ' + error.message)
+    
+    let errorMessage = 'Sikertelen mentés: ' + error.message;
+
+    // Ha a hiba oka az, hogy a VIN már létezik (Unique constraint violation)
+    if (error.code === '23505') {
+        errorMessage = 'Ez az alvázszám (VIN) már szerepel a rendszerben!';
+    }
+
+    // FONTOS: encodeURIComponent használata a Vercel hiba elkerülése miatt
+    return redirect(`/cars/new?error=${encodeURIComponent(errorMessage)}`)
   }
   
   revalidatePath('/')
