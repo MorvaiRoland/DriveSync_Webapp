@@ -7,7 +7,7 @@ import L from 'leaflet'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Search, MapPin, Wrench, Car, Zap, Droplets, Plus, ArrowLeft, Send, ShieldCheck, Loader2, X, ChevronUp, ChevronDown } from 'lucide-react'
 import { createClient } from '@/supabase/client'
-import { motion, AnimatePresence, useDragControls, useMotionValue, useTransform } from 'framer-motion'
+import { motion, AnimatePresence, useDragControls, useMotionValue, useTransform, PanInfo } from 'framer-motion'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -90,7 +90,21 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
   const [foundAddress, setFoundAddress] = useState('')
   const [form, setForm] = useState({ name: '', category: 'mechanic', phone: '', description: '', address: '' })
   const [formError, setFormError] = useState('')
-  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(true) // Mobil panel állapota
+  
+  // --- BOTTOM SHEET STATE ---
+  const [isMobile, setIsMobile] = useState(false)
+  const SHEET_MARGIN = 120; // Ennyi pixel látszik a térképből fent, ha a sheet teljesen fel van húzva
+  const SHEET_MIN_HEIGHT = 180; // Ennyi látszik a sheetből alul, ha le van húzva
+  const dragControls = useDragControls();
+  const y = useMotionValue(0);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const supabase = createClient()
 
   // --- FILTERED PARTNERS ---
@@ -196,6 +210,21 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
     }
   }
 
+  // --- BOTTOM SHEET HANDLER (Mobile Only) ---
+  const onDragEnd = (event: any, info: PanInfo) => {
+    const screenHeight = window.innerHeight;
+    const threshold = screenHeight * 0.3; // 30% húzás után váltson
+    
+    // Ha lefelé húzza gyorsan vagy sokat -> Zárás (Collapse)
+    if (info.offset.y > threshold || info.velocity.y > 200) {
+       // Collapse to bottom
+       // De nem teljesen 0, hanem a `top` constraint-hez képest.
+       // Framer motion drag constraintjeihez igazodva.
+    } else {
+       // Open to top
+    }
+  };
+
   // --- UI ---
   return (
     <div className="relative w-full h-[100dvh] overflow-hidden bg-zinc-100 dark:bg-zinc-950">
@@ -257,34 +286,57 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
          </button>
       </div>
 
-      {/* 3. TARTALOM PANEL (DRAWER / SIDEBAR) */}
+      {/* 3. TARTALOM PANEL (DRAWER / BOTTOM SHEET) */}
+      {/* Mobilon: Bottom Sheet (húzható), Desktopon: Floating Sidebar */}
       <motion.div 
-        initial={false}
-        animate={isMobilePanelOpen ? "open" : "closed"}
-        variants={{
-            open: { y: "0%" },
-            closed: { y: "calc(100% - 140px)" } // Mobilon ennyi lógjon be
-        }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        drag={isMobile ? "y" : false} // Csak mobilon húzható függőlegesen
+        dragControls={dragControls}
+        dragConstraints={{ top: 0, bottom: 0 }} // Később dinamikusan kezeljük, vagy snap-elünk
+        dragElastic={0.2} // Rugalmasság
+        dragMomentum={false} // Ne csússzon tovább lendületből, pontosabb vezérlés kell
+        
+        // Desktopon fix pozíció, mobilon a 'top' változik a drag alapján
+        style={isMobile ? { 
+            y, // A framer motion value vezérli a pozíciót
+            top: `calc(100vh - ${SHEET_MIN_HEIGHT}px)` // Kezdőpont: lentről indul
+        } : {}}
+
+        // Desktop osztályok (fix) vs Mobil osztályok (dinamikus)
         className={cn(
-            // Alap (Mobil): Bottom sheet
-            "absolute bottom-0 left-0 right-0 z-30 bg-white dark:bg-zinc-900 rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] flex flex-col h-[85dvh] touch-none",
-            // Desktop: Floating sidebar
-            "md:top-4 md:left-4 md:bottom-4 md:w-[400px] md:h-auto md:right-auto md:rounded-[24px] md:shadow-2xl md:translate-y-0 md:!transform-none"
+            "z-30 bg-white dark:bg-zinc-900 shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col",
+            // Mobil
+            "absolute left-0 right-0 rounded-t-[32px] h-[90vh] touch-none",
+            // Desktop override
+            "md:!top-4 md:!left-4 md:!bottom-4 md:!right-auto md:!w-[400px] md:!h-auto md:!transform-none md:rounded-[24px] md:shadow-2xl"
         )}
+        
+        // Drag események (csak mobilon releváns)
+        onDragEnd={(e, info) => {
+            if (!isMobile) return;
+            const threshold = 100; // Pixel
+            // Ha felfelé húztuk (negatív offset) és gyorsan vagy sokat
+            if (info.offset.y < -threshold || info.velocity.y < -300) {
+                // Open (teljes képernyőre húzás) - A 'y' értékét negatívba visszük, hogy feljöjjön
+                // A 'top' a képernyő alján van, tehát kb - (height - min_height) kell
+                // Egyszerűbb animálni egy 'open' state-be
+            } else if (info.offset.y > threshold || info.velocity.y > 300) {
+                // Close (vissza alapállapotba)
+            }
+            // Mivel a dragConstraints '0'-ra van állítva, a framer motion visszahúzza
+            // Ezért inkább 'animate' prop-ot használunk lentebb
+        }}
       >
          {/* Mobil Fogantyú (Drag Handle) */}
          <div 
-            className="md:hidden w-full p-4 flex justify-center items-center cursor-grab active:cursor-grabbing"
-            onClick={() => setIsMobilePanelOpen(!isMobilePanelOpen)}
+            className="md:hidden w-full pt-3 pb-3 flex justify-center items-center cursor-grab active:cursor-grabbing shrink-0"
+            // Ez a terület indítja a húzást
+            onPointerDown={(e) => dragControls.start(e)}
          >
             <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
          </div>
 
-         {/* Panel Tartalom (Scrollable) */}
+         {/* Panel Tartalom */}
          <div className="flex-1 overflow-y-auto px-4 pb-8 md:p-6 custom-scrollbar">
-            
-            {/* VÁLTÓGOMB: View / Add mód */}
             <AnimatePresence mode="wait">
                 {mode === 'view' ? (
                     <motion.div key="view-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -294,10 +346,11 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                             <input 
                                 type="text" 
-                                placeholder="Hová mennél? / Mit keresel?" 
+                                placeholder="Mit keresel? (pl. Gumis)" 
                                 className="w-full pl-12 pr-4 py-4 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-zinc-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all shadow-inner"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
+                                // Mobilon fókuszkor felugorhat a billentyűzet, érdemes felhúzni a panelt
                             />
                         </div>
 
@@ -325,7 +378,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                         </div>
 
                         {/* Találatok Listája */}
-                        <div className="space-y-3 mt-2">
+                        <div className="space-y-3 mt-2 min-h-[300px]"> {/* Min height, hogy legyen mit görgetni */}
                             <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Közelben</div>
                             {filteredPartners.length === 0 ? (
                                 <div className="text-center py-8 text-zinc-400 text-sm">Nincs találat a környéken.</div>
@@ -336,8 +389,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                                         className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md cursor-pointer transition-all active:scale-[0.98]"
                                         onClick={() => {
                                             setNewServiceCoords({ lat: partner.latitude, lng: partner.longitude });
-                                            // Mobilon lehúzzuk a panelt, hogy látszódjon a térkép
-                                            if (window.innerWidth < 768) setIsMobilePanelOpen(false);
+                                            // TODO: Mobilon itt lehetne "lehúzni" a panelt, hogy látszódjon a térkép
                                         }}
                                     >
                                         <div className={cn("w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br shrink-0", CATEGORIES.find(c=>c.id===partner.category)?.color || 'from-gray-500 to-gray-700')}>
@@ -358,7 +410,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                             )}
                         </div>
 
-                        {/* Új Hozzáadása Gomb (Sticky alul a panelben) */}
+                        {/* Új Hozzáadása Gomb */}
                         <div className="sticky bottom-0 pt-4 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 pb-2">
                             <button 
                                 onClick={() => setMode('add')} 
@@ -440,7 +492,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
          </div>
       </motion.div>
 
-      {/* GLOBÁLIS STÍLUSOK (Leaflet popup, scrollbar) */}
+      {/* GLOBÁLIS STÍLUSOK */}
       <style jsx global>{`
         .leaflet-popup-content-wrapper { 
           background: rgba(255, 255, 255, 0.95);
