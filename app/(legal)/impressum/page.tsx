@@ -32,7 +32,7 @@ export default function ImpressumPage() {
                   <div>
                      <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-1">Cégnév</span>
                      <span className="text-lg font-bold text-slate-900 dark:text-white block">DynamicSense Technologies</span>
-                     <span className="text-sm text-slate-500">Morvai Roland E.V.</span>
+                     <span className="text-sm text-slate-500">Morvai Roland (Tulajdonos)</span>
                   </div>
                   <div>
                      <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block mb-1">Székhely</span>
