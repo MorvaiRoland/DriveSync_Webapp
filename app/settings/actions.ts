@@ -18,14 +18,12 @@ export async function updateProfile(formData: FormData) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return redirect('/login')
 
-    // JAVÍTÁS: Explicit típusdeklaráció
     let avatarUrlToSave: string | null = null; 
     
     // Kezdő érték beállítása a rejtett mezőből (ha nem üres)
     if (currentAvatarUrl && currentAvatarUrl !== 'null' && currentAvatarUrl.length > 0) {
         avatarUrlToSave = currentAvatarUrl;
     }
-
 
     // --- 1. Kép törlése ---
     if (deleteAvatar) {
@@ -58,11 +56,10 @@ export async function updateProfile(formData: FormData) {
     }
 
     // --- 3. Profil adatok mentése ---
-    // Az avatarUrlToSave most már biztosan string vagy null, ami megfelel a Supabase-nek
     const { error: updateError } = await supabase.auth.updateUser({
         data: { 
             full_name: fullName, 
-            avatar_url: avatarUrlToSave // Itt fogadja el a null-t is
+            avatar_url: avatarUrlToSave 
         }
     })
 
@@ -125,9 +122,7 @@ export async function deleteAccountAction() {
 
     try {
         // 3. LÉNYEGES LÉPÉS: Az autók leválasztása a felhasználóról
-        // Feltételezzük, hogy a tábla neve 'vehicles'. Ha 'cars', írd át!
-        // A user_id-t NULL-ra állítjuk, így az autó megmarad, de nem lesz gazdája (árva rekord).
-        // Fontos: Az adatbázisban a 'user_id' oszlopnak engedélyeznie kell a NULL értéket (is_nullable: true).
+        // Feltételezve, hogy futtattad az SQL parancsot: ALTER TABLE cars ALTER COLUMN user_id DROP NOT NULL;
         const { error: unlinkError } = await supabaseAdmin
             .from('cars') 
             .update({ user_id: null }) 
@@ -135,8 +130,7 @@ export async function deleteAccountAction() {
 
         if (unlinkError) {
             console.error('Hiba az autók leválasztásakor:', unlinkError)
-            // Ha nem sikerül leválasztani, megállítjuk a folyamatot, hogy ne vesszenek el az autók
-            return redirect(`/settings?error=${encodeURIComponent('Nem sikerült az autók mentése törlés előtt.')}`)
+            return redirect(`/settings?error=${encodeURIComponent('Nem sikerült az autók mentése törlés előtt. Kérjük próbáld újra.')}`)
         }
 
         // 4. Kijelentkeztetés
@@ -158,4 +152,3 @@ export async function deleteAccountAction() {
     // 6. Siker esetén átirányítás
     return redirect(`/login?message=${encodeURIComponent('A fiókod sikeresen törölve lett. Az autóid megmaradtak az adatbázisban.')}`)
 }
-
