@@ -22,7 +22,7 @@ export default async function LoginPage(props: Props) {
          touch-none: Letiltja a görgetést érintőképernyőn.
          z-50: Biztosítjuk, hogy ez legyen legfelül.
       */}
-      <div className="fixed inset-0 w-full bg-slate-950 font-sans text-slate-200 overflow-hidden touch-none flex z-50">
+      <div className="fixed inset-0 w-full h-[100dvh] bg-slate-950 font-sans text-slate-200 overflow-hidden touch-none flex z-50">
         
         {/* === MOBILE BACKGROUND (Videó) === */}
         <div className="absolute inset-0 z-0 lg:hidden pointer-events-none select-none">
@@ -46,7 +46,7 @@ export default async function LoginPage(props: Props) {
              overflow-y-auto: Csak itt engedünk görgetést, ha muszáj.
              no-scrollbar: Elrejtjük a gördítősávot.
           */}
-          <div className="w-full h-full flex flex-col p-4 lg:p-12 overflow-y-auto no-scrollbar scroll-smooth">
+          <div className="w-full h-full flex flex-col p-4 lg:p-12 overflow-y-auto no-scrollbar scroll-smooth overscroll-none" style={{ WebkitOverflowScrolling: 'auto', touchAction: 'none' }}>
             
             {/* 1. MOBILE HEADER (Spacer a tetején, hogy középre kerüljön a tartalom) */}
             <div className="lg:hidden min-h-[10%] flex flex-col items-center justify-center shrink-0 py-4">

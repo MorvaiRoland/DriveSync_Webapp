@@ -23,7 +23,7 @@ export const LoginClientWrapper = ({ children }: { children: React.ReactNode }) 
           initial={{ opacity: 0, scale: 1.02, filter: "blur(12px)" }}
           animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
           transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }} 
-          className="w-full h-[100dvh]"
+          className="w-full h-[100dvh] overflow-hidden touch-none"
         >
           {children}
         </motion.main>
