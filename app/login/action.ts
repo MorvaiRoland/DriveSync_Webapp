@@ -1,8 +1,10 @@
 'use server'
 
+
 import { headers } from 'next/headers'
 import { createClient } from 'supabase/server'
 import { redirect } from 'next/navigation'
+import { getEarlyAccessProEnabled } from '@/utils/earlyAccessConfig'
 
 // Segédfüggvény a kód tisztábbá tételéhez
 function encodedRedirect(path: string, message: string) {
@@ -31,14 +33,12 @@ export async function login(formData: FormData) {
 // --- 2. REGISZTRÁCIÓ ---
 export async function signup(formData: FormData) {
   const supabase = await createClient()
-  
   const requestHeaders = await headers()
   const origin = requestHeaders.get('origin')
-  
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -49,6 +49,18 @@ export async function signup(formData: FormData) {
   if (error) {
     console.error(error)
     return encodedRedirect('/login', 'Hiba történt a regisztráció során')
+  }
+
+  // Early Access Pro logic (admin configurable)
+  const earlyAccessPro = await getEarlyAccessProEnabled();
+  const userId = data?.user?.id;
+  if (earlyAccessPro && userId) {
+    // Insert or upsert into subscriptions table
+    await supabase.from('subscriptions').upsert({
+      user_id: userId,
+      plan_type: 'pro',
+      status: 'active',
+    }, { onConflict: 'user_id' });
   }
 
   return encodedRedirect('/login', 'Sikeres regisztráció! Kérjük, erősítsd meg az email címedet.')

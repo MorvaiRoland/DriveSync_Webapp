@@ -1,4 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
+import { getEarlyAccessConfig, setEarlyAccessConfig, EarlyAccessConfig } from '@/utils/earlyAccessConfig'
+// 10. Early Access Pro Config módosítása
+async function updateEarlyAccessConfig(formData: FormData) {
+    'use server'
+    const adminKey = formData.get('adminKey') as string;
+    if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
+    const enabled = formData.get('early_access_pro') === 'on';
+    const duration = parseInt(formData.get('early_access_pro_duration_months') as string, 10) || 3;
+    const fallback = formData.get('early_access_fallback_plan') as string || 'starter';
+    await setEarlyAccessConfig({
+        early_access_pro: enabled,
+        early_access_pro_duration_months: duration,
+        early_access_fallback_plan: fallback,
+    });
+    revalidatePath(`/admin?key=${adminKey}`);
+}
 import { notFound, redirect } from 'next/navigation' // Added redirect for search reset
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
@@ -150,66 +166,68 @@ async function searchUsers(formData: FormData) {
 // FŐ KOMPONENS
 // ==========================================
 export default async function AdminDashboard({
-  searchParams,
+    searchParams,
 }: {
-  searchParams: Promise<{ key?: string, q?: string }>; // Bővítettük a 'q' paraméterrel
+    searchParams: Promise<{ key?: string, q?: string }>; // Bővítettük a 'q' paraméterrel
 }) {
-  
-  // --- BIZTONSÁG ---
-  const resolvedParams = await searchParams;
-  const secretKey = resolvedParams?.key;
-  const searchQuery = resolvedParams?.q || ''; // Keresési kifejezés
+    // --- BIZTONSÁG ---
+    const resolvedParams = await searchParams;
+    const secretKey = resolvedParams?.key;
+    const searchQuery = resolvedParams?.q || '';
 
-  if (!secretKey || secretKey !== process.env.ADMIN_ACCESS_KEY) {
-    return notFound();
-  }
+    if (!secretKey || secretKey !== process.env.ADMIN_ACCESS_KEY) {
+        return notFound();
+    }
 
-  const supabaseAdmin = getAdminClient()
+    const supabaseAdmin = getAdminClient();
 
-  // --- ADATLEKÉRÉS ---
-  const [carsRes, eventsRes, subsRes, usersRes, promosRes, releaseRes, battlesRes] = await Promise.all([
-    supabaseAdmin.from('cars').select('id'),
-    supabaseAdmin.from('events').select('id, type, cost, car_id'),
-    supabaseAdmin.from('subscriptions').select('user_id, status, plan_type'),
-    supabaseAdmin.auth.admin.listUsers(),
-    supabaseAdmin.from('promotions').select('*').order('created_at', { ascending: false }),
-    supabaseAdmin.from('release_notes').select('*').order('release_date', { ascending: false }),
-    supabaseAdmin.from('battles').select('*').order('created_at', { ascending: false })
-  ])
+    // --- Early Access Pro config lekérése ---
+    const earlyAccessConfig: EarlyAccessConfig = await getEarlyAccessConfig();
 
-  const cars = carsRes.data || []
-  const events = eventsRes.data || []
-  const subscriptions = subsRes.data || []
-  const allUsers = usersRes.data.users || []
-  const promotions = promosRes.data || []
-  const releaseNotes = releaseRes.data || []
-  const battles = battlesRes.data || []
+    // --- ADATLEKÉRÉS ---
+    const [carsRes, eventsRes, subsRes, usersRes, promosRes, releaseRes, battlesRes] = await Promise.all([
+        supabaseAdmin.from('cars').select('id'),
+        supabaseAdmin.from('events').select('id, type, cost, car_id'),
+        supabaseAdmin.from('subscriptions').select('user_id, status, plan_type'),
+        supabaseAdmin.auth.admin.listUsers(),
+        supabaseAdmin.from('promotions').select('*').order('created_at', { ascending: false }),
+        supabaseAdmin.from('release_notes').select('*').order('release_date', { ascending: false }),
+        supabaseAdmin.from('battles').select('*').order('created_at', { ascending: false })
+    ]);
 
-  // --- STATISZTIKÁK SZÁMOLÁSA ---
-  let userList = allUsers.map(u => {
-      const sub = subscriptions.find(s => s.user_id === u.id);
-      return {
-          id: u.id,
-          email: u.email || '',
-          created_at: u.created_at,
-          plan: sub?.plan_type || 'free',
-          status: sub?.status || 'inactive'
-      }
-  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const cars = carsRes.data || [];
+    const events = eventsRes.data || [];
+    const subscriptions = subsRes.data || [];
+    const allUsers = usersRes.data.users || [];
+    const promotions = promosRes.data || [];
+    const releaseNotes = releaseRes.data || [];
+    const battles = battlesRes.data || [];
 
-  const totalRegisteredUsers = userList.length
+    // --- STATISZTIKÁK SZÁMOLÁSA ---
+    let userList = allUsers.map(u => {
+        const sub = subscriptions.find(s => s.user_id === u.id);
+        return {
+            id: u.id,
+            email: u.email || '',
+            created_at: u.created_at,
+            plan: sub?.plan_type || 'free',
+            status: sub?.status || 'inactive',
+        };
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  // --- SZŰRÉS KERESÉS ALAPJÁN (Ha van 'q' paraméter) ---
-  if (searchQuery) {
-      userList = userList.filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()));
-  }
+    const totalRegisteredUsers = userList.length;
 
-  const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0)
-  const lifetimeCount = userList.filter(u => u.plan === 'lifetime').length
-  const proCount = userList.filter(u => u.plan === 'pro').length
-  const proRate = totalRegisteredUsers > 0 ? Math.round(((lifetimeCount + proCount) / totalRegisteredUsers) * 100) : 0
+    // --- SZŰRÉS KERESÉS ALAPJÁN (Ha van 'q' paraméter) ---
+    if (searchQuery) {
+        userList = userList.filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
 
-  return (
+    const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0);
+    const lifetimeCount = userList.filter(u => u.plan === 'lifetime').length;
+    const proCount = userList.filter(u => u.plan === 'pro').length;
+    const proRate = totalRegisteredUsers > 0 ? Math.round(((lifetimeCount + proCount) / totalRegisteredUsers) * 100) : 0;
+
+    return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans p-4 md:p-8">
       
       {/* HEADER */}
@@ -226,7 +244,38 @@ export default async function AdminDashboard({
         </Link>
       </div>
 
-      {/* KPI GRID */}
+            {/* Early Access Pro Config Section */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-10 max-w-2xl mx-auto">
+                <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                    <span className="bg-amber-500/20 text-amber-400 p-1.5 rounded-lg">⚡</span>
+                    Early Access Pro Beállítások
+                </h2>
+                <form action={updateEarlyAccessConfig} className="flex flex-col gap-4 mt-2">
+                    <input type="hidden" name="adminKey" value={secretKey} />
+                    <div className="flex items-center gap-3">
+                        <input type="checkbox" id="early_access_pro" name="early_access_pro" defaultChecked={earlyAccessConfig.early_access_pro} className="accent-amber-500 w-5 h-5" />
+                        <label htmlFor="early_access_pro" className="text-white font-medium">Új felhasználók kapjanak Early Access Pro-t</label>
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <div className="flex-1">
+                            <label htmlFor="early_access_pro_duration_months" className="block text-slate-300 text-sm mb-1">Pro időtartam (hónap)</label>
+                            <input type="number" min="1" max="12" name="early_access_pro_duration_months" id="early_access_pro_duration_months" defaultValue={earlyAccessConfig.early_access_pro_duration_months} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-amber-500 outline-none" />
+                        </div>
+                        <div className="flex-1">
+                            <label htmlFor="early_access_fallback_plan" className="block text-slate-300 text-sm mb-1">Lejárat utáni csomag</label>
+                            <select name="early_access_fallback_plan" id="early_access_fallback_plan" defaultValue={earlyAccessConfig.early_access_fallback_plan} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-amber-500 outline-none">
+                                <option value="starter">Starter</option>
+                                <option value="free">Free</option>
+                                <option value="pro">Pro</option>
+                                <option value="lifetime">Lifetime</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold py-3 rounded-xl transition-all mt-2">Beállítások mentése</button>
+                </form>
+            </div>
+
+            {/* KPI GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
          <KPICard title="Összes Tag" value={totalRegisteredUsers} subtitle={`${proRate}% Prémium`} color="blue" icon={<span className="text-2xl">👥</span>} />
          <KPICard title="Autók száma" value={cars.length} subtitle="Rögzített jármű" color="amber" icon={<span className="text-2xl">🚗</span>} />
