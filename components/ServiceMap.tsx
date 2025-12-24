@@ -7,12 +7,13 @@ import L from 'leaflet'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { 
   Search, MapPin, Wrench, Car, Zap, Droplets, Plus, 
-  ArrowLeft, Send, ShieldCheck, Navigation, Layers, CheckCircle2, Map as MapIcon 
+  ArrowLeft, Send, Navigation, Layers, Home, Phone, FileText, Map as MapIcon
 } from 'lucide-react'
-import { createClient } from '@/supabase/client'
-import { motion, AnimatePresence, useDragControls, useMotionValue } from 'framer-motion'
+// import { createClient } from '@/supabase/client' // Ha használod a DB-t
+import { motion, AnimatePresence } from 'framer-motion'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { useRouter } from 'next/navigation' // Router importálása
 
 // --- Segéd: Class merger ---
 function cn(...inputs: ClassValue[]) {
@@ -28,7 +29,7 @@ const CATEGORIES = [
   { id: 'electric', label: 'Villamosság', icon: Zap, color: 'bg-amber-500', gradient: 'from-amber-500 to-orange-600' },
 ]
 
-// --- Marker ikon generátor (VÁLTOZATLAN) ---
+// --- Marker ikon generátor ---
 const createModernIcon = (categoryId: string, isActive = false) => {
   if (typeof window === 'undefined') return L.divIcon({});
   const cat = CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[0];
@@ -54,7 +55,7 @@ const createModernIcon = (categoryId: string, isActive = false) => {
   return L.divIcon({ html, className: '', iconSize: [40, 44], iconAnchor: [20, 44] });
 }
 
-// --- Map komponensek (VÁLTOZATLAN) ---
+// --- Map komponensek ---
 function MapController({ onMapClick, isAdding }: { onMapClick: (lat: number, lng: number) => void, isAdding: boolean }) {
   useMapEvents({ click(e) { if (isAdding) onMapClick(e.latlng.lat, e.latlng.lng); }, });
   return null;
@@ -78,11 +79,22 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
   const [search, setSearch] = useState('')
   const [mode, setMode] = useState<'view' | 'add' | 'success'>('view')
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
-  const [newServiceCoords, setNewServiceCoords] = useState<{ lat: number, lng: number } | null>(null)
   
+  // Űrlap állapot
+  const [newServiceCoords, setNewServiceCoords] = useState<{ lat: number, lng: number } | null>(null)
+  const [formData, setFormData] = useState({
+    name: '',
+    category: 'mechanic',
+    phone: '',
+    address: '',
+    description: ''
+  })
+
   // Responsive States
   const [isMobile, setIsMobile] = useState(false)
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half')
+
+  const router = useRouter()
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -109,6 +121,23 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
     }
   }
 
+  // Térkép kattintás kezelése hozzáadáskor
+  const handleMapClick = async (lat: number, lng: number) => {
+    setNewServiceCoords({ lat, lng });
+    setSheetState('half'); // Felnyitjuk a panelt, hogy lássa az űrlapot
+    
+    // Opcionális: Cím visszakeresése (Reverse Geocoding)
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const data = await res.json();
+        if(data && data.display_name) {
+            setFormData(prev => ({ ...prev, address: data.display_name }));
+        }
+    } catch(e) {
+        console.error("Címkeresés hiba", e);
+    }
+  }
+
   return (
     <div className="relative w-full h-[100dvh] bg-zinc-100 dark:bg-zinc-950 overflow-hidden font-sans">
       
@@ -120,20 +149,18 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
           zoomControl={false}
           className="w-full h-full outline-none"
         >
-          {/* Sötétebb/Deszaturált térkép stílus a modern hatáshoz */}
           <TileLayer
             attribution='&copy; CAR-MAP'
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           />
-          <MapController onMapClick={(lat, lng) => { setNewServiceCoords({ lat, lng }); setSheetState('half'); }} isAdding={mode === 'add'} />
+          <MapController onMapClick={handleMapClick} isAdding={mode === 'add'} />
           <MapFlyTo position={newServiceCoords || userLocation} />
 
-          {/* User Location Pulse */}
           {userLocation && (
              <Marker position={userLocation} icon={L.divIcon({ html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg pulse-ring"></div>`, className: 'bg-transparent' })} />
           )}
 
-          {filteredPartners.map(p => (
+          {mode === 'view' && filteredPartners.map(p => (
             <Marker key={p.id} position={[p.latitude, p.longitude]} icon={createModernIcon(p.category)}>
               <Popup closeButton={false} className="custom-popup">
                 <div className="p-2 min-w-[200px]">
@@ -150,23 +177,35 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
             </Marker>
           ))}
 
-          {newServiceCoords && (
-            <Marker position={[newServiceCoords.lat, newServiceCoords.lng]} icon={createModernIcon('all', true)} />
+          {mode === 'add' && newServiceCoords && (
+            <Marker position={[newServiceCoords.lat, newServiceCoords.lng]} icon={createModernIcon(formData.category || 'all', true)} />
           )}
         </MapContainer>
       </div>
 
       {/* 2. LEBEGŐ NAVIGÁCIÓ (Felső sáv) */}
       <div className="absolute top-0 left-0 right-0 p-4 md:p-6 z-20 pointer-events-none flex justify-between items-start">
-        {/* Vissza gomb */}
-        <button 
-          onClick={() => window.history.back()}
-          className="pointer-events-auto w-10 h-10 md:w-12 md:h-12 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shadow-lg rounded-full flex items-center justify-center text-zinc-700 dark:text-zinc-200 border border-white/50 hover:scale-105 transition-transform"
-        >
-          <ArrowLeft size={20} />
-        </button>
+        {/* Bal felső gombok */}
+        <div className="flex flex-col gap-3 pointer-events-auto">
+            {/* Vissza gomb */}
+            <button 
+            onClick={() => window.history.back()}
+            className="w-10 h-10 md:w-12 md:h-12 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shadow-lg rounded-full flex items-center justify-center text-zinc-700 dark:text-zinc-200 border border-white/50 hover:scale-105 transition-transform"
+            >
+            <ArrowLeft size={20} />
+            </button>
+            
+            {/* ÚJ: Főoldal gomb */}
+            <button 
+            onClick={() => router.push('/')}
+            className="w-10 h-10 md:w-12 md:h-12 bg-indigo-600/90 backdrop-blur-md shadow-lg rounded-full flex items-center justify-center text-white border border-white/20 hover:scale-105 transition-transform hover:bg-indigo-700"
+            title="Vissza a főoldalra"
+            >
+            <Home size={20} />
+            </button>
+        </div>
 
-        {/* Térkép vezérlők (Jobb oldalra rendezve, hogy ne takarja a panelt) */}
+        {/* Jobb felső vezérlők */}
         <div className="flex flex-col gap-3 pointer-events-auto">
           <button onClick={handleLocateMe} className="w-10 h-10 md:w-12 md:h-12 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shadow-lg rounded-2xl flex items-center justify-center text-indigo-600 border border-white/50 hover:bg-white transition-colors">
             <Navigation size={20} />
@@ -177,7 +216,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
         </div>
       </div>
 
-      {/* 3. SIDEBAR / BOTTOM SHEET (A fő design változás) */}
+      {/* 3. SIDEBAR / BOTTOM SHEET */}
       <motion.aside
         initial={isMobile ? { y: '100%' } : { x: -400, opacity: 0 }}
         animate={isMobile ? { y: sheetState === 'collapsed' ? 'calc(100% - 80px)' : sheetState === 'half' ? '45%' : '0%' } : { x: 0, opacity: 1 }}
@@ -190,11 +229,9 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
         }}
         className={cn(
           "z-30 flex flex-col",
-          // Üveghatás és stílus:
           "bg-white/70 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/40 dark:border-zinc-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
-          // Pozicionálás:
           "fixed bottom-0 left-0 right-0 rounded-t-[32px]", // Mobil
-          "md:top-4 md:left-4 md:bottom-4 md:right-auto md:w-[400px] md:rounded-[32px] md:h-auto" // Desktop
+          "md:top-4 md:left-4 md:bottom-4 md:right-auto md:w-[450px] md:rounded-[32px] md:h-auto" // Desktop (szélesebb lett kicsit)
         )}
       >
         {/* Drag Indicator (Mobil) */}
@@ -208,7 +245,6 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
             {mode === 'view' ? (
               <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pt-2">
                 
-                {/* Header */}
                 <header className="mb-6 flex justify-between items-end">
                   <div>
                     <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Fedezd fel</h2>
@@ -219,7 +255,7 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                   </div>
                 </header>
 
-                {/* Kereső (Floating Input Style) */}
+                {/* Kereső */}
                 <div className="relative mb-6 group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Search className="h-5 w-5 text-zinc-400 group-focus-within:text-indigo-500 transition-colors" />
@@ -233,23 +269,29 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                   />
                 </div>
 
-                {/* Kategóriák (Chips) */}
-                <div className="flex gap-2 overflow-x-auto pb-6 -mx-5 px-5 scrollbar-hide">
-                   {CATEGORIES.map(cat => (
-                     <button 
-                      key={cat.id}
-                      onClick={() => setFilter(cat.id)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-xl whitespace-nowrap transition-all border",
-                        filter === cat.id 
-                          ? "bg-zinc-900 text-white border-zinc-900 shadow-lg scale-105" 
-                          : "bg-white dark:bg-zinc-800 text-zinc-600 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300"
-                      )}
-                     >
-                        <cat.icon size={16} className={filter === cat.id ? "text-white" : "text-zinc-400"} />
-                        <span className="text-xs font-bold">{cat.label}</span>
-                     </button>
-                   ))}
+                {/* Kategóriák - JAVÍTOTT PC LAYOUT */}
+                <div className="mb-6">
+                    <p className="text-xs font-bold uppercase text-zinc-400 mb-3 ml-1">Kategóriák</p>
+                    <div className={cn(
+                        "flex gap-2 overflow-x-auto pb-4 -mx-5 px-5 scrollbar-hide", // Mobil stílus (görgethető)
+                        "md:flex-wrap md:overflow-visible md:pb-0 md:mx-0 md:px-0" // PC stílus (wrap, nincs görgetés)
+                    )}>
+                        {CATEGORIES.map(cat => (
+                            <button 
+                            key={cat.id}
+                            onClick={() => setFilter(cat.id)}
+                            className={cn(
+                                "flex items-center gap-2 px-3 py-2 rounded-xl whitespace-nowrap transition-all border",
+                                filter === cat.id 
+                                ? "bg-zinc-900 text-white border-zinc-900 shadow-lg scale-105" 
+                                : "bg-white dark:bg-zinc-800 text-zinc-600 border-zinc-200 dark:border-zinc-700 hover:border-zinc-300"
+                            )}
+                            >
+                                <cat.icon size={16} className={filter === cat.id ? "text-white" : "text-zinc-400"} />
+                                <span className="text-xs font-bold">{cat.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Találati Lista */}
@@ -282,10 +324,10 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
                   )}
                 </div>
 
-                {/* Floating Action Button (FAB) */}
+                {/* FAB */}
                 <div className="absolute bottom-6 left-6 right-6">
                   <button 
-                    onClick={() => setMode('add')}
+                    onClick={() => { setMode('add'); setSheetState('half'); }}
                     className="w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition-all"
                   >
                     <Plus size={20} /> Új hely hozzáadása
@@ -295,32 +337,102 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
               </motion.div>
             ) : mode === 'add' ? (
               <motion.div key="add" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="pt-2 h-full flex flex-col">
-                 <button onClick={() => setMode('view')} className="self-start mb-4 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-xs font-bold text-zinc-600 flex items-center gap-1 transition-colors">
-                  <ArrowLeft size={14} /> Vissza
+                <button onClick={() => setMode('view')} className="self-start mb-4 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-xs font-bold text-zinc-600 flex items-center gap-1 transition-colors">
+                  <ArrowLeft size={14} /> Mégsem
                 </button>
-                <h2 className="text-xl font-black mb-6">Új szerviz</h2>
                 
-                <div className="space-y-4 flex-1">
-                   {/* Form mezők ugyanazok maradnak, csak stílus frissítés */}
-                   <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-zinc-400 pl-1">Név</label>
-                      <input className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-semibold outline-none focus:border-indigo-500 transition-colors" placeholder="Szerviz neve" />
-                   </div>
+                <h2 className="text-xl font-black mb-1">Új szerviz felvétele</h2>
+                <p className="text-xs text-zinc-500 mb-6">Töltsd ki az adatokat a pontos megjelenéshez.</p>
+                
+                {/* BŐVÍTETT FORM */}
+                <div className="space-y-4 flex-1 pb-10">
                    
+                   {/* 1. Név */}
+                   <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-zinc-400 pl-1">Szerviz neve</label>
+                      <input 
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="w-full p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-semibold outline-none focus:border-indigo-500 transition-colors" 
+                        placeholder="Pl. Kovács Autószerviz" 
+                      />
+                   </div>
+
+                   {/* 2. Kategória választó (Grid) */}
                    <div className="space-y-1">
                       <label className="text-[10px] font-bold uppercase text-zinc-400 pl-1">Kategória</label>
                       <div className="grid grid-cols-2 gap-2">
-                        {CATEGORIES.filter(c=>c.id!=='all').slice(0,4).map(c => (
-                           <button key={c.id} className="p-2 rounded-lg border border-zinc-200 text-xs font-medium hover:bg-zinc-50 text-left flex items-center gap-2">
-                              <c.icon size={14} className="text-zinc-400" /> {c.label}
+                        {CATEGORIES.filter(c=>c.id!=='all').map(c => (
+                           <button 
+                             key={c.id} 
+                             onClick={() => setFormData({...formData, category: c.id})}
+                             className={cn(
+                                "p-2 rounded-xl border text-xs font-medium text-left flex items-center gap-2 transition-all",
+                                formData.category === c.id 
+                                    ? "bg-indigo-50 border-indigo-500 text-indigo-700 ring-1 ring-indigo-500" 
+                                    : "border-zinc-200 hover:bg-zinc-50 text-zinc-600"
+                             )}
+                           >
+                              <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px]", c.color.replace('bg-', 'bg-'))}>
+                                  <c.icon size={12} />
+                              </div>
+                              {c.label}
                            </button>
                         ))}
                       </div>
                    </div>
 
-                   <div className="pt-4">
-                      <button className="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2">
-                         <Send size={16} /> Beküldés
+                   {/* 3. Telefonszám */}
+                   <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-zinc-400 pl-1">Telefonszám</label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                        <input 
+                            value={formData.phone}
+                            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                            className="w-full pl-10 p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-semibold outline-none focus:border-indigo-500 transition-colors" 
+                            placeholder="+36 30 123 4567" 
+                        />
+                      </div>
+                   </div>
+
+                   {/* 4. Cím (Map click tölti ki, de szerkeszthető) */}
+                   <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-zinc-400 pl-1">Pontos Cím</label>
+                      <div className="relative">
+                        <MapIcon className="absolute left-3 top-3 text-zinc-400" size={16} />
+                        <textarea 
+                            rows={2}
+                            value={formData.address}
+                            onChange={(e) => setFormData({...formData, address: e.target.value})}
+                            className="w-full pl-10 p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-semibold outline-none focus:border-indigo-500 transition-colors resize-none" 
+                            placeholder={newServiceCoords ? "Cím betöltése..." : "Kattints a térképre a címért vagy írd be kézzel."} 
+                        />
+                      </div>
+                      {!newServiceCoords && <p className="text-[10px] text-orange-500 font-medium ml-1">Kérlek jelöld ki a térképen is a helyet!</p>}
+                   </div>
+
+                   {/* 5. Leírás */}
+                   <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase text-zinc-400 pl-1">Rövid leírás (Opcionális)</label>
+                      <div className="relative">
+                        <FileText className="absolute left-3 top-3 text-zinc-400" size={16} />
+                        <textarea 
+                            rows={3}
+                            value={formData.description}
+                            onChange={(e) => setFormData({...formData, description: e.target.value})}
+                            className="w-full pl-10 p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm font-semibold outline-none focus:border-indigo-500 transition-colors resize-none" 
+                            placeholder="Nyitvatartás, szolgáltatások részletezése..." 
+                        />
+                      </div>
+                   </div>
+
+                   <div className="pt-2">
+                      <button 
+                        disabled={!newServiceCoords || !formData.name}
+                        className="w-full py-4 bg-zinc-900 text-white rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-black transition-colors"
+                      >
+                         <Send size={16} /> Szerviz beküldése
                       </button>
                    </div>
                 </div>

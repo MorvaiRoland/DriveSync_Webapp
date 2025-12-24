@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useFormStatus } from 'react-dom'
-import { updateProfile, updatePreferences } from '@/app/settings/actions'
+// FONTOS: Importáljuk a deleteAccountAction-t is!
+import { updateProfile, updatePreferences, deleteAccountAction } from '@/app/settings/actions'
 import Image from 'next/image'
 import {
   User,
@@ -16,12 +17,13 @@ import {
   Upload,
   Camera,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { createClient } from '@/supabase/client'
 import { useRouter } from 'next/navigation'
 
-// --- TÍPUSOK (opcionális, de ajánlott) ---
+// --- TÍPUSOK ---
 interface SettingsDashboardProps {
   user: any
   meta: any
@@ -46,6 +48,21 @@ function SubmitButton({ label = 'Mentés', id = 'submit_btn' }: { label?: string
   )
 }
 
+// Külön komponens a törlés gombhoz a loading state miatt
+function DeleteButton() {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3 font-bold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+    >
+      {pending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Trash2 className="h-5 w-5" />}
+      {pending ? 'Törlés folyamatban...' : 'Igen, törlöm a fiókot'}
+    </button>
+  )
+}
+
 // --- FŐ KOMPONENS ---
 
 export default function SettingsDashboard({
@@ -58,6 +75,9 @@ export default function SettingsDashboard({
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [loadingPortal, setLoadingPortal] = useState(false)
+  // Új state a modal megjelenítéséhez
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  
   const router = useRouter()
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -65,7 +85,7 @@ export default function SettingsDashboard({
 
   useEffect(() => setMounted(true), [])
 
-  // --- Előfizetés kezelés (Portal) ---
+  // --- Előfizetés kezelés ---
   const manageSubscription = async () => {
     setLoadingPortal(true)
     try {
@@ -86,14 +106,13 @@ export default function SettingsDashboard({
     router.push('/login')
   }
 
-  // --- Képkezelő segédfüggvény ---
+  // --- Képkezelés ---
   const handleFileChangeAndSubmit = () => {
     if (formRef.current) {
       formRef.current.dispatchEvent(new Event('submit', { bubbles: true }))
     }
   }
 
-  // --- Kép törlése ---
   const handleDeleteAvatar = () => {
     if (formRef.current) {
       const formData = new FormData(formRef.current)
@@ -106,6 +125,7 @@ export default function SettingsDashboard({
 
   return (
     <div className="flex min-h-[600px] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 md:flex-row">
+      
       {/* --- BAL OLDALI MENÜ --- */}
       <div className="flex w-full flex-col justify-between border-r border-slate-100 bg-slate-50/50 p-6 dark:border-slate-800 dark:bg-slate-800/50 md:w-64">
         <div className="space-y-2">
@@ -139,7 +159,7 @@ export default function SettingsDashboard({
           >
             <CreditCard className="h-4 w-4" /> Előfizetés
           </button>
-          {/* Hibabejelentés gomb */}
+          
           <button
             onClick={() => window.open('/support', '_blank')}
             className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-bold text-blue-500 transition-colors hover:bg-blue-50 dark:hover:bg-blue-900/10"
@@ -157,10 +177,11 @@ export default function SettingsDashboard({
       </div>
 
       {/* --- JOBB OLDALI TARTALOM --- */}
-      <div className="flex-1 overflow-y-auto p-8 md:p-12">
+      <div className="relative flex-1 overflow-y-auto p-8 md:p-12">
+        
         {/* 1. PROFIL SZERKESZTÉS */}
         {activeTab === 'profile' && (
-          <div className="max-w-lg animate-in slide-in-from-right-4 fade-in duration-500 space-y-8">
+          <div className="max-w-lg animate-in slide-in-from-right-4 fade-in duration-500 space-y-8 pb-10">
             <div>
               <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">
                 Személyes Adataim
@@ -192,7 +213,7 @@ export default function SettingsDashboard({
               />
 
               <div className="flex items-center gap-6">
-                {/* Avatar Kép */}
+                {/* Avatar */}
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   className="group relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-lg dark:border-slate-800"
@@ -210,13 +231,12 @@ export default function SettingsDashboard({
                       <User className="h-10 w-10" />
                     </div>
                   )}
-
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                     <Camera className="h-6 w-6 text-white" />
                   </div>
                 </div>
 
-                {/* Gombok */}
+                {/* Avatar Gombok */}
                 <div className="flex-1 space-y-2">
                   <label className="block text-xs font-bold uppercase text-slate-500">
                     Profilkép
@@ -245,7 +265,7 @@ export default function SettingsDashboard({
                 </div>
               </div>
 
-              {/* Text Inputok */}
+              {/* Inputok */}
               <div className="grid grid-cols-1 gap-4 pt-4 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-xs font-bold uppercase text-slate-500">
@@ -275,6 +295,35 @@ export default function SettingsDashboard({
                 <SubmitButton label="Adatok Mentése" id="profile_submit_btn" />
               </div>
             </form>
+
+            {/* --- VESZÉLYZÓNA (TÖRLÉS) --- */}
+            <div className="mt-10 border-t border-slate-200 pt-10 dark:border-slate-800">
+              <div className="rounded-2xl border border-red-100 bg-red-50 p-6 dark:border-red-900/30 dark:bg-red-900/10">
+                <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-red-600 dark:text-red-400">
+                  <AlertTriangle className="h-5 w-5" /> Veszélyzóna
+                </h3>
+                <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">
+                  Ha törlöd a fiókodat, az összes személyes adatod (név, email,
+                  beállítások) véglegesen törlődik.
+                  <br />
+                  <br />
+                  <strong className="text-slate-900 dark:text-slate-200">
+                    Fontos:
+                  </strong>{' '}
+                  A garázsban lévő autóid{' '}
+                  <span className="underline decoration-slate-400">
+                    nem törlődnek
+                  </span>
+                  , de többé nem fogod tudni elérni őket ezzel a fiókkal.
+                </p>
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="rounded-xl border border-red-200 bg-white px-5 py-2.5 text-sm font-bold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  Fiók Törlése
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -442,6 +491,37 @@ export default function SettingsDashboard({
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* --- MODAL POPUP (FIÓK TÖRLÉS MEGERŐSÍTÉS) --- */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex animate-in fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-sm duration-200">
+            <div className="w-full max-w-md animate-in zoom-in-95 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl duration-200 dark:border-slate-800 dark:bg-slate-900">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <h3 className="mb-2 text-center text-xl font-black text-slate-900 dark:text-white">
+                Biztosan törlöd a fiókot?
+              </h3>
+              <p className="mb-6 text-center text-sm text-slate-500">
+                Ez a művelet nem vonható vissza. A fiókod megszűnik, de az autók
+                adatai megmaradnak az adatbázisban (leválasztva a profilról).
+              </p>
+
+              <form action={deleteAccountAction}>
+                <div className="space-y-3">
+                  <DeleteButton />
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteModal(false)}
+                    className="w-full rounded-xl bg-slate-100 py-3 font-bold text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    Mégsem
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
