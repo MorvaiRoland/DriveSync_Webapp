@@ -4,7 +4,7 @@
 import { headers } from 'next/headers'
 import { createClient } from 'supabase/server'
 import { redirect } from 'next/navigation'
-import { getEarlyAccessProEnabled } from '@/utils/earlyAccessConfig'
+import { getEarlyAccessConfig } from '@/utils/earlyAccessConfig'
 
 // Segédfüggvény a kód tisztábbá tételéhez
 function encodedRedirect(path: string, message: string) {
@@ -52,9 +52,9 @@ export async function signup(formData: FormData) {
   }
 
   // Early Access Pro logic (admin configurable)
-  const earlyAccessPro = await getEarlyAccessProEnabled();
+  const { early_access_pro } = await getEarlyAccessConfig();
   const userId = data?.user?.id;
-  if (earlyAccessPro && userId) {
+  if (early_access_pro && userId) {
     // Insert or upsert into subscriptions table
     await supabase.from('subscriptions').upsert({
       user_id: userId,
