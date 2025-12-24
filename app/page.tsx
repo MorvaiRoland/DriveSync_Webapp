@@ -41,10 +41,41 @@ async function logCurrentMileage(formData: FormData) {
   
   if (carError) return redirect(`/?dev=${DEV_SECRET_KEY}&error=${encodeURIComponent('Hiba történt.')}`);
 
-  await supabase.from('events').insert({
-      car_id: car_id, type: 'other', title: 'Futás rögzítése', event_date: new Date().toISOString(),
-      mileage: current_mileage, cost: 0, notes: 'Gyors rögzítés a főoldalról'
-  });
+// 1. Lekérjük az autó aktuális kilométeróra állását
+const { data: currentCar, error: fetchError } = await supabase
+  .from('cars')
+  .select('mileage')
+  .eq('id', car_id)
+  .single();
+
+if (fetchError || !currentCar) {
+  throw new Error("Nem található az autó vagy hiba történt az adatok lekérésekor.");
+}
+
+// 2. ELLENŐRZÉS: Az új érték nem lehet kisebb, mint a jelenlegi
+if (Number(current_mileage) < currentCar.mileage) {
+  // Itt dobunk egy hibát, vagy visszaadunk egy üzenetet a frontendnek
+  throw new Error(`A megadott km állás (${current_mileage}) nem lehet kevesebb, mint a jelenlegi (${currentCar.mileage})!`);
+}
+
+// 3. Ha minden rendben, beszúrjuk az eseményt
+const { error: insertError } = await supabase.from('events').insert({
+  car_id: car_id, 
+  type: 'other', 
+  title: 'Futás rögzítése', 
+  event_date: new Date().toISOString(),
+  mileage: current_mileage, 
+  cost: 0, 
+  notes: 'Gyors rögzítés a főoldalról'
+});
+
+if (insertError) throw insertError;
+
+// 4. Frissítjük a 'cars' táblában is az aktuális állást (hogy legközelebb ehhez mérjen)
+await supabase
+  .from('cars')
+  .update({ mileage: current_mileage })
+  .eq('id', car_id);
 
   return redirect(`/?dev=${DEV_SECRET_KEY}&success=Km+frissitve`);
 }
