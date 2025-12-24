@@ -5,9 +5,13 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 're
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { Search, MapPin, Wrench, Car, Zap, Droplets, Plus, ArrowLeft, Send, ShieldCheck, Loader2, X, ChevronUp, ChevronDown } from 'lucide-react'
+import { 
+  Search, MapPin, Wrench, Car, Zap, Droplets, Plus, 
+  ArrowLeft, Send, ShieldCheck, Loader2, X, Navigation, 
+  Phone, Info, CheckCircle2, Map as MapIcon, Layers
+} from 'lucide-react'
 import { createClient } from '@/supabase/client'
-import { motion, AnimatePresence, useDragControls, useMotionValue, useTransform, PanInfo } from 'framer-motion'
+import { motion, AnimatePresence, useDragControls, useMotionValue, useSpring } from 'framer-motion'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -18,66 +22,65 @@ function cn(...inputs: ClassValue[]) {
 
 // --- KATEGÓRIÁK ---
 const CATEGORIES = [
-  { id: 'all', label: 'Összes', icon: Search, color: 'from-zinc-800 to-black', text: 'text-zinc-500' },
-  { id: 'mechanic', label: 'Szerelő', icon: Wrench, color: 'from-slate-700 to-slate-900', text: 'text-slate-500' },
-  { id: 'tire', label: 'Gumizás', icon: Car, color: 'from-stone-600 to-stone-800', text: 'text-stone-500' },
-  { id: 'wash', label: 'Autómosó', icon: Droplets, color: 'from-blue-600 to-blue-900', text: 'text-blue-500' },
-  { id: 'electric', label: 'Villamosság', icon: Zap, color: 'from-amber-500 to-amber-700', text: 'text-amber-500' },
+  { id: 'all', label: 'Összes', icon: Search, color: 'bg-zinc-500', gradient: 'from-zinc-500 to-zinc-700' },
+  { id: 'mechanic', label: 'Szerelő', icon: Wrench, color: 'bg-indigo-500', gradient: 'from-indigo-500 to-blue-600' },
+  { id: 'tire', label: 'Gumizás', icon: Car, color: 'bg-orange-500', gradient: 'from-orange-500 to-red-600' },
+  { id: 'wash', label: 'Autómosó', icon: Droplets, color: 'bg-sky-500', gradient: 'from-sky-500 to-indigo-600' },
+  { id: 'electric', label: 'Villamosság', icon: Zap, color: 'bg-amber-500', gradient: 'from-amber-500 to-orange-600' },
 ]
 
-// --- Marker Generátor ---
-const createCustomIcon = (categoryId: string, isNew = false) => {
+// --- Custom Marker Icon ---
+const createModernIcon = (categoryId: string, isActive = false) => {
   if (typeof window === 'undefined') return L.divIcon({});
+  const cat = CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[0];
+  const Icon = cat.icon;
 
-  if (isNew) {
-    const iconHtml = renderToStaticMarkup(
-      <div className="relative flex items-center justify-center">
-         <div className="absolute w-full h-full bg-emerald-500/30 rounded-full animate-ping"></div>
-         <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500 text-white shadow-2xl border-4 border-white dark:border-zinc-900">
-            <MapPin className="w-6 h-6" />
-         </div>
-         <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-emerald-500 rotate-45 border-r border-b border-white dark:border-zinc-900"></div>
+  const html = renderToStaticMarkup(
+    <div className={cn(
+      "relative flex items-center justify-center transition-transform duration-300",
+      isActive ? "scale-125 z-[1000]" : "scale-100"
+    )}>
+      <div className={cn(
+        "w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xl border-2 border-white dark:border-zinc-900 bg-gradient-to-br",
+        cat.gradient
+      )}>
+        <Icon size={20} strokeWidth={2.5} />
       </div>
-    )
-    return L.divIcon({ html: iconHtml, className: 'custom-marker-new', iconSize: [48, 58], iconAnchor: [24, 58] })
-  }
-
-  const category = CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[0];
-  const IconComponent = category.icon;
-  
-  const iconHtml = renderToStaticMarkup(
-    <div className="relative group transition-transform hover:scale-110 hover:z-50 cursor-pointer">
-      <div className={`relative flex items-center justify-center w-10 h-10 rounded-full border-[3px] border-white dark:border-zinc-950 shadow-lg bg-gradient-to-br ${category.color}`}>
-        <IconComponent className="w-5 h-5 text-white" />
-      </div>
-      <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-3 h-3 bg-gradient-to-br ${category.color} rotate-45 border-r border-b border-white dark:border-zinc-950 -z-10`}></div>
+      <div className={cn(
+        "absolute -bottom-1 w-3 h-3 rotate-45 border-r-2 border-b-2 border-white dark:border-zinc-900 bg-inherit",
+        cat.color
+      )} />
     </div>
   );
-  return L.divIcon({ html: iconHtml, className: 'custom-marker-icon', iconSize: [40, 50], iconAnchor: [20, 50], popupAnchor: [0, -50] });
+
+  return L.divIcon({ html, className: '', iconSize: [40, 44], iconAnchor: [20, 44] });
 }
 
-// --- Térkép Komponensek ---
+// --- Térkép Segédkomponensek ---
 function MapController({ onMapClick, isAdding }: { onMapClick: (lat: number, lng: number) => void, isAdding: boolean }) {
   useMapEvents({ 
-    click(e) { 
-      if (isAdding) onMapClick(e.latlng.lat, e.latlng.lng); 
-    }, 
+    click(e) { if (isAdding) onMapClick(e.latlng.lat, e.latlng.lng); }, 
   });
   return null;
 }
 
-function MapFlyTo({ position }: { position: { lat: number, lng: number } | [number, number] | null }) {
+function MapFlyTo({ position }: { position: any }) {
   const map = useMap();
+
   useEffect(() => {
     if (position) {
-      const coords: [number, number] = !Array.isArray(position) ? [position.lat, position.lng] : position;
-      map.flyTo(coords, 15, { duration: 1.5 });
+      // JAVÍTÁS: Az "as [number, number]" hozzáadása a végére megoldja a hibát
+      const coords = (Array.isArray(position) 
+        ? position 
+        : [position.lat, position.lng]) as [number, number];
+      
+      map.flyTo(coords, 15, { duration: 1.5, easeLinearity: 0.25 });
     }
   }, [position, map]);
+
   return null;
 }
 
-// === FŐ KOMPONENS ===
 export default function ServiceMap({ initialPartners, user }: { initialPartners: any[], user: any }) {
   const [partners, setPartners] = useState(initialPartners)
   const [filter, setFilter] = useState('all')
@@ -89,14 +92,11 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
   const [addressInput, setAddressInput] = useState('')
   const [foundAddress, setFoundAddress] = useState('')
   const [form, setForm] = useState({ name: '', category: 'mechanic', phone: '', description: '', address: '' })
-  const [formError, setFormError] = useState('')
   
-  // --- BOTTOM SHEET STATE ---
+  // --- Responsive & Animation States ---
   const [isMobile, setIsMobile] = useState(false)
-  const SHEET_MARGIN = 120; // Ennyi pixel látszik a térképből fent, ha a sheet teljesen fel van húzva
-  const SHEET_MIN_HEIGHT = 180; // Ennyi látszik a sheetből alul, ha le van húzva
-  const dragControls = useDragControls();
-  const y = useMotionValue(0);
+  const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('half')
+  const sheetY = useMotionValue(0)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -107,422 +107,284 @@ export default function ServiceMap({ initialPartners, user }: { initialPartners:
 
   const supabase = createClient()
 
-  // --- FILTERED PARTNERS ---
   const filteredPartners = useMemo(() => {
     let list = partners
     if (filter !== 'all') list = list.filter(p => p.category === filter)
     if (search.trim()) {
       const s = search.trim().toLowerCase()
-      list = list.filter(p =>
-        (p.name && p.name.toLowerCase().includes(s)) ||
-        (p.address && p.address.toLowerCase().includes(s)) ||
-        (p.category && p.category.toLowerCase().includes(s))
-      )
+      list = list.filter(p => p.name?.toLowerCase().includes(s) || p.address?.toLowerCase().includes(s))
     }
     return list
   }, [partners, filter, search])
 
-  // --- LOCATION ---
   const handleLocateMe = () => {
-    setIsLoading(true)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((pos) => {
-        const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
-        setUserLocation(coords)
-        setIsLoading(false)
-        if (mode === 'add') {
-            handleMapClick(coords[0], coords[1]);
-        }
-      }, () => {
-        alert('Nem sikerült meghatározni a pozíciót.')
-        setIsLoading(false)
+        setUserLocation([pos.coords.latitude, pos.coords.longitude])
       })
     }
   }
 
-  // --- ADDRESS SEARCH ---
-  const handleAddressSearch = async () => {
-    if (!addressInput.trim()) return
-    setIsLoading(true)
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressInput)}`)
-      const data = await res.json()
-      if (data && data.length > 0) {
-        const { lat, lon, display_name } = data[0]
-        const coords = { lat: parseFloat(lat), lng: parseFloat(lon) }
-        setNewServiceCoords(coords)
-        setFoundAddress(display_name)
-      } else {
-        alert('Nem található ilyen cím.')
-      }
-    } catch (e) {
-      alert('Hiba a kereséskor.')
-    }
-    setIsLoading(false)
-  }
-
-  // --- MAP CLICK (ADD MODE) ---
-  const handleMapClick = async (lat: number, lng: number) => {
-    setNewServiceCoords({ lat, lng })
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-      const data = await res.json()
-      if (data && data.display_name) {
-        setFoundAddress(data.display_name)
-        setAddressInput(data.display_name.split(',')[0])
-        setForm(f => ({ ...f, address: data.display_name }))
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  // --- SUBMIT FORM ---
-  const submitServiceRequest = async (e: any) => {
-    e.preventDefault()
-    setFormError('')
-    if (!form.name || !form.category || !form.phone || !newServiceCoords) {
-      setFormError('Minden *-gal jelölt mező kötelező és a térképen is jelöld a helyet!')
-      return
-    }
-    setIsLoading(true)
-    const data = {
-      user_id: user?.id,
-      name: form.name,
-      category: form.category,
-      phone: form.phone,
-      description: form.description,
-      address: form.address || foundAddress,
-      latitude: newServiceCoords.lat,
-      longitude: newServiceCoords.lng,
-      status: 'pending'
-    }
-    const { error } = await supabase.from('service_requests').insert(data)
-    setIsLoading(false)
-    if (!error) {
-      setMode('success')
-      setForm({ name: '', category: 'mechanic', phone: '', description: '', address: '' })
-      setNewServiceCoords(null)
-      setAddressInput('')
-      setFoundAddress('')
-    } else {
-      setFormError('Hiba történt a mentéskor. Kérjük próbáld újra.')
-    }
-  }
-
-  // --- BOTTOM SHEET HANDLER (Mobile Only) ---
-  const onDragEnd = (event: any, info: PanInfo) => {
-    const screenHeight = window.innerHeight;
-    const threshold = screenHeight * 0.3; // 30% húzás után váltson
-    
-    // Ha lefelé húzza gyorsan vagy sokat -> Zárás (Collapse)
-    if (info.offset.y > threshold || info.velocity.y > 200) {
-       // Collapse to bottom
-       // De nem teljesen 0, hanem a `top` constraint-hez képest.
-       // Framer motion drag constraintjeihez igazodva.
-    } else {
-       // Open to top
-    }
-  };
-
-  // --- UI ---
+  // --- UI Renders ---
   return (
-    <div className="relative w-full h-[100dvh] overflow-hidden bg-zinc-100 dark:bg-zinc-950">
+    <div className="relative w-full h-[100dvh] bg-zinc-50 dark:bg-zinc-950 overflow-hidden font-sans selection:bg-indigo-500 selection:text-white">
       
-      {/* 1. TÉRKÉP (TELJES HÁTTÉR) */}
+      {/* 1. TÉRKÉP RÉTEG */}
       <div className="absolute inset-0 z-0">
         <MapContainer
           center={[47.4979, 19.0402]}
           zoom={13}
           zoomControl={false}
-          className="w-full h-full outline-none"
+          className="w-full h-full"
         >
           <TileLayer
-            attribution='© <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
+            attribution='&copy; CAR-MAP'
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           />
-          <MapController onMapClick={handleMapClick} isAdding={mode === 'add'} />
-          <MapFlyTo position={newServiceCoords ? newServiceCoords : (userLocation || null)} />
+          <MapController onMapClick={(lat, lng) => {
+             setNewServiceCoords({ lat, lng });
+             setSheetState('half');
+          }} isAdding={mode === 'add'} />
+          <MapFlyTo position={newServiceCoords || userLocation} />
 
-          {userLocation && (
-             <Marker position={userLocation} icon={L.divIcon({ html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg pulse-ring"></div>`, className: 'bg-transparent' })} />
-          )}
-
-          {mode === 'view' && filteredPartners.map((partner) => (
-            <Marker key={partner.id} position={[partner.latitude, partner.longitude]} icon={createCustomIcon(partner.category)}>
-              <Popup className="glass-popup" closeButton={false} minWidth={280}>
-                <div className="p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 ${CATEGORIES.find(c=>c.id === partner.category)?.text}`}>
-                      {CATEGORIES.find(c => c.id === partner.category)?.label}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-lg leading-tight mb-1">{partner.name}</h3>
-                  <p className="text-xs text-zinc-500 mb-3">{partner.address}</p>
-                  <a href={`https://www.google.com/maps/search/?api=1&query=${partner.latitude},${partner.longitude}`} target="_blank" rel="noopener noreferrer" className="block text-center w-full py-2 bg-black text-white text-xs font-bold rounded-lg hover:bg-zinc-800 transition-colors">
-                    Útvonaltervezés
-                  </a>
+          {filteredPartners.map(p => (
+            <Marker key={p.id} position={[p.latitude, p.longitude]} icon={createModernIcon(p.category)}>
+              <Popup closeButton={false} className="custom-popup">
+                <div className="p-1 min-w-[200px]">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-1">
+                    {CATEGORIES.find(c => c.id === p.category)?.label}
+                  </p>
+                  <h4 className="font-bold text-zinc-900">{p.name}</h4>
+                  <p className="text-xs text-zinc-500 mb-3">{p.address}</p>
+                  <button className="w-full py-2 bg-zinc-900 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2">
+                    <Navigation size={14} /> Útvonal
+                  </button>
                 </div>
               </Popup>
             </Marker>
           ))}
 
-          {mode === 'add' && newServiceCoords && (
-            <Marker position={[newServiceCoords.lat, newServiceCoords.lng]} icon={createCustomIcon('all', true)} />
+          {newServiceCoords && (
+            <Marker position={[newServiceCoords.lat, newServiceCoords.lng]} icon={createModernIcon('all', true)} />
           )}
         </MapContainer>
       </div>
 
-      {/* 2. LEBEGŐ GOMBOK (VISSZA, HELYZET) */}
-      <div className="absolute top-4 left-4 z-20 flex gap-2">
-        <button onClick={() => window.history.back()} className="p-3 bg-white/90 dark:bg-zinc-900/90 rounded-full shadow-lg border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:scale-105 transition-transform backdrop-blur-md">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-      </div>
-      
-      <div className="absolute top-4 right-4 z-20">
-         <button onClick={handleLocateMe} className="p-3 bg-white/90 dark:bg-zinc-900/90 rounded-full shadow-lg border border-zinc-200 dark:border-zinc-800 text-blue-500 hover:scale-105 transition-transform backdrop-blur-md">
-            <MapPin className="w-5 h-5" />
-         </button>
-      </div>
-
-      {/* 3. TARTALOM PANEL (DRAWER / BOTTOM SHEET) */}
-      {/* Mobilon: Bottom Sheet (húzható), Desktopon: Floating Sidebar */}
-      <motion.div 
-        drag={isMobile ? "y" : false} // Csak mobilon húzható függőlegesen
-        dragControls={dragControls}
-        dragConstraints={{ top: 0, bottom: 0 }} // Később dinamikusan kezeljük, vagy snap-elünk
-        dragElastic={0.2} // Rugalmasság
-        dragMomentum={false} // Ne csússzon tovább lendületből, pontosabb vezérlés kell
-        
-        // Desktopon fix pozíció, mobilon a 'top' változik a drag alapján
-        style={isMobile ? { 
-            y, // A framer motion value vezérli a pozíciót
-            top: `calc(100vh - ${SHEET_MIN_HEIGHT}px)` // Kezdőpont: lentről indul
-        } : {}}
-
-        // Desktop osztályok (fix) vs Mobil osztályok (dinamikus)
-        className={cn(
-            "z-30 bg-white dark:bg-zinc-900 shadow-[0_-10px_40px_rgba(0,0,0,0.15)] flex flex-col",
-            // Mobil
-            "absolute left-0 right-0 rounded-t-[32px] h-[90vh] touch-none",
-            // Desktop override
-            "md:!top-4 md:!left-4 md:!bottom-4 md:!right-auto md:!w-[400px] md:!h-auto md:!transform-none md:rounded-[24px] md:shadow-2xl"
-        )}
-        
-        // Drag események (csak mobilon releváns)
-        onDragEnd={(e, info) => {
-            if (!isMobile) return;
-            const threshold = 100; // Pixel
-            // Ha felfelé húztuk (negatív offset) és gyorsan vagy sokat
-            if (info.offset.y < -threshold || info.velocity.y < -300) {
-                // Open (teljes képernyőre húzás) - A 'y' értékét negatívba visszük, hogy feljöjjön
-                // A 'top' a képernyő alján van, tehát kb - (height - min_height) kell
-                // Egyszerűbb animálni egy 'open' state-be
-            } else if (info.offset.y > threshold || info.velocity.y > 300) {
-                // Close (vissza alapállapotba)
-            }
-            // Mivel a dragConstraints '0'-ra van állítva, a framer motion visszahúzza
-            // Ezért inkább 'animate' prop-ot használunk lentebb
-        }}
-      >
-         {/* Mobil Fogantyú (Drag Handle) */}
-         <div 
-            className="md:hidden w-full pt-3 pb-3 flex justify-center items-center cursor-grab active:cursor-grabbing shrink-0"
-            // Ez a terület indítja a húzást
-            onPointerDown={(e) => dragControls.start(e)}
-         >
-            <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
-         </div>
-
-         {/* Panel Tartalom */}
-         <div className="flex-1 overflow-y-auto px-4 pb-8 md:p-6 custom-scrollbar">
-            <AnimatePresence mode="wait">
-                {mode === 'view' ? (
-                    <motion.div key="view-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                        
-                        {/* Kereső */}
-                        <div className="relative mb-4">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                            <input 
-                                type="text" 
-                                placeholder="Mit keresel? (pl. Gumis)" 
-                                className="w-full pl-12 pr-4 py-4 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-zinc-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all shadow-inner"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                // Mobilon fókuszkor felugorhat a billentyűzet, érdemes felhúzni a panelt
-                            />
-                        </div>
-
-                        {/* Kategóriák */}
-                        <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide snap-x">
-                            {CATEGORIES.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setFilter(cat.id)}
-                                    className={cn(
-                                        "flex flex-col items-center gap-2 min-w-[70px] snap-start transition-opacity",
-                                        filter === cat.id ? "opacity-100" : "opacity-60 hover:opacity-80"
-                                    )}
-                                >
-                                    <div className={cn(
-                                        "w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br shadow-md transition-transform active:scale-95",
-                                        cat.color,
-                                        filter === cat.id ? "ring-2 ring-offset-2 ring-zinc-900 dark:ring-white" : ""
-                                    )}>
-                                        <cat.icon className="w-6 h-6 text-white" />
-                                    </div>
-                                    <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">{cat.label}</span>
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Találatok Listája */}
-                        <div className="space-y-3 mt-2 min-h-[300px]"> {/* Min height, hogy legyen mit görgetni */}
-                            <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Közelben</div>
-                            {filteredPartners.length === 0 ? (
-                                <div className="text-center py-8 text-zinc-400 text-sm">Nincs találat a környéken.</div>
-                            ) : (
-                                filteredPartners.map(partner => (
-                                    <div 
-                                        key={partner.id} 
-                                        className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md cursor-pointer transition-all active:scale-[0.98]"
-                                        onClick={() => {
-                                            setNewServiceCoords({ lat: partner.latitude, lng: partner.longitude });
-                                            // TODO: Mobilon itt lehetne "lehúzni" a panelt, hogy látszódjon a térkép
-                                        }}
-                                    >
-                                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br shrink-0", CATEGORIES.find(c=>c.id===partner.category)?.color || 'from-gray-500 to-gray-700')}>
-                                            {(() => {
-                                                const Icon = CATEGORIES.find(c=>c.id===partner.category)?.icon || Wrench;
-                                                return <Icon className="w-5 h-5 text-white" />
-                                            })()}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-zinc-900 dark:text-white truncate">{partner.name}</h3>
-                                            <p className="text-xs text-zinc-500 truncate">{partner.address}</p>
-                                        </div>
-                                        <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center">
-                                            <ArrowLeft className="w-4 h-4 rotate-180 text-zinc-400" />
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        {/* Új Hozzáadása Gomb */}
-                        <div className="sticky bottom-0 pt-4 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 pb-2">
-                            <button 
-                                onClick={() => setMode('add')} 
-                                className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl font-bold shadow-xl flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-                            >
-                                <Plus className="w-5 h-5" /> Új Szerviz Ajánlása
-                            </button>
-                        </div>
-
-                    </motion.div>
-                ) : mode === 'add' ? (
-                    <motion.form key="add-form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} onSubmit={submitServiceRequest} className="flex flex-col h-full">
-                        <div className="flex items-center gap-4 mb-6">
-                            <button type="button" onClick={() => setMode('view')} className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                                <ArrowLeft className="w-6 h-6 text-zinc-900 dark:text-white" />
-                            </button>
-                            <h2 className="text-xl font-black text-zinc-900 dark:text-white">Új Hely</h2>
-                        </div>
-
-                        <div className="space-y-6 flex-1">
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold uppercase text-zinc-500 ml-1">Név</label>
-                                <input type="text" required className="w-full p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all" placeholder="Pl. Kovács Autószerviz" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold uppercase text-zinc-500 ml-1">Kategória</label>
-                                    <select className="w-full p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl font-medium outline-none appearance-none" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                                        {CATEGORIES.filter(c => c.id !== 'all').map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold uppercase text-zinc-500 ml-1">Telefon</label>
-                                    <input type="tel" required className="w-full p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all" placeholder="+36..." value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold uppercase text-zinc-500 ml-1">Cím / Helyszín</label>
-                                <div className="flex gap-2">
-                                    <input type="text" required className="flex-1 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all" placeholder="Keress vagy bökj a térképre..." value={addressInput} onChange={e => { setAddressInput(e.target.value); setForm(f => ({ ...f, address: e.target.value })) }} />
-                                    <button type="button" onClick={handleAddressSearch} className="px-4 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 rounded-xl transition-colors"><Search className="w-5 h-5" /></button>
-                                </div>
-                                {newServiceCoords && (
-                                    <div className="flex items-center gap-2 text-xs text-emerald-600 font-medium mt-2 bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded-lg">
-                                        <CheckCircle2 className="w-4 h-4" /> Pozíció rögzítve a térképen
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold uppercase text-zinc-500 ml-1">Leírás (Opcionális)</label>
-                                <textarea rows={3} className="w-full p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all resize-none" placeholder="Szolgáltatások, nyitvatartás..." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-                            </div>
-                        </div>
-
-                        {formError && <p className="text-red-500 text-sm font-bold mt-2 text-center">{formError}</p>}
-
-                        <button type="submit" disabled={isLoading} className="w-full py-4 mt-6 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-                            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />} Beküldés
-                        </button>
-                    </motion.form>
-                ) : (
-                    <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center h-full text-center">
-                        <div className="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-6 text-emerald-600 dark:text-emerald-400">
-                            <ShieldCheck className="w-12 h-12" />
-                        </div>
-                        <h2 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">Siker!</h2>
-                        <p className="text-zinc-500 dark:text-zinc-400 mb-8 max-w-[250px]">
-                            A bejelentést rögzítettük. Ellenőrzés után megjelenik a térképen.
-                        </p>
-                        <button onClick={() => setMode('view')} className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl font-bold shadow-xl">
-                            Vissza a kezdőlapra
-                        </button>
-                    </motion.div>
+      {/* 2. LEBEGŐ KERESŐ (DESKTOP) / HEADER (MOBILE) */}
+      <div className="absolute top-0 left-0 right-0 p-4 z-20 pointer-events-none flex flex-col md:flex-row justify-between gap-4">
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <button 
+            onClick={() => window.history.back()}
+            className="w-12 h-12 bg-white dark:bg-zinc-900 shadow-2xl rounded-2xl flex items-center justify-center text-zinc-700 dark:text-zinc-200 border border-white/20 backdrop-blur-xl"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          
+          <div className="hidden md:flex bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl p-1 items-center gap-1">
+             {CATEGORIES.map(cat => (
+               <button 
+                key={cat.id}
+                onClick={() => setFilter(cat.id)}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                  filter === cat.id ? "bg-zinc-900 text-white shadow-lg" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 )}
-            </AnimatePresence>
-         </div>
-      </motion.div>
+               >
+                 {cat.label}
+               </button>
+             ))}
+          </div>
+        </div>
 
-      {/* GLOBÁLIS STÍLUSOK */}
+        <div className="flex flex-col items-end gap-2 pointer-events-auto">
+          <button onClick={handleLocateMe} className="w-12 h-12 bg-white dark:bg-zinc-900 shadow-xl rounded-2xl flex items-center justify-center text-indigo-500 border border-white/20 backdrop-blur-xl">
+            <Navigation size={20} />
+          </button>
+          <button className="w-12 h-12 bg-white dark:bg-zinc-900 shadow-xl rounded-2xl flex items-center justify-center text-zinc-500 border border-white/20 backdrop-blur-xl">
+            <Layers size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* 3. INTERAKTÍV OLDALPANEL / BOTTOM SHEET */}
+      <motion.aside
+        initial={isMobile ? { y: '100%' } : { x: -400 }}
+        animate={isMobile ? { y: sheetState === 'collapsed' ? '85%' : sheetState === 'half' ? '40%' : '5%' } : { x: 0 }}
+        drag={isMobile ? "y" : false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        onDragEnd={(_, info) => {
+            if (info.offset.y < -50) setSheetState('full');
+            else if (info.offset.y > 50) setSheetState('collapsed');
+        }}
+        className={cn(
+          "z-30 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl shadow-[0_-10px_50px_rgba(0,0,0,0.1)] flex flex-col",
+          "fixed bottom-0 left-0 right-0 rounded-t-[40px] md:top-4 md:left-4 md:bottom-4 md:right-auto md:w-[420px] md:rounded-[32px] md:border md:border-white/10"
+        )}
+      >
+        {/* Drag Handle (Mobile only) */}
+        <div className="md:hidden w-full py-4 flex justify-center cursor-grab active:cursor-grabbing">
+          <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 pb-10 custom-scrollbar">
+          <AnimatePresence mode="wait">
+            {mode === 'view' ? (
+              <motion.div key="view" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                <header className="mb-6">
+                  <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Fedezd fel</h2>
+                  <p className="text-zinc-500 text-sm">Találj megbízható szervizpartnereket</p>
+                </header>
+
+                {/* Kereső Sáv */}
+                <div className="relative mb-6">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder="Név, város vagy típus..."
+                    className="w-full pl-12 pr-4 py-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                </div>
+
+                {/* Mobil Kategória Görgető */}
+                <div className="md:hidden flex gap-3 overflow-x-auto pb-6 scrollbar-hide">
+                   {CATEGORIES.map(cat => (
+                     <button 
+                      key={cat.id}
+                      onClick={() => setFilter(cat.id)}
+                      className={cn(
+                        "flex flex-col items-center gap-2 min-w-[80px]",
+                        filter === cat.id ? "opacity-100" : "opacity-50"
+                      )}
+                     >
+                        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br", cat.gradient)}>
+                          <cat.icon size={22} />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{cat.label}</span>
+                     </button>
+                   ))}
+                </div>
+
+                {/* Lista */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-xs font-black uppercase text-zinc-400 tracking-widest">{filteredPartners.length} Találat</span>
+                    <button className="text-xs font-bold text-indigo-500">Térképen mind</button>
+                  </div>
+
+                  {filteredPartners.map(p => (
+                    <motion.div 
+                      layoutId={p.id}
+                      key={p.id}
+                      className="group bg-white dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 p-4 rounded-[24px] hover:shadow-xl hover:shadow-indigo-500/5 transition-all cursor-pointer active:scale-95"
+                    >
+                      <div className="flex gap-4">
+                        <div className={cn("w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center text-white shadow-inner bg-gradient-to-br", CATEGORIES.find(c=>c.id===p.category)?.gradient)}>
+                           {(() => {
+                             const Icon = CATEGORIES.find(c=>c.id===p.category)?.icon || MapPin;
+                             return <Icon size={24} />
+                           })()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-zinc-900 dark:text-white truncate group-hover:text-indigo-500 transition-colors">{p.name}</h4>
+                          <p className="text-sm text-zinc-500 truncate flex items-center gap-1">
+                            <MapPin size={12} /> {p.address}
+                          </p>
+                          <div className="flex gap-2 mt-3">
+                             <span className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md text-[10px] font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-tighter">4.8 ★ (120+)</span>
+                             <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-md text-[10px] font-bold text-emerald-600 uppercase">Nyitva</span>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Sticky Add Button */}
+                <div className="sticky bottom-0 mt-8 pb-2">
+                  <button 
+                    onClick={() => setMode('add')}
+                    className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[22px] font-bold shadow-2xl shadow-indigo-500/40 flex items-center justify-center gap-3 transition-transform active:scale-95"
+                  >
+                    <Plus size={20} /> Új hely beküldése
+                  </button>
+                </div>
+              </motion.div>
+            ) : mode === 'add' ? (
+              <motion.div key="add" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+                <button onClick={() => setMode('view')} className="mb-6 flex items-center gap-2 text-zinc-500 font-bold text-sm">
+                  <ArrowLeft size={16} /> Vissza a listához
+                </button>
+                <h2 className="text-2xl font-black mb-8">Hely hozzáadása</h2>
+                
+                <div className="space-y-6">
+                  <div className="group">
+                    <label className="text-xs font-black uppercase text-zinc-400 mb-2 block ml-1">Szerviz neve *</label>
+                    <input className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none transition-all font-medium" placeholder="Hogy hívják a helyet?" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-black uppercase text-zinc-400 mb-2 block ml-1">Típus</label>
+                      <select className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl border-none outline-none font-bold">
+                        {CATEGORIES.filter(c=>c.id!=='all').map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-black uppercase text-zinc-400 mb-2 block ml-1">Mobil</label>
+                      <input className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl border-none outline-none font-medium" placeholder="+36..." />
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-[24px] border border-indigo-100 dark:border-indigo-800/30">
+                    <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-3 flex items-center gap-2">
+                       <MapIcon size={14} /> JELÖLD KI A TÉRKÉPEN
+                    </p>
+                    <div className="text-sm text-zinc-600 dark:text-zinc-300 font-medium">
+                       {newServiceCoords ? (
+                         <span className="flex items-center gap-2 text-emerald-600"><CheckCircle2 size={16} /> Koordináták rögzítve</span>
+                       ) : "Kattints a térképre a pontos hely megadásához!"}
+                    </div>
+                  </div>
+
+                  <button className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[22px] font-black shadow-xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95">
+                    <Send size={18} /> Beküldés ellenőrzésre
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div key="success" className="flex flex-col items-center justify-center h-full text-center py-20">
+                 <div className="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6">
+                    <ShieldCheck size={48} />
+                 </div>
+                 <h2 className="text-2xl font-black mb-2">Köszönjük!</h2>
+                 <p className="text-zinc-500 mb-10">A beküldött adatokat moderátorunk hamarosan jóváhagyja.</p>
+                 <button onClick={() => setMode('view')} className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-bold">Rendben</button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.aside>
+
       <style jsx global>{`
-        .leaflet-popup-content-wrapper { 
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(12px);
-          border-radius: 16px;
-          box-shadow: 0 20px 40px -5px rgba(0,0,0,0.2);
-          padding: 0;
-          border: 1px solid rgba(0,0,0,0.05);
+        .leaflet-container { font-family: inherit; }
+        .custom-popup .leaflet-popup-content-wrapper {
+          border-radius: 24px;
+          padding: 8px;
+          box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(8px);
         }
-        .leaflet-popup-content { margin: 0 !important; width: 100% !important; }
-        .leaflet-popup-tip { background: rgba(255, 255, 255, 0.95); }
+        .custom-popup .leaflet-popup-tip { display: none; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 4px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; }
-        .pulse-ring {
-            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-            animation: pulse-blue 2s infinite;
-        }
-        @keyframes pulse-blue {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e4e4e7; border-radius: 10px; }
+        @media (prefers-color-scheme: dark) {
+          .custom-popup .leaflet-popup-content-wrapper { background: rgba(24, 24, 27, 0.9); border: 1px solid rgba(255,255,255,0.1); }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; }
         }
       `}</style>
     </div>
   )
-}
-
-function CheckCircle2({ className }: { className?: string }) {
-    return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
 }
