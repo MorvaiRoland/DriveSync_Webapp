@@ -8,20 +8,21 @@ import {
   BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
   MessageCircle, HelpCircle, Server, Smartphone,
   ChevronDown, Layers, AlertTriangle, Cpu, Gift, Search,
-  Sun, Moon // Új ikonok
+  Sun, Moon 
 } from 'lucide-react';
 import PromoModal from '@/components/PromoModal'; 
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
-// --- 1. SPECIAL COMPONENTS ---
+// --- 1. SEGÉD KOMPONENSEK (HELPER COMPONENTS) ---
 
-// THEME TOGGLE BUTTON (Profi animált váltó)
+// THEME TOGGLE BUTTON
 const ThemeToggle = () => {
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
-    // Kezdeti állapot ellenőrzése a böngészőből
-    if (localStorage.getItem('theme') === 'light') {
+    // Biztonságos ellenőrzés a hidratálás után
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme === 'light') {
       setIsDark(false);
       document.documentElement.classList.remove('dark');
     } else {
@@ -47,20 +48,14 @@ const ThemeToggle = () => {
     <button
       onClick={toggleTheme}
       className={`
-        relative flex items-center justify-between w-14 h-8 rounded-full p-1 transition-colors duration-500 mr-4
+        relative flex items-center justify-between w-14 h-8 rounded-full p-1 transition-colors duration-500 mr-2 md:mr-4
         ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-slate-200 border border-slate-300'}
       `}
       aria-label="Téma váltás"
     >
-      <span className="sr-only">Téma váltás</span>
-      
-      {/* Sun Icon (Light mode position) */}
       <Sun size={14} className={`z-10 ml-1 transition-colors duration-300 ${isDark ? 'text-slate-500' : 'text-amber-500'}`} />
-      
-      {/* Moon Icon (Dark mode position) */}
       <Moon size={14} className={`z-10 mr-1 transition-colors duration-300 ${isDark ? 'text-indigo-400' : 'text-slate-400'}`} />
 
-      {/* The Sliding Ball */}
       <motion.div
         className="absolute w-6 h-6 rounded-full shadow-md z-0"
         initial={false}
@@ -80,15 +75,15 @@ const MagneticButton = ({ children, className = "", href = "#" }: { children: Re
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
   const handleMouse = (e: React.MouseEvent) => {
+    if (!ref.current) return;
     const { clientX, clientY } = e;
-    const { height, width, left, top } = ref.current!.getBoundingClientRect();
+    const { height, width, left, top } = ref.current.getBoundingClientRect();
     const middleX = clientX - (left + width / 2);
     const middleY = clientY - (top + height / 2);
     setPosition({ x: middleX * 0.15, y: middleY * 0.15 });
   };
 
   const reset = () => setPosition({ x: 0, y: 0 });
-
   const { x, y } = position;
 
   return (
@@ -109,7 +104,7 @@ const MagneticButton = ({ children, className = "", href = "#" }: { children: Re
   );
 };
 
-// SPOTLIGHT CARD (Light/Dark mode kompatibilis)
+// SPOTLIGHT CARD
 const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(245,158,11,0.15)" }: any) => {
   const divRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -152,18 +147,18 @@ const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(245,15
 const TechTrustBar = () => {
   const specs = [
     { label: "Titkosítás", value: "AES-256 Banki Szint", icon: <Lock size={16} /> },
-    { label: "Adatfeldolgozás", value: "Gemini 2.5 Flash AI", icon: <Cpu size={16} /> },
+    { label: "Adatfeldolgozás", value: "Gemini 2.5 AI", icon: <Cpu size={16} /> },
     { label: "Rendelkezésre állás", value: "99.9% Uptime", icon: <Server size={16} /> },
     { label: "Platform", value: "iOS / Android / Web", icon: <Smartphone size={16} /> },
   ];
 
   return (
-    <div className="w-full border-y bg-white/50 dark:bg-slate-900/30 border-slate-200 dark:border-white/5 py-8 relative z-10 overflow-hidden backdrop-blur-sm transition-colors duration-500">
-       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
+    <div className="w-full border-y bg-white/50 dark:bg-slate-900/30 border-slate-200 dark:border-white/5 py-8 relative z-10 backdrop-blur-sm transition-colors duration-500 overflow-hidden">
+       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 pointer-events-none"></div>
        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-wrap justify-center md:justify-around items-center gap-8 md:gap-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 justify-items-center md:justify-items-between">
              {specs.map((spec, i) => (
-                <div key={i} className="flex items-center gap-3 group cursor-default">
+                <div key={i} className="flex items-center gap-3 group cursor-default w-full justify-center md:justify-start">
                    <div className="text-slate-500 dark:text-slate-600 group-hover:text-emerald-500 transition-colors duration-500 bg-white dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-inner">
                       {spec.icon}
                    </div>
@@ -226,7 +221,7 @@ const ComparisonSection = () => {
     )
 }
 
-// TYPERWRITER TEXT
+// TYPEWRITER TEXT
 const TypewriterText = ({ text, speed = 30 }: { text: string, speed?: number }) => {
   const [displayedText, setDisplayedText] = useState('');
   useEffect(() => {
@@ -255,12 +250,12 @@ const BackgroundGlows = () => (
 // 3D DASHBOARD PREVIEW
 const DashboardPreview = () => {
   const { scrollY } = useScroll();
-  const rotateX = useTransform(scrollY, [0, 600], [5, 0]);
-  const translateY = useTransform(scrollY, [0, 600], [0, -50]);
+  const rotateX = useTransform(scrollY, [0, 500], [5, 0]);
+  const scale = useTransform(scrollY, [0, 500], [0.95, 1]);
 
   return (
     <motion.div 
-      style={{ rotateX, translateY, transformPerspective: 1000 }}
+      style={{ rotateX, scale, transformPerspective: 1000 }}
       className="relative mx-auto mt-20 max-w-5xl w-full z-20 px-4 group"
     >
       <div className="relative rounded-2xl border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_0_50px_rgba(0,0,0,0.1)] dark:shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden transition-all duration-700">
@@ -364,7 +359,8 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
+    // Passive listener a jobb görgetési teljesítményért
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -376,13 +372,14 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 overflow-x-hidden transition-colors duration-500">
+    // JAVÍTÁS: overflow-x-hidden és min-h-screen eltávolítva a fő wrapperből a scroll bug elkerülése végett
+    <div className="relative w-full flex flex-col font-sans text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 transition-colors duration-500">
       
       {promo && <PromoModal promo={promo} />}
       <BackgroundGlows />
 
-      {/* NAVBAR */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 py-4 shadow-xl dark:shadow-2xl' : 'bg-transparent border-transparent py-6'}`}>
+      {/* NAVBAR - Fixed Z-index: 100 */}
+      <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 py-4 shadow-xl' : 'bg-transparent border-transparent py-6'}`}>
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group">
              <div className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300">
@@ -404,7 +401,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             
             <div className="h-4 w-px bg-slate-300 dark:bg-slate-800"></div>
 
-            {/* --- THEME TOGGLE BUTTON BEILLESZTVE --- */}
             <ThemeToggle />
             
             <Link href="/login" className="text-sm font-bold text-slate-800 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Belépés</Link>
@@ -447,6 +443,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </AnimatePresence>
       </nav>
 
+      {/* MAIN CONTENT - Relative positioning, z-index 10 */}
       <main className="relative z-10 flex-1 flex flex-col pt-32">
         
         {/* HERO SECTION */}
@@ -719,10 +716,10 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10 px-6 relative z-10 transition-colors">
-          {/* Footer Glow Line */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
-          
+      <footer className="relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10 px-6 transition-colors">
+         {/* Footer Glow Line */}
+         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
+         
          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="md:col-span-1">
                <Link href="/" className="flex items-center gap-2 mb-6">
@@ -758,17 +755,17 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                     <li><a href="#features" className="hover:text-amber-500 transition-colors">Funkciók</a></li>
                     <li><a href="#gamification" className="hover:text-amber-500 transition-colors">Közösség</a></li>
                     <li>
-                       <Link href="/changelog" className="hover:text-amber-500 transition-colors flex items-center gap-2 group">
+                        <Link href="/changelog" className="hover:text-amber-500 transition-colors flex items-center gap-2 group">
                            Újdonságok
                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:animate-pulse"></span>
-                       </Link>
-                   </li>
+                        </Link>
+                    </li>
                     <li>
-                       <Link href="/support" className="hover:text-amber-500 transition-colors flex items-center gap-2">
+                        <Link href="/support" className="hover:text-amber-500 transition-colors flex items-center gap-2">
                            Hibajelentés & Kapcsolat
                            <span className="bg-amber-500/10 text-amber-500 text-[10px] px-1.5 py-0.5 rounded">Support</span>
-                       </Link>
-                   </li>
+                        </Link>
+                    </li>
                 </ul>
             </div>
 
