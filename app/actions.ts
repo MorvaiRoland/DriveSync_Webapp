@@ -70,3 +70,82 @@ export async function getUpcomingRemindersForUI() {
 
   return reminders || []
 }
+
+export async function logCurrentMileage(formData: FormData) {
+  'use server' // Biztos ami biztos, bár a fájl tetején már ott van
+
+  const supabase = await createClient()
+  
+  // 1. Authentikáció ellenőrzése
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: "Nincs bejelentkezve felhasználó." }
+  }
+
+  // 2. Adatok kinyerése a formból
+  const car_id = formData.get('car_id') as string
+  const current_mileage = parseInt(formData.get('current_mileage') as string)
+
+  // 3. Alapvető validáció
+  if (!car_id || isNaN(current_mileage) || current_mileage <= 0) {
+    return { error: "Érvénytelen adatok (hiányzó autó vagy hibás km)." }
+  }
+
+  try {
+    // 4. Lekérjük az autó jelenlegi adatait (km állás ellenőrzéshez)
+    const { data: currentCar, error: fetchError } = await supabase
+      .from('cars')
+      .select('mileage, user_id') // user_id is kell a jogosultság ellenőrzéshez
+      .eq('id', car_id)
+      .single()
+
+    if (fetchError || !currentCar) {
+      return { error: "Nem található az autó vagy hiba az adatok lekérésekor." }
+    }
+
+    // 5. Jogosultság ellenőrzése (RLS általában kezeli, de extra védelem)
+    if (currentCar.user_id !== user.id) {
+       // Opcionális: Ha megosztott autókat is kezelni akarsz, itt bővíteni kell a logikát
+       // De alapesetben csak a sajátját szerkesztheti
+       return { error: "Nincs jogosultságod módosítani ezt az autót." }
+    }
+
+    // 6. LOGIKAI ELLENŐRZÉS: Nem lehet kevesebb az új érték
+    if (current_mileage < currentCar.mileage) {
+      return { 
+        error: `A megadott érték (${current_mileage} km) nem lehet kevesebb, mint a jelenlegi óraállás (${currentCar.mileage} km)!` 
+      }
+    }
+
+    // 7. Esemény beszúrása az 'events' táblába
+    // Megjegyzés: Ha nincs 'notes' vagy 'description' oszlopod, töröld ki azt a sort!
+    const { error: insertError } = await supabase.from('events').insert({
+      car_id: car_id, 
+      type: 'other', // Vagy 'mileage_log', ha van ilyen típusod
+      title: 'Futás rögzítése', 
+      event_date: new Date().toISOString(),
+      mileage: current_mileage, 
+      cost: 0, 
+      description: 'Gyors rögzítés a főoldalról' // Ellenőrizd: notes vagy description az oszlop neve?
+    })
+
+    if (insertError) throw insertError
+
+    // 8. Autó 'mileage' mezőjének frissítése a 'cars' táblában
+    const { error: updateError } = await supabase
+      .from('cars')
+      .update({ mileage: current_mileage })
+      .eq('id', car_id)
+
+    if (updateError) throw updateError
+
+    // 9. Cache frissítése, hogy a Dashboardon azonnal látszódjon
+    revalidatePath('/')
+    
+    return { success: true, message: "Kilométeróra állás sikeresen frissítve!" }
+
+  } catch (error: any) {
+    console.error("Hiba a km rögzítésekor:", error)
+    return { error: "Váratlan hiba történt a mentés során." }
+  }
+}

@@ -8,6 +8,7 @@ import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan }
 import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
 import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map } from 'lucide-react';
 import HeaderNav from '@/components/HeaderNav';
+import QuickMileageForm from '@/components/QuickMileageForm'; // <--- ÚJ IMPORT
 
 // Dynamic imports - everything except critical path
 const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { loading: () => null });
@@ -26,59 +27,6 @@ const FEATURES = {
   mileageLog: true, addCar: true, aiMechanic: true, reminders: true,
   activityLog: true, gamification: true, weather: true, fuelPrices: true, sharedCars: true,
 };
-
-async function logCurrentMileage(formData: FormData) {
-  'use server'
-  const car_id = formData.get('car_id');
-  const current_mileage = parseInt(String(formData.get('current_mileage')));
-
-  if (!car_id || isNaN(current_mileage) || current_mileage <= 0) {
-    return redirect(`/?dev=${DEV_SECRET_KEY}&error=${encodeURIComponent('Hibás km állás.')}`);
-  }
-
-  const supabase = await createClient();
-  const { error: carError } = await supabase.from('cars').update({ mileage: current_mileage }).eq('id', car_id);
-  
-  if (carError) return redirect(`/?dev=${DEV_SECRET_KEY}&error=${encodeURIComponent('Hiba történt.')}`);
-
-// 1. Lekérjük az autó aktuális kilométeróra állását
-const { data: currentCar, error: fetchError } = await supabase
-  .from('cars')
-  .select('mileage')
-  .eq('id', car_id)
-  .single();
-
-if (fetchError || !currentCar) {
-  throw new Error("Nem található az autó vagy hiba történt az adatok lekérésekor.");
-}
-
-// 2. ELLENŐRZÉS: Az új érték nem lehet kisebb, mint a jelenlegi
-if (Number(current_mileage) < currentCar.mileage) {
-  // Itt dobunk egy hibát, vagy visszaadunk egy üzenetet a frontendnek
-  throw new Error(`A megadott km állás (${current_mileage}) nem lehet kevesebb, mint a jelenlegi (${currentCar.mileage})!`);
-}
-
-// 3. Ha minden rendben, beszúrjuk az eseményt
-const { error: insertError } = await supabase.from('events').insert({
-  car_id: car_id, 
-  type: 'other', 
-  title: 'Futás rögzítése', 
-  event_date: new Date().toISOString(),
-  mileage: current_mileage, 
-  cost: 0, 
-  notes: 'Gyors rögzítés a főoldalról'
-});
-
-if (insertError) throw insertError;
-
-// 4. Frissítjük a 'cars' táblában is az aktuális állást (hogy legközelebb ehhez mérjen)
-await supabase
-  .from('cars')
-  .update({ mileage: current_mileage })
-  .eq('id', car_id);
-
-  return redirect(`/?dev=${DEV_SECRET_KEY}&success=Km+frissitve`);
-}
 
 async function DashboardComponent() {
   const supabase = await createClient()
@@ -131,7 +79,7 @@ async function DashboardComponent() {
 
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
-  // ... (statisztika számítások változatlanok) ...
+  // ... (statisztika számítások) ...
   if (cars.length > 0) {
       const relevantCarIds = [...myCars, ...sharedCars].map(c => c.id);
       if (relevantCarIds.length > 0) {
@@ -161,8 +109,7 @@ async function DashboardComponent() {
                  return sum + 100;
             }
 
-            // 2. Ciklus meghatározása (FONTOS: service_interval_km a helyes mezőnév!)
-            // Ha nincs megadva, 15 000 km az alapértelmezett
+            // 2. Ciklus meghatározása
             const interval = car.service_interval_km || 15000;
             
             // 3. Utolsó szerviz km meghatározása (Adatbázis mező vagy Események)
@@ -184,11 +131,9 @@ async function DashboardComponent() {
             const kmDrivenSinceService = Math.max(0, currentKm - lastServiceKm);
             
             // Ha többet mentünk, mint az intervallum (Túlfutás), akkor a hátralévő 0%
-            // Képlet: (Intervallum - Megtett) / Intervallum * 100
             let healthPercent = ((interval - kmDrivenSinceService) / interval) * 100;
 
             // 5. Korrekció: 0 és 100 közé szorítjuk
-            // Így a "Túlfutás" (ami negatív lenne) pontosan 0-ként adódik hozzá, ahogy a képen is látszik
             healthPercent = Math.max(0, Math.min(100, healthPercent));
 
             return sum + healthPercent;
@@ -227,43 +172,39 @@ async function DashboardComponent() {
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       <ChangelogModal />
       
+      <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 'env(safe-area-inset-top, 1rem)' }}>
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
 
-  <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 'env(safe-area-inset-top, 1rem)' }}>
-    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
+          {/* Left: HeaderNav (desktop + mobile) */}
+          <div className="flex items-center">
+            <HeaderNav />
+          </div>
 
-      {/* Left: HeaderNav (desktop + mobile) */}
-      <div className="flex items-center">
-        <HeaderNav />
-      </div>
+          {/* Right controls remain server-side (settings, logout) */}
+          <div className="flex items-center gap-3">
+            <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+              <span className="text-sm">🚀</span> Early Access Pro
+            </Link>
+            
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+            
+            <Link href="/settings" className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Beállítások">
+              <Settings className="w-5 h-5" />
+            </Link>
+            
+            <form action={signOut}>
+              <button className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors" title="Kilépés">
+                <LogOut className="w-5 h-5" />
+              </button>
+            </form>
+          </div>
 
-      {/* Right controls remain server-side (settings, logout) */}
-      <div className="flex items-center gap-3">
-        <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-          <span className="text-sm">🚀</span> Early Access Pro
-        </Link>
-        
-        <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-        
-        <Link href="/settings" className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Beállítások">
-          <Settings className="w-5 h-5" />
-        </Link>
-        
-        <form action={signOut}>
-          <button className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors" title="Kilépés">
-            <LogOut className="w-5 h-5" />
-          </button>
-        </form>
-      </div>
+        </div>
+      </nav>
 
-    </div>
-  </nav>
-
-      {/* ... Dashboard Main Content (Változatlan) ... */}
+      {/* ... Dashboard Main Content ... */}
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-32 md:pt-24" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 4.5rem)' }}>
-        {/* ... */}
-        {/* Ide jön a Dashboard tartalom (Header, KPI, Grid) */}
-        {/* ... */}
-        {/* (A fenti kódból másold be a Dashboard teljes renderelését, mert itt helytakarékosság miatt kihagytam) */}
+        
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
@@ -291,7 +232,7 @@ async function DashboardComponent() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[220px]">
-                       <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500"><span className="font-bold text-lg">💰</span></div>
+                       <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-50"><span className="font-bold text-lg">💰</span></div>
                        <div>
                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Elmúlt 30 nap</p>
                            <p className="text-lg font-black text-slate-900 dark:text-white">{spentLast30Days.toLocaleString()}</p>
@@ -303,39 +244,15 @@ async function DashboardComponent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-8">
+              
+              {/* --- ITT TÖRTÉNT A VÁLTOZÁS: ÚJ KOMPONENS BEHÍVÁSA --- */}
               {FEATURES.mileageLog && myCars.length > 0 && (
-                  <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xl p-6 sm:p-8 group border border-slate-200 dark:border-slate-800">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none transition-colors duration-700"></div>
-                      <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-600/5 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
-                      <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-                          <div className="flex items-center gap-4 w-full md:w-auto">
-                              <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-inner">
-                                  <Gauge className="w-7 h-7 text-amber-500" />
-                              </div>
-                              <div>
-                                  <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Gyors Km Rögzítés</h3>
-                                  <p className="text-slate-500 dark:text-slate-400 text-sm">Frissítsd az óraállást egy kattintással.</p>
-                              </div>
-                          </div>
-                          <form action={logCurrentMileage} className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                              <div className="relative group/input">
-                                  <select name="car_id" className="w-full sm:w-48 pl-4 pr-10 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none appearance-none cursor-pointer transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white" defaultValue={latestCarId || ""}>
-                                      {myCars.map((car) => (
-                                          <option key={car.id} value={car.id}>{car.make} {car.model}</option>
-                                      ))}
-                                  </select>
-                              </div>
-                              <div className="relative flex-1 sm:flex-none">
-                                  <input type="number" name="current_mileage" placeholder="Új állás..." className="w-full sm:w-36 pl-4 pr-10 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 placeholder-slate-400 dark:placeholder-slate-500 text-slate-900 dark:text-white" required />
-                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase">KM</span>
-                              </div>
-                              <button type="submit" className="px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold rounded-xl shadow-lg shadow-amber-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
-                                  <CheckCircle2 className="w-5 h-5" /><span className="hidden sm:inline">Mentés</span>
-                              </button>
-                          </form>
-                      </div>
-                  </div>
+                  <QuickMileageForm 
+                      cars={myCars} 
+                      latestCarId={latestCarId} 
+                  />
               )}
+              {/* ----------------------------------------------------- */}
 
               {(myCars.length > 0 || FEATURES.addCar || sharedCars.length > 0) && (
                   <div className="space-y-6">
@@ -407,14 +324,13 @@ async function DashboardComponent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
                   {FEATURES.weather && <WeatherWidget />}
                   {FEATURES.fuelPrices && <FuelWidget />}
-                  {/* --- KÖLTSÉG GYORS ELŐNÉZET --- */}
-              {cars.length > 0 && (
-                <QuickCostOverview 
-                  spentLast30Days={spentLast30Days} 
-                  spendingTrend={spendingTrend} 
-                  totalSpent={totalCostAllTime}
-                />
-              )}
+                  {cars.length > 0 && (
+                    <QuickCostOverview 
+                      spentLast30Days={spentLast30Days} 
+                      spendingTrend={spendingTrend} 
+                      totalSpent={totalCostAllTime}
+                    />
+                  )}
               </div>
 
               {FEATURES.reminders && (
@@ -471,7 +387,6 @@ async function DashboardComponent() {
 }
 
 function CarCard({ car, shared }: { car: any, shared?: boolean }) {
-  // ... CarCard kódja (változatlan) ...
   return (
     <div className={`relative group flex flex-col bg-white dark:bg-slate-800 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-slate-100 dark:border-slate-700 h-full ${shared ? 'ring-2 ring-blue-500/30' : ''}`}>
       <Link href={`/cars/${car.id}`} className="relative h-60 overflow-hidden">
@@ -531,12 +446,10 @@ export default async function Page({
     return <DashboardComponent />
   }
 
-  // --- ÚJ RÉSZ: CHECK PARAMÉTER KEZELÉSE ---
   const params = await searchParams
   if (params.check !== undefined) {
       return redirect('/check')
   }
-  // -----------------------------------------
 
   const { data: activePromo } = await supabase.from('promotions').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle()
   const { data: updates } = await supabase.from('release_notes').select('*').order('release_date', { ascending: false }).limit(5);
