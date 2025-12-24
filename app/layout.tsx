@@ -30,6 +30,32 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  
+  // --- ITT A KÉP BEÁLLÍTÁSA (Open Graph) ---
+  openGraph: {
+    title: 'DynamicSense Technologies',
+    description: 'Prémium Garázsmenedzsment AI támogatással. Flotta és szervizkönyv egy helyen.',
+    url: 'https://www.dynamicsense.hu',
+    siteName: 'DynamicSense',
+    images: [
+      {
+        url: '/opengraph-image.png', // Ez a kép a public mappában vagy az app gyökerében legyen
+        width: 1200,
+        height: 630,
+        alt: 'DynamicSense Dashboard Preview',
+      },
+    ],
+    locale: 'hu_HU',
+    type: 'website',
+  },
+  // --- Twitter kártya beállítása is ajánlott ---
+  twitter: {
+    card: 'summary_large_image',
+    title: 'DynamicSense Technologies',
+    description: 'A legmodernebb magyar autós alkalmazás.',
+    images: ['/opengraph-image.png'], // Ugyanaz a kép
+  },
+
   alternates: {
     canonical: '/',
   },
