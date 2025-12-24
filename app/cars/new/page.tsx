@@ -1,19 +1,31 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { addCar } from '@/app/cars/actions'
+import { addCar, claimCar } from '@/app/cars/actions' // Győződj meg róla, hogy a claimCar is exportálva van az actions.ts-ből!
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { useFormStatus } from 'react-dom'
 import {
   CarFront, Calendar, Gauge, Fuel, Zap, Settings,
   Palette, FileText, CheckCircle2, AlertCircle, Upload, ChevronDown,
-  ArrowLeft, Info, X
+  ArrowLeft, Info, X, Fingerprint, ShieldCheck
 } from 'lucide-react'
 
-// --- 1. LIQUID BUTTON ---
-function SubmitButton() {
+// --- TÍPUSOK ---
+interface ExistingCar {
+  id: string
+  make: string
+  model: string
+  plate: string
+  vin: string
+  year: number
+  mileage: number
+  color?: string
+}
+
+// --- 1. LIQUID BUTTON (Form Submit) ---
+function SubmitButton({ label = "Mentés a Garázsba", icon }: { label?: string, icon?: React.ReactNode }) {
   const { pending } = useFormStatus()
 
   return (
@@ -31,10 +43,10 @@ function SubmitButton() {
     >
       <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
       <span className={`flex items-center justify-center gap-2 relative z-10 ${pending ? 'opacity-50' : ''}`}>
-        {pending ? 'Mentés...' : (
+        {pending ? 'Feldolgozás...' : (
           <>
-            <CheckCircle2 className="w-5 h-5" />
-            <span>Mentés a Garázsba</span>
+            {icon || <CheckCircle2 className="w-5 h-5" />}
+            <span>{label}</span>
           </>
         )}
       </span>
@@ -93,7 +105,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
   )
 }
 
-// --- 3. GLASS SELECT MEZŐ (JAVÍTOTT) ---
+// --- 3. GLASS SELECT MEZŐ ---
 function SelectGroup({ label, name, children, required = false, icon, value, onChange, disabled }: any) {
   const [focused, setFocused] = useState(false)
 
@@ -132,8 +144,6 @@ function SelectGroup({ label, name, children, required = false, icon, value, onC
             text-slate-900 dark:text-white 
             focus:ring-0 focus:outline-none
             ${!icon && 'pl-4'}
-            
-            /* --- JAVÍTÁS: Kifejezetten a legördülő opciók stílusa --- */
             [&>option]:bg-white [&>option]:text-slate-900 
             dark:[&>option]:bg-slate-900 dark:[&>option]:text-white
           `}
@@ -168,16 +178,24 @@ function FormSection({ title, step, children }: { title: string, step: string, c
     )
 }
 
-// --- 5. FŐ ŰRLAP LOGIKA ---
+// --- 5. FŐ LOGIKA (FORM + DUPLIKÁCIÓ KEZELÉS) ---
 function CarForm() {
   const searchParams = useSearchParams()
-  const error = searchParams.get('error')
+  const router = useRouter()
   
+  // URL Paraméterek
+  const error = searchParams.get('error')
+  const foundCarId = searchParams.get('found_car_id')
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  // Statek
+  const [existingCar, setExistingCar] = useState<ExistingCar | null>(null)
+  const [loadingDuplicate, setLoadingDuplicate] = useState(false)
+  
   const [brands, setBrands] = useState<{id: number, name: string}[]>([])
   const [models, setModels] = useState<{id: number, name: string}[]>([])
   const [selectedBrandId, setSelectedBrandId] = useState<string>("")
@@ -186,6 +204,25 @@ function CarForm() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
 
+  // Duplikált autó lekérése (Ha van found_car_id)
+  useEffect(() => {
+    if (foundCarId) {
+      const fetchDuplicate = async () => {
+        setLoadingDuplicate(true)
+        const { data } = await supabase
+          .from('cars')
+          .select('*')
+          .eq('id', foundCarId)
+          .single()
+        
+        if (data) setExistingCar(data)
+        setLoadingDuplicate(false)
+      }
+      fetchDuplicate()
+    }
+  }, [foundCarId, supabase])
+
+  // Márkák betöltése
   useEffect(() => {
     async function fetchBrands() {
       const { data } = await supabase.from('catalog_brands').select('*').order('name')
@@ -193,8 +230,9 @@ function CarForm() {
       setLoadingBrands(false)
     }
     fetchBrands()
-  }, [])
+  }, [supabase])
 
+  // Modellek betöltése
   useEffect(() => {
     async function fetchModels() {
       if (!selectedBrandId || selectedBrandId === 'other') {
@@ -207,25 +245,102 @@ function CarForm() {
       setLoadingModels(false)
     }
     fetchModels()
-  }, [selectedBrandId])
+  }, [selectedBrandId, supabase])
 
+  // Képkezelő függvények
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setImagePreview(URL.createObjectURL(file));
   };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); setIsDragOver(true);
-  }
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault(); setIsDragOver(false);
-  }
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); }
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); }
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault(); setIsDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file) setImagePreview(URL.createObjectURL(file));
   }
 
+  // --- A: DUPLIKÁCIÓ ESETÉN MEGJELENŐ KÁRTYA ---
+  if (foundCarId && existingCar) {
+    return (
+      <div className="max-w-xl mx-auto pb-20 animate-in zoom-in-95 duration-500">
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-white/70 dark:bg-slate-900/70 border-2 border-amber-500/50 backdrop-blur-xl shadow-2xl p-8">
+            
+            {/* Villogó háttér effekt */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/20 rounded-full blur-3xl animate-pulse"></div>
+            
+            <div className="text-center relative z-10">
+                <div className="mx-auto w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-amber-500/30">
+                    <AlertCircle className="w-10 h-10 text-white" />
+                </div>
+                
+                <h2 className="text-2xl font-black uppercase text-slate-900 dark:text-white mb-2">
+                    Ez az autó már létezik!
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400 mb-8">
+                    A megadott alvázszám (VIN) alapján megtaláltuk az autót a rendszerben. Nem kell újra felvinned az adatokat.
+                </p>
+
+                {/* Autó Adatok Kártya */}
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 mb-8 text-left">
+                    <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-700 pb-4">
+                        <div>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Típus</span>
+                            <div className="font-bold text-xl text-slate-900 dark:text-white">{existingCar.make} {existingCar.model}</div>
+                        </div>
+                        <div className="text-right">
+                             <div className="inline-block px-3 py-1 bg-white dark:bg-slate-900 rounded-lg text-slate-800 dark:text-slate-200 font-mono font-bold border border-slate-200 dark:border-slate-700 shadow-sm">
+                                {existingCar.plate}
+                             </div>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-amber-600 dark:text-amber-500">
+                                <Fingerprint className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <span className="block text-xs text-slate-500">Alvázszám</span>
+                                <span className="font-mono text-sm font-bold">{existingCar.vin}</span>
+                            </div>
+                         </div>
+                         <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-500">
+                                <Calendar className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <span className="block text-xs text-slate-500">Évjárat</span>
+                                <span className="font-bold text-sm">{existingCar.year}</span>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+
+                {/* Action Buttons */}
+                <form action={claimCar} className="space-y-4">
+                    <input type="hidden" name="car_id" value={existingCar.id} />
+                    
+                    <SubmitButton 
+                        label="Felvétel a Garázsomba" 
+                        icon={<ShieldCheck className="w-5 h-5" />}
+                    />
+
+                    <Link 
+                        href="/cars/new" 
+                        onClick={() => router.replace('/cars/new')} // URL reset
+                        className="block w-full text-center py-3 text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+                    >
+                        Mégse, elírtam valamit
+                    </Link>
+                </form>
+            </div>
+        </div>
+      </div>
+    )
+  }
+
+  // --- B: NORMÁL ŰRLAP ---
   const selectedBrandName = brands.find(b => b.id.toString() === selectedBrandId)?.name || ""
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: currentYear - 1980 + 1 }, (_, i) => currentYear - i)
@@ -237,7 +352,7 @@ function CarForm() {
         {error && (
             <div className="mb-8 bg-red-500/10 border border-red-500/20 backdrop-blur-md p-4 rounded-2xl flex items-center gap-4 text-red-600 dark:text-red-400 animate-in fade-in slide-in-from-top-2">
                 <div className="bg-red-500/20 p-2 rounded-xl"><AlertCircle className="w-5 h-5" /></div>
-                <p className="font-medium text-sm">{error}</p>
+                <p className="font-medium text-sm">{decodeURIComponent(error)}</p>
             </div>
         )}
 
@@ -355,7 +470,7 @@ function CarForm() {
                             </SelectGroup>
                         </div>
                         
-                        <InputGroup label="Alvázszám (VIN)" name="vin" placeholder="pl. WVWZZZ..." uppercase required />
+                        <InputGroup label="Alvázszám (VIN)" name="vin" placeholder="pl. WVWZZZ..." uppercase required icon={<Fingerprint className="w-5 h-5" />} />
                     </div>
                 </FormSection>
 
@@ -456,6 +571,7 @@ function CarForm() {
   )
 }
 
+// --- PAGE WRAPPER ---
 export default function NewCarPage() {
   return (
     <div className="min-h-screen font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 selection:text-amber-700 dark:selection:text-amber-200 transition-colors duration-500">
