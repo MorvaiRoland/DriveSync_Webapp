@@ -10,13 +10,12 @@ import OfflineIndicator from '@/components/OfflineIndicator'
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" }, // bg-slate-50
-    { media: "(prefers-color-scheme: dark)", color: "#020617" },  // bg-slate-950
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#020617" },
   ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // A userScalable: false-t csak akkor hagyd benne, ha nagyon indokolt!
 };
 
 export const metadata: Metadata = {
@@ -29,7 +28,7 @@ export const metadata: Metadata = {
   keywords: ["DynamicSense", "autó nyilvántartás", "szervizkönyv", "tankolás napló", "autó eladás", "garázs menedzsment", "járműelőélet"],
   authors: [{ name: "DynamicSense Technologies" }],
   formatDetection: {
-    telephone: false, // Megakadályozza, hogy az iOS véletlenszerű számokat linknek nézzen
+    telephone: false,
   },
   alternates: {
     canonical: '/',
@@ -40,7 +39,6 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "DynamicSense",
   },
-  // ... (többi ikon és OG beállítás változatlan, azok tökéletesek)
 };
 
 export default function RootLayout({
@@ -51,15 +49,16 @@ export default function RootLayout({
   return (
     <html lang="hu" suppressHydrationWarning>
       <body
+        // JAVÍTÁS: overflow-x-hidden csak itt legyen, a body-n!
         className="antialiased bg-slate-50 dark:bg-slate-950 transition-colors duration-300 min-h-screen flex flex-col overflow-x-hidden selection:bg-blue-500 selection:text-white"
         style={{
           minHeight: '100dvh',
-          // Padding helyett érdemes lehet a belső tartalomnál kezelni, 
-          // de ha globálisan akarod, ez a legbiztosabb módja:
-          paddingTop: 'env(safe-area-inset-top, 0px)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          paddingLeft: 'env(safe-area-inset-left, 0px)',
-          paddingRight: 'env(safe-area-inset-right, 0px)',
+          // A biztonságos zónákat CSS változóként is átadhatjuk, de a padding itt is maradhat, 
+          // ha a design megkívánja. PWA-nál ez segít elkerülni, hogy a tartalom a "notch" alá kerüljön.
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          paddingLeft: 'env(safe-area-inset-left)',
+          paddingRight: 'env(safe-area-inset-right)',
         }}
       >
         <ThemeProvider
@@ -68,8 +67,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* A tartalom középre rendezése és max szélesség korlátozása nagy kijelzőkön */}
-          <main className="flex-1 flex flex-col w-full max-w-[2000px] mx-auto overflow-x-hidden">
+          {/* JAVÍTÁS: Innen kivettük az overflow-x-hidden-t. 
+              Ez a konténer csak a szélességet és középre igazítást kezeli. */}
+          <main className="flex-1 w-full max-w-[2000px] mx-auto flex flex-col relative">
             {children}
           </main>
           
