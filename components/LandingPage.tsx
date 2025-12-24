@@ -379,14 +379,31 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
       <BackgroundGlows />
 
       {/* NAVBAR - Fixed Z-index: 100 */}
-      <nav className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${scrolled ? 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 py-4 shadow-xl' : 'bg-transparent border-transparent py-6'}`}>
-        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3 group">
-             <div className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300">
-                <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
-             </div>
-             <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase hidden sm:block group-hover:text-amber-500 transition-colors duration-300">
-               Dynamic<span className="text-amber-500 group-hover:text-slate-900 dark:group-hover:text-white transition-colors duration-300">Sense</span>
+      <nav
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500
+          ${scrolled
+            ? 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 py-4 shadow-xl'
+            : 'bg-transparent border-transparent py-6'}
+        `}
+        style={{}}
+      >
+        <div
+          className="max-w-7xl mx-auto px-6 flex justify-between items-center"
+          style={{
+            marginTop: 'env(safe-area-inset-top)',
+          }}
+        >
+          <Link href="/" className="flex items-center gap-3 group"
+            style={{}}
+          >
+            <div
+              className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300"
+              style={{}}
+            >
+              <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
+            </div>
+            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase hidden sm:block group-hover:text-amber-500 transition-colors duration-300">
+              Dynamic<span className="text-amber-500 group-hover:text-slate-900 dark:group-hover:text-white transition-colors duration-300">Sense</span>
             </span>
           </Link>
 
@@ -412,10 +429,22 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </Link>
           </div>
 
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden text-slate-600 dark:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors">
-             {mobileMenuOpen ? <X /> : <Menu />}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden text-slate-600 dark:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+            style={{}}
+          >
+            {mobileMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
+
+        <style jsx global>{`
+          @media (max-width: 768px) {
+            nav > div.max-w-7xl {
+              margin-top: 18px !important;
+            }
+          }
+        `}</style>
 
         <AnimatePresence>
             {mobileMenuOpen && (
