@@ -9,6 +9,7 @@ import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
 import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map } from 'lucide-react';
 import HeaderNav from '@/components/HeaderNav';
 import QuickMileageForm from '@/components/QuickMileageForm'; // <--- ÚJ IMPORT
+import TripPlannerModal from '@/components/TripPlannerModal'; // <--- ÚJ
 
 // Dynamic imports - everything except critical path
 const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { loading: () => null });
@@ -182,6 +183,7 @@ async function DashboardComponent() {
 
           {/* Right controls remain server-side (settings, logout) */}
           <div className="flex items-center gap-3">
+            <TripPlannerModal cars={myCars} />
             <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
               <span className="text-sm">🚀</span> Early Access Pro
             </Link>
