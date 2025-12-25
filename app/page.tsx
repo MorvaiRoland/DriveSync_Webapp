@@ -183,7 +183,25 @@ async function DashboardComponent() {
 
           {/* Right controls remain server-side (settings, logout) */}
           <div className="flex items-center gap-3">
-            <TripPlannerModal cars={myCars} />
+            // Régi kód helyett:
+// <TripPlannerModal cars={myCars} /> 
+
+// Új kód:
+<Link 
+  href="/trip-planner"
+  className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
+>
+  <Map className="w-4 h-4" />
+  Úttervező
+</Link>
+
+// Mobil verzió:
+<Link 
+  href="/trip-planner"
+  className="md:hidden p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+>
+  <Map className="w-5 h-5" />
+</Link>
             <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
               <span className="text-sm">🚀</span> Early Access Pro
             </Link>
