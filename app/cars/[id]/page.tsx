@@ -141,8 +141,10 @@ export default async function CarDetailsPage(props: Props) {
   const WidgetTips = <SmartTipsCard tips={smartTips} />;
   const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
   const WidgetCharts = <AnalyticsCharts events={safeEvents} isPro={true} />;
+  
+  // ITT VÁLTOZTATTUK MEG AZ EVENTLOGOT (Lásd lentebb a definíciót)
   const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
-  // --- ÚJ FUEL TRACKER ---
+  
   const WidgetFuel = <FuelTrackerCard events={safeEvents} isElectric={isElectric} carMileage={car.mileage} />;
 
   // --- MOBILE TABS CONTENT ---
@@ -150,11 +152,11 @@ export default async function CarDetailsPage(props: Props) {
     overview: (
         <div className="space-y-6">
             <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
-            {WidgetParking}
             {WidgetHealth}
-            {WidgetFuel} {/* Itt jelenik meg mobilon a Cost helyett/mellett */}
-            {WidgetPrediction}
             {WidgetCost}
+            {WidgetFuel}
+            {WidgetParking}
+            {WidgetPrediction}
             {WidgetSales}
         </div>
     ),
@@ -166,21 +168,24 @@ export default async function CarDetailsPage(props: Props) {
   const DesktopLayout = (
     <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
         <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
-            
             <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
+            
+            {/* SOR 1 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {WidgetHealth}
+                 {WidgetCost}
+            </div>
 
+            {/* SOR 2 */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                 <div>{WidgetFuel}</div>
                  <div className="space-y-6">
-                    {WidgetHealth}
-                    {WidgetPrediction}
                     {WidgetParking}
-                 </div>
-                 
-                 <div className="space-y-6">
-                    {WidgetFuel} {/* Kiemelt helyen a jobb hasábban */}
-                    {WidgetCost}
+                    {WidgetPrediction}
                  </div>
             </div>
+
+            {/* SOR 3 */}
             {WidgetCharts}
             {WidgetLog}
         </div>
@@ -202,29 +207,11 @@ export default async function CarDetailsPage(props: Props) {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
-      
-      {/* HEADER SECTION */}
-      <HeaderSection 
-        car={car} 
-        healthStatus={healthStatus} 
-        nextServiceKm={nextServiceKm} 
-        kmRemaining={kmRemaining} 
-        safeEvents={safeEvents} 
-        isPro={true} 
-      />
-
-      {/* DESKTOP ACTION BAR */}
+      <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={true} />
       <DesktopActionGrid carId={carIdString} isElectric={isElectric} />
-
-      {/* MAIN CONTENT */}
-    <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 3.5rem)' }}>
-        <ResponsiveDashboard 
-            mobileTabs={mobileTabs}
-            desktopContent={DesktopLayout}
-        />
+      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 3.5rem)' }}>
+        <ResponsiveDashboard mobileTabs={mobileTabs} desktopContent={DesktopLayout} />
       </div>
-
-      {/* MOBILE BOTTOM NAV */}
       <MobileBottomNav carId={carIdString} isElectric={isElectric} />
     </div>
   )
@@ -232,9 +219,87 @@ export default async function CarDetailsPage(props: Props) {
 
 // --- SUB-COMPONENTS ---
 
-// *** ÚJ FUEL TRACKER KÁRTYA ***
+// *** TÖRLÉS FUNKCIÓVAL BŐVÍTETT EVENTLOG ***
+function EventLog({ events, carId }: any) {
+    return (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <History className="w-5 h-5 text-slate-400" /> Eseménytörténet
+                </h3>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{events.length} bejegyzés</span>
+            </div>
+            
+            <div className="p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
+                {events.length > 0 ? (
+                    <div className="relative border-l-2 border-slate-100 dark:border-slate-800 ml-3 space-y-8">
+                        {events.map((event: any, index: number) => (
+                            <div key={event.id} className="relative pl-8 group">
+                                {/* Idővonal pötty */}
+                                <div className={`absolute -left-[9px] top-4 w-4 h-4 rounded-full border-4 border-white dark:border-slate-900 ${
+                                    event.type === 'fuel' ? 'bg-amber-500' : 
+                                    event.type === 'service' ? 'bg-indigo-500' : 'bg-slate-400'
+                                } shadow-sm`}></div>
+
+                                {/* Kártya Konténer - Relative a pozicionálás miatt */}
+                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:border-amber-500/30 hover:shadow-md transition-all relative overflow-hidden">
+                                    
+                                    {/* Szerkesztés Link - Kitölti a kártyát */}
+                                    <Link href={`/cars/${carId}/events/${event.id}/edit`} className="block p-4 z-0">
+                                        <div className="flex justify-between items-start mb-2 pr-8"> {/* PR-8 hagy helyet a kuka gombnak */}
+                                            <div>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">
+                                                    {new Date(event.event_date).toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                </span>
+                                                <h4 className="font-bold text-slate-900 dark:text-white text-base">{event.title}</h4>
+                                            </div>
+                                            <span className={`font-mono font-bold whitespace-nowrap ${event.cost > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                                                {event.cost > 0 ? `-${event.cost.toLocaleString()} Ft` : '-'}
+                                            </span>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
+                                            <div className="flex items-center gap-1.5">
+                                                <Gauge className="w-3.5 h-3.5" />
+                                                {event.mileage.toLocaleString()} km
+                                            </div>
+                                            {event.liters && (
+                                                <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
+                                                    <Fuel className="w-3.5 h-3.5" />
+                                                    {event.liters}L
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Link>
+
+                                    {/* Törlés Gomb - Abszolút pozíció a jobb felső sarokban */}
+                                    <div className="absolute top-2 right-2 z-10">
+                                         <form action={deleteEvent}>
+                                            <input type="hidden" name="id" value={event.id} />
+                                            <input type="hidden" name="car_id" value={carId} />
+                                            <button 
+                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                                title="Bejegyzés törlése"
+                                                type="submit"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                         </form>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="py-12 text-center text-slate-400 text-sm italic">Nincs rögzített esemény.</div>
+                )}
+            </div>
+        </div>
+    )
+}
+
 function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], isElectric: boolean, carMileage: number }) {
-  // 1. Csak az üzemanyag események kellenek, kilométer szerint rendezve (növekvő) a számításhoz
   const fuelEvents = events
     .filter(e => e.type === 'fuel' && e.mileage && e.liters)
     .sort((a, b) => a.mileage - b.mileage);
@@ -255,14 +320,11 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
       pricePerUnit: (current.cost && current.liters) ? Math.round(current.cost / current.liters) : 0,
     };
 
-    // Ha van ELŐZŐ tankolás, akkor tudunk fogyasztást számolni az aktuálisra
-    // (Feltételezve, hogy a mostani tankolás pótolja az előző óta elfogyasztottat)
     if (i > 0) {
       const prev = fuelEvents[i - 1];
       const distance = current.mileage - prev.mileage;
       
       if (distance > 0) {
-        // (Betankolt mennyiség / Megtett út) * 100
         const cons = (current.liters / distance) * 100;
         stats.consumption = cons;
         stats.distance = distance;
@@ -271,8 +333,7 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
     history.push({ ...current, ...stats });
   }
   
-  // Átlagfogyasztás számítása (Csak a valid, >0 fogyasztások átlaga)
-  const validSegments = history.filter(h => h.consumption > 0 && h.consumption < 50); // Szűrés extrém értékekre
+  const validSegments = history.filter(h => h.consumption > 0 && h.consumption < 50);
   const avgCons = validSegments.length > 0 
     ? validSegments.reduce((sum, h) => sum + h.consumption, 0) / validSegments.length 
     : 0;
@@ -281,8 +342,7 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
   const lastPricePerUnit = lastEvent ? lastEvent.pricePerUnit : 0;
   const lastDistance = lastEvent ? lastEvent.distance : 0;
 
-  // Megjelenítéshez fordított sorrend (legfrissebb elől), max 5 elem
-  const displayHistory = [...history].reverse().slice(0, 5);
+  const displayHistory = [...history].reverse().slice(0, 4);
 
   const unit = isElectric ? 'kWh' : 'L';
   const currency = 'Ft';
@@ -290,13 +350,11 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
   const lightBg = isElectric ? 'bg-cyan-50 dark:bg-cyan-900/20' : 'bg-amber-50 dark:bg-amber-900/20';
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full relative group">
-      {/* Háttér effekt */}
+    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full relative group">
       <div className={`absolute top-0 right-0 w-32 h-32 ${isElectric ? 'bg-cyan-500/5' : 'bg-amber-500/5'} rounded-full blur-3xl -z-10 transition-all group-hover:scale-150`} />
 
-      {/* HEADER */}
-      <div className="p-6 pb-2">
-        <div className="flex justify-between items-start mb-6">
+      <div className="p-5 pb-2">
+        <div className="flex justify-between items-start mb-5">
           <div>
             <h3 className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">
               Átlagfogyasztás
@@ -310,50 +368,36 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
               </span>
             </div>
           </div>
-          <div className={`p-3 rounded-2xl ${lightBg} ${themeColor}`}>
-            {isElectric ? <Zap className="w-6 h-6" /> : <Fuel className="w-6 h-6" />}
+          <div className={`p-2.5 rounded-xl ${lightBg} ${themeColor}`}>
+            {isElectric ? <Zap className="w-5 h-5" /> : <Fuel className="w-5 h-5" />}
           </div>
         </div>
 
-        {/* SUMMARY GRID */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <SummaryBox 
-            label="Egységár" 
-            value={lastPricePerUnit > 0 ? `${lastPricePerUnit} ${currency}` : '-'} 
-            subLabel={`/${unit}`}
-          />
-          <SummaryBox 
-            label="Előző Táv" 
-            value={lastDistance > 0 ? `${lastDistance} km` : '-'} 
-            subLabel="két tankolás közt"
-          />
-          <SummaryBox 
-            label="Összesen" 
-            value={`${(totalCost/1000).toFixed(0)} E ${currency}`} 
-            subLabel={`${fuelEvents.length} alkalom`}
-          />
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <SummaryBox label="Egységár" value={lastPricePerUnit > 0 ? `${lastPricePerUnit} ${currency}` : '-'} subLabel={`/${unit}`} />
+          <SummaryBox label="Előző Táv" value={lastDistance > 0 ? `${lastDistance} km` : '-'} subLabel="utolsó tankolás" />
+          <SummaryBox label="Összesen" value={`${(totalCost/1000).toFixed(0)} E ${currency}`} subLabel={`${fuelEvents.length} alkalom`} />
         </div>
       </div>
 
-      {/* HISTORY LIST */}
       <div className="flex-1 bg-slate-50/50 dark:bg-slate-950/30 border-t border-slate-100 dark:border-slate-800/50 p-4">
-        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">Legutóbbi tankolások</h4>
+        <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">Legutóbbiak</h4>
         <div className="space-y-2">
           {displayHistory.length > 0 ? displayHistory.map((item, idx) => {
             const isBetter = item.consumption < avgCons;
             const diff = Math.abs(item.consumption - avgCons).toFixed(1);
             
             return (
-              <div key={item.id || idx} className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all shadow-sm hover:shadow-md">
-                <div className="flex justify-between items-center mb-2">
+              <div key={item.id || idx} className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 transition-all shadow-sm hover:shadow-md">
+                <div className="flex justify-between items-center mb-1">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center font-bold text-xs leading-none ${lightBg} ${themeColor}`}>
+                    <div className={`w-9 h-9 rounded-lg flex flex-col items-center justify-center font-bold text-[10px] leading-none ${lightBg} ${themeColor}`}>
                       <span>{new Date(item.event_date).getMonth() + 1}.</span>
-                      <span className="text-sm">{new Date(item.event_date).getDate()}</span>
+                      <span className="text-xs">{new Date(item.event_date).getDate()}</span>
                     </div>
                     <div>
-                      <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{item.title || 'Kút'}</p>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                      <p className="font-bold text-slate-800 dark:text-slate-200 text-xs">{item.title || 'Kút'}</p>
+                      <div className="flex items-center gap-2 text-[9px] text-slate-400 font-medium">
                         <span className="flex items-center gap-1"><Gauge className="w-3 h-3"/> {item.mileage.toLocaleString()}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                         <span className="flex items-center gap-1"><Droplet className="w-3 h-3"/> {item.liters}{unit}</span>
@@ -364,23 +408,23 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
                   <div className="text-right">
                      {item.consumption > 0 ? (
                         <div className="flex flex-col items-end">
-                          <span className="font-bold text-slate-900 dark:text-white tabular-nums">
-                            {item.consumption.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">{unit}</span>
+                          <span className="font-bold text-slate-900 dark:text-white text-sm tabular-nums">
+                            {item.consumption.toFixed(1)} <span className="text-[9px] text-slate-400 font-normal">{unit}</span>
                           </span>
-                          <div className={`text-[10px] font-bold flex items-center gap-0.5 ${isBetter ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          <div className={`text-[9px] font-bold flex items-center gap-0.5 ${isBetter ? 'text-emerald-500' : 'text-rose-500'}`}>
                             {isBetter ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
                             {diff}
                           </div>
                         </div>
                      ) : (
-                        <span className="text-[10px] text-slate-400 italic">Bázis</span>
+                        <span className="text-[9px] text-slate-400 italic">Bázis</span>
                      )}
                   </div>
                 </div>
               </div>
             );
           }) : (
-            <div className="text-center py-4 text-slate-400 text-xs italic">Nincs elegendő adat a számításhoz.</div>
+            <div className="text-center py-4 text-slate-400 text-xs italic">Nincs elegendő adat.</div>
           )}
         </div>
       </div>
@@ -390,9 +434,9 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
 
 function SummaryBox({ label, value, subLabel }: any) {
   return (
-    <div className="bg-slate-50 dark:bg-slate-800/50 p-2 md:p-3 rounded-2xl border border-slate-100 dark:border-slate-800 text-center md:text-left">
-      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1 truncate">{label}</p>
-      <p className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate mb-0.5">{value}</p>
+    <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800 text-center md:text-left">
+      <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5 truncate">{label}</p>
+      <p className="font-bold text-slate-800 dark:text-slate-200 text-xs md:text-sm truncate">{value}</p>
       <p className="text-[9px] text-slate-400 truncate opacity-70">{subLabel}</p>
     </div>
   )
@@ -409,8 +453,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
             )}
             
             <div className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-end pb-8 pt-20 md:pt-0 md:pb-0 md:justify-center">
-                
-                {/* Top Nav */}
                 <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-center z-30">
                     <Link href="/" className="flex items-center gap-2 text-white/80 hover:text-white bg-black/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-all hover:bg-white/10">
                         <Warehouse className="w-4 h-4" />
@@ -418,7 +460,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                     </Link>
                     <div className="flex items-center gap-3">
                         <ExportMenu car={car} events={safeEvents} />
-                        
                         <Link href={`/cars/${car.id}/edit`} className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md transition-colors border border-white/10">
                             <Pencil className="w-4 h-4" />
                         </Link>
@@ -426,7 +467,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                 </div>
 
                 <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-10 mt-6 md:mt-0">
-                    {/* Autó Kép */}
                     <div className="w-32 h-32 md:w-52 md:h-52 rounded-[2rem] border-4 border-white/10 shadow-2xl overflow-hidden relative flex-shrink-0 bg-slate-800 group-hover:scale-105 transition-transform duration-500 ease-out">
                         {car.image_url ? (
                             <Image src={car.image_url} alt="Car" fill className="object-cover" />
@@ -436,22 +476,17 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                             </div>
                         )}
                     </div>
-                    
-                    {/* Szöveges Infók */}
                     <div className="text-center md:text-left flex-1 space-y-3 pb-2 w-full">
                           <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] md:text-xs font-bold uppercase tracking-widest ${healthStatus.color} backdrop-blur-md`}>
                             <span className={`w-2 h-2 rounded-full ${healthStatus.dot}`}></span>
                             {healthStatus.text}
                         </div>
-                        
                         <div>
                             <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none mb-1 break-words">
                                 {car.make} <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500">{car.model}</span>
                             </h1>
                             <p className="text-slate-300/80 font-mono text-lg md:text-xl tracking-widest">{car.plate}</p>
                         </div>
-
-                        {/* Badge-ek */}
                         <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-1 w-full">
                             <StatBadge label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
                             <StatBadge label="Szervizig" value={`${kmRemaining.toLocaleString()} km`} valueColor={kmRemaining <= 1000 ? 'text-red-400' : 'text-emerald-400'} />
@@ -501,7 +536,6 @@ function MobileBottomNav({ carId, isElectric }: { carId: string, isElectric?: bo
 function DesktopActionGrid({ carId, isElectric }: { carId: string, isElectric?: boolean }) {
     const btnClass = "group h-16 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all hover:-translate-y-1 font-bold border border-transparent overflow-hidden relative";
     const shine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer";
-    
     return (
         <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-5 gap-4">
              <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} ${isElectric ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-amber-500 hover:bg-amber-400 text-slate-900'}`}>
@@ -528,9 +562,9 @@ function DesktopActionGrid({ carId, isElectric }: { carId: string, isElectric?: 
 
 function CostCard({ total, fuel, service, isElectric }: any) {
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-6"><Wallet className="w-5 h-5 text-slate-400" />Költségek</h3>
-            <div className="flex items-center gap-5 mb-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 h-full flex flex-col justify-between">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4"><Wallet className="w-5 h-5 text-slate-400" />Költségek</h3>
+            <div className="flex items-center gap-5 mb-4">
                 <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-500 shadow-inner">
                     <Banknote className="w-7 h-7" />
                 </div>
@@ -687,64 +721,6 @@ function TireHotelCard({ tires, carMileage, carId }: any) {
                     })
                 ) : (
                     <p className="text-xs text-slate-400 text-center py-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">Nincs rögzített abroncs.</p>
-                )}
-            </div>
-        </div>
-    )
-}
-
-function EventLog({ events, carId }: any) {
-    return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                    <History className="w-5 h-5 text-slate-400" /> Eseménytörténet
-                </h3>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{events.length} bejegyzés</span>
-            </div>
-            
-            <div className="p-6 max-h-[500px] overflow-y-auto custom-scrollbar">
-                {events.length > 0 ? (
-                    <div className="relative border-l-2 border-slate-100 dark:border-slate-800 ml-3 space-y-8">
-                        {events.map((event: any, index: number) => (
-                            <div key={event.id} className="relative pl-8 group">
-                                <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white dark:border-slate-900 ${
-                                    event.type === 'fuel' ? 'bg-amber-500' : 
-                                    event.type === 'service' ? 'bg-indigo-500' : 'bg-slate-400'
-                                } shadow-sm`}></div>
-
-                                <Link href={`/cars/${carId}/events/${event.id}/edit`} className="block bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:border-amber-500/30 hover:shadow-md transition-all">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">
-                                                {new Date(event.event_date).toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' })}
-                                            </span>
-                                            <h4 className="font-bold text-slate-900 dark:text-white text-base">{event.title}</h4>
-                                        </div>
-                                        <span className={`font-mono font-bold ${event.cost > 0 ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
-                                            {event.cost > 0 ? `-${event.cost.toLocaleString()} Ft` : '-'}
-                                        </span>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
-                                        <div className="flex items-center gap-1.5">
-                                            <Gauge className="w-3.5 h-3.5" />
-                                            {event.mileage.toLocaleString()} km
-                                        </div>
-                                        {event.liters && (
-                                            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
-                                                <Fuel className="w-3.5 h-3.5" />
-                                                {event.liters}L
-                                            </div>
-                                        )}
-                                    </div>
-                                    <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
-                                </Link>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="py-12 text-center text-slate-400 text-sm italic">Nincs rögzített esemény.</div>
                 )}
             </div>
         </div>
