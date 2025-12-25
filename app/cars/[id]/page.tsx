@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { deleteEvent, deleteReminder } from './actions'
 import DocumentManager from './DocumentManager'
 import ExportMenu from '@/components/ExportMenu'
-import PublicToggle from '@/components/PublicToggle' // Biztosítsd, hogy ez a path jó legyen!
+import PublicToggle from '@/components/PublicToggle'
 import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
 import VignetteManager from '@/components/VignetteManager'
 import SmartParkingWidget from '@/components/SmartParkingWidget' 
@@ -20,7 +20,8 @@ import {
   Pencil, FileText, Lock, 
   ShieldCheck, Disc, Snowflake, Sun, Wallet, Banknote, 
   Sparkles, Lightbulb, Plus, Trash2, Gauge, History, 
-  ChevronRight, CarFront, Zap
+  ChevronRight, CarFront, Zap, TrendingUp, TrendingDown, 
+  Droplet, MapPin, Calendar, ArrowRight
 } from 'lucide-react';
 
 // --- TÍPUSOK ---
@@ -127,7 +128,7 @@ export default async function CarDetailsPage(props: Props) {
   const carIdString = car.id.toString();
   const isPublic = car.is_public_history || false; 
 
-  // --- WIDGET LOGIKA (MINDENKI PRO) ---
+  // --- WIDGET LOGIKA ---
   const WidgetParking = <SmartParkingWidget carId={carIdString} activeSession={activeParking} />;
   const WidgetHealth = <CarHealthWidget {...healthProps} />;
   const WidgetPrediction = <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} />;
@@ -141,14 +142,20 @@ export default async function CarDetailsPage(props: Props) {
   const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
   const WidgetCharts = <AnalyticsCharts events={safeEvents} isPro={true} />;
   const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
+  // --- ÚJ FUEL TRACKER ---
+  const WidgetFuel = <FuelTrackerCard events={safeEvents} isElectric={isElectric} carMileage={car.mileage} />;
 
   // --- MOBILE TABS CONTENT ---
   const mobileTabs = {
     overview: (
         <div className="space-y-6">
-            {/* Mobilon is megjelenjen a fekete-fehér kapcsoló */}
             <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
-            {WidgetParking}{WidgetHealth}{WidgetPrediction}{WidgetCost}{WidgetSales}
+            {WidgetParking}
+            {WidgetHealth}
+            {WidgetFuel} {/* Itt jelenik meg mobilon a Cost helyett/mellett */}
+            {WidgetPrediction}
+            {WidgetCost}
+            {WidgetSales}
         </div>
     ),
     services: <div className="space-y-6">{WidgetSpecs}{WidgetVignette}{WidgetTires}{WidgetDocs}</div>,
@@ -160,17 +167,17 @@ export default async function CarDetailsPage(props: Props) {
     <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
         <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
             
-            {/* Fekete-fehér kapcsoló Desktopon */}
             <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                  <div className="space-y-6">
                     {WidgetHealth}
                     {WidgetPrediction}
+                    {WidgetParking}
                  </div>
                  
                  <div className="space-y-6">
-                    {WidgetParking}
+                    {WidgetFuel} {/* Kiemelt helyen a jobb hasábban */}
                     {WidgetCost}
                  </div>
             </div>
@@ -224,6 +231,172 @@ export default async function CarDetailsPage(props: Props) {
 }
 
 // --- SUB-COMPONENTS ---
+
+// *** ÚJ FUEL TRACKER KÁRTYA ***
+function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], isElectric: boolean, carMileage: number }) {
+  // 1. Csak az üzemanyag események kellenek, kilométer szerint rendezve (növekvő) a számításhoz
+  const fuelEvents = events
+    .filter(e => e.type === 'fuel' && e.mileage && e.liters)
+    .sort((a, b) => a.mileage - b.mileage);
+
+  let totalLiters = 0;
+  let totalCost = 0;
+  const history = [];
+
+  for (let i = 0; i < fuelEvents.length; i++) {
+    const current = fuelEvents[i];
+    
+    totalLiters += current.liters || 0;
+    totalCost += current.cost || 0;
+
+    let stats = {
+      consumption: 0,
+      distance: 0,
+      pricePerUnit: (current.cost && current.liters) ? Math.round(current.cost / current.liters) : 0,
+    };
+
+    // Ha van ELŐZŐ tankolás, akkor tudunk fogyasztást számolni az aktuálisra
+    // (Feltételezve, hogy a mostani tankolás pótolja az előző óta elfogyasztottat)
+    if (i > 0) {
+      const prev = fuelEvents[i - 1];
+      const distance = current.mileage - prev.mileage;
+      
+      if (distance > 0) {
+        // (Betankolt mennyiség / Megtett út) * 100
+        const cons = (current.liters / distance) * 100;
+        stats.consumption = cons;
+        stats.distance = distance;
+      }
+    }
+    history.push({ ...current, ...stats });
+  }
+  
+  // Átlagfogyasztás számítása (Csak a valid, >0 fogyasztások átlaga)
+  const validSegments = history.filter(h => h.consumption > 0 && h.consumption < 50); // Szűrés extrém értékekre
+  const avgCons = validSegments.length > 0 
+    ? validSegments.reduce((sum, h) => sum + h.consumption, 0) / validSegments.length 
+    : 0;
+  
+  const lastEvent = history[history.length - 1];
+  const lastPricePerUnit = lastEvent ? lastEvent.pricePerUnit : 0;
+  const lastDistance = lastEvent ? lastEvent.distance : 0;
+
+  // Megjelenítéshez fordított sorrend (legfrissebb elől), max 5 elem
+  const displayHistory = [...history].reverse().slice(0, 5);
+
+  const unit = isElectric ? 'kWh' : 'L';
+  const currency = 'Ft';
+  const themeColor = isElectric ? 'text-cyan-500' : 'text-amber-500';
+  const lightBg = isElectric ? 'bg-cyan-50 dark:bg-cyan-900/20' : 'bg-amber-50 dark:bg-amber-900/20';
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full relative group">
+      {/* Háttér effekt */}
+      <div className={`absolute top-0 right-0 w-32 h-32 ${isElectric ? 'bg-cyan-500/5' : 'bg-amber-500/5'} rounded-full blur-3xl -z-10 transition-all group-hover:scale-150`} />
+
+      {/* HEADER */}
+      <div className="p-6 pb-2">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h3 className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">
+              Átlagfogyasztás
+            </h3>
+            <div className="flex items-baseline gap-2">
+              <span className={`text-4xl md:text-5xl font-black tracking-tighter ${themeColor}`}>
+                {avgCons > 0 ? avgCons.toFixed(1) : '-'}
+              </span>
+              <span className="text-slate-400 font-bold text-lg">
+                {unit}/100km
+              </span>
+            </div>
+          </div>
+          <div className={`p-3 rounded-2xl ${lightBg} ${themeColor}`}>
+            {isElectric ? <Zap className="w-6 h-6" /> : <Fuel className="w-6 h-6" />}
+          </div>
+        </div>
+
+        {/* SUMMARY GRID */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <SummaryBox 
+            label="Egységár" 
+            value={lastPricePerUnit > 0 ? `${lastPricePerUnit} ${currency}` : '-'} 
+            subLabel={`/${unit}`}
+          />
+          <SummaryBox 
+            label="Előző Táv" 
+            value={lastDistance > 0 ? `${lastDistance} km` : '-'} 
+            subLabel="két tankolás közt"
+          />
+          <SummaryBox 
+            label="Összesen" 
+            value={`${(totalCost/1000).toFixed(0)} E ${currency}`} 
+            subLabel={`${fuelEvents.length} alkalom`}
+          />
+        </div>
+      </div>
+
+      {/* HISTORY LIST */}
+      <div className="flex-1 bg-slate-50/50 dark:bg-slate-950/30 border-t border-slate-100 dark:border-slate-800/50 p-4">
+        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">Legutóbbi tankolások</h4>
+        <div className="space-y-2">
+          {displayHistory.length > 0 ? displayHistory.map((item, idx) => {
+            const isBetter = item.consumption < avgCons;
+            const diff = Math.abs(item.consumption - avgCons).toFixed(1);
+            
+            return (
+              <div key={item.id || idx} className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all shadow-sm hover:shadow-md">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center font-bold text-xs leading-none ${lightBg} ${themeColor}`}>
+                      <span>{new Date(item.event_date).getMonth() + 1}.</span>
+                      <span className="text-sm">{new Date(item.event_date).getDate()}</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{item.title || 'Kút'}</p>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                        <span className="flex items-center gap-1"><Gauge className="w-3 h-3"/> {item.mileage.toLocaleString()}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                        <span className="flex items-center gap-1"><Droplet className="w-3 h-3"/> {item.liters}{unit}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                     {item.consumption > 0 ? (
+                        <div className="flex flex-col items-end">
+                          <span className="font-bold text-slate-900 dark:text-white tabular-nums">
+                            {item.consumption.toFixed(1)} <span className="text-[10px] text-slate-400 font-normal">{unit}</span>
+                          </span>
+                          <div className={`text-[10px] font-bold flex items-center gap-0.5 ${isBetter ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {isBetter ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
+                            {diff}
+                          </div>
+                        </div>
+                     ) : (
+                        <span className="text-[10px] text-slate-400 italic">Bázis</span>
+                     )}
+                  </div>
+                </div>
+              </div>
+            );
+          }) : (
+            <div className="text-center py-4 text-slate-400 text-xs italic">Nincs elegendő adat a számításhoz.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryBox({ label, value, subLabel }: any) {
+  return (
+    <div className="bg-slate-50 dark:bg-slate-800/50 p-2 md:p-3 rounded-2xl border border-slate-100 dark:border-slate-800 text-center md:text-left">
+      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase mb-1 truncate">{label}</p>
+      <p className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate mb-0.5">{value}</p>
+      <p className="text-[9px] text-slate-400 truncate opacity-70">{subLabel}</p>
+    </div>
+  )
+}
 
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
     return (
