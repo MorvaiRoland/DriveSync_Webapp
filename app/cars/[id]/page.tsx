@@ -141,32 +141,27 @@ export default async function CarDetailsPage(props: Props) {
   const WidgetTips = <SmartTipsCard tips={smartTips} />;
   const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
   const WidgetCharts = <AnalyticsCharts events={safeEvents} isPro={true} />;
+  
+  // ITT VÁLTOZTATTUK MEG AZ EVENTLOGOT (Lásd lentebb a definíciót)
   const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
+  
   const WidgetFuel = <FuelTrackerCard events={safeEvents} isElectric={isElectric} carMileage={car.mileage} />;
 
-  // --- MOBILE TABS CONTENT (ÚJRATERVEZETT) ---
+  // --- MOBILE TABS CONTENT ---
   const mobileTabs = {
     overview: (
-        <div className="space-y-3 pb-4">
+        <div className="space-y-6">
             <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
-            
-            {/* GRID LAYOUT: Egészség és Költség egymás mellett, hogy spóroljunk a hellyel */}
-            <div className="grid grid-cols-2 gap-3">
-                <div className="h-full">{WidgetHealth}</div>
-                <div className="h-full">{WidgetCost}</div>
-            </div>
-
-            {/* Teljes szélességű, de kompakt üzemanyag kártya */}
+            {WidgetHealth}
+            {WidgetCost}
             {WidgetFuel}
-            
-            {/* További widgetek */}
-            {WidgetPrediction}
             {WidgetParking}
+            {WidgetPrediction}
             {WidgetSales}
         </div>
     ),
-    services: <div className="space-y-4">{WidgetSpecs}{WidgetVignette}{WidgetTires}{WidgetDocs}</div>,
-    log: <div className="space-y-4">{WidgetTips}{WidgetReminders}{WidgetCharts}{WidgetLog}</div>
+    services: <div className="space-y-6">{WidgetSpecs}{WidgetVignette}{WidgetTires}{WidgetDocs}</div>,
+    log: <div className="space-y-6">{WidgetTips}{WidgetReminders}{WidgetCharts}{WidgetLog}</div>
   };
 
   // --- DESKTOP BENTO GRID CONTENT ---
@@ -175,12 +170,13 @@ export default async function CarDetailsPage(props: Props) {
         <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
             <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
             
-            {/* Desktopon tágasabb elrendezés */}
+            {/* SOR 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  {WidgetHealth}
                  {WidgetCost}
             </div>
 
+            {/* SOR 2 */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                  <div>{WidgetFuel}</div>
                  <div className="space-y-6">
@@ -189,6 +185,7 @@ export default async function CarDetailsPage(props: Props) {
                  </div>
             </div>
 
+            {/* SOR 3 */}
             {WidgetCharts}
             {WidgetLog}
         </div>
@@ -212,7 +209,7 @@ export default async function CarDetailsPage(props: Props) {
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
       <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={true} />
       <DesktopActionGrid carId={carIdString} isElectric={isElectric} />
-      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-4 md:mt-8 relative z-20" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 3.5rem)' }}>
+      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 3.5rem)' }}>
         <ResponsiveDashboard mobileTabs={mobileTabs} desktopContent={DesktopLayout} />
       </div>
       <MobileBottomNav carId={carIdString} isElectric={isElectric} />
@@ -222,6 +219,7 @@ export default async function CarDetailsPage(props: Props) {
 
 // --- SUB-COMPONENTS ---
 
+// *** TÖRLÉS FUNKCIÓVAL BŐVÍTETT EVENTLOG ***
 function EventLog({ events, carId }: any) {
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -237,14 +235,18 @@ function EventLog({ events, carId }: any) {
                     <div className="relative border-l-2 border-slate-100 dark:border-slate-800 ml-3 space-y-8">
                         {events.map((event: any, index: number) => (
                             <div key={event.id} className="relative pl-8 group">
+                                {/* Idővonal pötty */}
                                 <div className={`absolute -left-[9px] top-4 w-4 h-4 rounded-full border-4 border-white dark:border-slate-900 ${
                                     event.type === 'fuel' ? 'bg-amber-500' : 
                                     event.type === 'service' ? 'bg-indigo-500' : 'bg-slate-400'
                                 } shadow-sm`}></div>
 
+                                {/* Kártya Konténer - Relative a pozicionálás miatt */}
                                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:border-amber-500/30 hover:shadow-md transition-all relative overflow-hidden">
+                                    
+                                    {/* Szerkesztés Link - Kitölti a kártyát */}
                                     <Link href={`/cars/${carId}/events/${event.id}/edit`} className="block p-4 z-0">
-                                        <div className="flex justify-between items-start mb-2 pr-8">
+                                        <div className="flex justify-between items-start mb-2 pr-8"> {/* PR-8 hagy helyet a kuka gombnak */}
                                             <div>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">
                                                     {new Date(event.event_date).toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -270,6 +272,7 @@ function EventLog({ events, carId }: any) {
                                         </div>
                                     </Link>
 
+                                    {/* Törlés Gomb - Abszolút pozíció a jobb felső sarokban */}
                                     <div className="absolute top-2 right-2 z-10">
                                          <form action={deleteEvent}>
                                             <input type="hidden" name="id" value={event.id} />
@@ -283,6 +286,7 @@ function EventLog({ events, carId }: any) {
                                             </button>
                                          </form>
                                     </div>
+                                    
                                 </div>
                             </div>
                         ))}
@@ -338,8 +342,7 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
   const lastPricePerUnit = lastEvent ? lastEvent.pricePerUnit : 0;
   const lastDistance = lastEvent ? lastEvent.distance : 0;
 
-  // Mobilon csak 2, desktopon 4 elem
-  const displayHistory = [...history].reverse().slice(0, 4); 
+  const displayHistory = [...history].reverse().slice(0, 4);
 
   const unit = isElectric ? 'kWh' : 'L';
   const currency = 'Ft';
@@ -350,49 +353,45 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full relative group">
       <div className={`absolute top-0 right-0 w-32 h-32 ${isElectric ? 'bg-cyan-500/5' : 'bg-amber-500/5'} rounded-full blur-3xl -z-10 transition-all group-hover:scale-150`} />
 
-      {/* HEADER: Mobilon nagyon kompakt */}
-      <div className="p-4 md:p-5 pb-2">
-        <div className="flex justify-between items-start mb-3 md:mb-5">
+      <div className="p-5 pb-2">
+        <div className="flex justify-between items-start mb-5">
           <div>
             <h3 className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">
               Átlagfogyasztás
             </h3>
             <div className="flex items-baseline gap-2">
-              <span className={`text-3xl md:text-5xl font-black tracking-tighter ${themeColor}`}>
+              <span className={`text-4xl md:text-5xl font-black tracking-tighter ${themeColor}`}>
                 {avgCons > 0 ? avgCons.toFixed(1) : '-'}
               </span>
-              <span className="text-slate-400 font-bold text-sm md:text-lg">
-                {unit}/100
+              <span className="text-slate-400 font-bold text-lg">
+                {unit}/100km
               </span>
             </div>
           </div>
-          <div className={`p-2 md:p-2.5 rounded-xl ${lightBg} ${themeColor}`}>
+          <div className={`p-2.5 rounded-xl ${lightBg} ${themeColor}`}>
             {isElectric ? <Zap className="w-5 h-5" /> : <Fuel className="w-5 h-5" />}
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mb-2 md:mb-3">
-          <SummaryBox label="Egységár" value={lastPricePerUnit > 0 ? `${lastPricePerUnit} ${currency}` : '-'} subLabel={`/${unit}`} compact />
-          <SummaryBox label="Előző Táv" value={lastDistance > 0 ? `${lastDistance} km` : '-'} subLabel="legutóbb" compact />
-          <SummaryBox label="Összesen" value={`${(totalCost/1000).toFixed(0)} E`} subLabel={`${fuelEvents.length}x`} compact />
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <SummaryBox label="Egységár" value={lastPricePerUnit > 0 ? `${lastPricePerUnit} ${currency}` : '-'} subLabel={`/${unit}`} />
+          <SummaryBox label="Előző Táv" value={lastDistance > 0 ? `${lastDistance} km` : '-'} subLabel="utolsó tankolás" />
+          <SummaryBox label="Összesen" value={`${(totalCost/1000).toFixed(0)} E ${currency}`} subLabel={`${fuelEvents.length} alkalom`} />
         </div>
       </div>
 
-      <div className="flex-1 bg-slate-50/50 dark:bg-slate-950/30 border-t border-slate-100 dark:border-slate-800/50 p-3 md:p-4">
-        <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1 hidden md:block">Legutóbbiak</h4>
+      <div className="flex-1 bg-slate-50/50 dark:bg-slate-950/30 border-t border-slate-100 dark:border-slate-800/50 p-4">
+        <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">Legutóbbiak</h4>
         <div className="space-y-2">
           {displayHistory.length > 0 ? displayHistory.map((item, idx) => {
             const isBetter = item.consumption < avgCons;
             const diff = Math.abs(item.consumption - avgCons).toFixed(1);
             
-            // Mobilon az utolsó 2 után elrejtjük a többit, hogy ne legyen hosszú
-            const mobileHiddenClass = idx > 1 ? 'hidden md:block' : '';
-
             return (
-              <div key={item.id || idx} className={`bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 transition-all shadow-sm hover:shadow-md ${mobileHiddenClass}`}>
+              <div key={item.id || idx} className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 transition-all shadow-sm hover:shadow-md">
                 <div className="flex justify-between items-center mb-1">
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 md:w-9 md:h-9 rounded-lg flex flex-col items-center justify-center font-bold text-[9px] md:text-[10px] leading-none ${lightBg} ${themeColor}`}>
+                    <div className={`w-9 h-9 rounded-lg flex flex-col items-center justify-center font-bold text-[10px] leading-none ${lightBg} ${themeColor}`}>
                       <span>{new Date(item.event_date).getMonth() + 1}.</span>
                       <span className="text-xs">{new Date(item.event_date).getDate()}</span>
                     </div>
@@ -400,6 +399,8 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
                       <p className="font-bold text-slate-800 dark:text-slate-200 text-xs">{item.title || 'Kút'}</p>
                       <div className="flex items-center gap-2 text-[9px] text-slate-400 font-medium">
                         <span className="flex items-center gap-1"><Gauge className="w-3 h-3"/> {item.mileage.toLocaleString()}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                        <span className="flex items-center gap-1"><Droplet className="w-3 h-3"/> {item.liters}{unit}</span>
                       </div>
                     </div>
                   </div>
@@ -407,7 +408,7 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
                   <div className="text-right">
                      {item.consumption > 0 ? (
                         <div className="flex flex-col items-end">
-                          <span className="font-bold text-slate-900 dark:text-white text-xs md:text-sm tabular-nums">
+                          <span className="font-bold text-slate-900 dark:text-white text-sm tabular-nums">
                             {item.consumption.toFixed(1)} <span className="text-[9px] text-slate-400 font-normal">{unit}</span>
                           </span>
                           <div className={`text-[9px] font-bold flex items-center gap-0.5 ${isBetter ? 'text-emerald-500' : 'text-rose-500'}`}>
@@ -431,55 +432,14 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
   );
 }
 
-// Okos SummaryBox ami alkalmazkodik a mérethez
-function SummaryBox({ label, value, subLabel, compact }: any) {
+function SummaryBox({ label, value, subLabel }: any) {
   return (
     <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800 text-center md:text-left">
-      <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase mb-0.5 truncate">{label}</p>
-      <p className={`font-bold text-slate-800 dark:text-slate-200 ${compact ? 'text-xs' : 'text-xs md:text-sm'} truncate`}>{value}</p>
-      {!compact && <p className="text-[9px] text-slate-400 truncate opacity-70">{subLabel}</p>}
+      <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5 truncate">{label}</p>
+      <p className="font-bold text-slate-800 dark:text-slate-200 text-xs md:text-sm truncate">{value}</p>
+      <p className="text-[9px] text-slate-400 truncate opacity-70">{subLabel}</p>
     </div>
   )
-}
-
-// *** KOMPAKT COST CARD ***
-function CostCard({ total, fuel, service, isElectric }: any) {
-    return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 md:p-6 h-full flex flex-col justify-between">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-3 md:mb-4 text-sm md:text-base">
-                <Wallet className="w-4 h-4 md:w-5 md:h-5 text-slate-400" /> Költségek
-            </h3>
-            
-            {/* Nagy összeg */}
-            <div className="flex items-center gap-3 md:gap-5 mb-3 md:mb-4">
-                <div className="hidden md:flex w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/20 items-center justify-center text-amber-600 dark:text-amber-500 shadow-inner">
-                    <Banknote className="w-7 h-7" />
-                </div>
-                <div>
-                    <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase">Összesen</p>
-                    <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">{total > 999999 ? `${(total/1000000).toFixed(1)}M` : total.toLocaleString()} Ft</p>
-                </div>
-            </div>
-
-            {/* Kisebb tételek: Mobilon egymás alá, Desktopon rácsban, de itt most a Flex-col a nyerő a szűk hely miatt */}
-            <div className="flex flex-col gap-2">
-                 <CostItem label={isElectric ? "Töltés" : "Üzemanyag"} value={fuel} icon={isElectric ? <Zap className="w-3 h-3" /> : <Fuel className="w-3 h-3" />} />
-                 <CostItem label="Szerviz" value={service} icon={<Wrench className="w-3 h-3" />} />
-            </div>
-        </div>
-    )
-}
-
-function CostItem({ label, value, icon }: any) {
-    return (
-        <div className="bg-slate-50 dark:bg-slate-800/50 p-2 md:p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex justify-between items-center">
-            <div className="flex items-center gap-1.5 text-slate-400">
-                {icon}
-                <span className="text-[9px] md:text-[10px] uppercase font-bold">{label}</span>
-            </div>
-            <p className="font-bold text-slate-800 dark:text-slate-200 text-xs md:text-sm">{value > 999999 ? `${(value/1000000).toFixed(1)}M` : value.toLocaleString()}</p>
-        </div>
-    )
 }
 
 function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
@@ -596,6 +556,39 @@ function DesktopActionGrid({ carId, isElectric }: { carId: string, isElectric?: 
              <Link href={`/cars/${carId}/parts`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 border-slate-200 dark:border-slate-700`}>
                 <Package className="w-5 h-5" />Alkatrészek
              </Link>
+        </div>
+    )
+}
+
+function CostCard({ total, fuel, service, isElectric }: any) {
+    return (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 h-full flex flex-col justify-between">
+            <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4"><Wallet className="w-5 h-5 text-slate-400" />Költségek</h3>
+            <div className="flex items-center gap-5 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-500 shadow-inner">
+                    <Banknote className="w-7 h-7" />
+                </div>
+                <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase">Eddigi Összes</p>
+                    <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{total.toLocaleString()} Ft</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                 <CostItem label={isElectric ? "Töltés" : "Üzemanyag"} value={fuel} icon={isElectric ? <Zap className="w-3 h-3" /> : <Fuel className="w-3 h-3" />} />
+                 <CostItem label="Szerviz" value={service} icon={<Wrench className="w-3 h-3" />} />
+            </div>
+        </div>
+    )
+}
+
+function CostItem({ label, value, icon }: any) {
+    return (
+        <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-1.5 mb-1 text-slate-400">
+                {icon}
+                <span className="text-[10px] uppercase font-bold">{label}</span>
+            </div>
+            <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{value.toLocaleString()} Ft</p>
         </div>
     )
 }
