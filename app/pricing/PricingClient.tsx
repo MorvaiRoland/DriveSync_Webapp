@@ -158,7 +158,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
 
         {/* --- STATS (Verzió és Status) --- */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 opacity-60">
-             <StatItem label="Jelenlegi Verzió" value="v2.4 Beta" />
+             <StatItem label="Jelenlegi Verzió" value="v2.5 Beta" />
              <StatItem label="Havi Költség" value="0 Ft" />
              <StatItem label="Státusz" value="Stabil" />
              <StatItem label="Támogatás" value="24/7 AI" />

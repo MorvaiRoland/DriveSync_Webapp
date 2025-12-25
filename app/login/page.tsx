@@ -82,7 +82,7 @@ export default async function LoginPage(props: Props) {
 
             {/* 3. FOOTER (Alulra tapadva) */}
             <div className="lg:mt-8 min-h-[5%] flex justify-between items-end pb-2 text-[9px] text-slate-500 font-mono uppercase tracking-widest shrink-0 w-full max-w-[400px] mx-auto">
-                <span className="hover:text-slate-300 transition-colors cursor-default">v2.4.0 Béta</span>
+                <span className="hover:text-slate-300 transition-colors cursor-default">v2.5.0 Béta</span>
                 <span className="flex items-center gap-1 hover:text-emerald-400 transition-colors cursor-default"><Shield size={9} /> Secure</span>
             </div>
 
