@@ -183,10 +183,9 @@ async function DashboardComponent() {
 
           {/* Right controls remain server-side (settings, logout) */}
           <div className="flex items-center gap-3">
-            // Régi kód helyett:
-// <TripPlannerModal cars={myCars} /> 
+ 
 
-// Új kód:
+
 <Link 
   href="/trip-planner"
   className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
@@ -195,7 +194,7 @@ async function DashboardComponent() {
   Úttervező
 </Link>
 
-// Mobil verzió:
+
 <Link 
   href="/trip-planner"
   className="md:hidden p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
