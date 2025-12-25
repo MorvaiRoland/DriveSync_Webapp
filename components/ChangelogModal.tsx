@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, ArrowRight, Zap, Search, Map, Wrench, Navigation } from 'lucide-react'
 
 // Verzió frissítése, hogy megjelenjen a felhasználóknak
-const CURRENT_VERSION = '2.5.0'; 
+const CURRENT_VERSION = '2.5.0 Béta'; 
 const RELEASE_DATE = '2025. Május 25.';
 
 // 1. Az új funkciók listája
@@ -68,7 +68,7 @@ export default function ChangelogModal() {
                     Új eszközök <br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">élesítve! 🚀</span>
                 </h2>
-                <p className="text-slate-300 text-sm font-medium">Okos Úttervező, VIN check és Szervizkereső.</p>
+                <p className="text-slate-300 text-sm font-medium">Okos Úttervező</p>
             </div>
         </div>
 
