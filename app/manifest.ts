@@ -7,17 +7,17 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Digitális szervizkönyv, költségkövetés és AI diagnosztika autósoknak.',
     start_url: '/',
     scope: '/',
-    display: 'standalone', // Ez kötelező a PermissionManager működéséhez!
-    background_color: '#020617', // A layoutod sötét hátteréhez igazítva
-    theme_color: '#020617',     // A böngésző sáv színe
+    display: 'standalone',
+    background_color: '#020617',
+    theme_color: '#020617',
     orientation: 'portrait',
     dir: 'ltr',
     lang: 'hu-HU',
     id: 'com.dynamicsense.app',
-
+    
     icons: [
       {
-        src: '/icons/icon-192.png', // Javasolt külön mappába tenni az ikonokat
+        src: '/icons/icon-192.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
@@ -26,7 +26,7 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/icons/icon-192.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'maskable', // Androidon ez teszi lehetővé a kerek/négyzet alakú adaptációt
+        purpose: 'maskable',
       },
       {
         src: '/icons/icon-512.png',
@@ -42,25 +42,25 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
 
-    // A screenshotok aktiválják a "gazdag telepítési élményt" Androidon
     screenshots: [
       {
-        src: '/screenshots/mobile-dashboard.png', // Ide egy valódi képet tegyél az appról!
+        src: '/screenshots/mobile-dashboard.png',
         sizes: '1080x1920',
         type: 'image/png',
-        form_factor: 'narrow',
+        form_factor: 'narrow', // Fontos: 'narrow' telefonra
         label: 'DynamicSense Irányítópult',
       },
       {
         src: '/screenshots/desktop-home.png',
         sizes: '1920x1080',
         type: 'image/png',
-        form_factor: 'wide',
+        form_factor: 'wide', // Fontos: 'wide' desktopra
         label: 'DynamicSense Webes felület',
       },
     ],
 
     categories: ['productivity', 'utilities', 'lifestyle'],
+    
     shortcuts: [
       {
         name: 'Garázsom',
@@ -77,7 +77,7 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
       },
     ],
-
+    
     prefer_related_applications: false,
   }
 }

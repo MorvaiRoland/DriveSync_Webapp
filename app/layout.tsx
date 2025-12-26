@@ -6,9 +6,9 @@ import { Toaster } from "sonner";
 import CookieBanner from '@/components/CookieBanner'
 import InstallPrompt from '@/components/InstallPrompt'
 import OfflineIndicator from '@/components/OfflineIndicator' 
-// 1. IMPORTÁLD BE A JOGOSULTSÁG-KEZELŐT
 import PermissionManager from '@/components/PermissionChecker' 
 
+// Viewport külön exportálása a Next.js 14+ szabvány szerint (Optimalizált)
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
@@ -16,6 +16,8 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1, // Megakadályozza a véletlen nagyítást inputoknál mobilon
+  userScalable: false, // App-szerűbb élmény
   viewportFit: "cover",
 };
 
@@ -30,6 +32,16 @@ export const metadata: Metadata = {
   authors: [{ name: "DynamicSense Technologies" }],
   formatDetection: {
     telephone: false,
+  },
+  
+  // *** EZ A RÉSZ HIÁNYZOTT AZ IPHONE IKONHOZ: ***
+  icons: {
+    icon: '/icons/icon-512.png', // Favicon
+    shortcut: '/icons/icon-512.png', 
+    apple: [
+      { url: '/icons/apple-icon.png' }, // iPhone alapértelmezett
+      { url: '/icons/apple-icon.png', sizes: '512x512' } // Nagyobb felbontású eszközökhöz
+    ],
   },
   
   openGraph: {
@@ -48,6 +60,7 @@ export const metadata: Metadata = {
     locale: 'hu_HU',
     type: 'website',
   },
+  
   twitter: {
     card: 'summary_large_image',
     title: 'DynamicSense Technologies',
@@ -58,7 +71,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
+  
+  // A manifest automatikusan generálódik a manifest.ts-ből, de explicit hivatkozás maradhat
   manifest: "/manifest.webmanifest",
+  
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -77,6 +93,7 @@ export default function RootLayout({
         className="antialiased bg-slate-50 dark:bg-slate-950 transition-colors duration-300 min-h-screen flex flex-col overflow-x-hidden selection:bg-blue-500 selection:text-white"
         style={{
           minHeight: '100dvh',
+          // iOS Safe Area kezelés (Notch/Dynamic Island)
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)',
           paddingLeft: 'env(safe-area-inset-left)',
@@ -89,6 +106,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          {/* Main konténer optimalizálás */}
           <main className="flex-1 w-full max-w-[2000px] mx-auto flex flex-col relative">
             {children}
           </main>
@@ -96,9 +114,7 @@ export default function RootLayout({
           <Toaster position="top-center" richColors closeButton />
           <CookieBanner />
           <InstallPrompt />
-       
           
-          {/* 2. ILLESZD BE A KOMPONENST IDE */}
           <PermissionManager />
           
           <OfflineIndicator />
