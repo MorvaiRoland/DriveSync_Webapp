@@ -1,55 +1,89 @@
 /** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: false,
-
+  register: true, // Érdemes true-ra tenni, hogy a Next kezelje a regisztrációt
   skipWaiting: true,
   clientsClaim: true,
-
   disable: process.env.NODE_ENV === 'development',
 
-  // 🔥 EZ HIÁNYZOTT – START-URL TELJES KIKAPCSOLÁSA
-  navigateFallback: null,
-  navigateFallbackDenylist: [/.*/],
-
-  // (ez maradhat, de önmagában kevés)
+  // 🔥 EZEK A KRITIKUS BEÁLLÍTÁSOK A LOOP ELLEN:
   cacheStartUrl: false,
+  dynamicStartUrl: false, // EZ KELL NEKED! Ez tiltja le a "/" kényszerített cache-elését.
+  
+  navigateFallback: null, // App Routernél nem lehet fallback HTML
+  navigateFallbackDenylist: [/.*/], // Minden navigációt átengedünk a hálózatnak
 
   buildExcludes: [
     /middleware-manifest\.json$/,
     /app-build-manifest\.json$/,
     /_buildManifest\.js$/,
     /_ssgManifest\.js$/,
-    /index\.html$/, // ❗ KRITIKUS
+    /index\.html$/,
     /\.map$/,
   ],
 
   runtimeCaching: [
+    // 1. NAVIGÁCIÓ JAVÍTÁSA:
+    // Minden oldalbetöltés (HTML kérés) kizárólag a hálózatról jöhet.
+    // Ez szünteti meg a fehér képernyőt és a loopot.
     {
-      // 🚫 App Router navigáció SOHA nem cache-elhető
       urlPattern: ({ request }) => request.mode === 'navigate',
-      handler: 'NetworkOnly',
+      handler: 'NetworkOnly', 
     },
+    // 2. Statikus JS/CSS fájlok (ezek mehetnek cache-be nyugodtan)
     {
       urlPattern: /\.(?:js|css)$/i,
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'static-resources',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 nap
+        },
       },
     },
+    // 3. Képek cache-elése (Next Image optimalizált képek is)
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'images',
+        expiration: {
+          maxEntries: 60,
+          maxAgeSeconds: 30 * 24 * 60 * 60,
+        },
+      },
+    },
+    // 4. API hívások és szerver oldali kérések (NetworkFirst a biztonság kedvéért)
+    {
+      urlPattern: /\/api\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'apis',
+        expiration: {
+          maxEntries: 30,
+          maxAgeSeconds: 24 * 60 * 60,
+        },
+        networkTimeoutSeconds: 10,
+      },
+    },
+    // 5. Külső Fontok és Mapbox
     {
       urlPattern: /^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|api\.mapbox\.com)\/.*/i,
       handler: 'CacheFirst',
       options: {
         cacheName: 'external-assets',
+        expiration: {
+          maxEntries: 30,
+          maxAgeSeconds: 60 * 24 * 60 * 60,
+        },
       },
     },
   ],
 });
 
-
 /* -------------------------------------------------------------------------- */
-/*                               SECURITY HEADERS                             */
+/* SECURITY HEADERS                              */
 /* -------------------------------------------------------------------------- */
 
 const cspHeader = `
@@ -67,7 +101,7 @@ const cspHeader = `
 `.replace(/\s{2,}/g, ' ').trim();
 
 /* -------------------------------------------------------------------------- */
-/*                                 NEXT CONFIG                                */
+/* NEXT CONFIG                                 */
 /* -------------------------------------------------------------------------- */
 
 const nextConfig = {
@@ -110,7 +144,6 @@ const nextConfig = {
         ],
       },
       {
-        // ❗ sw.js SOHA nem cache-elhető
         source: '/sw.js',
         headers: [
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
