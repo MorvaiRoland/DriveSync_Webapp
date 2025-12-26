@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 
 // Térkép dinamikus importálása (SSR tiltva)
-// Fontos: Itt a saját Mapbox térképedet importáljuk!
 const TripMap = dynamic(() => import('@/components/TripMap'), { 
   ssr: false,
   loading: () => <div className="h-full w-full bg-slate-100 dark:bg-slate-800 animate-pulse flex items-center justify-center text-slate-400">Térkép betöltése...</div>
@@ -144,44 +143,46 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
   }, [selectedCarId]);
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)]">
+    // JAVÍTÁS: pt-[env(safe-area-inset-top)] hozzáadva a konténerhez
+    // h-screen helyett min-h-screen a mobil görgetés miatt
+    <div className="flex h-[calc(100vh-64px)] flex-col pt-[env(safe-area-inset-top)] lg:flex-row lg:pt-0">
       
-      {/* BAL SÁV (Görgethető) */}
-      <div className="w-full lg:w-[450px] bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-y-auto custom-scrollbar shadow-xl z-20">
-        <div className="p-6 space-y-8">
+      {/* BAL SÁV (Görgethető vezérlőpult) */}
+      <div className="custom-scrollbar z-20 flex h-full w-full flex-col overflow-y-auto border-r border-slate-200 bg-slate-50 shadow-xl dark:border-slate-800 dark:bg-slate-950 lg:w-[450px]">
+        <div className="space-y-8 p-6 pb-24 lg:pb-6">
           
           {/* CÍM KERESŐK */}
-          <div className="space-y-4 relative">
-             <div className="relative group">
-                <div className="absolute left-3 top-3.5 text-indigo-500 group-focus-within:scale-110 transition-transform"><MapPin className="w-5 h-5" /></div>
+          <div className="relative space-y-4">
+             <div className="group relative">
+                <div className="absolute left-3 top-3.5 text-indigo-500 transition-transform group-focus-within:scale-110"><MapPin className="h-5 w-5" /></div>
                 <input 
                   type="text" placeholder="Honnan indulunk?" value={startQuery}
                   onChange={(e) => { setStartQuery(e.target.value); searchAddress(e.target.value, true); }}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 pl-10 pr-10 text-sm font-medium shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm font-medium shadow-sm outline-none transition-all focus:ring-2 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900"
                 />
-                <button onClick={handleLocateMe} className="absolute right-2 top-2 p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg text-indigo-600 transition-colors" title="Pozícióm">
-                  <Locate className="w-4 h-4" />
+                <button onClick={handleLocateMe} className="absolute right-2 top-2 rounded-lg p-1.5 text-indigo-600 transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-900/30" title="Pozícióm">
+                  <Locate className="h-4 w-4" />
                 </button>
              </div>
 
-             <div className="relative group">
+             <div className="group relative">
                 {/* Vonal összekötő */}
-                <div className="absolute left-[19px] -top-6 bottom-6 w-0.5 bg-gradient-to-b from-indigo-500 to-amber-500 -z-10 opacity-30"></div>
+                <div className="absolute -top-6 bottom-6 left-[19px] -z-10 w-0.5 bg-gradient-to-b from-indigo-500 to-amber-500 opacity-30"></div>
                 
-                <div className="absolute left-3 top-3.5 text-amber-500 group-focus-within:scale-110 transition-transform"><MapPin className="w-5 h-5" /></div>
+                <div className="absolute left-3 top-3.5 text-amber-500 transition-transform group-focus-within:scale-110"><MapPin className="h-5 w-5" /></div>
                 <input 
                   type="text" placeholder="Hová megyünk?" value={endQuery}
                   onChange={(e) => { setEndQuery(e.target.value); searchAddress(e.target.value, false); }}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 pl-10 text-sm font-medium shadow-sm focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 text-sm font-medium shadow-sm outline-none transition-all focus:ring-2 focus:ring-amber-500 dark:border-slate-800 dark:bg-slate-900"
                 />
              </div>
 
              {/* Találati lista */}
              {searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 z-50 mt-2 overflow-hidden max-h-60 overflow-y-auto">
+                <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-60 overflow-hidden overflow-y-auto rounded-xl border border-slate-100 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
                   {searchResults.map((res: any, idx) => (
-                    <button key={idx} onClick={() => selectAddress(res)} className="w-full text-left px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-50 dark:border-slate-800/50 last:border-0 truncate flex items-center gap-2">
-                      <MapPin className="w-3 h-3 text-slate-400" />
+                    <button key={idx} onClick={() => selectAddress(res)} className="flex w-full items-center gap-2 truncate border-b border-slate-50 px-4 py-3 text-left text-sm hover:bg-slate-50 last:border-0 dark:border-slate-800/50 dark:hover:bg-slate-800">
+                      <MapPin className="h-3 w-3 text-slate-400" />
                       {res.place_name}
                     </button>
                   ))}
@@ -190,94 +191,94 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
           </div>
 
           {/* TAB VÁLTÓ */}
-          <div className="flex p-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-             <button onClick={() => setActiveTab('route')} className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-300 ${activeTab === 'route' ? 'bg-indigo-600 text-white shadow-md transform scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>Útvonal</button>
-             <button onClick={() => setActiveTab('costs')} className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-300 ${activeTab === 'costs' ? 'bg-indigo-600 text-white shadow-md transform scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>Költségek</button>
+          <div className="flex rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+             <button onClick={() => setActiveTab('route')} className={`flex-1 rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === 'route' ? 'scale-105 transform bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>Útvonal</button>
+             <button onClick={() => setActiveTab('costs')} className={`flex-1 rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === 'costs' ? 'scale-105 transform bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>Költségek</button>
           </div>
 
           {/* TARTALOM */}
           <div className="space-y-6">
              {activeTab === 'route' ? (
-                <div className="space-y-5 animate-in slide-in-from-left-4 fade-in duration-500">
+                <div className="animate-in fade-in slide-in-from-left-4 space-y-5 duration-500">
                    {/* Járműválasztó */}
                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Jármű</label>
-                      <select value={selectedCarId || ''} onChange={(e) => setSelectedCarId(Number(e.target.value))} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Jármű</label>
+                      <select value={selectedCarId || ''} onChange={(e) => setSelectedCarId(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900">
                          {cars.map(c => <option key={c.id} value={c.id}>{c.make} {c.model} ({c.plate})</option>)}
                       </select>
                    </div>
 
                    {/* Táv és Idő Kártya */}
                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center text-center">
-                         <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-2"><Navigation className="w-5 h-5 text-blue-500" /></div>
-                         <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Távolság</p>
+                      <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                         <div className="mb-2 rounded-full bg-blue-50 p-2 dark:bg-blue-900/20"><Navigation className="h-5 w-5 text-blue-500" /></div>
+                         <p className="mb-0.5 text-[10px] font-bold uppercase text-slate-400">Távolság</p>
                          <p className="text-xl font-black text-slate-800 dark:text-white">{distance.toFixed(1)} <span className="text-xs font-normal text-slate-400">km</span></p>
                       </div>
-                      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center text-center">
-                         <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-full mb-2"><Clock className="w-5 h-5 text-purple-500" /></div>
-                         <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Idő</p>
+                      <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                         <div className="mb-2 rounded-full bg-purple-50 p-2 dark:bg-purple-900/20"><Clock className="h-5 w-5 text-purple-500" /></div>
+                         <p className="mb-0.5 text-[10px] font-bold uppercase text-slate-400">Idő</p>
                          <p className="text-xl font-black text-slate-800 dark:text-white">{hours}ó {minutes}p</p>
                       </div>
                    </div>
 
                    {/* Oda-vissza kapcsoló */}
-                   <label className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer hover:border-indigo-500 transition-all shadow-sm group">
+                   <label className="group flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-500 dark:border-slate-800 dark:bg-slate-900">
                       <div className="flex items-center gap-3">
-                         <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-300 ${isRoundTrip ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover:bg-indigo-50 dark:group-hover:bg-slate-700'}`}>
-                            <ArrowRightLeft className="w-5 h-5" />
+                         <div className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors duration-300 ${isRoundTrip ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 dark:bg-slate-800 dark:group-hover:bg-slate-700'}`}>
+                            <ArrowRightLeft className="h-5 w-5" />
                          </div>
                          <div>
-                            <p className="font-bold text-sm text-slate-800 dark:text-white">Oda-vissza út</p>
+                            <p className="text-sm font-bold text-slate-800 dark:text-white">Oda-vissza út</p>
                             <p className="text-[10px] text-slate-400">Automatikusan duplázza a távot</p>
                          </div>
                       </div>
-                      <input type="checkbox" checked={isRoundTrip} onChange={(e) => setIsRoundTrip(e.target.checked)} className="w-6 h-6 accent-indigo-600 rounded-md" />
+                      <input type="checkbox" checked={isRoundTrip} onChange={(e) => setIsRoundTrip(e.target.checked)} className="h-6 w-6 accent-indigo-600 rounded-md" />
                    </label>
                 </div>
              ) : (
-                <div className="space-y-5 animate-in slide-in-from-right-4 fade-in duration-500">
+                <div className="animate-in fade-in slide-in-from-right-4 space-y-5 duration-500">
                    {/* Ár és Fogyasztás */}
                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                         <label className="text-[10px] font-bold text-slate-400 uppercase">Üzemanyagár</label>
+                         <label className="text-[10px] font-bold uppercase text-slate-400">Üzemanyagár</label>
                          <div className="relative">
-                            <input type="number" value={fuelPrice} onChange={(e) => setFuelPrice(Number(e.target.value))} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 pl-9 text-sm font-bold shadow-sm" />
-                            <div className="absolute left-3 top-2.5 text-slate-400 font-serif font-bold text-xs">Ft</div>
+                            <input type="number" value={fuelPrice} onChange={(e) => setFuelPrice(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pl-9 text-sm font-bold shadow-sm dark:border-slate-800 dark:bg-slate-900" />
+                            <div className="absolute left-3 top-2.5 font-serif text-xs font-bold text-slate-400">Ft</div>
                          </div>
                       </div>
                       <div className="space-y-1">
-                         <label className="text-[10px] font-bold text-slate-400 uppercase">Fogyasztás ({unit})</label>
+                         <label className="text-[10px] font-bold uppercase text-slate-400">Fogyasztás ({unit})</label>
                          <div className="relative">
-                            <input type="number" value={consumption} onChange={(e) => setConsumption(Number(e.target.value))} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 pl-9 text-sm font-bold shadow-sm" />
-                            <Fuel className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                            <input type="number" value={consumption} onChange={(e) => setConsumption(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pl-9 text-sm font-bold shadow-sm dark:border-slate-800 dark:bg-slate-900" />
+                            <Fuel className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                          </div>
                       </div>
                    </div>
 
                    {/* Amortizáció */}
                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                      <label className="flex items-center gap-1 text-[10px] font-bold uppercase text-slate-400">
                          Amortizáció (Ft/km)
-                         <div title="Gumikopás, értékvesztés, szerviz költség becslése"><Info className="w-3 h-3 text-slate-400 cursor-help" /></div>
+                         <div title="Gumikopás, értékvesztés, szerviz költség becslése"><Info className="h-3 w-3 cursor-help text-slate-400" /></div>
                       </label>
                       <div className="relative">
-                         <input type="number" value={amortization} onChange={(e) => setAmortization(Number(e.target.value))} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 pl-9 text-sm font-bold shadow-sm" />
-                         <TrendingUp className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                         <input type="number" value={amortization} onChange={(e) => setAmortization(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pl-9 text-sm font-bold shadow-sm dark:border-slate-800 dark:bg-slate-900" />
+                         <TrendingUp className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                       </div>
                    </div>
 
                    {/* Extra költségek */}
-                   <div className="p-4 bg-slate-100 dark:bg-slate-900/50 rounded-2xl space-y-3">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Egyéb Költségek</p>
+                   <div className="space-y-3 rounded-2xl bg-slate-100 p-4 dark:bg-slate-900/50">
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Egyéb Költségek</p>
                       <div className="grid grid-cols-2 gap-4">
                          <div className="relative">
-                            <input type="number" value={tollCost} onChange={(e) => setTollCost(Number(e.target.value))} className="w-full bg-white dark:bg-slate-800 border-none rounded-xl px-3 py-2 pl-9 text-sm font-bold shadow-sm placeholder:text-slate-300" placeholder="Matrica" />
-                            <Coins className="w-4 h-4 absolute left-3 top-2 text-slate-400" />
+                            <input type="number" value={tollCost} onChange={(e) => setTollCost(Number(e.target.value))} className="w-full rounded-xl border-none bg-white px-3 py-2 pl-9 text-sm font-bold shadow-sm placeholder:text-slate-300 dark:bg-slate-800" placeholder="Matrica" />
+                            <Coins className="absolute left-3 top-2 h-4 w-4 text-slate-400" />
                          </div>
                          <div className="relative">
-                            <input type="number" value={parkingCost} onChange={(e) => setParkingCost(Number(e.target.value))} className="w-full bg-white dark:bg-slate-800 border-none rounded-xl px-3 py-2 pl-9 text-sm font-bold shadow-sm placeholder:text-slate-300" placeholder="Parkolás" />
-                            <ParkingSquare className="w-4 h-4 absolute left-3 top-2 text-slate-400" />
+                            <input type="number" value={parkingCost} onChange={(e) => setParkingCost(Number(e.target.value))} className="w-full rounded-xl border-none bg-white px-3 py-2 pl-9 text-sm font-bold shadow-sm placeholder:text-slate-300 dark:bg-slate-800" placeholder="Parkolás" />
+                            <ParkingSquare className="absolute left-3 top-2 h-4 w-4 text-slate-400" />
                          </div>
                       </div>
                    </div>
@@ -288,43 +289,43 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
                          <span>Utasok</span>
                          <span className="text-indigo-600 dark:text-indigo-400">{passengers} fő</span>
                       </div>
-                      <input type="range" min="1" max="7" value={passengers} onChange={(e) => setPassengers(Number(e.target.value))} className="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-slate-800" />
+                      <input type="range" min="1" max="7" value={passengers} onChange={(e) => setPassengers(Number(e.target.value))} className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-indigo-600 dark:bg-slate-800" />
                    </div>
                 </div>
              )}
           </div>
 
           {/* ÖSSZESÍTŐ KÁRTYA */}
-          <div className="mt-8 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-2xl relative overflow-hidden group">
-             <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="group relative mt-8 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white shadow-2xl">
+             <div className="absolute -mr-16 -mt-16 right-0 top-0 h-48 w-48 rounded-full bg-indigo-500/20 blur-3xl transition-transform duration-700 group-hover:scale-110"></div>
              
              <div className="relative z-10">
-                <div className="flex justify-between items-end mb-6">
+                <div className="mb-6 flex justify-between items-end">
                    <div>
-                      <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Várható Költség</p>
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Várható Költség</p>
                       <p className="text-4xl font-black tracking-tighter">{grandTotal.toLocaleString()} <span className="text-lg font-bold text-slate-500">Ft</span></p>
                    </div>
                    <div className="text-right">
-                      <p className="text-slate-400 text-[10px] font-bold uppercase mb-1">Fejenként</p>
+                      <p className="mb-1 text-[10px] font-bold uppercase text-slate-400">Fejenként</p>
                       <p className="text-xl font-bold text-emerald-400">{costPerPerson.toLocaleString()} Ft</p>
                    </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 text-center">
-                   <div className="bg-white/10 rounded-2xl p-3 backdrop-blur-sm hover:bg-white/15 transition-colors">
-                      <Fuel className="w-5 h-5 mx-auto mb-1 text-amber-400" />
-                      <p className="text-[10px] text-slate-300 mb-0.5">Üzemanyag</p>
-                      <p className="font-bold text-sm">{totalFuelNeeded.toFixed(1)} {unit}</p>
+                   <div className="rounded-2xl bg-white/10 p-3 backdrop-blur-sm transition-colors hover:bg-white/15">
+                      <Fuel className="mx-auto mb-1 h-5 w-5 text-amber-400" />
+                      <p className="mb-0.5 text-[10px] text-slate-300">Üzemanyag</p>
+                      <p className="text-sm font-bold">{totalFuelNeeded.toFixed(1)} {unit}</p>
                    </div>
-                   <div className="bg-white/10 rounded-2xl p-3 backdrop-blur-sm hover:bg-white/15 transition-colors">
-                      <Wallet className="w-5 h-5 mx-auto mb-1 text-blue-400" />
-                      <p className="text-[10px] text-slate-300 mb-0.5">Egyéb</p>
-                      <p className="font-bold text-sm">{(totalAmortization + tollCost + parkingCost).toLocaleString()}</p>
+                   <div className="rounded-2xl bg-white/10 p-3 backdrop-blur-sm transition-colors hover:bg-white/15">
+                      <Wallet className="mx-auto mb-1 h-5 w-5 text-blue-400" />
+                      <p className="mb-0.5 text-[10px] text-slate-300">Egyéb</p>
+                      <p className="text-sm font-bold">{(totalAmortization + tollCost + parkingCost).toLocaleString()}</p>
                    </div>
-                   <div className="bg-white/10 rounded-2xl p-3 backdrop-blur-sm hover:bg-white/15 transition-colors">
-                      <Leaf className="w-5 h-5 mx-auto mb-1 text-green-400" />
-                      <p className="text-[10px] text-slate-300 mb-0.5">CO2</p>
-                      <p className="font-bold text-sm">{isElectric ? '0' : (totalFuelNeeded * 2.3).toFixed(0)} kg</p>
+                   <div className="rounded-2xl bg-white/10 p-3 backdrop-blur-sm transition-colors hover:bg-white/15">
+                      <Leaf className="mx-auto mb-1 h-5 w-5 text-green-400" />
+                      <p className="mb-0.5 text-[10px] text-slate-300">CO2</p>
+                      <p className="text-sm font-bold">{isElectric ? '0' : (totalFuelNeeded * 2.3).toFixed(0)} kg</p>
                    </div>
                 </div>
              </div>
@@ -333,23 +334,18 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
         </div>
       </div>
 
-      {/* JOBB SÁV (Térkép) - Mobilon ez lehet, hogy alulra kerül vagy elrejtjük */}
-      <div className="flex-1 bg-slate-200 dark:bg-slate-900 relative hidden lg:block">
+      {/* JOBB SÁV (Térkép) - Mobilon ez megjelenik a tartalom mellett/alatt */}
+      <div className="relative h-[300px] w-full flex-1 bg-slate-200 dark:bg-slate-900 lg:h-full">
          <TripMap startPos={startCoords} endPos={endCoords} routeGeoJson={routeGeoJson} />
          
          {!startCoords && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-900/10 backdrop-blur-sm z-10">
-               <div className="bg-white dark:bg-slate-800 px-6 py-3 rounded-full shadow-xl flex items-center gap-3 animate-bounce">
-                  <MapIcon className="w-5 h-5 text-indigo-500" />
-                  <span className="font-bold text-slate-700 dark:text-slate-200">Válassz indulási helyet bal oldalt!</span>
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/10 backdrop-blur-sm">
+               <div className="flex animate-bounce items-center gap-3 rounded-full bg-white px-6 py-3 shadow-xl dark:bg-slate-800">
+                  <MapIcon className="h-5 w-5 text-indigo-500" />
+                  <span className="font-bold text-slate-700 dark:text-slate-200">Válassz indulási helyet!</span>
                </div>
             </div>
          )}
-      </div>
-
-      {/* MOBIL TÉRKÉP GOMB (Opcionális: ha mobilon külön nézetet akarsz a térképnek) */}
-      <div className="lg:hidden fixed bottom-6 right-6 z-50">
-         {/* Itt lehetne egy gomb, ami megnyitja a térképet teljes képernyőn mobilon */}
       </div>
 
     </div>

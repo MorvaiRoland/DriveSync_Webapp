@@ -209,7 +209,7 @@ export default async function CarDetailsPage(props: Props) {
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
       <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={true} />
       <DesktopActionGrid carId={carIdString} isElectric={isElectric} />
-      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 3.5rem)' }}>
+      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
         <ResponsiveDashboard mobileTabs={mobileTabs} desktopContent={DesktopLayout} />
       </div>
       <MobileBottomNav carId={carIdString} isElectric={isElectric} />
@@ -406,7 +406,7 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
                   </div>
                   
                   <div className="text-right">
-                     {item.consumption > 0 ? (
+                      {item.consumption > 0 ? (
                         <div className="flex flex-col items-end">
                           <span className="font-bold text-slate-900 dark:text-white text-sm tabular-nums">
                             {item.consumption.toFixed(1)} <span className="text-[9px] text-slate-400 font-normal">{unit}</span>
@@ -416,9 +416,9 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
                             {diff}
                           </div>
                         </div>
-                     ) : (
+                      ) : (
                         <span className="text-[9px] text-slate-400 italic">Bázis</span>
-                     )}
+                      )}
                   </div>
                 </div>
               </div>
@@ -453,7 +453,9 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
             )}
             
             <div className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-end pb-8 pt-20 md:pt-0 md:pb-0 md:justify-center">
-                <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-center z-30">
+                {/* --- MÓDOSÍTÁS: padding-top hozzáadása az env(safe-area-inset-top) értékkel --- */}
+                {/* Eredeti: absolute top-0 left-0 right-0 p-4 md:p-6 ... */}
+                <div className="absolute top-0 left-0 right-0 z-30 px-4 pb-4 md:px-6 md:pb-6 flex justify-between items-center pt-[calc(env(safe-area-inset-top)+1rem)]">
                     <Link href="/" className="flex items-center gap-2 text-white/80 hover:text-white bg-black/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-all hover:bg-white/10">
                         <Warehouse className="w-4 h-4" />
                         <span className="hidden sm:inline font-bold text-sm">Garázs</span>

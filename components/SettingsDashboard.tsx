@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useFormStatus } from 'react-dom'
-// FONTOS: Importáljuk a deleteAccountAction-t is!
 import { updateProfile, updatePreferences, deleteAccountAction } from '@/app/settings/actions'
 import Image from 'next/image'
 import {
@@ -48,7 +47,6 @@ function SubmitButton({ label = 'Mentés', id = 'submit_btn' }: { label?: string
   )
 }
 
-// Külön komponens a törlés gombhoz a loading state miatt
 function DeleteButton() {
   const { pending } = useFormStatus()
   return (
@@ -75,7 +73,6 @@ export default function SettingsDashboard({
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [loadingPortal, setLoadingPortal] = useState(false)
-  // Új state a modal megjelenítéséhez
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   
   const router = useRouter()
@@ -85,7 +82,6 @@ export default function SettingsDashboard({
 
   useEffect(() => setMounted(true), [])
 
-  // --- Előfizetés kezelés ---
   const manageSubscription = async () => {
     setLoadingPortal(true)
     try {
@@ -100,13 +96,11 @@ export default function SettingsDashboard({
     }
   }
 
-  // --- Kijelentkezés ---
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/login')
   }
 
-  // --- Képkezelés ---
   const handleFileChangeAndSubmit = () => {
     if (formRef.current) {
       formRef.current.dispatchEvent(new Event('submit', { bubbles: true }))
@@ -124,10 +118,13 @@ export default function SettingsDashboard({
   if (!mounted) return null
 
   return (
-    <div className="flex min-h-[600px] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 md:flex-row">
+    // JAVÍTÁS: Szélesség korlátozás (max-w-6xl) és overflow kezelés mobilon
+    // Mobilon (alapértelmezett) flex-col, és NINCS overflow-hidden, hogy a lap természetesen görgessen.
+    // Asztali nézetben (md:) flex-row és overflow-hidden a belső scrollhoz.
+    <div className="mx-auto flex w-full max-w-6xl flex-col rounded-3xl border border-slate-100 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 md:min-h-[600px] md:flex-row md:overflow-hidden">
       
       {/* --- BAL OLDALI MENÜ --- */}
-      <div className="flex w-full flex-col justify-between border-r border-slate-100 bg-slate-50/50 p-6 dark:border-slate-800 dark:bg-slate-800/50 md:w-64">
+      <div className="flex w-full flex-col justify-between border-b border-slate-100 bg-slate-50/50 p-6 dark:border-slate-800 dark:bg-slate-800/50 md:w-72 md:border-b-0 md:border-r">
         <div className="space-y-2">
           <button
             onClick={() => setActiveTab('profile')}
@@ -177,11 +174,13 @@ export default function SettingsDashboard({
       </div>
 
       {/* --- JOBB OLDALI TARTALOM --- */}
-      <div className="relative flex-1 overflow-y-auto p-8 md:p-12">
+      {/* JAVÍTÁS: md:overflow-y-auto csak asztali nézetben. Mobilon hagyjuk a teljes oldalt görgetni. */}
+      {/* pb-24: Extra hely az alján mobilon, hogy ne lógjon bele a Home bar-ba */}
+      <div className="relative flex-1 p-6 pb-24 md:overflow-y-auto md:p-12 md:pb-12">
         
         {/* 1. PROFIL SZERKESZTÉS */}
         {activeTab === 'profile' && (
-          <div className="max-w-lg animate-in slide-in-from-right-4 fade-in duration-500 space-y-8 pb-10">
+          <div className="max-w-lg animate-in slide-in-from-right-4 fade-in duration-500 space-y-8">
             <div>
               <h2 className="mb-2 text-2xl font-black text-slate-900 dark:text-white">
                 Személyes Adataim
@@ -212,7 +211,7 @@ export default function SettingsDashboard({
                 onChange={handleFileChangeAndSubmit}
               />
 
-              <div className="flex items-center gap-6">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
                 {/* Avatar */}
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -497,7 +496,7 @@ export default function SettingsDashboard({
 
         {/* --- MODAL POPUP (FIÓK TÖRLÉS MEGERŐSÍTÉS) --- */}
         {showDeleteModal && (
-          <div className="fixed inset-0 z-50 flex animate-in fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-sm duration-200">
+          <div className="fixed inset-0 z-[100] flex animate-in fade-in items-center justify-center bg-black/60 p-4 backdrop-blur-sm duration-200">
             <div className="w-full max-w-md animate-in zoom-in-95 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl duration-200 dark:border-slate-800 dark:bg-slate-900">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
                 <Trash2 className="h-6 w-6" />
