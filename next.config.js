@@ -28,7 +28,7 @@ const withPWA = require('next-pwa')({
     // Ez szünteti meg a fehér képernyőt és a loopot.
     {
       urlPattern: ({ request }) => request.mode === 'navigate',
-      handler: 'NetworkOnly', 
+      handler: 'NetworkFirst', 
     },
     // 2. Statikus JS/CSS fájlok (ezek mehetnek cache-be nyugodtan)
     {
