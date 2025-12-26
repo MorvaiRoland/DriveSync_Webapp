@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 
-// 1. CSP Header
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline';
@@ -24,7 +23,7 @@ const nextConfig = {
   
   images: {
     formats: ['image/webp'],
-    minimumCacheTTL: 604800, // 1 hét
+    minimumCacheTTL: 604800,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
@@ -32,12 +31,6 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.googleusercontent.com' },
       { protocol: 'https', hostname: '**' }
     ],
-  },
-  
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '10mb',
-    },
   },
 
   async headers() {
@@ -52,71 +45,39 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
         ],
       },
+      // KRITIKUS: A Service Worker fájlt tilos cache-elni!
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Content-Type', value: 'application/javascript' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
     ];
   },
 };
 
-// --- PWA BEÁLLÍTÁS (A JAVÍTÁS LÉNYEGE) ---
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: false, // Kézzel regisztráljuk a RegisterSW.tsx-ben
-  skipWaiting: true,
+  register: false, 
+  skipWaiting: false, // KIKAPCSOLVA: Ne frissítsen agresszívan a háttérben!
+  clientsClaim: false, // KIKAPCSOLVA: Megelőzi a reload loopot
   disable: process.env.NODE_ENV === 'development',
-  
-  // Fontos: ezeket a fájlokat NE cache-elje, mert bezavarják a Next.js működését
   buildExcludes: [/middleware-manifest\.json$/, /app-build-manifest\.json$/],
-
   runtimeCaching: [
-    // 1. SZABÁLY: NAVIGÁCIÓ (HTML) - MINDIG HÁLÓZAT ELŐSZÖR!
-    // Ez javítja meg a "beragadást". Ha van net, onnan tölti, ha nincs, csak akkor a cache-ből.
     {
       urlPattern: ({ request }) => request.mode === 'navigate',
-      handler: 'NetworkFirst',
+      handler: 'NetworkFirst', // Mindig próbálja meg a hálózatot először
       options: {
         cacheName: 'pages',
-        expiration: {
-          maxEntries: 1, 
-          maxAgeSeconds: 24 * 60 * 60, // 24 óra
-        },
-        networkTimeoutSeconds: 3, // Ha 3 mp alatt nem jön válasz a szervertől, akkor nyúl a cache-hez
-      },
-    },
-    // 2. SZABÁLY: API HÍVÁSOK (Supabase, Next API)
-    {
-      urlPattern: ({ url }) => url.pathname.startsWith('/api') || url.hostname.includes('supabase'),
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'apis',
         networkTimeoutSeconds: 5,
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 5 * 60, // 5 perc
-        },
       },
     },
-    // 3. SZABÁLY: KÉPEK (MEHET CACHE-BŐL AGRESSZÍVAN)
-    {
-      urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-image-assets',
-        expiration: {
-          maxEntries: 64,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 1 hónap
-        },
-      },
-    },
-    // 4. SZABÁLY: JS és CSS FÁJLOK
     {
       urlPattern: /\.(?:js|css)$/i,
       handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-js-assets',
-        expiration: {
-          maxEntries: 64,
-          maxAgeSeconds: 24 * 60 * 60,
-        },
-      },
+      options: { cacheName: 'static-resources' },
     },
   ],
 });
