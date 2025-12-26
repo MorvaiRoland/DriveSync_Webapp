@@ -6,6 +6,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner' // Ha használod a sonnert, ha nem, sima alert is jó
 
+// --- KONFIGURÁCIÓ ---
+// FONTOS: Ezt cseréld le a Stripe Dashboardon létrehozott 12.990 Ft-os Price ID-ra!
+// Példa: 'price_1Qxyz...'
+const LIFETIME_PRICE_ID = 'price_1SijxIRbHGQdHUF48ulonZdP' // <--- IDE MÁSOLD BE A VALÓDI ID-T!
+
 interface PricingClientProps {
   initialPlan: string
 }
@@ -33,8 +38,8 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId: 'price_1SijxIRbHGQdHUF48ulonZdP', // Ezt majd a Stripe-ból kapod, lásd lentebb
-          mode: 'payment', // Egyszeri fizetés, nem 'subscription'
+          priceId: 'price_1SijxIRbHGQdHUF48ulonZdP', // Küldjük az új árat
+          mode: 'payment', // Egyszeri fizetés
         }),
       })
 
@@ -46,7 +51,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
       if (data.url) {
         window.location.href = data.url
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error)
       toast.error('Hiba a fizetés indításakor. Próbáld újra!')
       setLoadingStripe(false)
@@ -130,7 +135,8 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
 
                     <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600 mb-2">Founder Edition</h3>
                     <div className="flex items-baseline gap-1 mb-2">
-                        <span className="text-5xl font-black text-slate-900 dark:text-white">29.990 Ft</span>
+                        {/* JAVÍTVA: Ár frissítve 12.990 Ft-ra */}
+                        <span className="text-5xl font-black text-slate-900 dark:text-white">12.990 Ft</span>
                         <span className="text-slate-500 font-bold">/ örökre</span>
                     </div>
                     <p className="text-xs font-bold text-emerald-500 uppercase tracking-wide mb-6">Egyszeri fizetés. Nincs havidíj.</p>
@@ -150,7 +156,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
                     <button 
                         onClick={handleBuyLifetime}
                         disabled={loadingStripe}
-                        className="group relative w-full py-4 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-black font-bold text-sm uppercase tracking-wider shadow-xl hover:shadow-2xl transition-all overflow-hidden"
+                        className="group relative w-full py-4 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-black font-bold text-sm uppercase tracking-wider shadow-xl hover:shadow-2xl transition-all overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 dark:via-black/10 to-transparent translate-x-[-100%] group-hover:animate-[shimmer_1s_infinite]"></div>
                         <span className="relative z-10 flex items-center justify-center gap-2">
