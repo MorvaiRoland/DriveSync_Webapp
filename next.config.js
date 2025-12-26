@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-// 1. CSP Header (Változatlan - ez jó volt)
+// CSP Header optimalizálva
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline';
@@ -18,24 +18,22 @@ const cspHeader = `
 
 const nextConfig = {
   poweredByHeader: false,
+  reactStrictMode: true, // Segít a hibák kiszűrésében
   
-  // Mobile optimization & Mapbox
+  // Mobile & Mapbox
   transpilePackages: ['react-map-gl', 'mapbox-gl'],
   compress: true,
-  productionBrowserSourceMaps: false,
   
-  // Image optimization
+  // Image optimization - MAXIMÁLIS SEBESSÉG
   images: {
-    formats: ['image/webp'],
-    minimumCacheTTL: 60,
-    deviceSizes: [320, 375, 425, 640],
+    formats: ['image/webp', 'image/avif'], // AVIF hozzáadva a kisebb méretért
+    minimumCacheTTL: 604800, // 60 mp helyett 1 HÉT (fontos a gyorsasághoz!)
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920], // Szabványosabb méretek
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: '**.supabase.co',
-        port: '',
-        pathname: '/storage/v1/object/public/**',
       },
       {
         protocol: 'https',
@@ -49,8 +47,9 @@ const nextConfig = {
   },
   
   experimental: {
+    optimizePackageImports: ['lucide-react', 'date-fns'], // Tree-shaking optimalizálás
     serverActions: {
-      bodySizeLimit: '20mb',
+      bodySizeLimit: '10mb', // 20mb túlzás lehet, lassíthat
     },
   },
 
@@ -59,75 +58,46 @@ const nextConfig = {
       {
         source: '/:path*',
         headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: cspHeader,
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
-          },
+          { key: 'Content-Security-Policy', value: cspHeader },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
         ],
       },
     ];
   },
 };
 
-// PWA KONFIGURÁCIÓ - JAVÍTOTT (FLATTENED)
+// PWA KONFIGURÁCIÓ - JAVÍTOTT
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: true,
+  // FONTOS: Kikapcsoljuk az automatikus regisztrációt, mert a RegisterSW.tsx kezeli!
+  register: false, 
+  skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  reloadOnOnline: false,
-
-  // JAVÍTÁS: Közvetlenül ide írjuk a workbox beállításokat, 
-  // nem tesszük 'workboxOptions' blokkba!
   
-  skipWaiting: true,           // Azonnal frissít
-  clientsClaim: true,          // Azonnal átveszi az irányítást
-  cleanupOutdatedCaches: true, // Törli a régi fájlokat (Ez a legfontosabb!)
-  
-  // Ez kikapcsolja a zavaró logokat a build során
-  disableDevLogs: true,
-
+  // Cache stratégia
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
       handler: 'CacheFirst',
       options: {
         cacheName: 'google-fonts',
-        expiration: {
-          maxEntries: 20,
-          maxAgeSeconds: 60 * 60 * 24 * 365,
-        },
+        expiration: { maxEntries: 4, maxAgeSeconds: 365 * 24 * 60 * 60 },
       },
     },
     {
-      urlPattern: /^https:\/\/.+\.supabase\.co\/.*/i,
-      handler: 'NetworkFirst',
+      urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: { cacheName: 'static-font-assets' },
+    },
+    {
+      urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
+      handler: 'StaleWhileRevalidate',
       options: {
-        cacheName: 'supabase-api',
-        networkTimeoutSeconds: 10,
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24,
-        },
+        cacheName: 'static-image-assets',
+        expiration: { maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 },
       },
     },
   ],
