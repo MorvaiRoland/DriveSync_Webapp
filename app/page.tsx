@@ -15,7 +15,7 @@ import { Metadata } from 'next' // <--- Ne felejtsd el importálni
 // Ez felülírja a layout.tsx sablonját (template) a főoldalon
 export const metadata: Metadata = {
   title: {
-    absolute: "DynamicSense Technologies - Prémium Garázsmenedzsment"
+   absolute: "Prémium Garázsmenedzsment"
   }
 }
 

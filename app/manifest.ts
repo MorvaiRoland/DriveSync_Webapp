@@ -2,12 +2,14 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'DynamicSense - Prémium Garázsmenedzsment',
+    // 1. VÁLTOZÁS: Legyen csak a rövid név, így nem lesz duplikáció a címsorban
+    name: 'DynamicSense', 
     short_name: 'DynamicSense',
-    description: 'Digitális szervizkönyv, költségkövetés és AI diagnosztika autósoknak.',
     
-    // 🔹 Start URL standalone módban, SW nem cache-eli
-    start_url: '/?mode=standalone',
+    // 2. A szlogen maradjon a leírásban
+    description: 'Prémium Garázsmenedzsment - Digitális szervizkönyv és költségkövetés.',
+    
+    start_url: '/',
     scope: '/',
     display: 'standalone',
     background_color: '#020617',
@@ -17,7 +19,6 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'hu-HU',
     id: 'com.dynamicsense.app',
 
-    // 🔹 Ikonok, csak egy any + egy maskable változat
     icons: [
       {
         src: '/icons/icon-512.png',
@@ -33,33 +34,32 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
 
-    // 🔹 Screenshot-ok
+    // Screenshots maradhat (vagy kommenteld ki, ha nincs még kép)
     screenshots: [
       {
         src: '/screenshots/mobile-dashboard.png',
         sizes: '1080x1920',
         type: 'image/png',
-        form_factor: 'narrow', // Telefon
+        form_factor: 'narrow',
         label: 'DynamicSense Irányítópult',
       },
       {
         src: '/screenshots/desktop-home.png',
         sizes: '1920x1080',
         type: 'image/png',
-        form_factor: 'wide', // Desktop
+        form_factor: 'wide',
         label: 'DynamicSense Webes felület',
       },
     ],
 
     categories: ['productivity', 'utilities', 'lifestyle'],
 
-    // 🔹 Shortcut-ok, start_url-hoz igazítva, hogy SW ne cache-elje
     shortcuts: [
       {
         name: 'Garázsom',
         short_name: 'Garázs',
         description: 'Autóid megtekintése',
-        url: '/?mode=standalone', // fontos a start_url összhangja
+        url: '/', 
         icons: [{ src: '/icons/icon-512.png', sizes: '512x512' }],
       },
       {
