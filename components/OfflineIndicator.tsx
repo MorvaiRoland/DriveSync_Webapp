@@ -1,59 +1,46 @@
-'use client';
+'use client'
 
-import React, { useEffect, useState } from 'react';
-import { WifiOff, Wifi } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { WifiOff } from 'lucide-react'
 
 export default function OfflineIndicator() {
-  const [isOnline, setIsOnline] = useState(true);
-  const [wasOffline, setWasOffline] = useState(false);
+  const [isOffline, setIsOffline] = useState(false)
 
   useEffect(() => {
-    // Set initial state
-    setIsOnline(navigator.onLine);
+    // Kezdeti állapot ellenőrzése
+    setIsOffline(!navigator.onLine)
 
-    const handleOnline = () => {
-      setIsOnline(true);
-      setWasOffline(true);
-      // Auto-hide notification after 3 seconds
-      setTimeout(() => setWasOffline(false), 3000);
-    };
-
+    const handleOnline = () => setIsOffline(false)
     const handleOffline = () => {
-      setIsOnline(false);
-      setWasOffline(false);
-    };
+      setIsOffline(true)
+      // Haptic feedback, ha elmegy a net (csak mobilon)
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([50, 50, 50])
+      }
+    }
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  if (isOnline) {
-    if (wasOffline) {
-      return (
-        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-400 rounded-lg px-4 py-3 flex items-center gap-3 z-50 animate-in slide-in-from-top-2 duration-300">
-          <Wifi className="w-5 h-5 flex-shrink-0" />
-          <div>
-            <p className="font-bold text-sm">Back Online</p>
-            <p className="text-xs opacity-90">Syncing your data...</p>
-          </div>
-        </div>
-      );
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
     }
-    return null;
-  }
+  }, [])
+
+  if (!isOffline) return null
 
   return (
-    <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-sm bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 rounded-lg px-4 py-3 flex items-center gap-3 z-50 animate-in slide-in-from-top-2 duration-300">
-      <WifiOff className="w-5 h-5 flex-shrink-0 animate-pulse" />
-      <div>
-        <p className="font-bold text-sm">You're Offline</p>
-        <p className="text-xs opacity-90">Changes will sync when you reconnect</p>
+    <div className="fixed bottom-20 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-300 md:bottom-6 md:left-auto md:right-6 md:w-auto">
+      <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-800 shadow-lg backdrop-blur-md dark:border-red-900/50 dark:bg-red-900/80 dark:text-red-100">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-red-800">
+          <WifiOff className="h-4 w-4 animate-pulse" />
+        </div>
+        <div>
+          <p className="text-sm font-bold">Nincs internetkapcsolat</p>
+          <p className="text-xs opacity-80">Offline módban vagy. Az adatok mentése a kapcsolat helyreállásakor történik.</p>
+        </div>
       </div>
     </div>
-  );
+  )
 }
