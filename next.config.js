@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-// 1. CSP Header beállítása (Maradt a te verziód, mert jó)
+// 1. CSP Header (Változatlan)
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline';
@@ -22,7 +22,7 @@ const nextConfig = {
   // Mobile optimization & Mapbox
   transpilePackages: ['react-map-gl', 'mapbox-gl'],
   compress: true,
-  productionBrowserSourceMaps: false, // Fontos: Kikapcsolva a gyorsabb buildért
+  productionBrowserSourceMaps: false,
   
   // Image optimization
   images: {
@@ -89,24 +89,25 @@ const nextConfig = {
   },
 };
 
-// PWA KONFIGURÁCIÓ JAVÍTÁSA
+// PWA KONFIGURÁCIÓ - JAVÍTVA (A hibás sorok kivéve)
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development', // Dev módban ne cache-eljen!
+  disable: process.env.NODE_ENV === 'development',
   
-  // iOS Stabilitás beállítások:
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: false, // Ezt kapcsold KI, mert iOS-en végtelen újratöltést okozhat
+  // KIVETTEM A HIBÁS SOROKAT:
+  // aggressiveFrontEndNavCaching: true,  <-- EZ OKOZTA A HIBÁT
+  // cacheOnFrontEndNav: true,            <-- EZT IS JOBB KIVENNI
 
-  // *** EZ A RÉSZ HIÁNYZOTT A STABILITÁSHOZ: ***
+  reloadOnOnline: false,
+
+  // Ez a rész a lényeg az iOS javításhoz:
   workboxOptions: {
     disableDevLogs: true,
-    skipWaiting: true,       // Azonnal telepítse az újat
-    clientsClaim: true,      // Azonnal vegye át az irányítást
-    cleanupOutdatedCaches: true, // Törölje a régi, beragadt verziókat (EZ A KULCS!)
+    skipWaiting: true,
+    clientsClaim: true,
+    cleanupOutdatedCaches: true, // Ez törli a régi verziókat
   },
 
   runtimeCaching: [
@@ -117,19 +118,19 @@ const withPWA = require('next-pwa')({
         cacheName: 'google-fonts',
         expiration: {
           maxEntries: 20,
-          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 év
+          maxAgeSeconds: 60 * 60 * 24 * 365,
         },
       },
     },
     {
       urlPattern: /^https:\/\/.+\.supabase\.co\/.*/i,
-      handler: 'NetworkFirst', // JAVASLAT: API-nál jobb a NetworkFirst, hogy mindig friss adatot kapj
+      handler: 'NetworkFirst',
       options: {
         cacheName: 'supabase-api',
-        networkTimeoutSeconds: 10, // Ha nincs net 10mp-ig, akkor adja a cache-t
+        networkTimeoutSeconds: 10,
         expiration: {
           maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24, // 1 nap
+          maxAgeSeconds: 60 * 60 * 24,
         },
       },
     },
