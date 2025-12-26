@@ -10,6 +10,14 @@ import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, Arr
 import HeaderNav from '@/components/HeaderNav';
 import QuickMileageForm from '@/components/QuickMileageForm'; // <--- ÚJ IMPORT
 import TripPlannerModal from '@/components/TripPlannerModal'; // <--- ÚJ
+import { Metadata } from 'next' // <--- Ne felejtsd el importálni
+
+// Ez felülírja a layout.tsx sablonját (template) a főoldalon
+export const metadata: Metadata = {
+  title: {
+    absolute: "DynamicSense Technologies - Prémium Garázsmenedzsment"
+  }
+}
 
 // Dynamic imports - everything except critical path
 const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { loading: () => null });
