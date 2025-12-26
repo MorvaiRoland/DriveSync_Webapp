@@ -1,78 +1,52 @@
 /** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
   dest: 'public',
-
-  // Manuális regisztráció
   register: false,
 
-  // App Router + PWA stabil frissítés
   skipWaiting: true,
   clientsClaim: true,
 
   disable: process.env.NODE_ENV === 'development',
 
-  /**
-   * 🔥 KRITIKUS
-   * Megakadályozza a "/" (start-url) NetworkFirst cache-elését
-   * → EZ ölte meg eddig a Chrome-ot
-   */
+  // 🔥 EZ HIÁNYZOTT – START-URL TELJES KIKAPCSOLÁSA
+  navigateFallback: null,
+  navigateFallbackDenylist: [/.*/],
+
+  // (ez maradhat, de önmagában kevés)
   cacheStartUrl: false,
 
-  /**
-   * 🔥 KRITIKUS
-   * Megakadályozza, hogy a Next belső HTML / manifest fájlok
-   * belekerüljenek a precache-be
-   */
   buildExcludes: [
     /middleware-manifest\.json$/,
     /app-build-manifest\.json$/,
     /_buildManifest\.js$/,
     /_ssgManifest\.js$/,
-    /index\.html$/,
+    /index\.html$/, // ❗ KRITIKUS
     /\.map$/,
   ],
 
   runtimeCaching: [
-    /**
-     * 🚫 HTML / NAVIGÁCIÓ
-     * App Router esetén SOHA nem cache-eljük
-     */
     {
+      // 🚫 App Router navigáció SOHA nem cache-elhető
       urlPattern: ({ request }) => request.mode === 'navigate',
       handler: 'NetworkOnly',
     },
-
-    /**
-     * ✅ Next.js statikus JS / CSS
-     */
     {
       urlPattern: /\.(?:js|css)$/i,
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'static-resources',
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 nap
-        },
       },
     },
-
-    /**
-     * ✅ Külső assetek (Google Fonts, Mapbox)
-     */
     {
       urlPattern: /^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|api\.mapbox\.com)\/.*/i,
       handler: 'CacheFirst',
       options: {
         cacheName: 'external-assets',
-        expiration: {
-          maxEntries: 30,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 nap
-        },
       },
     },
   ],
 });
+
 
 /* -------------------------------------------------------------------------- */
 /*                               SECURITY HEADERS                             */
