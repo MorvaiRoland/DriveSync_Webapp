@@ -90,38 +90,28 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="hu" suppressHydrationWarning>
-      <body
-        className="antialiased bg-slate-50 dark:bg-slate-950 transition-colors duration-300 min-h-screen flex flex-col overflow-x-hidden selection:bg-blue-500 selection:text-white"
-        style={{
-          minHeight: '100dvh',
-          // iOS Safe Area kezelés (Notch/Dynamic Island)
-          paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
-          paddingLeft: 'env(safe-area-inset-left)',
-          paddingRight: 'env(safe-area-inset-right)',
-        }}
-      >
+      <body className="antialiased bg-slate-50 dark:bg-slate-950 transition-colors duration-300 min-h-screen flex flex-col overflow-x-hidden">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          {/* Main konténer optimalizálás */}
           <main className="flex-1 w-full max-w-[2000px] mx-auto flex flex-col relative">
             {children}
           </main>
           
           <Toaster position="top-center" richColors closeButton />
-          <CookieBanner />
-          <InstallPrompt />
           
-          <PermissionManager />
-          
-          <OfflineIndicator />
-          <RegisterSW />
+          {/* Csak a kliensen futó komponensek */}
+          <div className="contents">
+            <CookieBanner />
+            <InstallPrompt />
+            <PermissionManager />
+            <OfflineIndicator />
+            <RegisterSW />
+          </div>
         </ThemeProvider>
-      
       </body>
     </html>
   );
