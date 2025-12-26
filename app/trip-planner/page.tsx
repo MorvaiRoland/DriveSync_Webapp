@@ -2,7 +2,7 @@ import { createClient } from '@/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import TripPlannerClient from './TripPlannerClient'
-import { Warehouse } from 'lucide-react'
+import { Warehouse, ChevronLeft } from 'lucide-react'
 
 export default async function TripPlannerPage() {
   const supabase = await createClient()
@@ -18,17 +18,22 @@ export default async function TripPlannerPage() {
     .eq('status', 'active') // Csak aktív autókat mutassunk
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
-      {/* Egyszerű fejléc visszalépéshez */}
-      <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 h-16 flex items-center justify-between sticky top-0 z-50">
-         <div className="flex items-center gap-4">
-            <Link href="/" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-               <Warehouse className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+    // JAVÍTÁS: h-screen és flex-col a teljes kitöltéshez, overflow-hidden hogy ne legyen dupla scroll
+    <div className="flex h-screen flex-col bg-slate-50 dark:bg-slate-950">
+      
+      {/* Fejléc - JAVÍTÁS: pt-[env(safe-area-inset-top)] a Notch miatt */}
+      <nav className="sticky top-0 z-50 flex h-auto w-full items-center justify-between border-b border-slate-200 bg-white/80 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
+         <div className="flex items-center gap-3">
+            <Link href="/" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+               <ChevronLeft className="h-5 w-5" />
             </Link>
-            <h1 className="font-bold text-lg text-slate-900 dark:text-white">Pro Úttervező</h1>
+            <div>
+               <h1 className="text-lg font-black text-slate-900 dark:text-white">Úttervező</h1>
+               <p className="text-[10px] font-medium text-slate-500">Tervezz okosan.</p>
+            </div>
          </div>
-         <div className="text-xs font-medium text-slate-500 hidden sm:block">
-            Tervezz okosan, spórolj többet.
+         <div className="hidden rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 sm:block">
+            Pro Verzió
          </div>
       </nav>
 
