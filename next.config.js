@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-// CSP Header optimalizálva
+// 1. CSP Header
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline';
@@ -18,38 +18,25 @@ const cspHeader = `
 
 const nextConfig = {
   poweredByHeader: false,
-  reactStrictMode: true, // Segít a hibák kiszűrésében
-  
-  // Mobile & Mapbox
+  reactStrictMode: true,
   transpilePackages: ['react-map-gl', 'mapbox-gl'],
   compress: true,
   
-  // Image optimization - MAXIMÁLIS SEBESSÉG
   images: {
-    formats: ['image/webp', 'image/avif'], // AVIF hozzáadva a kisebb méretért
-    minimumCacheTTL: 604800, // 60 mp helyett 1 HÉT (fontos a gyorsasághoz!)
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920], // Szabványosabb méretek
+    formats: ['image/webp'],
+    minimumCacheTTL: 604800, // 1 hét
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**.supabase.co',
-      },
-      {
-        protocol: 'https',
-        hostname: '**.googleusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: '**',
-      }
+      { protocol: 'https', hostname: '**.supabase.co' },
+      { protocol: 'https', hostname: '**.googleusercontent.com' },
+      { protocol: 'https', hostname: '**' }
     ],
   },
   
   experimental: {
-    optimizePackageImports: ['lucide-react', 'date-fns'], // Tree-shaking optimalizálás
     serverActions: {
-      bodySizeLimit: '10mb', // 20mb túlzás lehet, lassíthat
+      bodySizeLimit: '10mb',
     },
   },
 
@@ -69,35 +56,66 @@ const nextConfig = {
   },
 };
 
-// PWA KONFIGURÁCIÓ - JAVÍTOTT
+// --- PWA BEÁLLÍTÁS (A JAVÍTÁS LÉNYEGE) ---
 const withPWA = require('next-pwa')({
   dest: 'public',
-  // FONTOS: Kikapcsoljuk az automatikus regisztrációt, mert a RegisterSW.tsx kezeli!
-  register: false, 
+  register: false, // Kézzel regisztráljuk a RegisterSW.tsx-ben
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
   
-  // Cache stratégia
+  // Fontos: ezeket a fájlokat NE cache-elje, mert bezavarják a Next.js működését
+  buildExcludes: [/middleware-manifest\.json$/, /app-build-manifest\.json$/],
+
   runtimeCaching: [
+    // 1. SZABÁLY: NAVIGÁCIÓ (HTML) - MINDIG HÁLÓZAT ELŐSZÖR!
+    // Ez javítja meg a "beragadást". Ha van net, onnan tölti, ha nincs, csak akkor a cache-ből.
     {
-      urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
-      handler: 'CacheFirst',
+      urlPattern: ({ request }) => request.mode === 'navigate',
+      handler: 'NetworkFirst',
       options: {
-        cacheName: 'google-fonts',
-        expiration: { maxEntries: 4, maxAgeSeconds: 365 * 24 * 60 * 60 },
+        cacheName: 'pages',
+        expiration: {
+          maxEntries: 1, 
+          maxAgeSeconds: 24 * 60 * 60, // 24 óra
+        },
+        networkTimeoutSeconds: 3, // Ha 3 mp alatt nem jön válasz a szervertől, akkor nyúl a cache-hez
       },
     },
+    // 2. SZABÁLY: API HÍVÁSOK (Supabase, Next API)
     {
-      urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
-      handler: 'StaleWhileRevalidate',
-      options: { cacheName: 'static-font-assets' },
+      urlPattern: ({ url }) => url.pathname.startsWith('/api') || url.hostname.includes('supabase'),
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'apis',
+        networkTimeoutSeconds: 5,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 5 * 60, // 5 perc
+        },
+      },
     },
+    // 3. SZABÁLY: KÉPEK (MEHET CACHE-BŐL AGRESSZÍVAN)
     {
       urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'static-image-assets',
-        expiration: { maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 },
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 1 hónap
+        },
+      },
+    },
+    // 4. SZABÁLY: JS és CSS FÁJLOK
+    {
+      urlPattern: /\.(?:js|css)$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-js-assets',
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 24 * 60 * 60,
+        },
       },
     },
   ],
