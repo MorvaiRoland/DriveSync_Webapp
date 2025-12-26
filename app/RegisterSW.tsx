@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 
 export default function RegisterSW() {
   useEffect(() => {
-    // Csak kliens oldalon és csak production buildben fusson
+    // Csak production-ben és csak ha támogatott
     if (
       typeof window !== 'undefined' && 
       'serviceWorker' in navigator && 
@@ -12,10 +12,10 @@ export default function RegisterSW() {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('✅ SW Registered (Scope: ' + registration.scope + ')');
+          console.log('✅ SW Regisztrálva (Scope: ' + registration.scope + ')');
         })
-        .catch((error) => {
-          console.error('❌ SW Registration failed:', error);
+        .catch((err) => {
+          console.error('❌ SW Hiba:', err);
         });
     }
   }, []);

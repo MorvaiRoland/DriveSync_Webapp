@@ -7,7 +7,7 @@ import CookieBanner from '@/components/CookieBanner'
 import InstallPrompt from '@/components/InstallPrompt'
 import OfflineIndicator from '@/components/OfflineIndicator' 
 import PermissionManager from '@/components/PermissionChecker' 
-import ServiceWorkerKiller from '@/components/ServiceWorkerKiller';
+
 
 // Viewport külön exportálása a Next.js 14+ szabvány szerint (Optimalizált)
 export const viewport: Viewport = {
@@ -121,7 +121,7 @@ export default function RootLayout({
           <OfflineIndicator />
           <RegisterSW />
         </ThemeProvider>
-        <ServiceWorkerKiller />
+      
       </body>
     </html>
   );
