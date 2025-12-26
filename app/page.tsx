@@ -8,18 +8,18 @@ import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan }
 import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
 import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map } from 'lucide-react';
 import HeaderNav from '@/components/HeaderNav';
-import QuickMileageForm from '@/components/QuickMileageForm'; // <--- ÚJ IMPORT
-import TripPlannerModal from '@/components/TripPlannerModal'; // <--- ÚJ
-import { Metadata } from 'next' // <--- Ne felejtsd el importálni
+import QuickMileageForm from '@/components/QuickMileageForm';
+import TripPlannerModal from '@/components/TripPlannerModal';
+import { Metadata } from 'next'
 
-// Ez felülírja a layout.tsx sablonját (template) a főoldalon
+// Cím beállítása a Manifest duplikáció elkerülésére
 export const metadata: Metadata = {
   title: {
-   absolute: "Prémium Garázsmenedzsment"
+    absolute: "Prémium Garázsmenedzsment"
   }
 }
 
-// Dynamic imports - everything except critical path
+// Dynamic imports
 const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { loading: () => null });
 const AiMechanic = dynamic(() => import('@/components/AiMechanic'), { loading: () => null });
 const CongratulationModal = dynamic(() => import('@/components/CongratulationModal'), { loading: () => null });
@@ -60,13 +60,8 @@ async function DashboardComponent() {
   let canUseAi = false;
   let totalCostAllTime = 0;
 
-  // Előfizetés és limitek ellenőrzése
-  // MOST MINDENKI PRO
   plan = 'lifetime';
   subscription = { plan_type: 'lifetime', status: 'active' };
-  
-  // Limit felülírása
-  let currentMaxCars: number | typeof Infinity = Infinity;
   canAddCar = true;
   canUseAi = true;
 
@@ -88,7 +83,6 @@ async function DashboardComponent() {
 
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
-  // ... (statisztika számítások) ...
   if (cars.length > 0) {
       const relevantCarIds = [...myCars, ...sharedCars].map(c => c.id);
       if (relevantCarIds.length > 0) {
@@ -107,24 +101,16 @@ async function DashboardComponent() {
               const spentPrev30Days = allCosts.filter(e => { const d = new Date(e.event_date); return d >= sixtyDaysAgo && d < thirtyDaysAgo; }).reduce((sum, e) => sum + (e.cost || 0), 0);
               if (spentPrev30Days > 0) spendingTrend = Math.round(((spentLast30Days - spentPrev30Days) / spentPrev30Days) * 100);
               else if (spentLast30Days > 0) spendingTrend = 100;
-              // Összes költség az idők kezdete óta
               totalCostAllTime = allCosts.reduce((sum, e) => sum + (e.cost || 0), 0);
           }
       }
     if (myCars.length > 0) {
          const totalHealth = myCars.reduce((sum, car) => {
-            // 1. Elektromos autók: Ha nincs motorolaj, az 100%-os egészségnek számít
             if (car.fuel_type === 'Elektromos') {
                  return sum + 100;
             }
-
-            // 2. Ciklus meghatározása
             const interval = car.service_interval_km || 15000;
-            
-            // 3. Utolsó szerviz km meghatározása (Adatbázis mező vagy Események)
             let lastServiceKm = car.last_service_mileage || 0;
-
-            // Megnézzük a rögzített 'service' eseményeket, hátha van frissebb adat
             if (car.events && Array.isArray(car.events)) {
                 const serviceEvents = car.events.filter((e: any) => e.type === 'service');
                 if (serviceEvents.length > 0) {
@@ -134,30 +120,20 @@ async function DashboardComponent() {
                     }
                 }
             }
-
-            // 4. Számítás
             const currentKm = car.mileage || 0;
             const kmDrivenSinceService = Math.max(0, currentKm - lastServiceKm);
-            
-            // Ha többet mentünk, mint az intervallum (Túlfutás), akkor a hátralévő 0%
             let healthPercent = ((interval - kmDrivenSinceService) / interval) * 100;
-
-            // 5. Korrekció: 0 és 100 közé szorítjuk
             healthPercent = Math.max(0, Math.min(100, healthPercent));
-
             return sum + healthPercent;
          }, 0);
-
-         // Átlagolás: Összes százalék összege / autók száma
          fleetHealth = Math.round(totalHealth / myCars.length);
       } else {
-         fleetHealth = 100; // Ha nincs autó, 100% az alapállapot
+         fleetHealth = 100;
       }
     }
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
 
-  // Badge logika
   const isHighMiler = cars.some(c => c.mileage >= 200000);
   const isAdmin = recentActivity.length > 0;
   const isEcoDriver = fleetHealth >= 90;
@@ -181,26 +157,25 @@ async function DashboardComponent() {
       {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
       <ChangelogModal />
       
-      <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" style={{ paddingTop: 'env(safe-area-inset-top, 1rem)' }}>
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300">
+      {/* --- MÓDOSÍTÁS 1: A Navigációt lejjebb toljuk (pt-[env(safe-area-inset-top)]) --- */}
+      <nav 
+        className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]" 
+      >
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300 mt-2">
 
-          {/* Left: HeaderNav (desktop + mobile) */}
+          {/* Left: HeaderNav */}
           <div className="flex items-center">
             <HeaderNav />
           </div>
 
-          {/* Right controls remain server-side (settings, logout) */}
+          {/* Right controls */}
           <div className="flex items-center gap-3">
- 
-
-
-          <Link href="/trip-planner" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+            <Link href="/trip-planner" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
               <Map className="w-4 h-4" /> Úttervező
-              </Link>
-              <Link href="/trip-planner" className="md:hidden p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
->
-  <Map className="w-5 h-5" />
-</Link>
+            </Link>
+            <Link href="/trip-planner" className="md:hidden p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <Map className="w-5 h-5" />
+            </Link>
             <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
               <span className="text-sm">🚀</span> Early Access Pro
             </Link>
@@ -221,8 +196,10 @@ async function DashboardComponent() {
         </div>
       </nav>
 
-      {/* ... Dashboard Main Content ... */}
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-32 md:pt-24" style={{ paddingTop: 'calc(env(safe-area-inset-top, 1rem) + 4.5rem)' }}>
+      {/* --- MÓDOSÍTÁS 2: A tartalomnak helyet hagyunk fentről (safe-area + 6rem) --- */}
+      <div 
+        className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]"
+      >
         
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
@@ -264,14 +241,12 @@ async function DashboardComponent() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-8">
               
-              {/* --- ITT TÖRTÉNT A VÁLTOZÁS: ÚJ KOMPONENS BEHÍVÁSA --- */}
               {FEATURES.mileageLog && myCars.length > 0 && (
                   <QuickMileageForm 
                       cars={myCars} 
                       latestCarId={latestCarId} 
                   />
               )}
-              {/* ----------------------------------------------------- */}
 
               {(myCars.length > 0 || FEATURES.addCar || sharedCars.length > 0) && (
                   <div className="space-y-6">
@@ -295,11 +270,11 @@ async function DashboardComponent() {
                                href="/cars/new" 
                                className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white/30 dark:bg-slate-800/30 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
                              >
-                                <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                                    <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" />
-                                </div>
-                                <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
-                                <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat ingyen</span>
+                                 <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                     <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" />
+                                 </div>
+                                 <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
+                                 <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat ingyen</span>
                              </Link>
                           )}
                       </div>

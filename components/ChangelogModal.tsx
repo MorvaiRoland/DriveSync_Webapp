@@ -5,7 +5,7 @@ import { X, ArrowRight, Zap, Search, Map, Wrench, Navigation } from 'lucide-reac
 
 // Verzió frissítése, hogy megjelenjen a felhasználóknak
 const CURRENT_VERSION = '2.5.0 Béta'; 
-const RELEASE_DATE = '2025. Május 25.';
+const RELEASE_DATE = '2025. December 25.';
 
 // 1. Az új funkciók listája
 const features = [

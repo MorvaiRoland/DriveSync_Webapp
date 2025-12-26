@@ -8,8 +8,6 @@ import InstallPrompt from '@/components/InstallPrompt'
 import OfflineIndicator from '@/components/OfflineIndicator' 
 import PermissionManager from '@/components/PermissionChecker' 
 
-
-// Viewport külön exportálása a Next.js 14+ szabvány szerint (Optimalizált)
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
@@ -17,9 +15,9 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1, // Megakadályozza a véletlen nagyítást inputoknál mobilon
-  userScalable: false, // App-szerűbb élmény
-  viewportFit: "cover",
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover", // Ez engedi, hogy a tartalom a Notch alá menjen
 };
 
 export const metadata: Metadata = {
@@ -34,17 +32,14 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  
-  // *** EZ A RÉSZ HIÁNYZOTT AZ IPHONE IKONHOZ: ***
   icons: {
-    icon: '/icons/icon-512.png', // Favicon
+    icon: '/icons/icon-512.png',
     shortcut: '/icons/icon-512.png', 
     apple: [
-      { url: '/icons/apple-icon.png' }, // iPhone alapértelmezett
-      { url: '/icons/apple-icon.png', sizes: '512x512' } // Nagyobb felbontású eszközökhöz
+      { url: '/icons/apple-icon.png' },
+      { url: '/icons/apple-icon.png', sizes: '512x512' }
     ],
   },
-  
   openGraph: {
     title: 'DynamicSense Technologies',
     description: 'Prémium Garázsmenedzsment AI támogatással. Flotta és szervizkönyv egy helyen.',
@@ -61,24 +56,19 @@ export const metadata: Metadata = {
     locale: 'hu_HU',
     type: 'website',
   },
-  
   twitter: {
     card: 'summary_large_image',
     title: 'DynamicSense Technologies',
     description: 'A legmodernebb magyar autós alkalmazás.',
     images: ['/opengraph-image.png'],
   },
-
   alternates: {
     canonical: '/',
   },
-  
-  // A manifest automatikusan generálódik a manifest.ts-ből, de explicit hivatkozás maradhat
   manifest: "/manifest.webmanifest",
-  
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "black-translucent", // Ez teszi átlátszóvá a felső sávot
     title: "DynamicSense",
   },
 };
@@ -103,7 +93,6 @@ export default function RootLayout({
           
           <Toaster position="top-center" richColors closeButton />
           
-          {/* Csak a kliensen futó komponensek */}
           <div className="contents">
             <CookieBanner />
             <InstallPrompt />
