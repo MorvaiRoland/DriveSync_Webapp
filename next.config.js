@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-// 1. Lépés: Definiáljuk a szigorú CSP-t
-// JAVÍTÁS: Hozzáadtuk a 'https://api.mapbox.com'-ot a style-src-hoz
-// JAVÍTÁS: Hozzáadtuk a 'worker-src'-t a térkép stabilitásához
+// 1. CSP Header beállítása (Maradt a te verziód, mert jó)
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline';
@@ -21,31 +19,28 @@ const cspHeader = `
 const nextConfig = {
   poweredByHeader: false,
   
-  // Mobile optimization
+  // Mobile optimization & Mapbox
   transpilePackages: ['react-map-gl', 'mapbox-gl'],
   compress: true,
-  productionBrowserSourceMaps: false,
+  productionBrowserSourceMaps: false, // Fontos: Kikapcsolva a gyorsabb buildért
   
-  // Image optimization for mobile
+  // Image optimization
   images: {
     formats: ['image/webp'],
     minimumCacheTTL: 60,
     deviceSizes: [320, 375, 425, 640],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
-      // Supabase képek
       {
         protocol: 'https',
         hostname: '**.supabase.co',
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
-      // Google profilképek
       {
         protocol: 'https',
         hostname: '**.googleusercontent.com',
       },
-      // Minden más külső kép (ha szükséges, különben törölhető a biztonság növeléséhez)
       {
         protocol: 'https',
         hostname: '**',
@@ -88,30 +83,32 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
-          {
-            key: 'Access-Control-Allow-Origin',
-            value: '*',
-          },
-          {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET, POST, PUT, DELETE, OPTIONS',
-          },
-          {
-            key: 'Access-Control-Allow-Headers',
-            value: 'X-Requested-With, Content-Type, Authorization',
-          },
         ],
       },
     ];
   },
 };
 
+// PWA KONFIGURÁCIÓ JAVÍTÁSA
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-  // Mobile optimization
+  disable: process.env.NODE_ENV === 'development', // Dev módban ne cache-eljen!
+  
+  // iOS Stabilitás beállítások:
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: false, // Ezt kapcsold KI, mert iOS-en végtelen újratöltést okozhat
+
+  // *** EZ A RÉSZ HIÁNYZOTT A STABILITÁSHOZ: ***
+  workboxOptions: {
+    disableDevLogs: true,
+    skipWaiting: true,       // Azonnal telepítse az újat
+    clientsClaim: true,      // Azonnal vegye át az irányítást
+    cleanupOutdatedCaches: true, // Törölje a régi, beragadt verziókat (EZ A KULCS!)
+  },
+
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
@@ -120,18 +117,19 @@ const withPWA = require('next-pwa')({
         cacheName: 'google-fonts',
         expiration: {
           maxEntries: 20,
-          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 év
         },
       },
     },
     {
       urlPattern: /^https:\/\/.+\.supabase\.co\/.*/i,
-      handler: 'StaleWhileRevalidate',
+      handler: 'NetworkFirst', // JAVASLAT: API-nál jobb a NetworkFirst, hogy mindig friss adatot kapj
       options: {
         cacheName: 'supabase-api',
+        networkTimeoutSeconds: 10, // Ha nincs net 10mp-ig, akkor adja a cache-t
         expiration: {
           maxEntries: 50,
-          maxAgeSeconds: 60 * 60, // 1 hour
+          maxAgeSeconds: 60 * 60 * 24, // 1 nap
         },
       },
     },

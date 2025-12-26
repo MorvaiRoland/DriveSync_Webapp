@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'DynamicSense - Prémium Garázsmenedzsment',
     short_name: 'DynamicSense',
     description: 'Digitális szervizkönyv, költségkövetés és AI diagnosztika autósoknak.',
-    start_url: '/',
+    start_url: '/?mode=standalone',
     scope: '/',
     display: 'standalone',
     background_color: '#020617',
