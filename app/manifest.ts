@@ -2,31 +2,31 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'DynamicSense - Premium Vehicle Management',
+    name: 'DynamicSense - Prémium Garázsmenedzsment',
     short_name: 'DynamicSense',
-    description: 'Comprehensive vehicle management with service history, costs, and AI diagnostics.',
+    description: 'Digitális szervizkönyv, költségkövetés és AI diagnosztika autósoknak.',
     start_url: '/',
     scope: '/',
-    display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#0f172a',
-    orientation: 'portrait-primary',
+    display: 'standalone', // Ez kötelező a PermissionManager működéséhez!
+    background_color: '#020617', // A layoutod sötét hátteréhez igazítva
+    theme_color: '#020617',     // A böngésző sáv színe
+    orientation: 'portrait',
     dir: 'ltr',
     lang: 'hu-HU',
     id: 'com.dynamicsense.app',
 
     icons: [
       {
-        src: '/icon.png',
+        src: '/icons/icon-192.png', // Javasolt külön mappába tenni az ikonokat
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon.png',
+        src: '/icons/icon-192.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'maskable',
+        purpose: 'maskable', // Androidon ez teszi lehetővé a kerek/négyzet alakú adaptációt
       },
       {
         src: '/icons/icon-512.png',
@@ -42,50 +42,39 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
 
+    // A screenshotok aktiválják a "gazdag telepítési élményt" Androidon
     screenshots: [
       {
-        src: '/DynamicSense-logo.png',
-        sizes: '540x720',
+        src: '/screenshots/mobile-dashboard.png', // Ide egy valódi képet tegyél az appról!
+        sizes: '1080x1920',
         type: 'image/png',
         form_factor: 'narrow',
-        label: 'DynamicSense Dashboard',
+        label: 'DynamicSense Irányítópult',
       },
       {
-        src: '/DynamicSense-logo.png',
-        sizes: '1280x720',
+        src: '/screenshots/desktop-home.png',
+        sizes: '1920x1080',
         type: 'image/png',
         form_factor: 'wide',
-        label: 'DynamicSense Dashboard',
+        label: 'DynamicSense Webes felület',
       },
     ],
 
-    categories: ['productivity', 'utilities'],
+    categories: ['productivity', 'utilities', 'lifestyle'],
     shortcuts: [
       {
-        name: 'Garage',
-        short_name: 'Garage',
-        description: 'Access your vehicle garage',
+        name: 'Garázsom',
+        short_name: 'Garázs',
+        description: 'Autóid megtekintése',
         url: '/',
-        icons: [
-          {
-            src: '/icon.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-        ],
+        icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
       },
       {
-        name: 'Analytics',
-        short_name: 'Analytics',
-        description: 'View vehicle analytics and costs',
+        name: 'Statisztikák',
+        short_name: 'Költségek',
+        description: 'Kiadások elemzése',
         url: '/analytics',
-        icons: [
-          {
-            src: '/icon.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-        ],
+        icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }],
       },
     ],
 

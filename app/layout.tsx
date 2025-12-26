@@ -7,6 +7,8 @@ import CookieBanner from '@/components/CookieBanner'
 import InstallPrompt from '@/components/InstallPrompt'
 import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import OfflineIndicator from '@/components/OfflineIndicator' 
+// 1. IMPORTÁLD BE A JOGOSULTSÁG-KEZELŐT
+import PermissionManager from '@/components/PermissionChecker' 
 
 export const viewport: Viewport = {
   themeColor: [
@@ -31,7 +33,6 @@ export const metadata: Metadata = {
     telephone: false,
   },
   
-  // --- ITT A KÉP BEÁLLÍTÁSA (Open Graph) ---
   openGraph: {
     title: 'DynamicSense Technologies',
     description: 'Prémium Garázsmenedzsment AI támogatással. Flotta és szervizkönyv egy helyen.',
@@ -39,7 +40,7 @@ export const metadata: Metadata = {
     siteName: 'DynamicSense',
     images: [
       {
-        url: '/opengraph-image.png', // Ez a kép a public mappában vagy az app gyökerében legyen
+        url: '/opengraph-image.png',
         width: 1200,
         height: 630,
         alt: 'DynamicSense Dashboard Preview',
@@ -48,12 +49,11 @@ export const metadata: Metadata = {
     locale: 'hu_HU',
     type: 'website',
   },
-  // --- Twitter kártya beállítása is ajánlott ---
   twitter: {
     card: 'summary_large_image',
     title: 'DynamicSense Technologies',
     description: 'A legmodernebb magyar autós alkalmazás.',
-    images: ['/opengraph-image.png'], // Ugyanaz a kép
+    images: ['/opengraph-image.png'],
   },
 
   alternates: {
@@ -75,12 +75,9 @@ export default function RootLayout({
   return (
     <html lang="hu" suppressHydrationWarning>
       <body
-        // JAVÍTÁS: overflow-x-hidden csak itt legyen, a body-n!
         className="antialiased bg-slate-50 dark:bg-slate-950 transition-colors duration-300 min-h-screen flex flex-col overflow-x-hidden selection:bg-blue-500 selection:text-white"
         style={{
           minHeight: '100dvh',
-          // A biztonságos zónákat CSS változóként is átadhatjuk, de a padding itt is maradhat, 
-          // ha a design megkívánja. PWA-nál ez segít elkerülni, hogy a tartalom a "notch" alá kerüljön.
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)',
           paddingLeft: 'env(safe-area-inset-left)',
@@ -93,8 +90,6 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* JAVÍTÁS: Innen kivettük az overflow-x-hidden-t. 
-              Ez a konténer csak a szélességet és középre igazítást kezeli. */}
           <main className="flex-1 w-full max-w-[2000px] mx-auto flex flex-col relative">
             {children}
           </main>
@@ -103,6 +98,10 @@ export default function RootLayout({
           <CookieBanner />
           <InstallPrompt />
           <PWAInstallPrompt />
+          
+          {/* 2. ILLESZD BE A KOMPONENST IDE */}
+          <PermissionManager />
+          
           <OfflineIndicator />
           <RegisterSW />
         </ThemeProvider>
