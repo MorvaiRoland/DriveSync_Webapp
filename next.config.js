@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-// 1. CSP Header (Változatlan)
+// 1. CSP Header (Változatlan - ez jó volt)
 const cspHeader = `
     default-src 'self';
     script-src 'self' 'unsafe-eval' 'unsafe-inline';
@@ -89,26 +89,22 @@ const nextConfig = {
   },
 };
 
-// PWA KONFIGURÁCIÓ - JAVÍTVA (A hibás sorok kivéve)
+// PWA KONFIGURÁCIÓ - JAVÍTOTT (FLATTENED)
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
-  skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  
-  // KIVETTEM A HIBÁS SOROKAT:
-  // aggressiveFrontEndNavCaching: true,  <-- EZ OKOZTA A HIBÁT
-  // cacheOnFrontEndNav: true,            <-- EZT IS JOBB KIVENNI
-
   reloadOnOnline: false,
 
-  // Ez a rész a lényeg az iOS javításhoz:
-  workboxOptions: {
-    disableDevLogs: true,
-    skipWaiting: true,
-    clientsClaim: true,
-    cleanupOutdatedCaches: true, // Ez törli a régi verziókat
-  },
+  // JAVÍTÁS: Közvetlenül ide írjuk a workbox beállításokat, 
+  // nem tesszük 'workboxOptions' blokkba!
+  
+  skipWaiting: true,           // Azonnal frissít
+  clientsClaim: true,          // Azonnal átveszi az irányítást
+  cleanupOutdatedCaches: true, // Törli a régi fájlokat (Ez a legfontosabb!)
+  
+  // Ez kikapcsolja a zavaró logokat a build során
+  disableDevLogs: true,
 
   runtimeCaching: [
     {
