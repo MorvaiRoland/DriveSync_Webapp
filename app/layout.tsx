@@ -5,7 +5,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
 import CookieBanner from '@/components/CookieBanner'
 import InstallPrompt from '@/components/InstallPrompt'
-import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 import OfflineIndicator from '@/components/OfflineIndicator' 
 // 1. IMPORTÁLD BE A JOGOSULTSÁG-KEZELŐT
 import PermissionManager from '@/components/PermissionChecker' 
@@ -97,7 +96,7 @@ export default function RootLayout({
           <Toaster position="top-center" richColors closeButton />
           <CookieBanner />
           <InstallPrompt />
-          <PWAInstallPrompt />
+       
           
           {/* 2. ILLESZD BE A KOMPONENST IDE */}
           <PermissionManager />
