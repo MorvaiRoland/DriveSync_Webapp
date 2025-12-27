@@ -2,85 +2,161 @@ import { createClient } from '@/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import SettingsDashboard from '@/components/SettingsDashboard'
-import { signOutAction } from './actions'
+import { 
+  ShieldCheck, 
+  ArrowLeft, 
+  Settings2, 
+  Fingerprint, 
+  UserCircle,
+  Zap,
+  ShieldAlert
+} from 'lucide-react'
 
-export default async function SettingsPage(props: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
-  const searchParams = await props.searchParams
+// Next.js 15+ típusdefiníció a searchParams-hoz
+type PageProps = {
+  searchParams: Promise<{ [key: string]: string | undefined }>
+}
+
+export const metadata = {
+  title: 'Beállítások | Apex Analytics',
+  description: 'Fiók és adatkezelés 2025'
+}
+
+export default async function SettingsPage({ searchParams }: PageProps) {
+  // 1. Adatok await-elése a szerveren
+  const sParams = await searchParams
   const supabase = await createClient()
 
+  // 2. Auth ellenőrzés - Ha nincs user, azonnali redirect
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
-  // Előfizetés lekérdezése
+  // 3. Előfizetés és beállítások lekérése
   const { data: subscription } = await supabase
     .from('subscriptions')
-    .select('plan_type, status, stripe_customer_id')
+    .select('plan_type, status')
     .eq('user_id', user.id)
     .single()
 
+  // 4. Metadata és üzenetek kezelése
   const meta = user.user_metadata || {}
   const settings = meta.settings || { notify_email: true, notify_push: false, theme: 'system' }
-  const message = searchParams.success || searchParams.error
-  const isError = !!searchParams.error
-
-  const currentPlan = subscription?.plan_type || 'free';
+  const message = sParams.success || sParams.error
+  const isError = !!sParams.error
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300 pb-20">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-500 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] overflow-x-hidden selection:bg-primary/30">
+      
+      {/* --- PREMIUM ANIMÁLT HÁTTÉR --- */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-15%] right-[-10%] w-[70vw] h-[70vw] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[50vw] h-[50vw] bg-blue-600/10 rounded-full blur-[100px]" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] brightness-100" />
+      </div>
+
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
         
-        {/* HEADER */}
-        <div className="relative bg-slate-900 pb-32 pt-10 overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-20">
-                <div className="absolute -top-24 -right-24 w-96 h-96 bg-amber-500 rounded-full blur-3xl"></div>
-                <div className="absolute top-1/2 -left-24 w-72 h-72 bg-blue-600 rounded-full blur-3xl"></div>
-            </div>
+        {/* --- NAVIGÁCIÓ --- */}
+        <nav className="flex items-center justify-between mb-12">
+          <Link 
+            href="/" 
+            className="group flex items-center gap-3 px-4 py-2 rounded-2xl glass border-neon-glow hover:bg-primary/10 transition-all shadow-xl shadow-primary/5"
+          >
+            <ArrowLeft className="w-4 h-4 text-primary group-hover:-translate-x-1 transition-transform" />
+            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest">Vissza a Garázsba</span>
+          </Link>
 
-            <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6">
-                <div className="flex items-center justify-between mb-8">
-                      <Link href="/" className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors text-sm font-bold uppercase tracking-wider">
-                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                         Vissza a garázsba
-                     </Link>
-                    <form action={signOutAction}>
-                        <button className="text-white/70 hover:text-white text-sm font-bold transition-colors">
-                            Kijelentkezés
-                        </button>
-                    </form>
-                </div>
-                
-                <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">Fiókbeállítások</h1>
-                <p className="text-slate-400 max-w-xl">Kezeld a profilodat, az előfizetést és a biztonsági beállításokat egy helyen.</p>
+          <div className="flex items-center gap-4">
+            <div className="hidden xs:flex flex-col items-end">
+              <span className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter">Adatbiztonság</span>
+              <span className="text-[11px] font-bold text-emerald-500 flex items-center gap-1">
+                <ShieldCheck size={12} /> Protokoll Aktív
+              </span>
             </div>
+            <div className="h-10 w-10 rounded-2xl glass flex items-center justify-center border-neon-glow">
+              <Fingerprint className="text-primary w-5 h-5" />
+            </div>
+          </div>
+        </nav>
+
+        {/* --- CÍMSOR ÉS RENDSZERÜZENET --- */}
+        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest mb-2">
+              <Settings2 size={12} /> Account Configuration
+            </div>
+            <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-gradient-ocean uppercase italic leading-none">
+              Beállítások <span className="text-primary">.</span>
+            </h1>
+            <p className="text-muted-foreground font-medium text-sm md:text-base max-w-xl">
+              Profilkezelés, értesítési preferenciák és előfizetési adatok központosított vezérlése.
+            </p>
+          </div>
+
+          {/* Rendszer Üzenet (Ha van URL paraméter) */}
+          {message && (
+            <div className={`p-4 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-right-4 max-w-sm ${
+              isError ? 'bg-destructive/10 border-destructive text-destructive' : 'bg-emerald-500/10 border-emerald-500 text-emerald-500'
+            }`}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-current/10 shrink-0">
+                {isError ? <ShieldAlert size={20} /> : <Zap size={20} className="fill-current" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Rendszerüzenet</p>
+                <p className="text-xs font-bold leading-tight truncate">{message}</p>
+              </div>
+            </div>
+          )}
+        </header>
+
+        {/* --- DASHBOARD KONTÉNER --- */}
+        <div className="relative">
+          {/* Háttér dekoráció */}
+          <div className="absolute -left-20 top-40 opacity-[0.02] dark:opacity-[0.05] pointer-events-none rotate-90">
+             <UserCircle size={400} />
+          </div>
+
+          {/* A Kliens Komponens hívása az összes adattal */}
+          <SettingsDashboard 
+            user={user} 
+            meta={meta} 
+            settings={settings} 
+            subscription={subscription} 
+          />
         </div>
 
-        {/* TARTALOM */}
-        <div className="relative z-20 max-w-5xl mx-auto px-4 -mt-20">
-            {message && (
-                <div className={`mb-6 p-4 rounded-xl shadow-lg border flex items-center gap-3 animate-in slide-in-from-top-4 fade-in duration-500 backdrop-blur-md ${isError ? 'bg-red-500/90 border-red-600 text-white' : 'bg-emerald-500/90 border-emerald-600 text-white'}`}>
-                    <span className="text-xl bg-white/20 rounded-full w-8 h-8 flex items-center justify-center">{isError ? '!' : '✓'}</span>
-                    <span className="font-bold">{message}</span>
-                </div>
-            )}
+        {/* --- LÁBLÉC --- */}
+        <footer className="mt-24 border-t border-border/50 pt-12 flex flex-col items-center gap-8 text-center">
+          <div className="flex flex-wrap justify-center gap-6 sm:gap-12">
+            {[
+              { label: 'ÁSZF', href: '/terms' },
+              { label: 'Adatvédelem', href: '/privacy' },
+              { label: 'Support', href: '/support' }
+            ].map((link) => (
+              <Link 
+                key={link.label}
+                href={link.href}
+                className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
 
-            <SettingsDashboard 
-                user={user} 
-                meta={meta} 
-                settings={settings} 
-                subscription={subscription} 
-            />
-
-            {/* JOGI LINKEK A LÁBLÉCBEN */}
-            <div className="mt-12 border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col items-center gap-4">
-                <div className="flex gap-6 text-xs text-slate-500 font-medium">
-                    <Link href="/impressum" className="hover:text-slate-900 dark:hover:text-slate-300 transition-colors">Impresszum</Link>
-                    <Link href="/terms" className="hover:text-slate-900 dark:hover:text-slate-300 transition-colors">ÁSZF</Link>
-                    <Link href="/privacy" className="hover:text-slate-900 dark:hover:text-slate-300 transition-colors">Adatvédelem</Link>
-                </div>
-                <div className="text-slate-400 text-[10px] font-mono">
-                    DynamicSense ID: {user.id.split('-')[0]}... • Plan: {currentPlan.toUpperCase()}
-                </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-center gap-2 opacity-30 grayscale">
+               <span className="text-[10px] font-bold">POWERED BY</span>
+               <div className="h-4 w-12 bg-foreground rounded-sm" />
             </div>
-        </div>
+            <p className="text-[9px] font-mono text-slate-500 opacity-50 uppercase tracking-tighter">
+              Apex System v4.2.0 • Session Encrypted • 2025
+            </p>
+          </div>
+        </footer>
+      </div>
+
+      {/* --- MOBIL NOTCH SAFE ZONE FILLER --- */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 h-[env(safe-area-inset-bottom)] bg-background/80 backdrop-blur-md z-[100]" />
     </div>
   )
 }
