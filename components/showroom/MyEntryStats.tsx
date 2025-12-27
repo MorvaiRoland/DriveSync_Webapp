@@ -1,61 +1,48 @@
 'use client'
 
 import Image from 'next/image'
-import { Trophy, TrendingUp, Users } from 'lucide-react'
+import { Trophy, Activity, Users, Star } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export default function MyEntryStats({ myEntry }: { myEntry: any }) {
-  if (!myEntry) return null;
-
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl border border-slate-200 dark:border-slate-800 mb-12 relative overflow-hidden">
-        {/* Háttér dekoráció */}
-        <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass rounded-[2.5rem] p-8 border-neon-glow relative overflow-hidden group shadow-2xl">
+        <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:scale-110 transition-transform duration-1000">
+           <Star size={200} />
+        </div>
         
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-            <Trophy className="text-orange-500 w-5 h-5" />
-            Saját Nevezésed
-        </h2>
-
-        <div className="flex flex-col sm:flex-row gap-6">
-            {/* Kép */}
-            <div className="w-full sm:w-1/3 relative aspect-video sm:aspect-square rounded-2xl overflow-hidden shadow-md">
-                <Image 
-                    src={myEntry.imageUrl || '/placeholder-car.jpg'} 
-                    alt="Saját autó" 
-                    fill 
-                    className="object-cover" 
-                />
+        <div className="flex flex-col md:flex-row gap-10 relative z-10">
+            {/* Kép Grayscale hatással */}
+            <div className="w-full md:w-2/5 relative aspect-video md:aspect-square rounded-[2rem] overflow-hidden border border-white/10 group">
+                <Image src={myEntry.imageUrl || '/placeholder.jpg'} alt="Saját autó" fill className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
+                <div className="absolute top-4 left-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl">Jelölt</div>
             </div>
 
-            {/* Statisztikák */}
-            <div className="flex-1 grid grid-cols-2 gap-4">
-                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
-                    <p className="text-xs font-bold text-slate-400 uppercase mb-1">Összes szavazat</p>
-                    <p className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                        {myEntry.voteCount} 
-                        <span className="text-sm font-normal text-slate-400">db</span>
-                    </p>
-                </div>
-                
-                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
-                    <p className="text-xs font-bold text-slate-400 uppercase mb-1">Népszerűség</p>
-                    <div className="flex items-center gap-2">
-                        <TrendingUp className="text-emerald-500 w-5 h-5" />
-                        <span className="text-lg font-bold text-emerald-500">Top 10%</span>
-                    </div>
+            <div className="flex-1 flex flex-col justify-between py-2">
+                <div className="space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary flex items-center gap-2">
+                        <Trophy size={14} /> Saját Nevezés Állapota
+                    </h3>
+                    <h2 className="text-4xl font-black text-foreground uppercase italic tracking-tighter">{myEntry.carName}</h2>
                 </div>
 
-                <div className="col-span-2 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/30 flex items-center justify-between">
-                    <div>
-                        <p className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase mb-1">Autó típusa</p>
-                        <p className="font-bold text-slate-900 dark:text-white">{myEntry.carName}</p>
+                <div className="grid grid-cols-2 gap-4 mt-8">
+                    <div className="bg-accent/30 p-6 rounded-3xl border border-border/50 group/item">
+                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Szavazatok</p>
+                        <p className="text-3xl font-black text-foreground tabular-nums flex items-end gap-2">
+                            {myEntry.voteCount} <span className="text-xs text-primary mb-1">XP+</span>
+                        </p>
                     </div>
-                    <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-orange-500 shadow-sm">
-                        <Users className="w-5 h-5" />
+                    <div className="bg-primary/10 p-6 rounded-3xl border border-primary/20 text-primary">
+                        <p className="text-[9px] font-black uppercase tracking-widest mb-1">Népszerűség</p>
+                        <div className="flex items-center gap-2">
+                            <Activity size={24} />
+                            <span className="text-xl font-black italic tracking-tighter">Rising</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </motion.div>
   )
 }
