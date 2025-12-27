@@ -101,24 +101,48 @@ export async function joinBattle(formData: FormData) {
   return { success: true }
 }
 
-// 4. ÚJ: KILÉPÉS A VERSENYBŐL (Visszavonás)
+// 4. JAVÍTOTT: KILÉPÉS A VERSENYBŐL
 export async function leaveBattle(battleId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
   
     if (!user) return { error: 'Nincs bejelentkezve' }
-  
-    const { error } = await supabase
-      .from('battle_entries')
-      .delete()
-      .eq('battle_id', battleId)
-      .eq('user_id', user.id)
-  
-    if (error) {
-        console.error(error)
-        return { error: 'Nem sikerült visszavonni a nevezést.' }
+
+    // 1. Megkeressük a nevezés azonosítóját (szükség van rá a szavazatok törléséhez)
+    const { data: entry, error: findError } = await supabase
+        .from('battle_entries')
+        .select('id')
+        .eq('battle_id', battleId)
+        .eq('user_id', user.id)
+        .single()
+
+    if (findError || !entry) {
+        return { error: 'Nem található aktív nevezés ezzel az azonosítóval.' }
     }
-  
-    revalidatePath('/showroom')
-    return { success: true }
+
+    try {
+        // 2. Töröljük a nevezéshez tartozó összes szavazatot (manuális cleanup)
+        // Megjegyzés: Ha be van állítva az 'ON DELETE CASCADE' a DB-ben, ez a lépés elhagyható
+        await supabase
+            .from('battle_votes')
+            .delete()
+            .eq('entry_id', entry.id)
+
+        // 3. Most már törölhető maga a nevezés
+        const { error: deleteError } = await supabase
+            .from('battle_entries')
+            .delete()
+            .eq('id', entry.id)
+
+        if (deleteError) {
+            console.error('Delete error:', deleteError)
+            return { error: 'Hiba történt a törlés során: ' + deleteError.message }
+        }
+
+        revalidatePath('/showroom')
+        return { success: true }
+
+    } catch (e) {
+        return { error: 'Váratlan hiba történt a visszavonás során.' }
+    }
 }
