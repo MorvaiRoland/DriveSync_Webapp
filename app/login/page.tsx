@@ -93,7 +93,7 @@ export default async function LoginPage(props: Props) {
             {/* 3. LÁBLÉC */}
             <div className="mt-auto flex justify-between items-end pb-4 text-[9px] text-slate-500 font-black uppercase tracking-[0.4em] shrink-0 w-full max-w-[420px] mx-auto">
                 <div className="flex flex-col gap-1">
-                  <span className="opacity-50">Apex_OS v2.5.4 Béta</span>
+                  <span className="opacity-50">DynamicSense v2.5 Béta</span>
                   <span className="text-primary/60">Build_2025.12.27</span>
                 </div>
                 <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/5 px-3 py-1 rounded-lg border border-emerald-500/10">
