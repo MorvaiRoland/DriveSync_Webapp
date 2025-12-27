@@ -131,7 +131,7 @@ export default function SettingsDashboard({
                     </div>
                     <div className="text-center md:text-left space-y-4">
                         <h3 className="text-2xl font-black tracking-tighter uppercase italic">Profilkép módosítása</h3>
-                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest leading-relaxed max-w-xs">Az arcod az Apex rendszerben. <br/>Max 10MB (JPG, PNG).</p>
+                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest leading-relaxed max-w-xs">Az arcod a DynamicSense rendszerben. <br/>Max 10MB (JPG, PNG).</p>
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={() => formRef.current?.requestSubmit()} />
                         <button onClick={() => fileInputRef.current?.click()} className="bg-primary/10 text-primary border border-primary/20 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all">
                             Új kép feltöltése
