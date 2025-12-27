@@ -81,24 +81,24 @@ export const LoginSidePanel = () => {
                 <SpecItem 
                     icon={<Activity size={18} />} 
                     label="AI Mag" 
-                    value="Apex v2.5" 
+                    value="Gemini 2.5 Flash" 
                     color="bg-primary" 
                     progress={92}
                 />
                 <SpecItem 
                     icon={<Shield size={18} />} 
                     label="Biztonság" 
-                    value="Kvantum" 
+                    value="AES-256 Titkosítás" 
                     color="bg-blue-600" 
                     progress={100}
                 />
                 <SpecItem 
-                    icon={<Globe size={18} />} 
-                    label="Hálózat" 
-                    value="Edge" 
-                    color="bg-emerald-500" 
-                    progress={85}
-                />
+    icon={<Activity size={18} />} 
+    label="Telemetria" 
+    value="Valós idejű" 
+    color="bg-emerald-500" 
+    progress={100}
+/>
             </motion.div>
             
             {/* Rendszer állapot indikátor */}
