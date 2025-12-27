@@ -3,60 +3,45 @@
 import { useState, useMemo } from 'react'
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, BarChart, Bar, Legend
+  PieChart, Pie, Cell, Legend, ComposedChart, Bar, Line
 } from 'recharts'
 import { 
-  TrendingUp, TrendingDown, Target, Fuel, DollarSign, 
-  Calendar, PieChart as PieIcon, Layers, Sparkles, Activity
+  TrendingUp, Target, Fuel, DollarSign, PieChart as PieIcon, 
+  Layers, Sparkles, Activity, Zap, ShieldAlert, ChevronRight, 
+  ArrowUpRight, Briefcase, CalendarDays, Clock
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-// --- TÍPUSOK ÉS KONFIGURÁCIÓ ---
 type CategoryKey = 'fuel' | 'service' | 'insurance' | 'maintenance' | 'parking' | 'other';
 
 const COLORS: Record<CategoryKey, string> = {
-  fuel: '#F59E0B',        // Amber
-  service: '#3B82F6',     // Blue
-  insurance: '#8B5CF6',   // Violet
-  maintenance: '#10B981', // Emerald
-  parking: '#EC4899',     // Pink
-  other: '#64748B'        // Slate
+  fuel: '#F59E0B', service: '#3B82F6', insurance: '#8B5CF6',
+  maintenance: '#10B981', parking: '#EC4899', other: '#64748B'
 };
 
 const CATEGORY_LABELS: Record<CategoryKey, string> = {
-  fuel: 'Tankolás',
-  service: 'Szerviz',
-  insurance: 'Biztosítás',
-  maintenance: 'Karbantartás',
-  parking: 'Parkolás',
-  other: 'Egyéb'
+  fuel: 'Üzemanyag', service: 'Szerviz', insurance: 'Biztosítás',
+  maintenance: 'Karbantartás', parking: 'Parkolás', other: 'Egyéb'
 };
 
 export default function CostAnalyticsDashboard({ events, cars }: { events: any[], cars: any[] }) {
   const [timeRange, setTimeRange] = useState<'month' | 'quarter' | 'year' | 'all'>('year');
   const [selectedCar, setSelectedCar] = useState<string>('all');
-  const [budgetMode, setBudgetMode] = useState(false);
-  
-  // Példa költségvetés adatok
-  const [budgetData] = useState<Record<CategoryKey, number>>({
-    fuel: 45000,
-    service: 25000,
-    maintenance: 10000,
-    insurance: 15000,
-    parking: 5000,
-    other: 5000
-  });
+  const [activeTab, setActiveTab] = useState<'trends' | 'distribution' | 'prediction'>('trends');
 
-  // --- ADATFELDOLGOZÁS (TypeScript Biztos) ---
+  // --- ADATFELDOLGOZÁS AZ ADATBÁZISBÓL (events tábla alapján) ---
   const data = useMemo(() => {
     const totals: Record<CategoryKey, number> = { fuel: 0, service: 0, insurance: 0, maintenance: 0, parking: 0, other: 0 };
     const chartMap: Record<string, any> = {};
+    const categoryLastDate: Record<string, string> = {};
+    
+    let minKm = Infinity;
+    let maxKm = 0;
 
-    // Szűrés
     const filtered = events.filter((e: any) => {
       const carMatch = selectedCar === 'all' || e.car_id === parseInt(selectedCar);
       if (!carMatch) return false;
-
+      
       const date = new Date(e.event_date);
       const now = new Date();
       if (timeRange === 'month') return date >= new Date(now.setMonth(now.getMonth() - 1));
@@ -66,318 +51,238 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
     });
 
     filtered.forEach((e: any) => {
-      // Intelligens kategorizálás
+      // Intelligens kategorizálás a tábla 'type' és 'title' mezői alapján
       let cat: CategoryKey = 'other';
-      const type = e.type?.toLowerCase();
-      const notes = e.notes?.toLowerCase() || '';
+      const dbType = e.type?.toLowerCase();
+      const title = e.title?.toLowerCase() || '';
 
-      if (type === 'fuel') cat = 'fuel';
-      else if (type === 'service' || notes.includes('szerviz')) cat = 'service';
-      else if (notes.includes('biztosítás') || notes.includes('kgfb') || notes.includes('casco')) cat = 'insurance';
-      else if (notes.includes('parkolás')) cat = 'parking';
-      else if (notes.includes('karbantartás') || notes.includes('mosás')) cat = 'maintenance';
+      if (dbType === 'fuel') cat = 'fuel';
+      else if (dbType === 'service' || title.includes('szerviz') || title.includes('olaj')) cat = 'service';
+      else if (title.includes('biztosítás') || title.includes('kgfb') || title.includes('casco')) cat = 'insurance';
+      else if (title.includes('parkolás')) cat = 'parking';
+      else if (title.includes('mosás') || title.includes('karbantartás')) cat = 'maintenance';
 
       const cost = Number(e.cost) || 0;
       totals[cat] += cost;
 
-      // Grafikon adatok összeállítása
-      const dateLabel = new Date(e.event_date).toLocaleDateString('hu-HU', { month: 'short' });
-      if (!chartMap[dateLabel]) {
-        chartMap[dateLabel] = { name: dateLabel, fuel: 0, service: 0, insurance: 0, maintenance: 0, parking: 0, other: 0 };
+      // Utolsó dátum rögzítése kategóriánként (Predictionhöz)
+      if (!categoryLastDate[cat] || new Date(e.event_date) > new Date(categoryLastDate[cat])) {
+        categoryLastDate[cat] = e.event_date;
       }
-      chartMap[dateLabel][cat] += cost;
+
+      // Kilométer számítás
+      if (e.mileage > 0) {
+        minKm = Math.min(minKm, e.mileage);
+        maxKm = Math.max(maxKm, e.mileage);
+      }
+
+      // Havi bontás a grafikonhoz
+      const dateLabel = new Date(e.event_date).toLocaleDateString('hu-HU', { year: '2-digit', month: 'short' });
+      if (!chartMap[dateLabel]) {
+        chartMap[dateLabel] = { name: dateLabel, fuel: 0, service: 0, insurance: 0, total: 0 };
+      }
+      chartMap[dateLabel][cat] = (chartMap[dateLabel][cat] || 0) + cost;
+      chartMap[dateLabel].total += cost;
     });
 
-    // Distribution (Pite grafikonhoz) - JAVÍTOTT MAPPELÉS
-    const distribution = (Object.keys(totals) as CategoryKey[])
-      .map((key) => ({
-        name: CATEGORY_LABELS[key],
-        value: totals[key],
-        color: COLORS[key],
-        id: key
-      }))
-      .filter(item => item.value > 0);
-
+    const totalCost = Object.values(totals).reduce((a, b) => a + b, 0);
+    const kmDiff = (maxKm - minKm) > 0 ? (maxKm - minKm) : 1;
+    
     return {
       chartData: Object.values(chartMap),
-      distribution,
-      total: Object.values(totals).reduce((a, b) => a + b, 0),
-      totals
+      distribution: (Object.keys(totals) as CategoryKey[]).map(k => ({ name: CATEGORY_LABELS[k], value: totals[k], color: COLORS[k], id: k })).filter(v => v.value > 0),
+      total: totalCost,
+      totals,
+      ftPerKm: totalCost / kmDiff,
+      lastDates: categoryLastDate,
+      eventCount: filtered.length
     };
   }, [events, selectedCar, timeRange]);
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-12 transition-colors duration-500">
       
-      {/* --- FEJLÉC ÉS SZŰRŐK --- */}
-      <section className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tighter bg-gradient-to-r from-white via-slate-200 to-slate-500 bg-clip-text text-transparent">
-            Költség Analitika <span className="text-amber-500">.</span>
+      {/* --- FEJLÉC --- */}
+      <section className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            Pénzügyi Elemzés <Activity className="text-emerald-500 w-6 h-6" />
           </h1>
-          <p className="text-slate-400 mt-2 font-medium flex items-center gap-2">
-            <Activity size={16} className="text-amber-500" /> 
-            {data.total.toLocaleString()} Ft összköltség a vizsgált időszakban
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+            {data.eventCount} rögzített esemény feldolgozva.
           </p>
-        </motion.div>
-
-        <div className="flex flex-wrap gap-3 bg-white/5 p-2 rounded-[1.5rem] border border-white/10 backdrop-blur-xl shadow-2xl">
-          {['month', 'quarter', 'year', 'all'].map((range) => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range as any)}
-              className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                timeRange === range 
-                ? 'bg-white text-black shadow-[0_0_25px_rgba(255,255,255,0.2)]' 
-                : 'hover:bg-white/5 text-slate-400'
-              }`}
+        </div>
+        
+        <div className="flex flex-wrap gap-2 items-center bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <select 
+            value={selectedCar} 
+            onChange={(e) => setSelectedCar(e.target.value)}
+            className="bg-transparent border-none text-xs font-bold text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer"
+          >
+            <option value="all">Összes autó</option>
+            {cars.map(c => <option key={c.id} value={c.id}>{c.plate}</option>)}
+          </select>
+          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+          {['month', 'year', 'all'].map((r) => (
+            <button 
+              key={r} 
+              onClick={() => setTimeRange(r as any)}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all ${timeRange === r ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
             >
-              {range === 'month' ? '1H' : range === 'quarter' ? '3H' : range === 'year' ? '1É' : 'Mind'}
+              {r === 'month' ? '1H' : r === 'year' ? '1É' : 'Mind'}
             </button>
           ))}
         </div>
       </section>
 
-      {/* --- STATISZTIKAI BENTO BOXOK --- */}
+      {/* --- STATISZTIKAI BENTO GRID --- */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Fő Kártya */}
-        <motion.div 
-          whileHover={{ y: -5 }}
-          className="lg:col-span-2 bg-gradient-to-br from-amber-500 to-orange-600 p-8 rounded-[2.5rem] text-black relative overflow-hidden shadow-2xl shadow-amber-500/20 group"
-        >
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
-            <DollarSign size={120} />
-          </div>
-          <div className="relative z-10 h-full flex flex-col justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">Teljes ráfordítás</p>
-              <h3 className="text-5xl font-black mt-2 tracking-tighter">{data.total.toLocaleString()} Ft</h3>
-            </div>
-            <div className="mt-8 flex items-center gap-3">
-               <div className="bg-black/20 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 border border-black/5">
-                  <Sparkles size={14} className="animate-pulse" />
-                  <span className="text-xs font-bold uppercase">AI optimalizált adatok</span>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 relative overflow-hidden group shadow-sm">
+          <div className="relative z-10">
+            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full">Költségvetés</span>
+            <h2 className="text-5xl font-black text-slate-900 dark:text-white mt-4 tracking-tighter">
+              {data.total.toLocaleString()} <span className="text-2xl text-slate-400 font-medium">Ft</span>
+            </h2>
+            <div className="flex gap-4 mt-6">
+               <div className="flex items-center gap-2">
+                  <ArrowUpRight className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs font-bold text-slate-500 italic">~{Math.round(data.total / (data.eventCount || 1)).toLocaleString()} Ft / esemény</span>
                </div>
             </div>
           </div>
+          <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 group-hover:scale-110 transition-transform duration-700">
+            <DollarSign size={120} className="text-slate-900 dark:text-white" />
+          </div>
         </motion.div>
 
-        {/* Tankolás Box */}
-        <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 backdrop-blur-md flex flex-col justify-between group">
-          <div className="flex justify-between items-start">
-            <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-500 group-hover:bg-amber-500 group-hover:text-black transition-colors">
-              <Fuel size={24} />
-            </div>
-            <TrendingUp size={20} className="text-emerald-500" />
+        <div className="bg-amber-500 rounded-[2.5rem] p-8 text-white flex flex-col justify-between shadow-lg shadow-amber-500/20 relative overflow-hidden group">
+          <Zap className="w-8 h-8 mb-4 opacity-50 group-hover:scale-110 transition-transform" />
+          <div>
+            <h3 className="text-3xl font-black tracking-tighter italic">{data.ftPerKm.toFixed(1)} Ft / km</h3>
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mt-1">Valós fenntartási költség</p>
           </div>
-          <div className="mt-8">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tankolás összesen</p>
-            <h3 className="text-3xl font-black mt-1">{(data.totals.fuel || 0).toLocaleString()} Ft</h3>
-          </div>
+          <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
         </div>
 
-        {/* Járműválasztó Box */}
-        <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] flex flex-col justify-between shadow-inner">
-          <div className="p-3 bg-white/5 rounded-2xl text-slate-400 w-fit">
-            <Layers size={24} />
-          </div>
-          <div className="mt-8">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Aktuális Garázs</p>
-            <select 
-              value={selectedCar} 
-              onChange={(e) => setSelectedCar(e.target.value)}
-              className="w-full bg-transparent border-none font-black text-xl text-white focus:ring-0 p-0 cursor-pointer appearance-none"
-            >
-              <option value="all">Minden jármű</option>
-              {cars.map((c: any) => <option key={c.id} value={c.id} className="bg-slate-900">{c.plate} - {c.model}</option>)}
-            </select>
+        <div className="bg-slate-900 dark:bg-emerald-600 rounded-[2.5rem] p-8 text-white flex flex-col justify-between shadow-lg group">
+          <Sparkles className="w-8 h-8 mb-4 text-emerald-300" />
+          <p className="text-sm font-bold leading-snug">
+            {data.totals.fuel > data.totals.service 
+              ? "Az üzemanyag a legnagyobb kiadásod. Próbálj takarékosabb vezetést!"
+              : "A szervizelés dominál. Az autód mostantól megbízhatóbb állapotban van."}
+          </p>
+          <div className="text-[10px] font-black uppercase opacity-60 mt-4 flex items-center gap-2">
+            Adatbázis Insight <ChevronRight size={12} />
           </div>
         </div>
       </section>
 
-      {/* --- GRAFIKONOK SZEKCIÓ --- */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Fő Költségvonal */}
-        <div className="lg:col-span-2 bg-white/5 rounded-[3rem] p-8 md:p-10 border border-white/10 backdrop-blur-md relative">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
-            <h3 className="font-black text-2xl flex items-center gap-3">
-              <Activity className="text-amber-500" /> Trendvonal
-            </h3>
+      {/* --- GRAFIKONOK (Dark/Light kompatibilis színekkel) --- */}
+      <section className="bg-white dark:bg-slate-800 rounded-[3rem] border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+        <div className="flex border-b border-slate-100 dark:border-slate-700 p-4 gap-2 overflow-x-auto">
+          {['trends', 'distribution', 'prediction'].map((t) => (
             <button 
-              onClick={() => setBudgetMode(!budgetMode)} 
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black tracking-widest transition-all border ${
-                budgetMode 
-                ? 'bg-violet-500 border-violet-400 text-white shadow-lg shadow-violet-500/20' 
-                : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-              }`}
+              key={t} 
+              onClick={() => setActiveTab(t as any)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
             >
-              <Target size={16} /> {budgetMode ? 'BUDGET NÉZET ON' : 'BUDGET NÉZET'}
+              {t === 'trends' ? <Activity size={14}/> : t === 'distribution' ? <PieIcon size={14}/> : <ShieldAlert size={14}/>}
+              {t}
             </button>
-          </div>
-
-          <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.chartData}>
-                <defs>
-                  <linearGradient id="colorMain" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.fuel} stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor={COLORS.fuel} stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{fill: '#64748b', fontSize: 12, fontWeight: 700}} 
-                  dy={10}
-                />
-                <YAxis hide />
-                <Tooltip 
-                  cursor={{ stroke: '#ffffff10', strokeWidth: 2 }}
-                  contentStyle={{ 
-                    backgroundColor: '#0f172a', 
-                    borderRadius: '20px', 
-                    border: '1px solid #ffffff10',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)' 
-                  }}
-                  itemStyle={{ fontWeight: 900, fontSize: '12px' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="fuel" 
-                  stroke={COLORS.fuel} 
-                  strokeWidth={4} 
-                  fillOpacity={1} 
-                  fill="url(#colorMain)" 
-                  name="Tankolás"
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="service" 
-                  stroke={COLORS.service} 
-                  strokeWidth={4} 
-                  fill="transparent" 
-                  name="Szerviz"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          ))}
         </div>
 
-        {/* Eloszlás Pite */}
-        <div className="bg-white/5 rounded-[3rem] p-8 border border-white/10 backdrop-blur-md flex flex-col">
-          <h3 className="font-black text-2xl mb-10 flex items-center gap-3">
-            <PieIcon className="text-blue-500" /> Eloszlás
-          </h3>
-          <div className="h-[280px] relative">
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="p-6 md:p-10 h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            {activeTab === 'trends' ? (
+              <AreaChart data={data.chartData}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} dy={10} />
+                <YAxis hide />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', borderRadius: '16px', border: 'none', color: '#fff' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="total" stroke="#3B82F6" strokeWidth={4} fill="url(#colorTotal)" />
+              </AreaChart>
+            ) : activeTab === 'distribution' ? (
               <PieChart>
-                <Pie
-                  data={data.distribution}
-                  innerRadius={85}
-                  outerRadius={110}
-                  paddingAngle={10}
-                  dataKey="value"
-                  stroke="none"
-                >
+                <Pie data={data.distribution} innerRadius={80} outerRadius={120} paddingAngle={8} dataKey="value" stroke="none">
                   {data.distribution.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
               </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Top Kategória</span>
-                <span className="text-xl font-black text-white">{data.distribution[0]?.name || 'N/A'}</span>
-            </div>
-          </div>
-          
-          <div className="mt-auto space-y-3 pt-6">
-            {data.distribution.slice(0, 4).map((item: any) => (
-              <div key={item.id} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.name}</span>
+            ) : (
+              <ComposedChart data={data.chartData}>
+                <CartesianGrid strokeOpacity={0.1} vertical={false} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                <Tooltip />
+                <Bar dataKey="total" fill="#3B82F6" radius={[10, 10, 0, 0]} barSize={40} />
+                <Line type="monotone" dataKey="total" stroke="#F59E0B" strokeWidth={3} />
+              </ComposedChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      </section>
+
+      {/* --- ADATBÁZIS ALAPÚ EMLÉKEZTETŐK --- */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-700 shadow-sm">
+          <h3 className="font-black text-lg text-slate-900 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tighter">
+            <Briefcase className="text-blue-500 w-5 h-5" /> Költségkeret Analízis
+          </h3>
+          <div className="space-y-5">
+            {data.distribution.map((item) => (
+              <div key={item.id}>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-[10px] font-black uppercase text-slate-400">{item.name}</span>
+                  <span className="text-xs font-black text-slate-900 dark:text-slate-100">{item.value.toLocaleString()} Ft</span>
                 </div>
-                <span className="font-mono text-xs font-black">{item.value.toLocaleString()} Ft</span>
+                <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }} 
+                    animate={{ width: `${(item.value / data.total) * 100}%` }} 
+                    className="h-full rounded-full" 
+                    style={{ backgroundColor: item.color }} 
+                  />
+                </div>
               </div>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* --- KÖLTSÉGVETÉS SZEKCIÓ --- */}
-      <AnimatePresence>
-        {budgetMode && (
-          <motion.section 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            className="bg-[#0f172a] rounded-[3rem] p-8 md:p-12 border border-violet-500/20 shadow-2xl shadow-violet-500/10"
-          >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-              <div className="flex items-center gap-4">
-                <div className="p-4 bg-violet-500 rounded-[1.5rem] text-black shadow-lg shadow-violet-500/40">
-                  <Target size={28} />
-                </div>
-                <div>
-                  <h3 className="font-black text-3xl tracking-tighter">Havi Limit Kontroll</h3>
-                  <p className="text-slate-400 text-sm font-medium">Beállított célok vs. valós költések</p>
-                </div>
-              </div>
-              <div className="bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
-                 <span className="text-xs font-black uppercase tracking-widest text-violet-400">Status: Aktív Figyelés</span>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-              {(Object.keys(budgetData) as CategoryKey[]).map((key) => {
-                const limit = budgetData[key];
-                const actual = data.totals[key] || 0;
-                const percent = Math.min((actual / limit) * 100, 100);
-                const isOver = actual > limit;
-
-                return (
-                  <div key={key} className="space-y-4">
-                    <div className="flex justify-between items-end">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[key] }} />
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-300">{CATEGORY_LABELS[key]}</span>
+        <div className="bg-slate-50 dark:bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-inner">
+          <h3 className="font-black text-lg text-slate-900 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tighter">
+            <Clock className="text-emerald-500 w-5 h-5" /> Utolsó rögzített bejegyzések
+          </h3>
+          <div className="space-y-3">
+             {Object.entries(data.lastDates).slice(0, 4).map(([cat, date]: any) => (
+                <div key={cat} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 hover:scale-[1.02] transition-transform">
+                   <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: (COLORS as any)[cat] }} />
+                      <div>
+                        <p className="text-[10px] font-black uppercase text-slate-400">{CATEGORY_LABELS[cat as CategoryKey]}</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white">{new Date(date).toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                       </div>
-                      <span className={`text-sm font-black font-mono ${isOver ? 'text-red-500' : 'text-emerald-500'}`}>
-                        {actual.toLocaleString()} <span className="text-slate-600 font-medium">/ {limit.toLocaleString()} Ft</span>
-                      </span>
-                    </div>
-                    
-                    <div className="relative h-5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${percent}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className={`h-full rounded-full relative ${
-                          isOver 
-                          ? 'bg-gradient-to-r from-red-600 to-orange-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' 
-                          : 'bg-gradient-to-r from-emerald-600 to-teal-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]'
-                        }`}
-                      >
-                         <div className="absolute inset-0 bg-white/20 animate-shimmer" style={{ backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)' }} />
-                      </motion.div>
-                    </div>
-
-                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                       <span className={isOver ? 'text-red-500' : 'text-slate-500'}>{isOver ? 'Limit túllépve!' : 'Kiváló egyensúly'}</span>
-                       <span className="text-slate-500">{percent.toFixed(0)}%</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.section>
-        )}
-      </AnimatePresence>
+                   </div>
+                   <div className="text-[10px] font-black text-emerald-500 uppercase">Naplózva</div>
+                </div>
+             ))}
+             {Object.keys(data.lastDates).length === 0 && (
+               <p className="text-center text-slate-400 text-sm italic py-10">Nincs elég adat az előzmények megjelenítéséhez.</p>
+             )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
