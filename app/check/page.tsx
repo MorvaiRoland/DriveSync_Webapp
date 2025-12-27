@@ -65,7 +65,8 @@ export default function VinCheckPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden pb-20">
+    // FONTOS: pt-[env(safe-area-inset-top)] hozzáadva a notch kezeléséhez
+    <div className="min-h-screen bg-[#0B0F19] text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden pb-20 pt-[env(safe-area-inset-top)]">
         
       {/* Background FX */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -76,8 +77,8 @@ export default function VinCheckPage() {
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         
-        {/* VISSZA GOMB - Jobban pozícionálva mobilon */}
-        <div className="pt-6 md:absolute md:top-12 md:left-6 z-50">
+        {/* VISSZA GOMB - Biztonságos távolság a notch-tól mobilon */}
+        <div className="pt-4 md:pt-0 md:absolute md:top-12 md:left-6 z-50">
             <Link href="/" className="group inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 transition-all backdrop-blur-md shadow-lg text-slate-400 hover:text-white">
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 <span className="text-xs font-bold uppercase tracking-wider">Vissza</span>
@@ -88,7 +89,7 @@ export default function VinCheckPage() {
         <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10 md:mb-20 pt-10 md:pt-24"
+            className="text-center mb-10 md:mb-20 pt-6 md:pt-24"
         >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/50 border border-slate-700/50 text-emerald-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-md shadow-lg">
                 <ShieldCheck className="w-3.5 h-3.5" /> Hitelesített Adatlap
@@ -219,7 +220,7 @@ export default function VinCheckPage() {
                         </div>
                     </div>
 
-                    {/* --- TIMELINE SECTION --- */}
+                    {/* --- SZERVIZTÖRTÉNET --- */}
                     <div className="max-w-4xl mx-auto px-2">
                         <div className="flex items-center gap-4 md:gap-6 mb-12 md:mb-16 justify-center">
                             <div className="h-px flex-1 max-w-[100px] bg-gradient-to-r from-transparent to-slate-800"></div>
@@ -231,14 +232,11 @@ export default function VinCheckPage() {
                         </div>
 
                         <div className="relative">
-                            {/* Vertical Line - Mobilon balra, desktopon középre */}
                             <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-px bg-slate-800 md:-translate-x-1/2"></div>
-
                             <div className="space-y-8 md:space-y-12">
                                 {result.events?.map((event: any, i: number) => {
                                     const isLeft = i % 2 === 0;
                                     const date = new Date(event.event_date);
-                                    
                                     return (
                                         <motion.div 
                                             key={i}
@@ -248,17 +246,11 @@ export default function VinCheckPage() {
                                             className={`relative flex flex-col md:flex-row items-start md:items-center w-full ${isLeft ? 'md:flex-row-reverse' : ''}`}
                                         >
                                             <div className="hidden md:block w-1/2"></div>
-
-                                            {/* Középső Dot - Precízebb pozícionálás */}
                                             <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 w-3 h-3 md:w-4 md:h-4 rounded-full border-[2px] md:border-[3px] border-[#0B0F19] z-10 shadow-lg mt-6 md:mt-0 bg-white flex-shrink-0"></div>
-
-                                            {/* Kártya - Mobilon kitölti a teret */}
                                             <div className={`w-full md:w-1/2 pl-10 md:pl-0 ${isLeft ? 'md:pr-12' : 'md:pl-12'}`}>
                                                 <div className="bg-[#131722] border border-slate-800 p-5 md:p-6 rounded-2xl hover:border-slate-700 transition-all shadow-xl group relative overflow-hidden">
-                                                    
                                                     <div className={`absolute top-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br opacity-5 rounded-bl-[3rem] md:rounded-bl-[4rem] transition-opacity group-hover:opacity-10
                                                         ${event.type === 'service' ? 'from-emerald-400 to-transparent' : 'from-blue-400 to-transparent'}`}></div>
-
                                                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-4">
                                                         <div>
                                                             <div className="font-mono text-[10px] text-slate-500 mb-1 uppercase tracking-tighter">
@@ -272,7 +264,6 @@ export default function VinCheckPage() {
                                                             {event.mileage?.toLocaleString()} km
                                                         </div>
                                                     </div>
-
                                                     <div className="space-y-3">
                                                         {event.description && (
                                                             <div className="flex gap-3 text-xs md:text-sm text-slate-300">
@@ -292,8 +283,6 @@ export default function VinCheckPage() {
                                         </motion.div>
                                     )
                                 })}
-
-                                {/* Start Pont */}
                                 <div className="relative flex flex-col items-center pt-8">
                                      <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 top-10 w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)] z-10"></div>
                                      <div className="pl-10 md:pl-0 w-full md:w-auto text-left md:text-center">

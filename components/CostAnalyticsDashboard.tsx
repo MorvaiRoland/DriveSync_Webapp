@@ -2,506 +2,382 @@
 
 import { useState, useMemo } from 'react'
 import { 
-  LineChart, Line, AreaChart, Area, BarChart, Bar, 
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
-  PieChart, Pie, Cell, ScatterChart, Scatter
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts'
 import { 
-  TrendingUp, TrendingDown, AlertCircle, Target, Fuel, Wrench, 
-  DollarSign, Calendar, Info, ChevronDown, Plus, Settings, Download
+  TrendingUp, TrendingDown, Target, Fuel, DollarSign, 
+  Calendar, PieChart as PieIcon, Layers, Sparkles, Activity
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
-const COLORS = {
-  fuel: '#f59e0b',        // Amber
-  service: '#3b82f6',     // Blue
-  insurance: '#8b5cf6',   // Violet
-  maintenance: '#10b981', // Emerald
-  parking: '#ec4899',     // Pink
-  other: '#6b7280',       // Gray
-  warning: '#ef4444',     // Red
-  success: '#22c55e'      // Green
-}
+// --- TÍPUSOK ÉS KONFIGURÁCIÓ ---
+type CategoryKey = 'fuel' | 'service' | 'insurance' | 'maintenance' | 'parking' | 'other';
 
-const COST_CATEGORIES = {
-  fuel: { label: 'Tankolás', icon: '⛽', color: COLORS.fuel },
-  service: { label: 'Szerviz', icon: '🔧', color: COLORS.service },
-  insurance: { label: 'Biztosítás', icon: '🛡️', color: COLORS.insurance },
-  maintenance: { label: 'Karbantartás', icon: '🔩', color: COLORS.maintenance },
-  parking: { label: 'Parkolás', icon: '🅿️', color: COLORS.parking },
-  other: { label: 'Egyéb', icon: '📌', color: COLORS.other }
-}
+const COLORS: Record<CategoryKey, string> = {
+  fuel: '#F59E0B',        // Amber
+  service: '#3B82F6',     // Blue
+  insurance: '#8B5CF6',   // Violet
+  maintenance: '#10B981', // Emerald
+  parking: '#EC4899',     // Pink
+  other: '#64748B'        // Slate
+};
 
-interface CostAnalyticsProps {
-  events: any[]
-  cars: any[]
-}
+const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  fuel: 'Tankolás',
+  service: 'Szerviz',
+  insurance: 'Biztosítás',
+  maintenance: 'Karbantartás',
+  parking: 'Parkolás',
+  other: 'Egyéb'
+};
 
-export default function CostAnalyticsDashboard({ events, cars }: CostAnalyticsProps) {
-  const [timeRange, setTimeRange] = useState<'month' | 'quarter' | 'year' | 'all'>('year')
-  const [selectedCar, setSelectedCar] = useState<string | 'all'>('all')
-  const [budgetMode, setBudgetMode] = useState(false)
-  const [budgetData, setBudgetData] = useState<Record<string, number>>({
-    fuel: 50000,
-    service: 30000,
-    insurance: 0,
+export default function CostAnalyticsDashboard({ events, cars }: { events: any[], cars: any[] }) {
+  const [timeRange, setTimeRange] = useState<'month' | 'quarter' | 'year' | 'all'>('year');
+  const [selectedCar, setSelectedCar] = useState<string>('all');
+  const [budgetMode, setBudgetMode] = useState(false);
+  
+  // Példa költségvetés adatok
+  const [budgetData] = useState<Record<CategoryKey, number>>({
+    fuel: 45000,
+    service: 25000,
     maintenance: 10000,
+    insurance: 15000,
     parking: 5000,
     other: 5000
-  })
+  });
 
-  // --- ADATFELDOLGOZÁS ---
-  const processedData = useMemo(() => {
-    let filteredEvents = [...events]
+  // --- ADATFELDOLGOZÁS (TypeScript Biztos) ---
+  const data = useMemo(() => {
+    const totals: Record<CategoryKey, number> = { fuel: 0, service: 0, insurance: 0, maintenance: 0, parking: 0, other: 0 };
+    const chartMap: Record<string, any> = {};
 
-    // Szűrés autó alapján
-    if (selectedCar !== 'all') {
-      filteredEvents = filteredEvents.filter((e) => e.car_id === parseInt(selectedCar))
-    }
+    // Szűrés
+    const filtered = events.filter((e: any) => {
+      const carMatch = selectedCar === 'all' || e.car_id === parseInt(selectedCar);
+      if (!carMatch) return false;
 
-    // Szűrés időtartomány alapján
-    const now = new Date()
-    let dateFrom = new Date()
-    
-    switch (timeRange) {
-      case 'month':
-        dateFrom.setMonth(dateFrom.getMonth() - 1)
-        break
-      case 'quarter':
-        dateFrom.setMonth(dateFrom.getMonth() - 3)
-        break
-      case 'year':
-        dateFrom.setFullYear(dateFrom.getFullYear() - 1)
-        break
-      case 'all':
-        dateFrom = new Date(0)
-        break
-    }
+      const date = new Date(e.event_date);
+      const now = new Date();
+      if (timeRange === 'month') return date >= new Date(now.setMonth(now.getMonth() - 1));
+      if (timeRange === 'quarter') return date >= new Date(now.setMonth(now.getMonth() - 3));
+      if (timeRange === 'year') return date >= new Date(now.setFullYear(now.getFullYear() - 1));
+      return true;
+    });
 
-    filteredEvents = filteredEvents.filter((e) => new Date(e.event_date) >= dateFrom)
+    filtered.forEach((e: any) => {
+      // Intelligens kategorizálás
+      let cat: CategoryKey = 'other';
+      const type = e.type?.toLowerCase();
+      const notes = e.notes?.toLowerCase() || '';
 
-    // --- Kategorizálás (az event típusa alapján + custom kategóriák) ---
-    const categorizedEvents = filteredEvents.map((e) => {
-      let category = e.type === 'fuel' ? 'fuel' : e.type === 'service' ? 'service' : 'other'
-      
-      // Ha notes-ban van kulcsszó, akkor felülbírálunk
-      const notes = e.notes?.toLowerCase() || ''
-      if (notes.includes('biztosítás') || notes.includes('insurance')) category = 'insurance'
-      else if (notes.includes('szerviz') || notes.includes('service')) category = 'service'
-      else if (notes.includes('karbantartás') || notes.includes('maintenance')) category = 'maintenance'
-      else if (notes.includes('parkolás') || notes.includes('parking')) category = 'parking'
+      if (type === 'fuel') cat = 'fuel';
+      else if (type === 'service' || notes.includes('szerviz')) cat = 'service';
+      else if (notes.includes('biztosítás') || notes.includes('kgfb') || notes.includes('casco')) cat = 'insurance';
+      else if (notes.includes('parkolás')) cat = 'parking';
+      else if (notes.includes('karbantartás') || notes.includes('mosás')) cat = 'maintenance';
 
-      return { ...e, category }
-    })
+      const cost = Number(e.cost) || 0;
+      totals[cat] += cost;
 
-    // --- Havi adatok (grafikon)
-    const monthlyMap: Record<string, any> = {}
-    const categoryTotals: Record<string, number> = {}
-    const categoryTrendMap: Record<string, Record<string, number>> = {}
-
-    Object.keys(COST_CATEGORIES).forEach((cat) => {
-      categoryTotals[cat] = 0
-      categoryTrendMap[cat] = {}
-    })
-
-    categorizedEvents.forEach((e) => {
-      const date = new Date(e.event_date)
-      const monthKey = date.toLocaleDateString('hu-HU', { year: 'numeric', month: '2-digit', day: '2-digit' })
-
-      if (!monthlyMap[monthKey]) {
-        monthlyMap[monthKey] = { date: monthKey, total: 0 }
-        Object.keys(COST_CATEGORIES).forEach((cat) => {
-          monthlyMap[monthKey][cat] = 0
-        })
+      // Grafikon adatok összeállítása
+      const dateLabel = new Date(e.event_date).toLocaleDateString('hu-HU', { month: 'short' });
+      if (!chartMap[dateLabel]) {
+        chartMap[dateLabel] = { name: dateLabel, fuel: 0, service: 0, insurance: 0, maintenance: 0, parking: 0, other: 0 };
       }
+      chartMap[dateLabel][cat] += cost;
+    });
 
-      const cost = e.cost || 0
-      monthlyMap[monthKey][e.category] += cost
-      monthlyMap[monthKey].total += cost
-      categoryTotals[e.category] = (categoryTotals[e.category] || 0) + cost
-
-      if (!categoryTrendMap[e.category][monthKey]) {
-        categoryTrendMap[e.category][monthKey] = 0
-      }
-      categoryTrendMap[e.category][monthKey] += cost
-    })
-
-    const monthlyData = Object.values(monthlyMap).slice(-30) // Utolsó 30 pont
-
-    // --- Kategória eloszlás
-    const distributionData = Object.entries(categoryTotals)
-      .filter(([_, value]) => value > 0)
-      .map(([key, value]) => ({
-        name: COST_CATEGORIES[key as keyof typeof COST_CATEGORIES].label,
-        value: value,
-        color: COST_CATEGORIES[key as keyof typeof COST_CATEGORIES].color,
-        key: key
+    // Distribution (Pite grafikonhoz) - JAVÍTOTT MAPPELÉS
+    const distribution = (Object.keys(totals) as CategoryKey[])
+      .map((key) => ({
+        name: CATEGORY_LABELS[key],
+        value: totals[key],
+        color: COLORS[key],
+        id: key
       }))
-
-    // --- Statisztikák
-    const totalCost = Object.values(categoryTotals).reduce((a, b) => a + b, 0)
-    const avgMonthly = timeRange === 'month' ? totalCost : totalCost / (timeRange === 'quarter' ? 3 : timeRange === 'year' ? 12 : 1)
-    const avgPerCar = cars.length > 0 ? totalCost / cars.length : 0
-
-    // --- Budget vs Actual
-    const budgetComparison = Object.entries(budgetData).map(([key, budget]) => ({
-      category: COST_CATEGORIES[key as keyof typeof COST_CATEGORIES]?.label || key,
-      budget: budget,
-      actual: categoryTotals[key] || 0,
-      key: key
-    }))
+      .filter(item => item.value > 0);
 
     return {
-      monthlyData,
-      distributionData,
-      categoryTotals,
-      totalCost,
-      avgMonthly,
-      avgPerCar,
-      budgetComparison,
-      filteredEventCount: filteredEvents.length
-    }
-  }, [events, cars, timeRange, selectedCar, budgetData])
-
-  // --- CUSTOM TOOLTIP ---
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-950 border border-slate-700 p-3 rounded-lg shadow-xl backdrop-blur-md">
-          <p className="text-slate-300 font-bold text-xs mb-2">{label}</p>
-          {payload.map((entry: any, i: number) => (
-            <div key={i} className="flex items-center gap-2 text-sm">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-slate-400 text-xs">{entry.name}:</span>
-              <span className="text-white font-mono font-bold ml-auto">{(entry.value || 0).toLocaleString()} Ft</span>
-            </div>
-          ))}
-        </div>
-      )
-    }
-    return null
-  }
-
-  const StatCard = ({ icon: Icon, label, value, trend, color }: any) => (
-    <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">{label}</p>
-          <p className="text-2xl font-black text-slate-900 dark:text-white">{value.toLocaleString()} Ft</p>
-          {trend !== undefined && (
-            <div className={`flex items-center gap-1 mt-2 text-xs font-bold ${trend >= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-              {trend >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-              {Math.abs(trend)}% {trend >= 0 ? 'nőtt' : 'csökkent'}
-            </div>
-          )}
-        </div>
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${color}`}>
-          <Icon size={20} className="text-white" />
-        </div>
-      </div>
-    </div>
-  )
-
-  if (events.length === 0) {
-    return (
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 text-center border border-slate-200 dark:border-slate-700">
-        <DollarSign className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-        <p className="text-slate-600 dark:text-slate-400 font-medium">Nincs költségadat. Kezdj hozzá esemény rögzítésével!</p>
-      </div>
-    )
-  }
+      chartData: Object.values(chartMap),
+      distribution,
+      total: Object.values(totals).reduce((a, b) => a + b, 0),
+      totals
+    };
+  }, [events, selectedCar, timeRange]);
 
   return (
-    <div className="space-y-6">
-      {/* --- FEJLÉC ÉS VEZÉRLŐK --- */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                <DollarSign className="text-white" />
-              </div>
-              Költség Analitika
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              {processedData.filteredEventCount} esemény • {processedData.totalCost.toLocaleString()} Ft összesen
-            </p>
+    <div className="space-y-8 pb-12">
+      
+      {/* --- FEJLÉC ÉS SZŰRŐK --- */}
+      <section className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter bg-gradient-to-r from-white via-slate-200 to-slate-500 bg-clip-text text-transparent">
+            Költség Analitika <span className="text-amber-500">.</span>
+          </h1>
+          <p className="text-slate-400 mt-2 font-medium flex items-center gap-2">
+            <Activity size={16} className="text-amber-500" /> 
+            {data.total.toLocaleString()} Ft összköltség a vizsgált időszakban
+          </p>
+        </motion.div>
+
+        <div className="flex flex-wrap gap-3 bg-white/5 p-2 rounded-[1.5rem] border border-white/10 backdrop-blur-xl shadow-2xl">
+          {['month', 'quarter', 'year', 'all'].map((range) => (
+            <button
+              key={range}
+              onClick={() => setTimeRange(range as any)}
+              className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                timeRange === range 
+                ? 'bg-white text-black shadow-[0_0_25px_rgba(255,255,255,0.2)]' 
+                : 'hover:bg-white/5 text-slate-400'
+              }`}
+            >
+              {range === 'month' ? '1H' : range === 'quarter' ? '3H' : range === 'year' ? '1É' : 'Mind'}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* --- STATISZTIKAI BENTO BOXOK --- */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Fő Kártya */}
+        <motion.div 
+          whileHover={{ y: -5 }}
+          className="lg:col-span-2 bg-gradient-to-br from-amber-500 to-orange-600 p-8 rounded-[2.5rem] text-black relative overflow-hidden shadow-2xl shadow-amber-500/20 group"
+        >
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
+            <DollarSign size={120} />
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setTimeRange('month')}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${timeRange === 'month' ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
-            >
-              1H
-            </button>
-            <button
-              onClick={() => setTimeRange('quarter')}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${timeRange === 'quarter' ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
-            >
-              3H
-            </button>
-            <button
-              onClick={() => setTimeRange('year')}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${timeRange === 'year' ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
-            >
-              1É
-            </button>
-            <button
-              onClick={() => setTimeRange('all')}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${timeRange === 'all' ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
-            >
-              Összes
-            </button>
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">Teljes ráfordítás</p>
+              <h3 className="text-5xl font-black mt-2 tracking-tighter">{data.total.toLocaleString()} Ft</h3>
+            </div>
+            <div className="mt-8 flex items-center gap-3">
+               <div className="bg-black/20 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 border border-black/5">
+                  <Sparkles size={14} className="animate-pulse" />
+                  <span className="text-xs font-bold uppercase">AI optimalizált adatok</span>
+               </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Tankolás Box */}
+        <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 backdrop-blur-md flex flex-col justify-between group">
+          <div className="flex justify-between items-start">
+            <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-500 group-hover:bg-amber-500 group-hover:text-black transition-colors">
+              <Fuel size={24} />
+            </div>
+            <TrendingUp size={20} className="text-emerald-500" />
+          </div>
+          <div className="mt-8">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tankolás összesen</p>
+            <h3 className="text-3xl font-black mt-1">{(data.totals.fuel || 0).toLocaleString()} Ft</h3>
           </div>
         </div>
 
-        {/* Autó szűrő és Budget mód */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-2 block">Szűrés autó szerint</label>
-            <select
-              value={selectedCar}
+        {/* Járműválasztó Box */}
+        <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] flex flex-col justify-between shadow-inner">
+          <div className="p-3 bg-white/5 rounded-2xl text-slate-400 w-fit">
+            <Layers size={24} />
+          </div>
+          <div className="mt-8">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Aktuális Garázs</p>
+            <select 
+              value={selectedCar} 
               onChange={(e) => setSelectedCar(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-amber-500"
+              className="w-full bg-transparent border-none font-black text-xl text-white focus:ring-0 p-0 cursor-pointer appearance-none"
             >
-              <option value="all">Összes autó</option>
-              {cars.map((car) => (
-                <option key={car.id} value={car.id}>
-                  {car.make} {car.model} ({car.plate})
-                </option>
-              ))}
+              <option value="all">Minden jármű</option>
+              {cars.map((c: any) => <option key={c.id} value={c.id} className="bg-slate-900">{c.plate} - {c.model}</option>)}
             </select>
           </div>
-          <div className="flex items-end">
-            <button
-              onClick={() => setBudgetMode(!budgetMode)}
-              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${budgetMode ? 'bg-violet-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
+        </div>
+      </section>
+
+      {/* --- GRAFIKONOK SZEKCIÓ --- */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Fő Költségvonal */}
+        <div className="lg:col-span-2 bg-white/5 rounded-[3rem] p-8 md:p-10 border border-white/10 backdrop-blur-md relative">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
+            <h3 className="font-black text-2xl flex items-center gap-3">
+              <Activity className="text-amber-500" /> Trendvonal
+            </h3>
+            <button 
+              onClick={() => setBudgetMode(!budgetMode)} 
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black tracking-widest transition-all border ${
+                budgetMode 
+                ? 'bg-violet-500 border-violet-400 text-white shadow-lg shadow-violet-500/20' 
+                : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+              }`}
             >
-              <Target size={16} />
-              Költségvetés
+              <Target size={16} /> {budgetMode ? 'BUDGET NÉZET ON' : 'BUDGET NÉZET'}
             </button>
           </div>
+
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.chartData}>
+                <defs>
+                  <linearGradient id="colorMain" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.fuel} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={COLORS.fuel} stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#64748b', fontSize: 12, fontWeight: 700}} 
+                  dy={10}
+                />
+                <YAxis hide />
+                <Tooltip 
+                  cursor={{ stroke: '#ffffff10', strokeWidth: 2 }}
+                  contentStyle={{ 
+                    backgroundColor: '#0f172a', 
+                    borderRadius: '20px', 
+                    border: '1px solid #ffffff10',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.5)' 
+                  }}
+                  itemStyle={{ fontWeight: 900, fontSize: '12px' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="fuel" 
+                  stroke={COLORS.fuel} 
+                  strokeWidth={4} 
+                  fillOpacity={1} 
+                  fill="url(#colorMain)" 
+                  name="Tankolás"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="service" 
+                  stroke={COLORS.service} 
+                  strokeWidth={4} 
+                  fill="transparent" 
+                  name="Szerviz"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
 
-      {/* --- STATISZTIKA KÁRTYÁK --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={DollarSign}
-          label="Összes költség"
-          value={processedData.totalCost}
-          color="bg-gradient-to-br from-amber-500 to-orange-600"
-        />
-        <StatCard
-          icon={Calendar}
-          label={timeRange === 'month' ? 'Ez a hónap' : timeRange === 'quarter' ? 'Ez a negyed' : 'Átlag havonta'}
-          value={processedData.avgMonthly}
-          color="bg-gradient-to-br from-blue-500 to-cyan-600"
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Autónként átlag"
-          value={processedData.avgPerCar}
-          color="bg-gradient-to-br from-emerald-500 to-green-600"
-        />
-        <StatCard
-          icon={Fuel}
-          label="Tankolásra fordítva"
-          value={processedData.categoryTotals['fuel'] || 0}
-          color="bg-gradient-to-br from-yellow-500 to-amber-600"
-        />
-      </div>
-
-      {/* --- KÖLTSÉGTRENDEK GRAFIKON --- */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-        <h3 className="font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-          <TrendingUp size={20} className="text-amber-500" />
-          Költségtrendek
-        </h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={processedData.monthlyData}>
-            <defs>
-              <linearGradient id="colorFuel" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.fuel} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={COLORS.fuel} stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="colorService" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.service} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={COLORS.service} stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="colorOther" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.other} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={COLORS.other} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-            <XAxis dataKey="date" stroke="#94a3b8" style={{ fontSize: '12px' }} />
-            <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Area type="monotone" dataKey="fuel" stackId="1" stroke={COLORS.fuel} fill="url(#colorFuel)" name="Tankolás" />
-            <Area type="monotone" dataKey="service" stackId="1" stroke={COLORS.service} fill="url(#colorService)" name="Szerviz" />
-            <Area type="monotone" dataKey="other" stackId="1" stroke={COLORS.other} fill="url(#colorOther)" name="Egyéb" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* --- KATEGÓRIA ELOSZLÁS --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pite grafikon */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-          <h3 className="font-black text-slate-900 dark:text-white mb-4">Költségek megoszlása</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={processedData.distributionData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, value, percent }: any) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {processedData.distributionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value: any) => value.toLocaleString()} />
-            </PieChart>
-          </ResponsiveContainer>
-
-          {/* Kategória lista */}
-          <div className="mt-6 space-y-2">
-            {processedData.distributionData.map((item) => (
-              <div key={item.key} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+        {/* Eloszlás Pite */}
+        <div className="bg-white/5 rounded-[3rem] p-8 border border-white/10 backdrop-blur-md flex flex-col">
+          <h3 className="font-black text-2xl mb-10 flex items-center gap-3">
+            <PieIcon className="text-blue-500" /> Eloszlás
+          </h3>
+          <div className="h-[280px] relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data.distribution}
+                  innerRadius={85}
+                  outerRadius={110}
+                  paddingAngle={10}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {data.distribution.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Top Kategória</span>
+                <span className="text-xl font-black text-white">{data.distribution[0]?.name || 'N/A'}</span>
+            </div>
+          </div>
+          
+          <div className="mt-auto space-y-3 pt-6">
+            {data.distribution.slice(0, 4).map((item: any) => (
+              <div key={item.id} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5">
                 <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="font-semibold text-slate-900 dark:text-white">{item.name}</span>
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.name}</span>
                 </div>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">{item.value.toLocaleString()} Ft</span>
+                <span className="font-mono text-xs font-black">{item.value.toLocaleString()} Ft</span>
               </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Költségvetés vs Tényleges (ha aktív) */}
+      {/* --- KÖLTSÉGVETÉS SZEKCIÓ --- */}
+      <AnimatePresence>
         {budgetMode && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-            <h3 className="font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <Target size={20} className="text-violet-500" />
-              Költségvetés vs Tényleges
-            </h3>
-
-            {/* --- KÖLTSÉGVETÉS SZERKESZTÉS --- */}
-            <div className="mb-6 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-700">
-              <p className="text-sm font-bold text-violet-900 dark:text-violet-200 mb-4">📝 Költségvetés szerkesztése</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {Object.entries(budgetData).map(([key, value]) => (
-                  <div key={key} className="flex flex-col">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">
-                      {COST_CATEGORIES[key as keyof typeof COST_CATEGORIES]?.label || key}
-                    </label>
-                    <div className="flex items-center gap-1 bg-white dark:bg-slate-700 rounded-lg border border-violet-300 dark:border-violet-600 overflow-hidden">
-                      <span className="px-2 text-slate-400 text-xs font-bold">Ft</span>
-                      <input
-                        type="number"
-                        value={value}
-                        onChange={(e) => setBudgetData({ ...budgetData, [key]: Math.max(0, parseInt(e.target.value) || 0) })}
-                        className="flex-1 px-2 py-2 bg-transparent text-slate-900 dark:text-white font-mono text-sm outline-none"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                ))}
+          <motion.section 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="bg-[#0f172a] rounded-[3rem] p-8 md:p-12 border border-violet-500/20 shadow-2xl shadow-violet-500/10"
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-violet-500 rounded-[1.5rem] text-black shadow-lg shadow-violet-500/40">
+                  <Target size={28} />
+                </div>
+                <div>
+                  <h3 className="font-black text-3xl tracking-tighter">Havi Limit Kontroll</h3>
+                  <p className="text-slate-400 text-sm font-medium">Beállított célok vs. valós költések</p>
+                </div>
+              </div>
+              <div className="bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
+                 <span className="text-xs font-black uppercase tracking-widest text-violet-400">Status: Aktív Figyelés</span>
               </div>
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+              {(Object.keys(budgetData) as CategoryKey[]).map((key) => {
+                const limit = budgetData[key];
+                const actual = data.totals[key] || 0;
+                const percent = Math.min((actual / limit) * 100, 100);
+                const isOver = actual > limit;
 
-            {/* Költségvetés vs Tényleges Grafikon */}
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={processedData.budgetComparison}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="category" stroke="#94a3b8" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="budget" fill={COLORS.success} name="Költségvetés" />
-                <Bar dataKey="actual" fill={COLORS.warning} name="Tényleges" />
-              </BarChart>
-            </ResponsiveContainer>
-
-            {/* Budget status lista */}
-            <div className="mt-6 space-y-2 max-h-64 overflow-y-auto">
-              {processedData.budgetComparison.map((item) => {
-                const isOver = item.actual > item.budget
                 return (
-                  <div key={item.key} className={`p-3 rounded-lg border ${isOver ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700' : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'}`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-slate-900 dark:text-white">{item.category}</span>
-                      <span className={`font-bold text-sm ${isOver ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                        {isOver ? '📈' : '✓'} {Math.abs(item.actual - item.budget).toLocaleString()} Ft
+                  <div key={key} className="space-y-4">
+                    <div className="flex justify-between items-end">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[key] }} />
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-300">{CATEGORY_LABELS[key]}</span>
+                      </div>
+                      <span className={`text-sm font-black font-mono ${isOver ? 'text-red-500' : 'text-emerald-500'}`}>
+                        {actual.toLocaleString()} <span className="text-slate-600 font-medium">/ {limit.toLocaleString()} Ft</span>
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-                      <span>{item.actual.toLocaleString()} / {item.budget.toLocaleString()} Ft</span>
-                      <span>{((item.actual / item.budget) * 100).toFixed(0)}%</span>
+                    
+                    <div className="relative h-5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percent}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className={`h-full rounded-full relative ${
+                          isOver 
+                          ? 'bg-gradient-to-r from-red-600 to-orange-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' 
+                          : 'bg-gradient-to-r from-emerald-600 to-teal-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+                        }`}
+                      >
+                         <div className="absolute inset-0 bg-white/20 animate-shimmer" style={{ backgroundSize: '200% 100%', backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)' }} />
+                      </motion.div>
                     </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2 mt-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${isOver ? 'bg-red-500' : 'bg-emerald-500'}`}
-                        style={{ width: `${Math.min((item.actual / item.budget) * 100, 100)}%` }}
-                      />
+
+                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                       <span className={isOver ? 'text-red-500' : 'text-slate-500'}>{isOver ? 'Limit túllépve!' : 'Kiváló egyensúly'}</span>
+                       <span className="text-slate-500">{percent.toFixed(0)}%</span>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
-          </div>
+          </motion.section>
         )}
-
-        {/* Figyelmeztetések */}
-        {!budgetMode && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm">
-            <h3 className="font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <AlertCircle size={20} className="text-red-500" />
-              Figyelmeztetések & Tippek
-            </h3>
-            <div className="space-y-3">
-              {processedData.categoryTotals['fuel'] > 100000 && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg">
-                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                    💡 Magas tankolási költség ({(processedData.categoryTotals['fuel'] || 0).toLocaleString()} Ft)
-                  </p>
-                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">Ellenőrizd az autó fogyasztását és a vezetési szokásaidat.</p>
-                </div>
-              )}
-              {processedData.categoryTotals['service'] > 50000 && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg">
-                  <p className="text-sm font-semibold text-red-900 dark:text-red-200">
-                    🔧 Magas szerviz költség ({(processedData.categoryTotals['service'] || 0).toLocaleString()} Ft)
-                  </p>
-                  <p className="text-xs text-red-800 dark:text-red-300 mt-1">Időben tervezzük a karbantartást a nagyobb költségek elkerülésére.</p>
-                </div>
-              )}
-              {processedData.avgMonthly > 50000 && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 rounded-lg">
-                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
-                    📊 Magas havi költség ({processedData.avgMonthly.toLocaleString()} Ft)
-                  </p>
-                  <p className="text-xs text-blue-800 dark:text-blue-300 mt-1">Fontold meg költségvetést beállítani a kontrollabb működéshez.</p>
-                </div>
-              )}
-              {processedData.categoryTotals['fuel'] > 0 && processedData.categoryTotals['service'] > 0 && (
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 rounded-lg">
-                  <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-                    ✅ Jó: Rendszeres szerviz és tankolás adatok
-                  </p>
-                  <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1">Folytatsd az adatok naplózását - így tudunk jobb előrejelzéseket csinálni.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      </AnimatePresence>
     </div>
-  )
+  );
 }
