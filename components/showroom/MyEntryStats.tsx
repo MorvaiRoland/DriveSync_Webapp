@@ -6,14 +6,20 @@ import { Trophy, Activity, Trash2, Loader2, Star } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { leaveBattle } from '@/app/actions/showroom'
 
-export default function MyEntryStats({ myEntry }: { myEntry: any }) {
+export default function MyEntryStats({ myEntry, battleId }: { myEntry: any, battleId: string }) {
   const [isLeaving, setIsLeaving] = useState(false)
 
   const handleWithdraw = async () => {
-    if (!confirm("Biztosan vissza akarod vonni a nevezést? Minden eddigi szavazatod elveszik!")) return;
-    setIsLeaving(true);
-    await leaveBattle(myEntry.id);
-    setIsLeaving(false);
+    if (!confirm("Biztosan vissza akarod vonni a nevezést? Minden eddigi szavazatod elveszik!")) return
+    
+    setIsLeaving(true)
+    const result = await leaveBattle(battleId)
+    
+    if (result?.error) {
+      alert(result.error)
+      setIsLeaving(false)
+    }
+    // Siker esetén a revalidatePath frissíti az oldalt és eltűnik a komponens
   }
 
   return (
@@ -21,19 +27,19 @@ export default function MyEntryStats({ myEntry }: { myEntry: any }) {
         <div className="flex flex-col gap-6 relative z-10">
             <div className="flex items-center justify-between">
                 <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary flex items-center gap-2">
-                    <Trophy size={14} /> Saját Nevezés
+                    <Trophy size={14} /> Saját Nevezés Állapota
                 </h3>
                 <button 
                     onClick={handleWithdraw}
                     disabled={isLeaving}
-                    className="text-[9px] font-black uppercase tracking-widest text-destructive/50 hover:text-destructive flex items-center gap-1 transition-colors"
+                    className="text-[9px] font-black uppercase tracking-widest text-destructive/60 hover:text-destructive flex items-center gap-1.5 transition-all bg-destructive/5 hover:bg-destructive/10 px-3 py-1.5 rounded-full border border-destructive/10"
                 >
-                    {isLeaving ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />} Visszavonás
+                    {isLeaving ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />} 
+                    Nevezés visszavonása
                 </button>
             </div>
 
             <div className="flex gap-6 items-center">
-                {/* JAVÍTÁS: Nincs grayscale, a kép színes */}
                 <div className="w-24 h-24 sm:w-32 sm:h-32 relative rounded-3xl overflow-hidden border border-white/10 shadow-xl shrink-0">
                     <Image src={myEntry.imageUrl || '/placeholder.jpg'} alt="Saját autó" fill className="object-cover" />
                 </div>
