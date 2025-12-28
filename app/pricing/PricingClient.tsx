@@ -1,29 +1,31 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ArrowLeft, Loader2, Zap, LayoutDashboard, Crown, ShieldCheck, Sparkles, CreditCard } from 'lucide-react'
+import { Check, ArrowLeft, Loader2, Zap, LayoutDashboard, Crown, ShieldCheck, Sparkles, CreditCard, Lock } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner' 
 
-// --- KONFIGURÁCIÓ ---
-// Ne felejtsd el frissíteni a Stripe-ban is az árakat ezekre az összegekre!
 const STRIPE_PRICES = {
-  monthly: 'price_1SjPQzRbHGQdHUF40biCuF2v', // Pro Havi: 890 Ft
-  yearly: 'price_1SjPRYRbHGQdHUF4E86ttykq',  // Pro Éves: 8.900 Ft
-  lifetime: 'price_1SjPSMRbHGQdHUF42Ngnfo41' // Lifetime: 19.900 Ft
+  monthly: 'price_1SjPQzRbHGQdHUF40biCuF2v', 
+  yearly: 'price_1SjPRYRbHGQdHUF4E86ttykq',  
+  lifetime: 'price_1SjPSMRbHGQdHUF42Ngnfo41' 
 }
 
 interface PricingClientProps {
   initialPlan: string
   userEmail?: string
+  currentPlan?: string // ÚJ PROP: 'free' | 'pro' | 'lifetime'
 }
 
-export default function PricingClient({ initialPlan, userEmail }: PricingClientProps) {
+export default function PricingClient({ initialPlan, userEmail, currentPlan }: PricingClientProps) {
   const [loadingDashboard, setLoadingDashboard] = useState(false)
   const [loadingStripe, setLoadingStripe] = useState<string | null>(null)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly')
   const router = useRouter()
+
+  const isLifetime = currentPlan === 'lifetime';
+  const isPro = currentPlan === 'pro';
 
   const handleEnterDashboard = async () => {
     setLoadingDashboard(true)
@@ -33,6 +35,8 @@ export default function PricingClient({ initialPlan, userEmail }: PricingClientP
   }
 
   const handleCheckout = async (priceId: string, planName: string) => {
+    if (isLifetime) return; // Biztonsági csekk
+
     setLoadingStripe(planName);
     try {
       const response = await fetch('/api/stripe/checkout', {
@@ -81,37 +85,51 @@ export default function PricingClient({ initialPlan, userEmail }: PricingClientP
         
         {/* HEADER */}
         <div className="text-center mb-12 max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-6">
-               <Sparkles className="w-3 h-3" /> Bevezető Árak
-            </div>
+            {isLifetime ? (
+                <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-400 text-sm font-black uppercase tracking-widest mb-6">
+                   <Crown className="w-4 h-4" /> Founder Tag Vagy
+                </div>
+            ) : (
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-6">
+                   <Sparkles className="w-3 h-3" /> Bevezető Árak
+                </div>
+            )}
+            
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-6 leading-tight">
-              Válassz a céljaidhoz illő<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">garázs méretet.</span>
+              {isLifetime ? 'Köszönjük a bizalmat!' : 'Válassz a céljaidhoz illő'} <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">
+                  {isLifetime ? 'Tiéd a jövő.' : 'garázs méretet.'}
+              </span>
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 text-base md:text-xl leading-relaxed px-4 max-w-2xl mx-auto">
-              Kezdj kicsiben az ingyenes csomaggal, vagy oldd fel a korlátlan lehetőségeket kevesebbért, mint egy ebéd ára.
-            </p>
+            
+            {!isLifetime && (
+                <p className="text-slate-600 dark:text-slate-400 text-base md:text-xl leading-relaxed px-4 max-w-2xl mx-auto">
+                  Kezdj kicsiben az ingyenes csomaggal, vagy oldd fel a korlátlan lehetőségeket kevesebbért, mint egy ebéd ára.
+                </p>
+            )}
         </div>
 
         {/* BILLING TOGGLE */}
-        <div className="flex items-center justify-center gap-4 mb-12">
-            <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>Havi</span>
-            <button 
-                onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
-                className="relative w-14 h-8 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
-            >
-                <div className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-300 ${billingCycle === 'yearly' ? 'translate-x-6 bg-gradient-to-br from-amber-400 to-orange-500' : ''}`} />
-            </button>
-            <span className={`text-sm font-bold flex items-center gap-2 ${billingCycle === 'yearly' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>
-                Éves <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wide">-17%</span>
-            </span>
-        </div>
+        {!isLifetime && (
+            <div className="flex items-center justify-center gap-4 mb-12">
+                <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>Havi</span>
+                <button 
+                    onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
+                    className="relative w-14 h-8 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
+                >
+                    <div className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-300 ${billingCycle === 'yearly' ? 'translate-x-6 bg-gradient-to-br from-amber-400 to-orange-500' : ''}`} />
+                </button>
+                <span className={`text-sm font-bold flex items-center gap-2 ${billingCycle === 'yearly' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>
+                    Éves <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wide">-17%</span>
+                </span>
+            </div>
+        )}
 
         {/* PRICING GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl items-start">
             
             {/* 1. FREE PLAN */}
-            <div className="p-6 md:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 backdrop-blur-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+            <div className={`p-6 md:p-8 rounded-3xl border bg-white dark:bg-slate-900/50 backdrop-blur-sm transition-all ${isLifetime ? 'opacity-50 grayscale border-slate-200 dark:border-slate-800' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'}`}>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Starter</h3>
                 <div className="flex items-baseline gap-1 mb-6">
                     <span className="text-4xl font-black text-slate-900 dark:text-white">0 Ft</span>
@@ -139,11 +157,13 @@ export default function PricingClient({ initialPlan, userEmail }: PricingClientP
                 </button>
             </div>
 
-            {/* 2. PRO PLAN (KIEMELT) */}
-            <div className="relative p-1 rounded-[26px] bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500 shadow-2xl shadow-indigo-500/20 transform md:-translate-y-4">
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg flex items-center gap-2 whitespace-nowrap">
-                    <Zap className="w-3 h-3 fill-white" /> Népszerű
-                </div>
+            {/* 2. PRO PLAN */}
+            <div className={`relative p-1 rounded-[26px] transition-all transform ${isLifetime ? 'opacity-50 grayscale scale-95' : 'bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500 shadow-2xl shadow-indigo-500/20 md:-translate-y-4'}`}>
+                {!isLifetime && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg flex items-center gap-2 whitespace-nowrap">
+                        <Zap className="w-3 h-3 fill-white" /> Népszerű
+                    </div>
+                )}
 
                 <div className="bg-white dark:bg-[#0A0A0A] rounded-[22px] p-6 md:p-8 h-full relative overflow-hidden">
                     <h3 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">Pro</h3>
@@ -158,7 +178,7 @@ export default function PricingClient({ initialPlan, userEmail }: PricingClientP
                     </p>
                     
                     <p className="text-sm text-slate-600 dark:text-slate-300 mb-8 leading-relaxed min-h-[40px]">
-                        Minden, amire egy autórajongónak szüksége van. Kevesebbért, mint egy kávé ára.
+                        Minden, amire egy autórajongónak szüksége van. Korlátlan garázs és mesterséges intelligencia.
                     </p>
                     
                     <ul className="space-y-4 mb-8">
@@ -171,17 +191,30 @@ export default function PricingClient({ initialPlan, userEmail }: PricingClientP
 
                     <button 
                         onClick={() => handleCheckout(billingCycle === 'monthly' ? STRIPE_PRICES.monthly : STRIPE_PRICES.yearly, 'pro')}
-                        disabled={!!loadingStripe}
-                        className="w-full py-4 rounded-xl bg-indigo-600 text-white font-bold text-sm uppercase tracking-wider hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30"
+                        disabled={!!loadingStripe || isLifetime || isPro}
+                        className={`w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
+                            isLifetime || isPro 
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/30'
+                        }`}
                     >
-                        {loadingStripe === 'pro' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                        Pro Előfizetés
+                        {isLifetime ? (
+                            <>Már Megvan (Lifetime)</>
+                        ) : isPro ? (
+                            <>Jelenlegi Csomag</>
+                        ) : loadingStripe === 'pro' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <><CreditCard className="w-4 h-4" /> Pro Előfizetés</>
+                        )}
                     </button>
                 </div>
             </div>
 
             {/* 3. LIFETIME PLAN */}
-            <div className="p-6 md:p-8 rounded-3xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/10 backdrop-blur-sm hover:border-amber-300 dark:hover:border-amber-700 transition-all relative overflow-hidden">
+            <div className={`p-6 md:p-8 rounded-3xl border bg-amber-50/50 dark:bg-amber-950/10 backdrop-blur-sm transition-all relative overflow-hidden ${
+                isLifetime ? 'border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.3)] scale-105' : 'border-amber-200 dark:border-amber-900/50 hover:border-amber-300 dark:hover:border-amber-700'
+            }`}>
                 <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-[60px] -mr-10 -mt-10"></div>
                 
                 <h3 className="text-xl font-bold text-amber-700 dark:text-amber-500 mb-2 flex items-center gap-2">
@@ -196,20 +229,29 @@ export default function PricingClient({ initialPlan, userEmail }: PricingClientP
                 </p>
                 
                 <ul className="space-y-4 mb-8">
-                    <FeatureItem text="Minden Pro funkció örökre" />
-                    <FeatureItem text="Korlátlan (999) autó" />
-                    <FeatureItem text="Kiemelt ügyfélszolgálat" />
-                    <FeatureItem text="Founder jelvény a profilodon" />
-                    <FeatureItem text="Korai hozzáférés új funkciókhoz" />
+                    <FeatureItem text="Minden Pro funkció örökre" active={isLifetime} />
+                    <FeatureItem text="Korlátlan (999) autó" active={isLifetime} />
+                    <FeatureItem text="Kiemelt ügyfélszolgálat" active={isLifetime} />
+                    <FeatureItem text="Founder jelvény a profilodon" active={isLifetime} />
+                    <FeatureItem text="Korai hozzáférés új funkciókhoz" active={isLifetime} />
                 </ul>
 
                 <button 
                     onClick={() => handleCheckout(STRIPE_PRICES.lifetime, 'lifetime')}
-                    disabled={!!loadingStripe}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                    disabled={!!loadingStripe || isLifetime}
+                    className={`w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
+                        isLifetime 
+                        ? 'bg-emerald-500 text-white cursor-default shadow-emerald-500/20'
+                        : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:opacity-90 shadow-amber-500/20'
+                    }`}
                 >
-                    {loadingStripe === 'lifetime' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Megveszem Örökre
+                    {isLifetime ? (
+                        <><Check className="w-4 h-4" /> Már A Tiéd</>
+                    ) : loadingStripe === 'lifetime' ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <><Sparkles className="w-4 h-4" /> Megveszem Örökre</>
+                    )}
                 </button>
             </div>
 
