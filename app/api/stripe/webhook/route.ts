@@ -25,9 +25,9 @@ const supabaseAdmin = createClient(
 // --- PLAN MAPPING (Stripe Price ID -> DB Plan Enum) ---
 // Ezeket cseréld le a TE Stripe Price ID-jaidra!
 const PRICE_MAP: Record<string, string> = {
-  'price_XXXXXXXXXXXXXX': 'pro',      // Havi Pro
-  'price_YYYYYYYYYYYYYY': 'pro',      // Éves Pro
-  'price_1SijxIRbHGQdHUF48ulonZdP': 'lifetime' // Lifetime
+  'price_1SjPQzRbHGQdHUF40biCuF2v': 'pro',      // Havi Pro
+  'price_1SjPRYRbHGQdHUF4E86ttykq': 'pro',      // Éves Pro
+  'price_1SjPSMRbHGQdHUF42Ngnfo41': 'lifetime' // Lifetime
 }
 
 export async function POST(req: Request) {
