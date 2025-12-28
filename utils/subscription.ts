@@ -9,7 +9,11 @@ export const PLAN_LIMITS = {
     sharedGarage: false,
     cloudSync: true,
     export: false,
-    storage: false // Dokumentum tárhely
+    storage: false,
+    // ÚJ PRÉMIUM FUNKCIÓK (Ingyenesben kikapcsolva)
+    serviceMap: false,
+    vinSearch: false,
+    tripPlanner: false
   },
   pro: {
     maxCars: 10,
@@ -17,15 +21,23 @@ export const PLAN_LIMITS = {
     sharedGarage: true,
     cloudSync: true,
     export: true,
-    storage: true
+    storage: true,
+    // ÚJ PRÉMIUM FUNKCIÓK (Próban bekapcsolva)
+    serviceMap: true,
+    vinSearch: true,
+    tripPlanner: true
   },
   lifetime: {
-    maxCars: 999, // "Korlátlan"
+    maxCars: 999,
     aiMechanic: true,
     sharedGarage: true,
     cloudSync: true,
     export: true,
-    storage: true
+    storage: true,
+    // ÚJ PRÉMIUM FUNKCIÓK (Lifetimeban bekapcsolva)
+    serviceMap: true,
+    vinSearch: true,
+    tripPlanner: true
   }
 };
 
@@ -75,12 +87,10 @@ export async function checkLimit(supabase: SupabaseClient, userId: string, featu
   const { plan } = await getSubscriptionStatus(supabase, userId);
   const limits = PLAN_LIMITS[plan];
 
-  // Speciális ellenőrzés az autók számára (DB lekérdezés kell)
   if (feature === 'maxCars') {
     const { count } = await supabase.from('cars').select('*', { count: 'exact', head: true }).eq('user_id', userId);
     return (count || 0) < limits.maxCars;
   }
 
-  // Sima boolean feature (pl. aiMechanic)
   return limits[feature];
 }

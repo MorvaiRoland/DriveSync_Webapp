@@ -76,6 +76,7 @@ async function DashboardComponent() {
   // --- JOGOSULTSÁGOK ÉRVÉNYESÍTÉSE ---
   const canAddCar = myCars.length < limits.maxCars;
   const canUseAi = limits.aiMechanic;
+  const canTripPlan = limits.tripPlanner; // ÚJ LIMIT
 
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
@@ -142,7 +143,6 @@ async function DashboardComponent() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
       
-      {/* HÁTTÉR EFFEKTEK */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px]"></div>
@@ -151,7 +151,6 @@ async function DashboardComponent() {
 
       <CongratulationModal currentPlan={plan} />
       
-      {/* AI MECHANIC: Csak ha a csomag engedi */}
       {canUseAi ? <AiMechanic isPro={true} /> : null}
       
       <ChangelogModal />
@@ -166,11 +165,17 @@ async function DashboardComponent() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link href="/trip-planner" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
-              <Map className="w-4 h-4" /> Úttervező
-            </Link>
-            
-            {/* --- PLAN BADGE (Dinamikus) --- */}
+            {/* ÚTTERVEZŐ GOMB - LIMIT KEZELÉSSEL */}
+            {canTripPlan ? (
+                <Link href="/trip-planner" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+                  <Map className="w-4 h-4" /> Úttervező
+                </Link>
+            ) : (
+                <Link href="/pricing" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed hover:bg-slate-300 dark:hover:bg-slate-700 font-bold text-xs uppercase tracking-wider transition-all">
+                  <Lock className="w-4 h-4" /> Úttervező
+                </Link>
+            )}
+
             <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm ${
                 plan === 'free' ? 'bg-slate-100 text-slate-500 border-slate-200' : 
                 plan === 'lifetime' ? 'bg-purple-100 text-purple-600 border-purple-200' :
@@ -253,7 +258,6 @@ async function DashboardComponent() {
                               <span className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500"><CarFront className="w-5 h-5" /></span>
                               Saját Garázs
                           </h3>
-                          {/* LIMIT KIJELZŐ */}
                           <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${!canAddCar ? 'bg-red-50 text-red-500 border-red-100 dark:bg-red-900/20 dark:border-red-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
                               {myCars.length} / {limits.maxCars === 999 ? '∞' : limits.maxCars}
                           </span>
@@ -264,7 +268,6 @@ async function DashboardComponent() {
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {/* --- ÚJ AUTÓ HOZZÁADÁSA VAGY LIMIT ZÁR --- */}
                           {canAddCar ? (
                              <Link 
                                href="/cars/new" 
@@ -277,7 +280,6 @@ async function DashboardComponent() {
                                  <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat ingyen</span>
                              </Link>
                           ) : (
-                             /* LOCKED STATE */
                              <Link href="/pricing" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
                                  <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
                                      <Lock className="w-8 h-8" />
@@ -309,7 +311,6 @@ async function DashboardComponent() {
 
             <div className="lg:col-span-4 space-y-8">
               
-              {/* HA INGYENES A CSOMAG, REKLÁMOZZUK A PRO-T */}
               {plan === 'free' && (
                    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white text-center shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
                        <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>

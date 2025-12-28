@@ -6,7 +6,7 @@ import { deleteEvent, deleteReminder } from './actions'
 import DocumentManager from './DocumentManager'
 import ExportMenu from '@/components/ExportMenu'
 import PublicToggle from '@/components/PublicToggle'
-import { getSubscriptionStatus, PLAN_LIMITS } from '@/utils/subscription'
+import { getSubscriptionStatus, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
 import VignetteManager from '@/components/VignetteManager'
 import SmartParkingWidget from '@/components/SmartParkingWidget' 
 import SalesWidget from '@/components/SalesWidget'
@@ -21,7 +21,7 @@ import {
   ShieldCheck, Disc, Snowflake, Sun, Wallet, Banknote, 
   Sparkles, Lightbulb, Plus, Trash2, Gauge, History, 
   ChevronRight, CarFront, Zap, TrendingUp, TrendingDown, 
-  Droplet, MapPin, Calendar, ArrowRight
+  Droplet, MapPin, Calendar, ArrowRight, Search
 } from 'lucide-react';
 
 // --- TÍPUSOK ---
@@ -82,7 +82,9 @@ export default async function CarDetailsPage(props: Props) {
   const { plan } = await getSubscriptionStatus(supabase, user.id);
   const limits = PLAN_LIMITS[plan];
   
-  const isPro = limits.aiMechanic; // Prémium jog (AI és egyéb Pro funkciókhoz)
+  const isPro = limits.aiMechanic; 
+  const canServiceMap = limits.serviceMap;
+  const canVinSearch = limits.vinSearch;
 
   // --- Calculations ---
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)
@@ -131,7 +133,7 @@ export default async function CarDetailsPage(props: Props) {
   if (smartTips.length === 0) smartTips.push("Minden rendszer rendben. Biztonságos utat!");
 
   const healthProps = { car, oilLife, kmSinceService, serviceIntervalKm, kmRemaining, motStatus, insuranceStatus }
-  const techProps = { car, avgConsumption, isElectric }
+  const techProps = { car, avgConsumption, isElectric, canVinSearch }
   const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost, isElectric }
   const carIdString = car.id.toString();
   const isPublic = car.is_public_history || false; 
@@ -221,7 +223,10 @@ export default async function CarDetailsPage(props: Props) {
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
       <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={isPro} />
-      <DesktopActionGrid carId={carIdString} isElectric={isElectric} />
+      
+      {/* DESKTOP ACTION GRID - ITT VAN AZ ÚJ SZERVIZ TÉRKÉP GOMB */}
+      <DesktopActionGrid carId={carIdString} isElectric={isElectric} canServiceMap={canServiceMap} />
+      
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
         <ResponsiveDashboard mobileTabs={mobileTabs} desktopContent={DesktopLayout} />
       </div>
@@ -278,12 +283,11 @@ function EventLog({ events, carId }: any) {
                                     event.type === 'service' ? 'bg-indigo-500' : 'bg-slate-400'
                                 } shadow-sm`}></div>
 
-                                {/* Kártya Konténer - Relative a pozicionálás miatt */}
+                                {/* Kártya Konténer */}
                                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:border-amber-500/30 hover:shadow-md transition-all relative overflow-hidden">
                                     
-                                    {/* Szerkesztés Link - Kitölti a kártyát */}
                                     <Link href={`/cars/${carId}/events/${event.id}/edit`} className="block p-4 z-0">
-                                        <div className="flex justify-between items-start mb-2 pr-8"> {/* PR-8 hagy helyet a kuka gombnak */}
+                                        <div className="flex justify-between items-start mb-2 pr-8"> 
                                             <div>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">
                                                     {new Date(event.event_date).toLocaleDateString('hu-HU', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -309,7 +313,7 @@ function EventLog({ events, carId }: any) {
                                         </div>
                                     </Link>
 
-                                    {/* Törlés Gomb - Abszolút pozíció a jobb felső sarokban */}
+                                    {/* Törlés Gomb */}
                                     <div className="absolute top-2 right-2 z-10">
                                          <form action={deleteEvent}>
                                             <input type="hidden" name="id" value={event.id} />
@@ -434,7 +438,7 @@ function FuelTrackerCard({ events, isElectric, carMileage }: { events: any[], is
                     </div>
                     <div>
                       <p className="font-bold text-slate-800 dark:text-slate-200 text-xs">{item.title || 'Kút'}</p>
-                      <div className="flex items-center gap-2 text-[9px] text-slate-400 font-medium">
+                      <div className="flex items-center gap-2 text-9px text-slate-400 font-medium">
                         <span className="flex items-center gap-1"><Gauge className="w-3 h-3"/> {item.mileage.toLocaleString()}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                         <span className="flex items-center gap-1"><Droplet className="w-3 h-3"/> {item.liters}{unit}</span>
@@ -570,15 +574,16 @@ function MobileBottomNav({ carId, isElectric }: { carId: string, isElectric?: bo
     )
 }
 
-function DesktopActionGrid({ carId, isElectric }: { carId: string, isElectric?: boolean }) {
+// --- DESKTOP ACTION GRID ÚJ GOMBBAL (Szerviz Térkép) ---
+function DesktopActionGrid({ carId, isElectric, canServiceMap }: { carId: string, isElectric?: boolean, canServiceMap: boolean }) {
     const btnClass = "group h-16 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all hover:-translate-y-1 font-bold border border-transparent overflow-hidden relative";
     const shine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer";
     return (
-        <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-5 gap-4">
+        <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-6 gap-4"> {/* Grid-cols-6 az új gomb miatt */}
              <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} ${isElectric ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-amber-500 hover:bg-amber-400 text-slate-900'}`}>
                 <div className={shine} />
                 {isElectric ? <Zap className="w-5 h-5" /> : <Fuel className="w-5 h-5" />}
-                {isElectric ? 'Töltés rögzítése' : 'Tankolás'}
+                {isElectric ? 'Töltés' : 'Tankolás'}
              </Link>
              <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnClass} bg-slate-800 hover:bg-slate-700 text-white`}>
                 <div className={shine} />
@@ -593,6 +598,17 @@ function DesktopActionGrid({ carId, isElectric }: { carId: string, isElectric?: 
              <Link href={`/cars/${carId}/parts`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 border-slate-200 dark:border-slate-700`}>
                 <Package className="w-5 h-5" />Alkatrészek
              </Link>
+             
+             {/* ÚJ: SZERVIZ TÉRKÉP GOMB */}
+             {canServiceMap ? (
+                 <Link href={`/cars/${carId}/service-map`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 border-slate-200 dark:border-slate-700`}>
+                    <MapPin className="w-5 h-5" />Szerviz Térkép
+                 </Link>
+             ) : (
+                 <Link href="/pricing" className={`${btnClass} bg-slate-100 dark:bg-slate-800/50 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-800`}>
+                    <Lock className="w-4 h-4" />Szerviz Térkép
+                 </Link>
+             )}
         </div>
     )
 }
@@ -690,8 +706,7 @@ function RemindersList({ reminders, carId }: any) {
     )
 }
 
-function TechnicalSpecs({ car, avgConsumption }: any) {
-    // Dátum formázó segédfüggvény (Magyar formátum)
+function TechnicalSpecs({ car, avgConsumption, canVinSearch }: any) {
     const formatDate = (dateString: string | null) => {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleDateString('hu-HU', {
@@ -703,27 +718,32 @@ function TechnicalSpecs({ car, avgConsumption }: any) {
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
-                <Gauge className="w-5 h-5 text-slate-400" /> Specifikációk
-            </h3>
+            <div className="flex justify-between items-center mb-5">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Gauge className="w-5 h-5 text-slate-400" /> Specifikációk
+                </h3>
+                {/* ÚJ: VIN KERESŐ GOMB */}
+                {canVinSearch && car.vin ? (
+                    <a href={`https://vincheck.com/${car.vin}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded flex items-center gap-1 hover:bg-indigo-100 transition-colors">
+                        <Search className="w-3 h-3" /> Elemzés
+                    </a>
+                ) : (
+                    <Link href="/pricing" className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 px-2 py-1 rounded flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Elemzés
+                    </Link>
+                )}
+            </div>
             
             <div className="grid grid-cols-2 gap-x-4 gap-y-6">
                 <DataPoint label="Futásteljesítmény" value={car.mileage ? `${car.mileage.toLocaleString()} km` : '-'} />
                 <DataPoint label="Évjárat" value={car.year} />
-                
-                {/* Motor adatok */}
                 <DataPoint label="Motor (ccm)" value={car.engine_size ? `${car.engine_size} cm³` : '-'} />
                 <DataPoint label="Teljesítmény" value={car.power_hp ? `${car.power_hp} LE` : '-'} />
-                
-                {/* Váltó & Üzemanyag (Már magyarul jönnek az adatbázisból) */}
                 <DataPoint label="Sebességváltó" value={car.transmission || '-'} />
                 <DataPoint label="Üzemanyag" value={car.fuel_type || '-'} />
-                
-                {/* Kivitel & Szín */}
                 <DataPoint label="Kivitel" value={car.body_type || '-'} />
                 <DataPoint label="Szín" value={car.color || '-'} />
                 
-                {/* DÁTUMOK (ÚJ RÉSZ) */}
                 <div className="col-span-2 grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
                     <DataPoint 
                         label="Műszaki érvényesség" 
