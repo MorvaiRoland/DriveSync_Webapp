@@ -4,9 +4,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { getSubscriptionStatus, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
+import { getSubscriptionStatus, PLAN_LIMITS } from '@/utils/subscription'
 import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
-import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map, Crown, Sparkles } from 'lucide-react';
+import { Plus, Settings, LogOut, CarFront, Users, Lock, ArrowRight, Map, Crown } from 'lucide-react';
 import HeaderNav from '@/components/HeaderNav';
 import QuickMileageForm from '@/components/QuickMileageForm';
 import { Metadata } from 'next'
@@ -46,7 +46,6 @@ async function DashboardComponent() {
   const limits = PLAN_LIMITS[plan];
 
   // Jogosultságok
-  const canAddCar = true; 
   const canUseAi = limits.aiMechanic;
   const canTripPlan = limits.tripPlanner;
   
@@ -146,12 +145,31 @@ async function DashboardComponent() {
       { id: 'admin', name: 'Pontos Admin', icon: '📅', description: 'Aktív használat.', earned: isAdmin, color: 'from-blue-400 to-blue-600 text-white' }
   ];
 
+  // --- OKOS MEGJELENÍTÉSI LOGIKA ---
+  
+  // 1. Van-e autója?
+  const hasCars = cars.length > 0;
+  
+  // 2. Fiók kora (órában)
+  // Ha a user.created_at valamiért hiányzik, fallback a mostani időre (így 0 órásnak tűnik)
+  const userCreated = new Date(user.created_at || new Date().toISOString());
+  const now = new Date();
+  const accountAgeHours = (now.getTime() - userCreated.getTime()) / (1000 * 60 * 60);
+
+  // 3. TÚRA logika:
+  // Csak akkor mutatjuk, ha NINCS autója ÉS a fiókja fiatalabb, mint 24 óra.
+  // Így a visszatérő, de autótlan felhasználókat nem zaklatjuk.
+  const showTour = !hasCars && accountAgeHours < 24;
+
+  // 4. CHANGELOG logika:
+  // Csak akkor mutatjuk, ha VAN autója (aktív felhasználó).
+  const showChangelog = hasCars;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
       
-      {/* 1. ONBOARDING TÚRA MEGHÍVÁSA */}
-      {/* Ez mindig renderelődik, de a komponens belül ellenőrzi, hogy látta-e már a user */}
-      <OnboardingTour />
+      {/* ONBOARDING TÚRA - Feltételes megjelenítés */}
+      {showTour && <OnboardingTour />}
 
       {/* HÁTTÉR EFFEKTEK */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -165,9 +183,8 @@ async function DashboardComponent() {
       {/* AI MECHANIC: Csak ha a csomag engedi */}
       {canUseAi ? <AiMechanic isPro={true} /> : null}
       
-      {/* JAVÍTÁS: A Changelog csak akkor jön be, ha már VAN autója (tehát nem új user) */}
-      {/* Így az új usereknél a túra fut le, a régieknél a changelog */}
-      {cars.length > 0 && <ChangelogModal />}
+      {/* CHANGELOG: Csak ha van autója */}
+      {showChangelog && <ChangelogModal />}
       
       <nav 
         className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]" 
@@ -294,19 +311,19 @@ async function DashboardComponent() {
                           {/* ÚJ AUTÓ GOMB: Csak ha belefér a limitbe */}
                           {!isCarLimitReached ? (
                              <Link href="/cars/new" id="tour-add-car" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-400 transition-all cursor-pointer">
-                                 <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                                     <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500" />
-                                 </div>
-                                 <span className="font-bold text-slate-500 group-hover:text-slate-900">Új jármű hozzáadása</span>
+                                  <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                                      <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500" />
+                                  </div>
+                                  <span className="font-bold text-slate-500 group-hover:text-slate-900">Új jármű hozzáadása</span>
                              </Link>
                           ) : (
                              /* LOCKED STATE - Ha elérte a limitet */
                              <Link href="/pricing" id="tour-add-car" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
-                                 <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
-                                     <Lock className="w-8 h-8" />
-                                 </div>
-                                 <span className="font-bold text-slate-500">Limit elérve</span>
-                                 <span className="text-xs text-amber-500 font-bold mt-2 uppercase tracking-wide">Válts Pro-ra a bővítéshez</span>
+                                  <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
+                                      <Lock className="w-8 h-8" />
+                                  </div>
+                                  <span className="font-bold text-slate-500">Limit elérve</span>
+                                  <span className="text-xs text-amber-500 font-bold mt-2 uppercase tracking-wide">Válts Pro-ra a bővítéshez</span>
                              </Link>
                           )}
                       </div>

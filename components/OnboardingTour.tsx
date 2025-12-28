@@ -7,28 +7,24 @@ import "driver.js/dist/driver.css";
 export default function OnboardingTour() {
   
   useEffect(() => {
-    // 1. Ellenőrizzük, látta-e már a user a túrát
+    // 1. Ellenőrizzük a böngészőben, látta-e már (localStorage)
+    // Ez védi meg attól, hogy frissítéskor (F5) újra előjöjjön 24 órán belül.
     const hasSeenTour = localStorage.getItem('dynamicsense_tour_completed');
     
-    // Ha már látta, ne induljon el
     if (hasSeenTour) {
         return;
     }
 
-    // 2. Driver konfigurálása
     const driverObj = driver({
-      showProgress: true, // Pöttyök mutatása
+      showProgress: true,
       animate: true,
-      allowClose: true,   // Engedélyezi a bezárást (Skip)
+      allowClose: true,
       doneBtnText: 'Befejezés',
       nextBtnText: 'Tovább',
       prevBtnText: 'Vissza',
       progressText: '{{current}} / {{total}}',
-      
-      // Stílus finomhangolás (hogy illeszkedjen a designhoz)
       popoverClass: 'driverjs-theme',
       
-      // LÉPÉSEK DEFINIÁLÁSA
       steps: [
         { 
             element: '#tour-welcome', 
@@ -44,35 +40,33 @@ export default function OnboardingTour() {
                 description: 'Itt tudod rögzíteni az első járművedet. Ez a legfontosabb lépés az induláshoz.' 
             } 
         },
-        { 
-            element: '#tour-service-map', 
-            popover: { 
-                title: 'Szerviz Térkép 🗺️', 
-                description: 'Találd meg a legjobb szerelőket és autómosókat a közeledben.' 
-            } 
-        },
-        { 
-            element: '#tour-stats', 
-            popover: { 
-                title: 'Költségek & Statisztika 📊', 
-                description: 'Itt látod majd összesítve, mennyit költöttél az autódra az elmúlt hónapban.' 
-            } 
-        },
+        // Megjegyzés: Ellenőrizd, hogy a #tour-service-map elem létezik-e a Dashboardon, 
+        // különben a driver.js hibát dobhat vagy átugorja.
+        // { 
+        //     element: '#tour-stats', 
+        //     popover: { 
+        //         title: 'Költségek & Statisztika 📊', 
+        //         description: 'Itt látod majd összesítve, mennyit költöttél az autódra az elmúlt hónapban.' 
+        //     } 
+        // },
       ],
 
-      // 3. Ha a user bezárja (Skip) vagy végigcsinálja, mentsük el
+      // Fontos: Akár a "Befejezés", akár a "Bezárás" (X), akár a "félrekattintás" történik,
+      // a túra befejezettnek minősül.
       onDestroyStarted: () => {
         localStorage.setItem('dynamicsense_tour_completed', 'true');
         driverObj.destroy();
       },
     });
 
-    // Indítás kis késleltetéssel, hogy a DOM biztosan betöltődjön
-    setTimeout(() => {
+    // Indítás
+    const timer = setTimeout(() => {
         driverObj.drive();
-    }, 1000);
+    }, 1500); // Kicsit több időt adunk a Next.js hidrálásnak
+
+    return () => clearTimeout(timer);
 
   }, []);
 
-  return null; // Ez a komponens nem renderel semmit a DOM-ba
+  return null;
 }
