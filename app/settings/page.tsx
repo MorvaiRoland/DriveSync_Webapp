@@ -9,7 +9,7 @@ import {
   Fingerprint, 
   UserCircle,
   Zap,
-  ShieldAlert as AlertIcon // Átnevezve az import, hogy ne ütközzön semmivel
+  ShieldAlert as AlertIcon
 } from 'lucide-react'
 
 // Next.js 15+ típusdefiníció
@@ -34,11 +34,20 @@ export default async function SettingsPage({ searchParams }: PageProps) {
   // 3. Előfizetés és beállítások lekérése
   const { data: subscription } = await supabase
     .from('subscriptions')
-    .select('plan_type, status')
+    .select('plan_type, status, current_period_end')
     .eq('user_id', user.id)
     .single()
 
-  // 4. Metadata és üzenetek kezelése
+  // 4. Early Access Config lekérése (ÚJ!)
+  const { data: configData } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', 'early_access')
+    .single();
+  
+  const earlyAccessConfig = configData?.value || { enabled: false };
+
+  // 5. Metadata és üzenetek kezelése
   const meta = user.user_metadata || {}
   const settings = meta.settings || { notify_email: true, notify_push: false, theme: 'system' }
   const message = sParams.success || sParams.error
@@ -119,7 +128,8 @@ export default async function SettingsPage({ searchParams }: PageProps) {
             user={user} 
             meta={meta} 
             settings={settings} 
-            subscription={subscription} 
+            subscription={subscription}
+            earlyAccessConfig={earlyAccessConfig} // ÁTADJUK AZ ÚJ PROPOT
           />
         </div>
 

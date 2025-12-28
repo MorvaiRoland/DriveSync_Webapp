@@ -85,6 +85,8 @@ export default async function CarDetailsPage(props: Props) {
   const isPro = limits.aiMechanic; 
   const canServiceMap = limits.serviceMap;
   const canVinSearch = limits.vinSearch;
+  const canExport = limits.export; // Export jog
+  const canMileageLog = limits.mileageLog; // Útnyilvántartás jog
 
   // --- Calculations ---
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)
@@ -142,7 +144,6 @@ export default async function CarDetailsPage(props: Props) {
   const WidgetParking = <SmartParkingWidget carId={carIdString} activeSession={activeParking} />;
   const WidgetHealth = <CarHealthWidget {...healthProps} />;
   
-  // PRÉMIUM WIDGETEK: Csak ha Pro
   const WidgetPrediction = isPro 
     ? <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} /> 
     : <PremiumLockWidget title="Prediktív Karbantartás" icon={<Sparkles className="w-5 h-5 text-amber-500" />} />;
@@ -222,15 +223,23 @@ export default async function CarDetailsPage(props: Props) {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
-      <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={isPro} />
+      <HeaderSection 
+         car={car} 
+         healthStatus={healthStatus} 
+         nextServiceKm={nextServiceKm} 
+         kmRemaining={kmRemaining} 
+         safeEvents={safeEvents} 
+         isPro={isPro} 
+         canExport={canExport} // ÚJ PROP
+      />
       
-      {/* DESKTOP ACTION GRID - ITT VAN AZ ÚJ SZERVIZ TÉRKÉP GOMB */}
-      <DesktopActionGrid carId={carIdString} isElectric={isElectric} canServiceMap={canServiceMap} />
+      {/* DESKTOP ACTION GRID - SZERVIZ TÉRKÉP ÉS ÚTNYILVÁNTARTÁS LIMITTEL */}
+      <DesktopActionGrid carId={carIdString} isElectric={isElectric} canServiceMap={canServiceMap} canMileageLog={canMileageLog} />
       
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
         <ResponsiveDashboard mobileTabs={mobileTabs} desktopContent={DesktopLayout} />
       </div>
-      <MobileBottomNav carId={carIdString} isElectric={isElectric} />
+      <MobileBottomNav carId={carIdString} isElectric={isElectric} canMileageLog={canMileageLog} />
     </div>
   )
 }
@@ -277,15 +286,12 @@ function EventLog({ events, carId }: any) {
                     <div className="relative border-l-2 border-slate-100 dark:border-slate-800 ml-3 space-y-8">
                         {events.map((event: any, index: number) => (
                             <div key={event.id} className="relative pl-8 group">
-                                {/* Idővonal pötty */}
                                 <div className={`absolute -left-[9px] top-4 w-4 h-4 rounded-full border-4 border-white dark:border-slate-900 ${
                                     event.type === 'fuel' ? 'bg-amber-500' : 
                                     event.type === 'service' ? 'bg-indigo-500' : 'bg-slate-400'
                                 } shadow-sm`}></div>
 
-                                {/* Kártya Konténer */}
                                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:border-amber-500/30 hover:shadow-md transition-all relative overflow-hidden">
-                                    
                                     <Link href={`/cars/${carId}/events/${event.id}/edit`} className="block p-4 z-0">
                                         <div className="flex justify-between items-start mb-2 pr-8"> 
                                             <div>
@@ -312,8 +318,6 @@ function EventLog({ events, carId }: any) {
                                             )}
                                         </div>
                                     </Link>
-
-                                    {/* Törlés Gomb */}
                                     <div className="absolute top-2 right-2 z-10">
                                          <form action={deleteEvent}>
                                             <input type="hidden" name="id" value={event.id} />
@@ -327,7 +331,6 @@ function EventLog({ events, carId }: any) {
                                             </button>
                                          </form>
                                     </div>
-                                    
                                 </div>
                             </div>
                         ))}
@@ -483,7 +486,7 @@ function SummaryBox({ label, value, subLabel }: any) {
   )
 }
 
-function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro }: any) {
+function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro, canExport }: any) {
     return (
         <div className="relative bg-slate-900 w-full overflow-hidden shadow-2xl shrink-0 group min-h-[22rem] md:h-[28rem]">
             {car.image_url && (
@@ -500,7 +503,15 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                         <span className="hidden sm:inline font-bold text-sm">Garázs</span>
                     </Link>
                     <div className="flex items-center gap-3">
-                        <ExportMenu car={car} events={safeEvents} />
+                        {/* --- EXPORT MENU - CSAK HA JOGOSULT --- */}
+                        {canExport ? (
+                            <ExportMenu car={car} events={safeEvents} />
+                        ) : (
+                            <Link href="/pricing" className="bg-black/20 hover:bg-black/30 text-white/70 p-2.5 rounded-full backdrop-blur-md border border-white/10 flex items-center gap-1 text-xs font-bold">
+                                <Lock className="w-3 h-3" /> Export
+                            </Link>
+                        )}
+
                         <Link href={`/cars/${car.id}/edit`} className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md transition-colors border border-white/10">
                             <Pencil className="w-4 h-4" />
                         </Link>
@@ -548,7 +559,7 @@ function StatBadge({ label, value, valueColor = "text-white" }: any) {
     )
 }
 
-function MobileBottomNav({ carId, isElectric }: { carId: string, isElectric?: boolean }) {
+function MobileBottomNav({ carId, isElectric, canMileageLog }: { carId: string, isElectric?: boolean, canMileageLog: boolean }) {
     const btnBase = "flex flex-col items-center justify-center gap-1.5 py-2 rounded-2xl transition-all active:scale-95";
     return (
         <div className="md:hidden fixed bottom-6 left-4 right-4 bg-slate-900/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl z-50">
@@ -563,9 +574,18 @@ function MobileBottomNav({ carId, isElectric }: { carId: string, isElectric?: bo
                 <Link href={`/cars/${carId}/reminders/new`} className={`${btnBase} text-indigo-400 hover:bg-white/5`}>
                     <Bell className="w-5 h-5" /><span className="text-[9px] font-bold">Emlék.</span>
                 </Link>
-                <Link href={`/cars/${carId}/trips`} className={`${btnBase} text-blue-400 hover:bg-white/5`}>
-                    <Map className="w-5 h-5" /><span className="text-[9px] font-bold">Utak</span>
-                </Link>
+                
+                {/* --- ÚTNYILVÁNTARTÁS LIMIT --- */}
+                {canMileageLog ? (
+                    <Link href={`/cars/${carId}/trips`} className={`${btnBase} text-blue-400 hover:bg-white/5`}>
+                        <Map className="w-5 h-5" /><span className="text-[9px] font-bold">Utak</span>
+                    </Link>
+                ) : (
+                    <Link href="/pricing" className={`${btnBase} text-slate-500 opacity-70`}>
+                        <Lock className="w-5 h-5" /><span className="text-[9px] font-bold">Utak</span>
+                    </Link>
+                )}
+
                 <Link href={`/cars/${carId}/parts`} className={`${btnBase} text-emerald-400 hover:bg-white/5`}>
                     <Package className="w-5 h-5" /><span className="text-[9px] font-bold">Alkatr.</span>
                 </Link>
@@ -574,12 +594,11 @@ function MobileBottomNav({ carId, isElectric }: { carId: string, isElectric?: bo
     )
 }
 
-// --- DESKTOP ACTION GRID ÚJ GOMBBAL (Szerviz Térkép) ---
-function DesktopActionGrid({ carId, isElectric, canServiceMap }: { carId: string, isElectric?: boolean, canServiceMap: boolean }) {
+function DesktopActionGrid({ carId, isElectric, canServiceMap, canMileageLog }: { carId: string, isElectric?: boolean, canServiceMap: boolean, canMileageLog: boolean }) {
     const btnClass = "group h-16 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all hover:-translate-y-1 font-bold border border-transparent overflow-hidden relative";
     const shine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer";
     return (
-        <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-6 gap-4"> {/* Grid-cols-6 az új gomb miatt */}
+        <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-6 gap-4">
              <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} ${isElectric ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-amber-500 hover:bg-amber-400 text-slate-900'}`}>
                 <div className={shine} />
                 {isElectric ? <Zap className="w-5 h-5" /> : <Fuel className="w-5 h-5" />}
@@ -592,14 +611,23 @@ function DesktopActionGrid({ carId, isElectric, canServiceMap }: { carId: string
              <Link href={`/cars/${carId}/reminders/new`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border-slate-200 dark:border-slate-700`}>
                 <Bell className="w-5 h-5" />Emlékeztető
              </Link>
-             <Link href={`/cars/${carId}/trips`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 border-slate-200 dark:border-slate-700`}>
-                <Map className="w-5 h-5" />Útnyilvántartás
-             </Link>
+             
+             {/* --- ÚTNYILVÁNTARTÁS LIMIT --- */}
+             {canMileageLog ? (
+                <Link href={`/cars/${carId}/trips`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 border-slate-200 dark:border-slate-700`}>
+                    <Map className="w-5 h-5" />Útnyilvántartás
+                </Link>
+             ) : (
+                <Link href="/pricing" className={`${btnClass} bg-slate-100 dark:bg-slate-800/50 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-800`}>
+                    <Lock className="w-4 h-4" />Útnyilvántartás
+                </Link>
+             )}
+
              <Link href={`/cars/${carId}/parts`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 border-slate-200 dark:border-slate-700`}>
                 <Package className="w-5 h-5" />Alkatrészek
              </Link>
              
-             {/* ÚJ: SZERVIZ TÉRKÉP GOMB */}
+             {/* SZERVIZ TÉRKÉP */}
              {canServiceMap ? (
                  <Link href={`/cars/${carId}/service-map`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 border-slate-200 dark:border-slate-700`}>
                     <MapPin className="w-5 h-5" />Szerviz Térkép
@@ -722,7 +750,7 @@ function TechnicalSpecs({ car, avgConsumption, canVinSearch }: any) {
                 <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                     <Gauge className="w-5 h-5 text-slate-400" /> Specifikációk
                 </h3>
-                {/* ÚJ: VIN KERESŐ GOMB */}
+                {/* VIN KERESŐ GOMB */}
                 {canVinSearch && car.vin ? (
                     <a href={`https://vincheck.com/${car.vin}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded flex items-center gap-1 hover:bg-indigo-100 transition-colors">
                         <Search className="w-3 h-3" /> Elemzés
