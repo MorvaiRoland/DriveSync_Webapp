@@ -81,7 +81,6 @@ export async function signOutAction() {
     return redirect('/login')
 }
 
-// --- 4. FIÓK TÖRLÉSE (JAVÍTVA) ---
 export async function deleteAccountAction() {
     const supabase = await createClient()
     
@@ -89,68 +88,75 @@ export async function deleteAccountAction() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return redirect('/login')
 
-    // 2. Admin kliens inicializálása
+    // 2. Admin kliens
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceRoleKey) return redirect(`/settings?error=${encodeURIComponent('Szerver konfigurációs hiba (Service Role)')}`)
+    if (!serviceRoleKey) return redirect(`/settings?error=${encodeURIComponent('Szerver hiba (Service Role hiányzik)')}`)
 
     const supabaseAdmin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
 
-    // Hibakezeléshez változó
     let errorMessage: string | null = null;
 
     try {
-        // --- A. Autók leválasztása ---
+        // --- A. Autók leválasztása (HIBATŰRŐ MÓD) ---
+        // Megpróbáljuk leválasztani, de ha hiba van, NEM dobunk 'throw'-t, csak logoljuk.
+        // Így ha nincs autó, vagy adatbázis hiba van ennél a lépésnél, a törlés akkor is folytatódik.
         const { error: unlinkError } = await supabaseAdmin
             .from('cars') 
             .update({ user_id: null }) 
             .eq('user_id', user.id)
 
-        // Redirect helyett hibát dobunk, hogy a catch elkapja
-        if (unlinkError) throw new Error('Nem sikerült az autók leválasztása.')
+        if (unlinkError) {
+            console.warn("Figyelmeztetés: Autók leválasztása nem sikerült (vagy nem volt autó), de folytatjuk:", unlinkError.message)
+        }
 
-        // --- B. Avatar kép törlése (Storage) ---
+        // --- B. Avatar kép törlése ---
         if (user.user_metadata?.avatar_url) {
             try {
                 const urlParts = user.user_metadata.avatar_url.split('/');
                 const fileName = urlParts[urlParts.length - 1];
                 if (fileName) await supabaseAdmin.storage.from('avatars').remove([fileName]);
             } catch (e) {
-                console.warn("Avatar törlése nem sikerült, de folytatjuk.")
+                console.warn("Avatar törlése sikertelen, de nem kritikus.")
             }
         }
 
-        // --- C. KAPCSOLÓDÓ TÁBLÁK TAKARÍTÁSA ---
+        // --- C. Egyéb táblák takarítása ---
+        // Itt is "csendes" törlést alkalmazunk: ha egy tábla üres, nem baj.
         const tablesToCleanup = ['profiles', 'subscriptions', 'api_keys', 'direct_messages', 'friendships', 'group_members'];
+        
         for (const table of tablesToCleanup) {
-            // A delete hívásokat nem kell feltétlenül awaitelni blokkolóan, ha nem kritikus a hiba,
-            // de a biztonság kedvéért itt megvárjuk.
+            // Nem vizsgáljuk a hibát, csak megpróbáljuk kitörölni.
+            // Ha a tábla nem létezik vagy üres, a kód fut tovább.
             await supabaseAdmin.from(table).delete().eq('user_id', user.id);
-            // Biztonsági ID alapú törlés (ha a tábla szerkezete olyan)
+            
             if (table === 'profiles') {
                  await supabaseAdmin.from(table).delete().eq('id', user.id);
             }
         }
 
-        // --- D. Felhasználó VÉGLEGES törlése ---
+        // --- D. A VÉGLEGES TÖRLÉS ---
+        // Ez az egyetlen lépés, ami ha elhasal, akkor tényleg szólnunk kell.
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
-        if (deleteError) throw new Error(`Sikertelen felhasználó törlés: ${deleteError.message}`)
+        
+        if (deleteError) {
+            // Ha ez a hiba constraint miatt van, próbálunk adni egy értelmesebb üzenetet
+            console.error("Végleges törlési hiba:", deleteError);
+            throw new Error(`Nem sikerült a felhasználót törölni az Auth rendszerből. Ok: ${deleteError.message}`)
+        }
 
         // --- E. Kijelentkeztetés ---
         await supabase.auth.signOut()
 
     } catch (err: any) {
-        console.error("Törlési hiba:", err);
-        // Itt mentjük el a hibaüzenetet, de NEM redirectelünk még
-        errorMessage = err.message || 'Váratlan hiba történt';
+        console.error("Kritikus hiba a fiók törlése közben:", err);
+        errorMessage = err.message || 'Váratlan hiba történt a törlés során.';
     }
 
-    // --- REDIRECT ZÓNA (A try-catch blokkon kívül) ---
+    // --- REDIRECT ZÓNA ---
     
-    // Ha volt hiba, visszaküldjük a settings oldalra
     if (errorMessage) {
         return redirect(`/settings?error=${encodeURIComponent(errorMessage)}`)
     }
 
-    // Ha minden sikeres volt, mehet a login oldalra
     return redirect(`/login?message=${encodeURIComponent('A fiókod sikeresen törölve lett.')}`)
 }
