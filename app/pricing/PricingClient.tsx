@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ArrowLeft, Loader2, Zap, LayoutDashboard, Crown, ShieldCheck, Sparkles, CreditCard, Lock } from 'lucide-react'
+import { Check, ArrowLeft, Loader2, Zap, LayoutDashboard, Crown, ShieldCheck, Sparkles, CreditCard } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner' 
@@ -15,7 +15,7 @@ const STRIPE_PRICES = {
 interface PricingClientProps {
   initialPlan: string
   userEmail?: string
-  currentPlan?: string // ÚJ PROP: 'free' | 'pro' | 'lifetime'
+  currentPlan?: string
 }
 
 export default function PricingClient({ initialPlan, userEmail, currentPlan }: PricingClientProps) {
@@ -34,16 +34,21 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
     }, 800)
   }
 
-  const handleCheckout = async (priceId: string, planName: string) => {
+  // JAVÍTÁS: 'mode' paraméter hozzáadva (subscription vagy payment)
+  const handleCheckout = async (priceId: string, mode: 'subscription' | 'payment') => {
     if (isLifetime) return; // Biztonsági csekk
 
-    setLoadingStripe(planName);
+    // Melyik gomb töltsön (a mode alapján döntjük el a UI miatt)
+    const loadingKey = mode === 'payment' ? 'lifetime' : 'pro';
+    setLoadingStripe(loadingKey);
+    
     try {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           priceId,
+          mode, // <--- ELKÜLDJÜK A MÓDOT A SZERVERNEK
           successUrl: `${window.location.origin}/?success=true`,
           cancelUrl: `${window.location.origin}/pricing`,
         }),
@@ -54,7 +59,7 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
       if (data.url) {
         window.location.href = data.url;
       } else {
-        throw new Error('Nem kaptunk fizetési linket.');
+        throw new Error(data.error || 'Nem kaptunk fizetési linket.');
       }
     } catch (error) {
       console.error('Checkout error:', error);
@@ -190,7 +195,11 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
                     </ul>
 
                     <button 
-                        onClick={() => handleCheckout(billingCycle === 'monthly' ? STRIPE_PRICES.monthly : STRIPE_PRICES.yearly, 'pro')}
+                        // JAVÍTÁS: Átadjuk a 'subscription' módot
+                        onClick={() => handleCheckout(
+                            billingCycle === 'monthly' ? STRIPE_PRICES.monthly : STRIPE_PRICES.yearly, 
+                            'subscription'
+                        )}
                         disabled={!!loadingStripe || isLifetime || isPro}
                         className={`w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
                             isLifetime || isPro 
@@ -237,7 +246,8 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
                 </ul>
 
                 <button 
-                    onClick={() => handleCheckout(STRIPE_PRICES.lifetime, 'lifetime')}
+                    // JAVÍTÁS: Átadjuk a 'payment' módot (egyszeri fizetés)
+                    onClick={() => handleCheckout(STRIPE_PRICES.lifetime, 'payment')}
                     disabled={!!loadingStripe || isLifetime}
                     className={`w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
                         isLifetime 
