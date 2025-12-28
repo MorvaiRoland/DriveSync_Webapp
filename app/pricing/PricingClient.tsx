@@ -34,11 +34,9 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
     }, 800)
   }
 
-  // JAVÍTÁS: 'mode' paraméter hozzáadva (subscription vagy payment)
   const handleCheckout = async (priceId: string, mode: 'subscription' | 'payment') => {
-    if (isLifetime) return; // Biztonsági csekk
+    if (isLifetime) return;
 
-    // Melyik gomb töltsön (a mode alapján döntjük el a UI miatt)
     const loadingKey = mode === 'payment' ? 'lifetime' : 'pro';
     setLoadingStripe(loadingKey);
     
@@ -48,7 +46,7 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           priceId,
-          mode, // <--- ELKÜLDJÜK A MÓDOT A SZERVERNEK
+          mode, 
           successUrl: `${window.location.origin}/?success=true`,
           cancelUrl: `${window.location.origin}/pricing`,
         }),
@@ -133,7 +131,7 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
         {/* PRICING GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl items-start">
             
-            {/* 1. FREE PLAN */}
+            {/* 1. FREE PLAN (STARTER) */}
             <div className={`p-6 md:p-8 rounded-3xl border bg-white dark:bg-slate-900/50 backdrop-blur-sm transition-all ${isLifetime ? 'opacity-50 grayscale border-slate-200 dark:border-slate-800' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'}`}>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Starter</h3>
                 <div className="flex items-baseline gap-1 mb-6">
@@ -141,14 +139,15 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
                     <span className="text-slate-500 font-medium">/ hó</span>
                 </div>
                 <p className="text-sm text-slate-500 mb-8 leading-relaxed min-h-[40px]">
-                    Tökéletes egyetlen autó karbantartásához és alapvető költségkövetéshez.
+                    Alapvető funkciók egyetlen autó karbantartásához.
                 </p>
                 
                 <ul className="space-y-4 mb-8">
                     <FeatureItem text="1 autó kezelése" />
                     <FeatureItem text="Szervizkönyv & Tankolások" />
-                    <FeatureItem text="Alapvető statisztikák" />
                     <FeatureItem text="Nincs AI Szerelő" dull />
+                    <FeatureItem text="Nincs Útnyilvántartás" dull />
+                    <FeatureItem text="Nincs Export / VIN Kereső" dull />
                     <FeatureItem text="Nincs Cloud Sync (csak lokális)" dull />
                 </ul>
 
@@ -183,19 +182,19 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
                     </p>
                     
                     <p className="text-sm text-slate-600 dark:text-slate-300 mb-8 leading-relaxed min-h-[40px]">
-                        Minden, amire egy autórajongónak szüksége van. Korlátlan garázs és mesterséges intelligencia.
+                        Minden, amire egy autórajongónak szüksége van.
                     </p>
                     
                     <ul className="space-y-4 mb-8">
                         <FeatureItem text="Akár 10 autó kezelése" active />
                         <FeatureItem text="AI Szerelő & Diagnosztika" active />
-                        <FeatureItem text="Prediktív karbantartás" active />
-                        <FeatureItem text="Felhő szinkronizáció" active />
-                        <FeatureItem text="PDF Export & Megosztás" active />
+                        <FeatureItem text="Útnyilvántartás & Úttervező" active />
+                        <FeatureItem text="VIN Alvázszám Kereső" active />
+                        <FeatureItem text="Szerviz Térkép" active />
+                        <FeatureItem text="PDF Export & Felhő Szinkron" active />
                     </ul>
 
                     <button 
-                        // JAVÍTÁS: Átadjuk a 'subscription' módot
                         onClick={() => handleCheckout(
                             billingCycle === 'monthly' ? STRIPE_PRICES.monthly : STRIPE_PRICES.yearly, 
                             'subscription'
@@ -246,7 +245,6 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
                 </ul>
 
                 <button 
-                    // JAVÍTÁS: Átadjuk a 'payment' módot (egyszeri fizetés)
                     onClick={() => handleCheckout(STRIPE_PRICES.lifetime, 'payment')}
                     disabled={!!loadingStripe || isLifetime}
                     className={`w-full py-3 rounded-xl font-bold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
