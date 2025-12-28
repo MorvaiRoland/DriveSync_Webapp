@@ -117,10 +117,16 @@ export default function ServiceMap() {
       if (isMobile) setSheetOpen(true);
   }
 
-  // GPS
   const handleLocateMe = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((pos) => {
+    if (!navigator.geolocation) {
+      alert("A böngésződ nem támogatja a helymeghatározást.");
+      return;
+    }
+
+    setLoading(true); // Opcionális: jelezzük, hogy dolgozunk
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         setUserLocation([lat, lng]);
@@ -132,9 +138,33 @@ export default function ServiceMap() {
         // API hívás az aktuális kategóriával
         const categoryToFetch = isSosActive ? 'towing' : activeCategory;
         fetchPlaces(lat, lng, categoryToFetch);
-
-      }, () => alert("Engedélyezd a GPS-t!"));
-    }
+        setLoading(false);
+      }, 
+      (error) => {
+        setLoading(false);
+        console.error("Helymeghatározási hiba:", error);
+        
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                alert("A helymeghatározás le van tiltva a böngészőben. Kérlek, engedélyezd a címsorban!");
+                break;
+            case error.POSITION_UNAVAILABLE:
+                alert("A helyzeted nem állapítható meg. Próbáld meg később vagy ellenőrizd a Wi-Fi kapcsolatot.");
+                break;
+            case error.TIMEOUT:
+                alert("Időtúllépés a helymeghatározás során.");
+                break;
+            default:
+                alert("Ismeretlen hiba történt a helymeghatározáskor.");
+                break;
+        }
+      },
+      {
+        enableHighAccuracy: true, // PC-n ez néha segít, néha lassít
+        timeout: 10000,           // 10 másodpercet várunk max
+        maximumAge: 0
+      }
+    );
   }
 
   // SOS Mód
