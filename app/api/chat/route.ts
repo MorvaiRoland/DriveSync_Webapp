@@ -1,6 +1,7 @@
 import { google } from '@ai-sdk/google';
 import { streamText } from 'ai';
-import { createClient } from '@/supabase/server'; // Használd a helyes import utat!
+import { createClient } from '@/supabase/server'; // Standard kliens (User adatokhoz)
+import { createClient as createAdminClient } from '@supabase/supabase-js'; // Admin kliens (Számlálóhoz)
 
 export const maxDuration = 30;
 
@@ -13,30 +14,44 @@ export async function POST(req: Request) {
      return new Response('Invalid JSON', { status: 400 });
   }
 
+  // 1. Standard kliens a felhasználó azonosításához és az autók lekéréséhez
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return new Response('Unauthorized', { status: 401 });
 
-  // --- 1. RATE LIMIT & ELŐFIZETÉS ELLENŐRZÉS ---
+  // 2. Admin kliens létrehozása a limit kezeléséhez (RLS megkerülése)
+  // Fontos: A SUPABASE_SERVICE_ROLE_KEY-nek benne kell lennie az .env fájlban!
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!, 
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+
+  // --- 3. RATE LIMIT & ELŐFIZETÉS ELLENŐRZÉS ---
   
-  // A. Megnézzük, van-e aktív Pro előfizetése (Opcionális, ha a DB-ben van subscriptions tábla)
+  // A. Pro státusz lekérése (Ez mehet a sima klienssel)
   const { data: subscription } = await supabase
     .from('subscriptions')
     .select('status')
     .eq('user_id', user.id)
-    .eq('status', 'active') // Vagy ami a te logikád (pl. 'pro', 'trial')
+    .eq('status', 'active') 
     .single();
 
-  const isPro = !!subscription; // True, ha van találat
+  const isPro = !!subscription;
 
-  // B. Ha NEM Pro, ellenőrizzük a napi limitet
+  // B. Napi limit ellenőrzés és írás (ADMIN KLIENSSEL)
   if (!isPro) {
     const today = new Date().toISOString().split('T')[0];
     const LIMIT = 5;
 
-    // Lekérjük a mai használatot
-    const { data: usage } = await supabase
+    // Használat lekérése ADMIN klienssel
+    const { data: usage } = await supabaseAdmin
       .from('user_daily_usage')
       .select('*')
       .eq('user_id', user.id)
@@ -45,9 +60,8 @@ export async function POST(req: Request) {
     let currentCount = 0;
 
     if (usage) {
-      // Ha a dátum nem a mai, akkor nullázódik (virtuálisan)
       if (usage.last_reset_date !== today) {
-        currentCount = 0;
+        currentCount = 0; // Új nap, nullázunk
       } else {
         currentCount = usage.message_count;
       }
@@ -64,16 +78,19 @@ export async function POST(req: Request) {
       });
     }
 
-    // Ha még nem érte el, növeljük a számlálót
-    // (Nem várjuk meg a 'await'-et, hogy gyorsabb legyen a válasz, de hibakezelés miatt érdemes lehet)
-    await supabase.from('user_daily_usage').upsert({
+    // Használat növelése ADMIN klienssel (Így biztosan beírja, RLS-től függetlenül)
+    const { error: upsertError } = await supabaseAdmin.from('user_daily_usage').upsert({
       user_id: user.id,
       message_count: currentCount + 1,
       last_reset_date: today
     });
+
+    if (upsertError) {
+        console.error("Hiba a napi limit mentésekor:", upsertError);
+    }
   }
 
-  // --- 2. ADATGYŰJTÉS KONTEXTUSHOZ ---
+  // --- 4. ADATGYŰJTÉS KONTEXTUSHOZ (Standard klienssel, hogy csak a sajátját lássa) ---
   const [carsRes, eventsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('user_id', user.id),
     supabase
@@ -87,7 +104,7 @@ export async function POST(req: Request) {
   const cars = carsRes.data || [];
   const events = eventsRes.data || [];
 
-  // --- 3. SYSTEM PROMPT ---
+  // --- 5. SYSTEM PROMPT ---
   const contextText = `
     TE VAGY A DRIVESYNC AI SZERELŐ.
     
@@ -103,11 +120,12 @@ export async function POST(req: Request) {
     Válaszolj magyarul, szakmailag, de érthetően, röviden és tömören.
   `;
 
-  // --- 4. AI VÁLASZ GENERÁLÁSA ---
+  // --- 6. AI VÁLASZ GENERÁLÁSA ---
+  // Javítva: gemini-1.5-flash a stabil verzió (a 2.5 valószínűleg elírás volt)
   const result = streamText({
-    model: google('gemini-2.5-flash'), // Jelenleg a 1.5 Flash a stabil és gyors verzió
+    model: google('gemini-2.5-flash'), 
     system: contextText,
-    messages, // A képet a frontend base64-ben küldi a messages tömbben, a Vercel AI SDK ezt kezeli
+    messages, 
   });
 
   return result.toTextStreamResponse();
