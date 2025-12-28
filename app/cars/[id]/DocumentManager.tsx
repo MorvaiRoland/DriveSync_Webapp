@@ -1,7 +1,12 @@
 'use client'
 import Link from 'next/link'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { uploadDocument, deleteDocument, getDocumentUrl } from './actions'
+import { createBrowserClient } from '@supabase/ssr' // <--- FONTOS IMPORT
+
+// --- ÚJ IMPORTOK A TÖMÖRÍTÉSHEZ ---
+import imageCompression from 'browser-image-compression'
+import { v4 as uuidv4 } from 'uuid'
 
 type Doc = {
   id: string
@@ -13,6 +18,15 @@ type Doc = {
 export default function DocumentManager({ carId, documents }: { carId: string, documents: Doc[] }) {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // KELL A USER ID A MAPPASZERKEZETHEZ
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Supabase kliens a feltöltéshez
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   // --- MODAL STATE ---
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -20,13 +34,23 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
   const [docLabel, setDocLabel] = useState("")
   const [consentGiven, setConsentGiven] = useState(false)
 
+  // User lekérése mountoláskor
+  useEffect(() => {
+    async function getUser() {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) setUserId(user.id)
+    }
+    getUser()
+  }, [supabase])
+
   // --- LOGIKA ---
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setSelectedFile(file)
-    setDocLabel(file.name.split('.')[0])
+    // Fájlnév kiterjesztés nélkül alapértelmezett névnek
+    setDocLabel(file.name.replace(/\.[^/.]+$/, ""))
     setConsentGiven(false)
     setIsModalOpen(true)
     e.target.value = ''
@@ -39,70 +63,96 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
     setConsentGiven(false)
   }
 
+  // --- MÓDOSÍTOTT FELTÖLTÉS ---
   const handleUploadConfirm = async () => {
-    if (!selectedFile || !consentGiven) return
+    if (!selectedFile || !consentGiven || !userId) return
+    
     setUploading(true)
-    const formData = new FormData()
-    formData.append('file', selectedFile)
-    formData.append('car_id', carId)
-    formData.append('label', docLabel || selectedFile.name)
 
     try {
+      let fileToUpload = selectedFile;
+
+      // 1. TÖMÖRÍTÉS (Csak ha kép!)
+      if (selectedFile.type.startsWith('image/')) {
+          console.log(`Eredeti méret: ${selectedFile.size / 1024 / 1024} MB`);
+          
+          const options = {
+            maxSizeMB: 1,           // Max 1 MB dokumentumoknál (jobb olvashatóság miatt nagyobb mint az avatar)
+            maxWidthOrHeight: 2048, // Nagyobb felbontás a szöveg olvashatósága miatt
+            useWebWorker: true
+          }
+          
+          try {
+            fileToUpload = await imageCompression(selectedFile, options);
+            console.log(`Tömörített méret: ${fileToUpload.size / 1024 / 1024} MB`);
+          } catch (err) {
+            console.error("Tömörítési hiba, eredeti fájl használata:", err);
+          }
+      }
+
+      // 2. FELTÖLTÉS SUPABASE STORAGE-BA (Kliens oldalról)
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      // Mappaszerkezet: user_id/car_id/fájlnév
+      const filePath = `${userId}/${carId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('car-documents')
+        .upload(filePath, fileToUpload);
+
+      if (uploadError) throw uploadError;
+
+      // 3. ADATOK MENTÉSE AZ ADATBÁZISBA (Server Action hívása)
+      const formData = new FormData()
+      formData.append('car_id', carId)
+      formData.append('name', docLabel || selectedFile.name)
+      formData.append('file_path', filePath) // A feltöltött útvonalat küldjük
+      formData.append('file_type', selectedFile.type)
+
       await uploadDocument(formData)
+      
       setIsModalOpen(false)
+      setSelectedFile(null)
+      setDocLabel("")
+
     } catch (error) {
+      console.error(error)
       alert('Hiba történt a feltöltéskor')
     } finally {
       setUploading(false)
-      setSelectedFile(null)
     }
   }
 
   // --- JAVÍTOTT MEGNYITÁS (View) ---
   const openDocument = async (filePath: string) => {
-      // 1. TRÜKK: Azonnal nyitunk egy üres ablakot (szinkron művelet)
-      // Ezt a böngésző engedi, mert közvetlenül a kattintásra reagál.
       const newWindow = window.open('', '_blank')
-      
       if (newWindow) {
-          newWindow.document.write('Betöltés... Kérlek várj.');
+          newWindow.document.write('<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;">Betöltés... Kérlek várj.</div>');
       }
 
-      // 2. Lekérjük az URL-t (aszinkron)
       const url = await getDocumentUrl(filePath, false)
 
       if (url && newWindow) {
-          // 3. Ha megvan az URL, átirányítjuk az előre megnyitott ablakot
           newWindow.location.href = url
       } else {
-          // Ha hiba volt, bezárjuk az üres ablakot és szólunk
           newWindow?.close()
-          alert("Nem sikerült betölteni a dokumentumot. Lehet, hogy törölve lett.")
+          alert("Nem sikerült betölteni a dokumentumot.")
       }
   }
 
   // --- JAVÍTOTT LETÖLTÉS (Download) ---
   const downloadDocument = async (e: React.MouseEvent, filePath: string, fileName: string) => {
-      e.stopPropagation() // Ne fusson le a kártya kattintás (openDocument)
+      e.stopPropagation() 
       
-      // Jelezzük a usernek, hogy történik valami (opcionális, de jó UX)
-      const originalText = (e.currentTarget as HTMLButtonElement).innerHTML;
-      // (Itt lehetne egy spinner is, de most egyszerűsítünk)
-      
-      const url = await getDocumentUrl(filePath, true) // true = download flag
+      const url = await getDocumentUrl(filePath, true)
 
       if (url) {
-          // Létrehozunk egy ideiglenes <a> elemet a DOM-ban
           const link = document.createElement('a')
           link.href = url
-          link.setAttribute('download', fileName) // Ez adja a fájl nevét
-          link.setAttribute('target', '_blank')   // Biztonsági háló
+          link.setAttribute('download', fileName)
+          link.setAttribute('target', '_blank')
           document.body.appendChild(link)
-          
-          // Szimuláljuk a kattintást
           link.click()
-          
-          // Takarítás
           document.body.removeChild(link)
       } else {
           alert("Hiba a letöltési link generálásakor.")
@@ -151,7 +201,12 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
               {/* Dokumentum Ikon és Név */}
               <div className="h-full flex flex-col justify-between pr-6 md:pr-0">
                   <div className="absolute top-0 right-0 p-2 opacity-10 pointer-events-none">
-                      <svg className="w-10 md:w-12 h-10 md:h-12 dark:text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M7 2a2 2 0 00-2 2v1h10V4a2 2 0 00-2-2H7zm12 4h-2V4a4 4 0 00-4-4H7a4 4 0 00-4 4v1H1a1 1 0 00-1 1v12a1 1 0 001 1h18a1 1 0 001-1V7a1 1 0 00-1-1zM3 8h14v10H3V8zm2 2v2h10v-2H5zm0 4v2h8v-2H5z"/></svg>
+                      {/* Ikon típus alapján (PDF/Kép) */}
+                      {doc.file_type.includes('pdf') ? (
+                         <svg className="w-10 md:w-12 h-10 md:h-12 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      ) : (
+                         <svg className="w-10 md:w-12 h-10 md:h-12 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      )}
                   </div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate w-full">{doc.name}</span>
                   <span className="text-[10px] md:text-xs font-bold text-amber-600 dark:text-amber-500 flex items-center gap-1">
@@ -181,10 +236,8 @@ export default function DocumentManager({ carId, documents }: { carId: string, d
         </div>
       </div>
 
-      {/* --- MODAL (Marad a régi) --- */}
+      {/* --- MODAL --- */}
       {isModalOpen && (
-        // ... (Ez a rész változatlan, benne hagytam a fenti kódban csak rövidítve jelzem, de a komplett kódot másold be)
-        // A te esetedben a teljes fájlt cseréld, szóval bemásolom a Modalt is ide alább:
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200">
             

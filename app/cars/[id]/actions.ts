@@ -423,37 +423,28 @@ export async function deletePart(formData: FormData) {
 export async function uploadDocument(formData: FormData) {
   const supabase = await createClient()
 
-  const file = formData.get('file') as File
+  // MÁR NEM FÁJLT VÁRUNK, HANEM ADATOKAT
   const carId = formData.get('car_id') as string
-  const label = formData.get('label') as string
+  const name = formData.get('name') as string
+  const filePath = formData.get('file_path') as string
+  const fileType = formData.get('file_type') as string
 
-  if (!file || !carId) {
+  if (!filePath || !carId) {
     throw new Error('Hiányzó adatok')
   }
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Nem vagy bejelentkezve')
 
-  const fileExt = file.name.split('.').pop()
-  const fileName = `${carId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-  
-  const { error: uploadError } = await supabase.storage
-    .from('car-documents')
-    .upload(fileName, file)
-
-  if (uploadError) {
-    console.error('Upload error:', uploadError)
-    throw new Error('Hiba a fájl feltöltésekor')
-  }
-
+  // CSAK ADATBÁZIS MENTÉS TÖRTÉNIK
   const { error: dbError } = await supabase
     .from('car_documents')
     .insert({
       car_id: carId,
       user_id: user.id,
-      name: label || file.name,
-      file_path: fileName,
-      file_type: file.type
+      name: name,
+      file_path: filePath, // A kliens által megadott útvonal
+      file_type: fileType
     })
 
   if (dbError) {
