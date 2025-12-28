@@ -1,72 +1,51 @@
-import { createClient } from '@/supabase/server'
+// app/api/stripe/checkout/route.ts
 import { NextResponse } from 'next/server'
+import { createClient } from '@/supabase/server'
 import Stripe from 'stripe'
 
-// 1. Biztonsági ellenőrzés: Megvan-e a kulcs?
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('CRITICAL ERROR: STRIPE_SECRET_KEY is missing from env variables!')
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-12-18.acacia' as any, // <--- ÍGY
   typescript: true,
 })
 
 export async function POST(req: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return new NextResponse('Unauthorized', { status: 401 })
+
+  const { priceId, successUrl, cancelUrl } = await req.json()
+
+  // Eldöntjük, hogy ez egyszeri fizetés (Lifetime) vagy előfizetés (Pro)
+  // A lifetime price ID-dat ismerjük a konstansból
+  const isLifetime = priceId === 'price_1SijxIRbHGQdHUF48ulonZdP'; // Cseréld a sajátodra!
+
   try {
-    // 2. Környezeti változók ellenőrzése futásidőben
-    if (!process.env.STRIPE_SECRET_KEY) {
-        return NextResponse.json({ error: 'Szerver konfigurációs hiba: Hiányzó Stripe Kulcs' }, { status: 500 })
-    }
-    if (!process.env.NEXT_PUBLIC_BASE_URL) {
-        return NextResponse.json({ error: 'Szerver konfigurációs hiba: Hiányzó BASE_URL' }, { status: 500 })
-    }
-
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Nincs bejelentkezve' }, { status: 401 })
-    }
-
-    const body = await req.json()
-    const { priceId, mode } = body
-
-    if (!priceId) {
-        return NextResponse.json({ error: 'Hiányzó Price ID' }, { status: 400 })
-    }
-
-    console.log(`Checkout indítása: ${user.email}, Price: ${priceId}`)
-
-    // 3. Session létrehozása
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: ['card'], // + google_pay, apple_pay amit beállítottál
       line_items: [
         {
           price: priceId,
           quantity: 1,
         },
       ],
-      mode: mode, // 'subscription' vagy 'payment'
+      mode: isLifetime ? 'payment' : 'subscription', // FONTOS!
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      customer_email: user.email, // Automatikusan kitölti az emailt a Stripe-on
       
-      // JAVÍTÁS: Itt már az új /payment-success oldalra irányítunk!
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment-success`,
+      // EZ A LEGFONTOSABB SOR:
+      // Itt kötjük össze a Stripe-ot a Supabase Userrel
+      client_reference_id: user.id, 
       
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/pricing?canceled=true`,
-      customer_email: user.email,
       metadata: {
-        userId: user.id, // FONTOS: Ez alapján azonosítjuk a felhasználót a webhookban
-      },
+        userId: user.id, // Biztonsági tartalék
+      }
     })
 
     return NextResponse.json({ url: session.url })
-
   } catch (err: any) {
-    console.error('STRIPE API HIBA:', err)
-    
-    // FONTOS: Mindig JSON-t adunk vissza, még hiba esetén is!
-    return NextResponse.json(
-        { error: err.message || 'Ismeretlen szerver hiba' }, 
-        { status: 500 }
-    )
+    console.error(err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

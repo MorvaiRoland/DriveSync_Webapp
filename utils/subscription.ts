@@ -1,89 +1,86 @@
-import { createClient } from '@/supabase/server'
+import { SupabaseClient } from '@supabase/supabase-js'
 
-// 1. Csomag típusok (Hozzáadtam a 'founder'-t a biztonság kedvéért)
-export type SubscriptionPlan = 'free' | 'pro' | 'lifetime' | 'founder';
+export type SubscriptionPlan = 'free' | 'pro' | 'lifetime';
 
-// 2. Beállítások interface
-interface PlanConfig {
-  maxCars: number;
-  allowDocuments: boolean;
-  allowExport: boolean;
-  allowAi: boolean;
-  allowReminders: boolean;
-}
-
-// 3. Konfiguráció
-export const PLAN_LIMITS: Record<SubscriptionPlan, PlanConfig> = {
+export const PLAN_LIMITS = {
   free: {
     maxCars: 1,
-    allowDocuments: false,
-    allowExport: false,
-    allowAi: false,
-    allowReminders: true, 
+    aiMechanic: false,
+    sharedGarage: false,
+    cloudSync: true,
+    export: false,
+    storage: false // Dokumentum tárhely
   },
   pro: {
-    maxCars: Infinity, // JAVÍTVA: 999 helyett Infinity a ∞ jelhez
-    allowDocuments: true,
-    allowExport: true,
-    allowAi: true,
-    allowReminders: true,
+    maxCars: 10,
+    aiMechanic: true,
+    sharedGarage: true,
+    cloudSync: true,
+    export: true,
+    storage: true
   },
   lifetime: {
-    maxCars: Infinity, // JAVÍTVA
-    allowDocuments: true,
-    allowExport: true,
-    allowAi: true,
-    allowReminders: true,
-  },
-  founder: { // JAVÍTVA: Kompatibilitás a régi felhasználókkal
-    maxCars: Infinity,
-    allowDocuments: true,
-    allowExport: true,
-    allowAi: true,
-    allowReminders: true,
+    maxCars: 999, // "Korlátlan"
+    aiMechanic: true,
+    sharedGarage: true,
+    cloudSync: true,
+    export: true,
+    storage: true
   }
 };
 
-export async function getSubscriptionStatus(userId: string): Promise<SubscriptionPlan> {
-  const supabase = await createClient();
-  
-  // Hibakezelés: maybeSingle() biztonságosabb, ha véletlenül nincs rekord
-  const { data, error } = await supabase
+export async function getSubscriptionStatus(supabase: SupabaseClient, userId: string) {
+  // 1. Megnézzük a user konkrét előfizetését
+  const { data: sub } = await supabase
     .from('subscriptions')
-    .select('status, plan_type')
+    .select('*')
     .eq('user_id', userId)
-    .maybeSingle();
+    .single();
 
-  if (error || !data) {
-    return 'free';
+  // 2. Megnézzük az Admin Konfigurációt (Early Access)
+  const { data: config } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', 'early_access')
+    .single();
+
+  const earlyAccess = config?.value || { enabled: false };
+
+  // --- EARLY ACCESS LOGIKA ---
+  // Ha be van kapcsolva az Early Access, ÉS a usernek nincs már 'lifetime' csomagja:
+  // Akkor automatikusan PRO jogokat kap.
+  if (earlyAccess.enabled && sub?.plan_type !== 'lifetime') {
+     return { 
+       plan: 'pro' as SubscriptionPlan, 
+       isTrial: true, 
+       status: 'active' 
+     };
   }
 
-  const isActive = data.status === 'active' || data.status === 'trialing';
-  // Itt a 'plan_type' stringet kényszerítjük a típusunkra
-  const planType = data.plan_type as SubscriptionPlan;
-
-  // Ellenőrizzük, hogy a planType érvényes-e a mi rendszerünkben
-  const validPlans: SubscriptionPlan[] = ['pro', 'lifetime', 'founder'];
-
-  if (isActive && validPlans.includes(planType)) {
-      return planType;
+  // Ha nincs előfizetés rekordja és nincs Early Access, akkor FREE
+  if (!sub) {
+     return { plan: 'free' as SubscriptionPlan, status: 'active', isTrial: false };
   }
 
-  return 'free';
+  return {
+    plan: sub.plan_type as SubscriptionPlan,
+    status: sub.status,
+    periodEnd: sub.current_period_end,
+    isTrial: false
+  };
 }
 
-export function checkLimit(
-  plan: SubscriptionPlan, 
-  feature: keyof PlanConfig, 
-  currentCount: number = 0
-): boolean {
+// Segédfüggvény a limitek ellenőrzésére
+export async function checkLimit(supabase: SupabaseClient, userId: string, feature: keyof typeof PLAN_LIMITS['free']) {
+  const { plan } = await getSubscriptionStatus(supabase, userId);
   const limits = PLAN_LIMITS[plan];
-  
+
+  // Speciális ellenőrzés az autók számára (DB lekérdezés kell)
   if (feature === 'maxCars') {
-    // Infinity esetén ez mindig true lesz, ami helyes
-    return currentCount < limits.maxCars;
+    const { count } = await supabase.from('cars').select('*', { count: 'exact', head: true }).eq('user_id', userId);
+    return (count || 0) < limits.maxCars;
   }
-  
-  // Minden más feature boolean, de a biztonság kedvéért boolean-ra castoljuk
-  return !!limits[feature]; 
+
+  // Sima boolean feature (pl. aiMechanic)
+  return limits[feature];
 }

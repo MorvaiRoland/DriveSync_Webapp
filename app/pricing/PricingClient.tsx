@@ -1,21 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ArrowLeft, Loader2, Zap, LayoutDashboard, Crown, ShieldCheck, Sparkles } from 'lucide-react'
+import { Check, ArrowLeft, Loader2, Zap, LayoutDashboard, Crown, ShieldCheck, Sparkles, CreditCard } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { toast } from 'sonner'
+import { toast } from 'sonner' 
 
 // --- KONFIGURÁCIÓ ---
-const LIFETIME_PRICE_ID = 'price_1SijxIRbHGQdHUF48ulonZdP'
+// Ne felejtsd el frissíteni a Stripe-ban is az árakat ezekre az összegekre!
+const STRIPE_PRICES = {
+  monthly: 'price_1SjPQzRbHGQdHUF40biCuF2v', // Pro Havi: 890 Ft
+  yearly: 'price_1SjPRYRbHGQdHUF4E86ttykq',  // Pro Éves: 8.900 Ft
+  lifetime: 'price_1SjPSMRbHGQdHUF42Ngnfo41' // Lifetime: 19.900 Ft
+}
 
 interface PricingClientProps {
   initialPlan: string
+  userEmail?: string
 }
 
-export default function PricingClient({ initialPlan }: PricingClientProps) {
+export default function PricingClient({ initialPlan, userEmail }: PricingClientProps) {
   const [loadingDashboard, setLoadingDashboard] = useState(false)
-  const [loadingStripe, setLoadingStripe] = useState(false)
+  const [loadingStripe, setLoadingStripe] = useState<string | null>(null)
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly')
   const router = useRouter()
 
   const handleEnterDashboard = async () => {
@@ -25,8 +32,34 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
     }, 800)
   }
 
+  const handleCheckout = async (priceId: string, planName: string) => {
+    setLoadingStripe(planName);
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId,
+          successUrl: `${window.location.origin}/?success=true`,
+          cancelUrl: `${window.location.origin}/pricing`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Nem kaptunk fizetési linket.');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error('Hiba történt a fizetés indításakor. Próbáld újra!');
+      setLoadingStripe(null);
+    }
+  }
+
   return (
-    // FONTOS: pt-[env(safe-area-inset-top)] hozzáadva a notch kezeléséhez
     <div className="min-h-screen bg-slate-50 dark:bg-[#050505] text-slate-900 dark:text-slate-200 font-sans selection:bg-amber-500/30 selection:text-amber-600 relative overflow-x-hidden flex flex-col transition-colors duration-300 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       
       {/* HÁTTÉR */}
@@ -36,111 +69,160 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
       </div>
 
-      {/* NAVBAR - Biztonságos távolságra a kijelző tetejétől */}
+      {/* NAVBAR */}
       <nav className="relative z-50 w-full max-w-7xl mx-auto px-6 py-4 md:py-8 flex justify-between items-center">
         <Link href="/" className="group flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors text-sm font-bold">
              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 
-             <span>Később döntök, irány a Garázs</span>
+             <span>Vissza a Garázsba</span>
         </Link>
       </nav>
 
       <main className="relative z-10 flex-1 flex flex-col items-center px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full pb-20 pt-2 md:pt-10">
         
         {/* HEADER */}
-        <div className="text-center mb-12 md:mb-16 max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="text-center mb-12 max-w-3xl animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-6">
-               <Sparkles className="w-3 h-3" /> Indulási Ajánlat
+               <Sparkles className="w-3 h-3" /> Bevezető Árak
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight mb-6 leading-tight">
-              Fektess be a jövődbe. <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Soha többé havidíj.</span>
+              Válassz a céljaidhoz illő<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">garázs méretet.</span>
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 text-base md:text-xl leading-relaxed px-4">
-              A DynamicSense most indul. Légy az elsők között, és szerezz <strong className="text-slate-900 dark:text-white">örökös hozzáférést</strong> az összes jövőbeli Pro funkcióhoz.
+            <p className="text-slate-600 dark:text-slate-400 text-base md:text-xl leading-relaxed px-4 max-w-2xl mx-auto">
+              Kezdj kicsiben az ingyenes csomaggal, vagy oldd fel a korlátlan lehetőségeket kevesebbért, mint egy ebéd ára.
             </p>
         </div>
 
-        {/* PRICING CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full max-w-5xl items-center px-2">
+        {/* BILLING TOGGLE */}
+        <div className="flex items-center justify-center gap-4 mb-12">
+            <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>Havi</span>
+            <button 
+                onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
+                className="relative w-14 h-8 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
+            >
+                <div className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-sm transition-transform duration-300 ${billingCycle === 'yearly' ? 'translate-x-6 bg-gradient-to-br from-amber-400 to-orange-500' : ''}`} />
+            </button>
+            <span className={`text-sm font-bold flex items-center gap-2 ${billingCycle === 'yearly' ? 'text-slate-900 dark:text-white' : 'text-slate-500'}`}>
+                Éves <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wide">-17%</span>
+            </span>
+        </div>
+
+        {/* PRICING GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl items-start">
             
-            {/* 1. KÁRTYA: INGYENES */}
-            <div className="relative p-6 md:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm order-2 md:order-1 hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Early Access</h3>
+            {/* 1. FREE PLAN */}
+            <div className="p-6 md:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 backdrop-blur-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Starter</h3>
                 <div className="flex items-baseline gap-1 mb-6">
                     <span className="text-4xl font-black text-slate-900 dark:text-white">0 Ft</span>
-                    <span className="text-slate-500 font-medium">/ jelenleg</span>
+                    <span className="text-slate-500 font-medium">/ hó</span>
                 </div>
-                <p className="text-sm text-slate-500 mb-8 leading-relaxed">
-                    Használd az alkalmazást ingyen a béta időszak alatt. Később havidíjas rendszerre válthatunk, de az adataid megmaradnak.
+                <p className="text-sm text-slate-500 mb-8 leading-relaxed min-h-[40px]">
+                    Tökéletes egyetlen autó karbantartásához és alapvető költségkövetéshez.
                 </p>
                 
                 <ul className="space-y-4 mb-8">
-                    <FeatureItem text="Alapvető garázs funkciók" />
-                    <FeatureItem text="Korlátozott AI diagnosztika" />
-                    <FeatureItem text="Közösségi funkciók" />
-                    <FeatureItem text="Nincs garantált árvédelem" dull />
+                    <FeatureItem text="1 autó kezelése" />
+                    <FeatureItem text="Szervizkönyv & Tankolások" />
+                    <FeatureItem text="Alapvető statisztikák" />
+                    <FeatureItem text="Nincs AI Szerelő" dull />
+                    <FeatureItem text="Nincs Cloud Sync (csak lokális)" dull />
                 </ul>
 
                 <button 
                     onClick={handleEnterDashboard}
                     disabled={loadingDashboard}
-                    className="w-full py-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-sm uppercase tracking-wider hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold text-sm uppercase tracking-wider hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
                 >
-                    {loadingDashboard ? <Loader2 className="w-4 h-4 animate-spin" /> : <LayoutDashboard className="w-4 h-4" />}
-                    Tovább a Garázsba
+                    {loadingDashboard ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    Kezdés Ingyen
                 </button>
             </div>
 
-            {/* 2. KÁRTYA: LIFETIME */}
-            <div className="relative p-1 rounded-3xl bg-gradient-to-b from-amber-300 via-orange-500 to-red-500 shadow-2xl shadow-orange-500/20 order-1 md:order-2 transform md:scale-105">
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-lg flex items-center gap-2 whitespace-nowrap">
-                    <Crown className="w-3 h-3 fill-white" /> Legnépszerűbb
+            {/* 2. PRO PLAN (KIEMELT) */}
+            <div className="relative p-1 rounded-[26px] bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500 shadow-2xl shadow-indigo-500/20 transform md:-translate-y-4">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg flex items-center gap-2 whitespace-nowrap">
+                    <Zap className="w-3 h-3 fill-white" /> Népszerű
                 </div>
 
                 <div className="bg-white dark:bg-[#0A0A0A] rounded-[22px] p-6 md:p-8 h-full relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full blur-[80px] -mr-16 -mt-16"></div>
-
-                    <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600 mb-2">Founder Edition</h3>
+                    <h3 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">Pro</h3>
                     <div className="flex items-baseline gap-1 mb-2">
-                        <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white whitespace-nowrap">12.990 Ft</span>
-                        <span className="text-slate-500 font-bold">/ örökre</span>
+                        <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white">
+                            {billingCycle === 'monthly' ? '890' : '740'} Ft
+                        </span>
+                        <span className="text-slate-500 font-bold">/ hó</span>
                     </div>
-                    <p className="text-[10px] md:text-xs font-bold text-emerald-500 uppercase tracking-wide mb-6">Egyszeri fizetés. Nincs havidíj.</p>
+                    <p className="text-xs text-slate-400 mb-6">
+                        {billingCycle === 'monthly' ? 'Havonta számlázva' : 'Évente 8.900 Ft számlázva'}
+                    </p>
                     
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-8 leading-relaxed border-b border-slate-100 dark:border-slate-800 pb-6">
-                        Légy alapító tag! Támogasd a fejlesztést, és cserébe megkapod a Pro csomagot örökre.
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-8 leading-relaxed min-h-[40px]">
+                        Minden, amire egy autórajongónak szüksége van. Kevesebbért, mint egy kávé ára.
                     </p>
                     
                     <ul className="space-y-4 mb-8">
-                        <FeatureItem text="Minden jelenlegi Pro funkció" active />
-                        <FeatureItem text="Korlátlan AI Szerelő használat" active />
-                        <FeatureItem text="Garantáltan 0 Ft havidíj örökre" active />
-                        <FeatureItem text="Exkluzív 'Founder' jelvény" active />
-                        <FeatureItem text="Prioritásos ügyfélszolgálat" active />
+                        <FeatureItem text="Akár 10 autó kezelése" active />
+                        <FeatureItem text="AI Szerelő & Diagnosztika" active />
+                        <FeatureItem text="Prediktív karbantartás" active />
+                        <FeatureItem text="Felhő szinkronizáció" active />
+                        <FeatureItem text="PDF Export & Megosztás" active />
                     </ul>
 
                     <button 
-                        disabled={true}
-                        className="group relative w-full py-4 rounded-xl bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400 font-bold text-sm uppercase tracking-wider cursor-not-allowed transition-all overflow-hidden"
+                        onClick={() => handleCheckout(billingCycle === 'monthly' ? STRIPE_PRICES.monthly : STRIPE_PRICES.yearly, 'pro')}
+                        disabled={!!loadingStripe}
+                        className="w-full py-4 rounded-xl bg-indigo-600 text-white font-bold text-sm uppercase tracking-wider hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30"
                     >
-                        <span className="relative z-10 flex items-center justify-center gap-2">
-                            Hamarosan elérhető
-                        </span>
+                        {loadingStripe === 'pro' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                        Pro Előfizetés
                     </button>
-                    
-                    <p className="text-center text-[10px] text-slate-400 mt-4">
-                        A fizetés technikai okok miatt szünetel.
-                    </p>
                 </div>
+            </div>
+
+            {/* 3. LIFETIME PLAN */}
+            <div className="p-6 md:p-8 rounded-3xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/10 backdrop-blur-sm hover:border-amber-300 dark:hover:border-amber-700 transition-all relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-[60px] -mr-10 -mt-10"></div>
+                
+                <h3 className="text-xl font-bold text-amber-700 dark:text-amber-500 mb-2 flex items-center gap-2">
+                    <Crown className="w-5 h-5" /> Lifetime
+                </h3>
+                <div className="flex items-baseline gap-1 mb-6">
+                    <span className="text-4xl font-black text-slate-900 dark:text-white">19.900 Ft</span>
+                    <span className="text-slate-500 font-medium">/ egyszer</span>
+                </div>
+                <p className="text-sm text-slate-500 mb-8 leading-relaxed min-h-[40px]">
+                    Egyszeri befektetés, örökös Pro tagság. Soha többé nem kell havidíjat fizetned. Limitált ajánlat!
+                </p>
+                
+                <ul className="space-y-4 mb-8">
+                    <FeatureItem text="Minden Pro funkció örökre" />
+                    <FeatureItem text="Korlátlan (999) autó" />
+                    <FeatureItem text="Kiemelt ügyfélszolgálat" />
+                    <FeatureItem text="Founder jelvény a profilodon" />
+                    <FeatureItem text="Korai hozzáférés új funkciókhoz" />
+                </ul>
+
+                <button 
+                    onClick={() => handleCheckout(STRIPE_PRICES.lifetime, 'lifetime')}
+                    disabled={!!loadingStripe}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold text-sm uppercase tracking-wider hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                >
+                    {loadingStripe === 'lifetime' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Megveszem Örökre
+                </button>
             </div>
 
         </div>
 
         {/* TRUST BADGES */}
-        <div className="mt-12 md:mt-16 flex items-center gap-8 opacity-50 grayscale hover:grayscale-0 transition-all duration-500 pb-10">
-             <div className="flex items-center gap-2 text-[10px] md:text-xs font-bold text-slate-500">
+        <div className="mt-16 flex flex-col items-center gap-4 opacity-70">
+             <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
                 <ShieldCheck className="w-4 h-4" /> Biztonságos fizetés Stripe-on keresztül
              </div>
+             <p className="text-[10px] text-slate-400 max-w-md text-center">
+                 A fizetési adataidat nem tároljuk. A tranzakciót a Stripe, a világ egyik legbiztonságosabb fizetési szolgáltatója dolgozza fel. Bármikor lemondható.
+             </p>
         </div>
 
       </main>
@@ -151,7 +233,7 @@ export default function PricingClient({ initialPlan }: PricingClientProps) {
 function FeatureItem({ text, active, dull }: { text: string, active?: boolean, dull?: boolean }) {
     return (
         <li className={`flex items-start gap-3 ${dull ? 'opacity-50' : ''}`}>
-            <div className={`mt-0.5 rounded-full p-1 flex-shrink-0 ${active ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+            <div className={`mt-0.5 rounded-full p-1 flex-shrink-0 ${active ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
                 <Check className="w-3.5 h-3.5" strokeWidth={3} />
             </div>
             <span className={`text-sm font-medium ${active ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>{text}</span>

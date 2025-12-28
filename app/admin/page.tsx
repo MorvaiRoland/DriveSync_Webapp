@@ -1,40 +1,58 @@
 import { createClient } from '@supabase/supabase-js'
-import { getEarlyAccessConfig, setEarlyAccessConfig, EarlyAccessConfig } from '@/utils/earlyAccessConfig'
-// 10. Early Access Pro Config módosítása
-async function updateEarlyAccessConfig(formData: FormData) {
-    'use server'
-    const adminKey = formData.get('adminKey') as string;
-    if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
-    const enabled = formData.get('early_access_pro') === 'on';
-    const duration = parseInt(formData.get('early_access_pro_duration_months') as string, 10) || 3;
-    const fallback = formData.get('early_access_fallback_plan') as string || 'starter';
-    await setEarlyAccessConfig({
-        early_access_pro: enabled,
-        early_access_pro_duration_months: duration,
-        early_access_fallback_plan: fallback,
-    });
-    revalidatePath(`/admin?key=${adminKey}`);
-}
-import { notFound, redirect } from 'next/navigation' // Added redirect for search reset
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-// --- SUPABASE CLIENT ---
+// --- TÍPUSOK ---
+type EarlyAccessConfig = {
+  early_access_pro: boolean;
+  early_access_pro_duration_months: number;
+  early_access_fallback_plan: string;
+};
+
+// --- SUPABASE ADMIN CLIENT ---
 const getAdminClient = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 )
+
+// --- SEGÉDFÜGGVÉNY: Early Access Config Lekérése ---
+async function getEarlyAccessConfig(): Promise<EarlyAccessConfig> {
+  const supabase = getAdminClient();
+  const { data } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', 'early_access')
+    .single();
+
+  const defaultConfig: EarlyAccessConfig = {
+    early_access_pro: false,
+    early_access_pro_duration_months: 3,
+    early_access_fallback_plan: 'free'
+  };
+
+  if (data?.value) {
+    return {
+      early_access_pro: data.value.enabled ?? false,
+      early_access_pro_duration_months: data.value.duration_months ?? 3,
+      early_access_fallback_plan: data.value.fallback_plan ?? 'free'
+    };
+  }
+  return defaultConfig;
+}
 
 // ==========================================
 // SERVER ACTIONS (Adatbázis műveletek)
 // ==========================================
-
-// ... (Previous actions 1-8 remain exactly the same, copy them here if needed or keep existing) ...
-// For brevity, I am assuming actions 1-8 (updateSubscriptionPlan to deleteBattle) are unchanged.
-// Please ensure you keep them in the file!
 
 // 1. Felhasználó Csomag Módosítása
 async function updateSubscriptionPlan(formData: FormData) {
@@ -46,17 +64,46 @@ async function updateSubscriptionPlan(formData: FormData) {
   if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
 
   const supabase = getAdminClient()
+  
+  // Upsert a subscriptions táblába
   await supabase.from('subscriptions').upsert({ 
         user_id: userId, 
         plan_type: newPlan,
         status: 'active',
+        updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' })
 
   revalidatePath(`/admin?key=${adminKey}`) 
 }
 
-// ... (Include other actions: createPromotion, togglePromotion, deletePromotion, createReleaseNote, deleteReleaseNote, createBattle, deleteBattle) ...
-// 2. Új Promóció Létrehozása
+// 2. Early Access Config Módosítása
+async function updateEarlyAccessConfig(formData: FormData) {
+    'use server'
+    const adminKey = formData.get('adminKey') as string;
+    if (adminKey !== process.env.ADMIN_ACCESS_KEY) return;
+
+    const enabled = formData.get('early_access_pro') === 'on';
+    const duration = parseInt(formData.get('early_access_pro_duration_months') as string, 10) || 3;
+    const fallback = formData.get('early_access_fallback_plan') as string || 'free';
+
+    const supabase = getAdminClient();
+    
+    // JSONB formátumban mentjük
+    const newValue = {
+        enabled: enabled,
+        duration_months: duration,
+        fallback_plan: fallback
+    };
+
+    await supabase.from('app_config').upsert({
+        key: 'early_access',
+        value: newValue
+    });
+
+    revalidatePath(`/admin?key=${adminKey}`);
+}
+
+// 3. Promóciók
 async function createPromotion(formData: FormData) {
     'use server'
     const title = formData.get('title') as string
@@ -76,7 +123,6 @@ async function createPromotion(formData: FormData) {
     })
 
     revalidatePath(`/admin?key=${adminKey}`)
-    revalidatePath('/') 
 }
 
 async function togglePromotion(formData: FormData) {
@@ -88,7 +134,6 @@ async function togglePromotion(formData: FormData) {
     const supabase = getAdminClient()
     await supabase.from('promotions').update({ is_active: !currentStatus }).eq('id', id)
     revalidatePath(`/admin?key=${adminKey}`)
-    revalidatePath('/') 
 }
 
 async function deletePromotion(formData: FormData) {
@@ -99,9 +144,9 @@ async function deletePromotion(formData: FormData) {
     const supabase = getAdminClient()
     await supabase.from('promotions').delete().eq('id', id)
     revalidatePath(`/admin?key=${adminKey}`)
-    revalidatePath('/')
 }
 
+// 4. Release Notes
 async function createReleaseNote(formData: FormData) {
     'use server'
     const version = formData.get('version') as string
@@ -113,7 +158,6 @@ async function createReleaseNote(formData: FormData) {
     const supabase = getAdminClient()
     await supabase.from('release_notes').insert({ version, title, description, release_date: date || new Date().toISOString() })
     revalidatePath(`/admin?key=${adminKey}`)
-    revalidatePath('/') 
 }
 
 async function deleteReleaseNote(formData: FormData) {
@@ -124,9 +168,9 @@ async function deleteReleaseNote(formData: FormData) {
     const supabase = getAdminClient()
     await supabase.from('release_notes').delete().eq('id', id)
     revalidatePath(`/admin?key=${adminKey}`)
-    revalidatePath('/')
 }
 
+// 5. Battles
 async function createBattle(formData: FormData) {
     'use server'
     const title = formData.get('title') as string
@@ -137,7 +181,6 @@ async function createBattle(formData: FormData) {
     const supabase = getAdminClient()
     await supabase.from('battles').insert({ title, description, end_date: endDate, status: 'active' })
     revalidatePath(`/admin?key=${adminKey}`)
-    revalidatePath('/showroom')
 }
 
 async function deleteBattle(formData: FormData) {
@@ -148,16 +191,14 @@ async function deleteBattle(formData: FormData) {
     const supabase = getAdminClient()
     await supabase.from('battles').delete().eq('id', id)
     revalidatePath(`/admin?key=${adminKey}`)
-    revalidatePath('/showroom')
 }
 
-// 9. ÚJ: Felhasználó Keresés (Kliens oldali navigációhoz segéd)
+// 6. Keresés
 async function searchUsers(formData: FormData) {
     'use server'
     const query = formData.get('query') as string
     const adminKey = formData.get('adminKey') as string
     
-    // Redirectelünk az URL paraméterrel, így a szerver újrarendereli a listát a szűréssel
     redirect(`/admin?key=${adminKey}&q=${encodeURIComponent(query)}`)
 }
 
@@ -168,7 +209,7 @@ async function searchUsers(formData: FormData) {
 export default async function AdminDashboard({
     searchParams,
 }: {
-    searchParams: Promise<{ key?: string, q?: string }>; // Bővítettük a 'q' paraméterrel
+    searchParams: Promise<{ key?: string, q?: string }>;
 }) {
     // --- BIZTONSÁG ---
     const resolvedParams = await searchParams;
@@ -181,8 +222,8 @@ export default async function AdminDashboard({
 
     const supabaseAdmin = getAdminClient();
 
-    // --- Early Access Pro config lekérése ---
-    const earlyAccessConfig: EarlyAccessConfig = await getEarlyAccessConfig();
+    // --- CONFIG LEKÉRÉSE ---
+    const earlyAccessConfig = await getEarlyAccessConfig();
 
     // --- ADATLEKÉRÉS ---
     const [carsRes, eventsRes, subsRes, usersRes, promosRes, releaseRes, battlesRes] = await Promise.all([
@@ -210,21 +251,23 @@ export default async function AdminDashboard({
             id: u.id,
             email: u.email || '',
             created_at: u.created_at,
-            plan: sub?.plan_type || 'free',
+            // Ha nincs sub, de az early access aktív, akkor 'pro (trial)'-nak tekintjük a megjelenítéshez
+            plan: sub?.plan_type || (earlyAccessConfig.early_access_pro ? 'pro (EA)' : 'free'), 
             status: sub?.status || 'inactive',
         };
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     const totalRegisteredUsers = userList.length;
 
-    // --- SZŰRÉS KERESÉS ALAPJÁN (Ha van 'q' paraméter) ---
+    // --- SZŰRÉS KERESÉS ALAPJÁN ---
     if (searchQuery) {
         userList = userList.filter(u => u.email.toLowerCase().includes(searchQuery.toLowerCase()));
     }
 
     const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0);
     const lifetimeCount = userList.filter(u => u.plan === 'lifetime').length;
-    const proCount = userList.filter(u => u.plan === 'pro').length;
+    // A Pro számolásnál figyelembe vesszük az Early Accesst is
+    const proCount = userList.filter(u => u.plan === 'pro' || u.plan === 'pro (EA)').length;
     const proRate = totalRegisteredUsers > 0 ? Math.round(((lifetimeCount + proCount) / totalRegisteredUsers) * 100) : 0;
 
     return (
@@ -245,33 +288,41 @@ export default async function AdminDashboard({
       </div>
 
             {/* Early Access Pro Config Section */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-10 max-w-2xl mx-auto">
+            <div className={`border rounded-2xl p-6 mb-10 max-w-2xl mx-auto transition-colors ${earlyAccessConfig.early_access_pro ? 'bg-indigo-900/20 border-indigo-500/50 shadow-[0_0_30px_rgba(99,102,241,0.1)]' : 'bg-slate-900 border-slate-800'}`}>
                 <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
                     <span className="bg-amber-500/20 text-amber-400 p-1.5 rounded-lg">⚡</span>
                     Early Access Pro Beállítások
                 </h2>
+                <p className="text-slate-400 text-xs mb-4">
+                    Ha be van kapcsolva, minden regisztráló automatikusan megkapja a PRO funkciókat anélkül, hogy fizetne. 
+                    Amikor kikapcsolod, az új felhasználók FREE csomagba kerülnek.
+                </p>
                 <form action={updateEarlyAccessConfig} className="flex flex-col gap-4 mt-2">
                     <input type="hidden" name="adminKey" value={secretKey} />
-                    <div className="flex items-center gap-3">
-                        <input type="checkbox" id="early_access_pro" name="early_access_pro" defaultChecked={earlyAccessConfig.early_access_pro} className="accent-amber-500 w-5 h-5" />
-                        <label htmlFor="early_access_pro" className="text-white font-medium">Új felhasználók kapjanak Early Access Pro-t</label>
+                    
+                    <div className="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <input type="checkbox" id="early_access_pro" name="early_access_pro" defaultChecked={earlyAccessConfig.early_access_pro} className="accent-indigo-500 w-5 h-5 cursor-pointer" />
+                        <label htmlFor="early_access_pro" className="text-white font-bold cursor-pointer select-none">
+                            EARLY ACCESS AKTÍV (Mindenki Pro)
+                        </label>
                     </div>
+
                     <div className="flex flex-col md:flex-row gap-4">
                         <div className="flex-1">
-                            <label htmlFor="early_access_pro_duration_months" className="block text-slate-300 text-sm mb-1">Pro időtartam (hónap)</label>
-                            <input type="number" min="1" max="12" name="early_access_pro_duration_months" id="early_access_pro_duration_months" defaultValue={earlyAccessConfig.early_access_pro_duration_months} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-amber-500 outline-none" />
+                            <label htmlFor="early_access_pro_duration_months" className="block text-slate-400 text-xs uppercase font-bold mb-1">Időtartam (hónap)</label>
+                            <input type="number" min="1" max="12" name="early_access_pro_duration_months" id="early_access_pro_duration_months" defaultValue={earlyAccessConfig.early_access_pro_duration_months} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-indigo-500 outline-none font-mono" />
                         </div>
                         <div className="flex-1">
-                            <label htmlFor="early_access_fallback_plan" className="block text-slate-300 text-sm mb-1">Lejárat utáni csomag</label>
-                            <select name="early_access_fallback_plan" id="early_access_fallback_plan" defaultValue={earlyAccessConfig.early_access_fallback_plan} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-amber-500 outline-none">
-                                <option value="starter">Starter</option>
-                                <option value="free">Free</option>
-                                <option value="pro">Pro</option>
-                                <option value="lifetime">Lifetime</option>
+                            <label htmlFor="early_access_fallback_plan" className="block text-slate-400 text-xs uppercase font-bold mb-1">Lejárat után</label>
+                            <select name="early_access_fallback_plan" id="early_access_fallback_plan" defaultValue={earlyAccessConfig.early_access_fallback_plan} className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:border-indigo-500 outline-none">
+                                <option value="free">Free (Ingyenes)</option>
+                                <option value="pro">Pro (Fizetős)</option>
                             </select>
                         </div>
                     </div>
-                    <button type="submit" className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold py-3 rounded-xl transition-all mt-2">Beállítások mentése</button>
+                    <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-all mt-2 shadow-lg shadow-indigo-500/20">
+                        Beállítások Mentése
+                    </button>
                 </form>
             </div>
 
@@ -283,10 +334,7 @@ export default async function AdminDashboard({
          <KPICard title="Forgalom" value={`${(totalCost / 1000000).toFixed(1)}M`} subtitle="Költség (HUF)" color="emerald" icon={<span className="text-2xl">💰</span>} />
       </div>
 
-      {/* ... (Szekció 1, 2, 3: Promóciók, Release Notes, Battles - Ezek maradnak változatlanul) ... */}
-       {/* ===================================================================================== */}
       {/* SZEKCIÓ 1: PROMÓCIÓ KEZELŐ */}
-      {/* ===================================================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         
         {/* BAL: ÚJ PROMÓ */}
@@ -346,9 +394,7 @@ export default async function AdminDashboard({
         </div>
       </div>
 
-      {/* ===================================================================================== */}
-      {/* SZEKCIÓ 2: FRISSÍTÉSI NAPLÓ (CHANGELOG) */}
-      {/* ===================================================================================== */}
+      {/* SZEKCIÓ 2: FRISSÍTÉSI NAPLÓ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         
         {/* BAL: ÚJ FRISSÍTÉS */}
@@ -414,9 +460,7 @@ export default async function AdminDashboard({
         </div>
       </div>
 
-      {/* ===================================================================================== */}
-      {/* SZEKCIÓ 3: SHOWROOM VERSENYEK (BATTLES) */}
-      {/* ===================================================================================== */}
+      {/* SZEKCIÓ 3: SHOWROOM VERSENYEK */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         
         {/* BAL: ÚJ VERSENY */}
@@ -497,7 +541,6 @@ export default async function AdminDashboard({
                   Felhasználók {searchQuery && <span className="text-slate-500 text-sm font-normal">(Szűrt)</span>}
               </h3>
               
-              {/* KERESŐ FORM */}
               <form action={searchUsers} className="flex gap-2 w-full md:w-auto">
                   <input type="hidden" name="adminKey" value={secretKey} />
                   <input 
@@ -511,9 +554,9 @@ export default async function AdminDashboard({
                     Keresés
                   </button>
                   {searchQuery && (
-                     <Link href={`/admin?key=${secretKey}`} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
+                      <Link href={`/admin?key=${secretKey}`} className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
                         X
-                     </Link>
+                      </Link>
                   )}
               </form>
           </div>
@@ -522,7 +565,7 @@ export default async function AdminDashboard({
               <table className="w-full text-left text-sm text-slate-400">
                   <thead className="bg-slate-950 text-slate-200 uppercase font-bold text-xs">
                       <tr>
-                          <th className="px-6 py-4 w-12 text-center">#</th> {/* SORSZÁM */}
+                          <th className="px-6 py-4 w-12 text-center">#</th>
                           <th className="px-6 py-4">User</th>
                           <th className="px-6 py-4 text-center">Jelenlegi Csomag</th>
                           <th className="px-6 py-4 text-right">Módosítás</th>
@@ -541,7 +584,7 @@ export default async function AdminDashboard({
                               <td className="px-6 py-4 text-center">
                                   <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold border ${
                                       u.plan === 'lifetime' ? 'bg-amber-500/10 border-amber-500/50 text-amber-500' :
-                                      u.plan === 'pro' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' :
+                                      (u.plan === 'pro' || u.plan === 'pro (EA)') ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' :
                                       'bg-slate-800 border-slate-700 text-slate-400'
                                   }`}>
                                       {u.plan === 'lifetime' && '🚀 '}
@@ -552,7 +595,7 @@ export default async function AdminDashboard({
                                   <form action={updateSubscriptionPlan} className="flex items-center justify-end gap-2">
                                       <input type="hidden" name="userId" value={u.id} />
                                       <input type="hidden" name="adminKey" value={secretKey} />
-                                      <select name="plan" className="bg-slate-950 border border-slate-700 text-white text-xs rounded-lg focus:ring-amber-500 focus:border-amber-500 p-1.5" defaultValue={u.plan}>
+                                      <select name="plan" className="bg-slate-950 border border-slate-700 text-white text-xs rounded-lg focus:ring-amber-500 focus:border-amber-500 p-1.5" defaultValue={u.plan.startsWith('pro') ? 'pro' : u.plan}>
                                           <option value="free">Free</option>
                                           <option value="pro">Pro</option>
                                           <option value="lifetime">Lifetime</option>

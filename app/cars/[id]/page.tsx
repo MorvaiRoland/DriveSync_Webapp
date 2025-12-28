@@ -6,7 +6,7 @@ import { deleteEvent, deleteReminder } from './actions'
 import DocumentManager from './DocumentManager'
 import ExportMenu from '@/components/ExportMenu'
 import PublicToggle from '@/components/PublicToggle'
-import { getSubscriptionStatus, type SubscriptionPlan } from '@/utils/subscription'
+import { getSubscriptionStatus, PLAN_LIMITS } from '@/utils/subscription'
 import VignetteManager from '@/components/VignetteManager'
 import SmartParkingWidget from '@/components/SmartParkingWidget' 
 import SalesWidget from '@/components/SalesWidget'
@@ -36,6 +36,8 @@ type Car = {
   is_public_history?: boolean; 
 }
 
+const MOBILE_CARD_SIZES = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
+
 const getExpiryStatus = (dateString: string | null) => {
   if (!dateString) return { label: 'Nincs megadva', status: 'Kitöltés...', alert: false, color: 'text-slate-400', bg: 'bg-slate-50 dark:bg-slate-800/50 border-dashed'};
   const today = new Date();
@@ -53,6 +55,8 @@ export default async function CarDetailsPage(props: Props) {
   const params = await props.params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return notFound()
 
   const [carRes, eventsRes, remindersRes, tiresRes, docsRes, vigRes, parkingRes] = await Promise.all([
     supabase.from('cars').select('*').eq('id', params.id).single(),
@@ -74,7 +78,11 @@ export default async function CarDetailsPage(props: Props) {
   const safeVignettes = vigRes.data || []
   const activeParking = parkingRes.data || null
 
-  const isPro = true; 
+  // --- ELŐFIZETÉS ELLENŐRZÉS ---
+  const { plan } = await getSubscriptionStatus(supabase, user.id);
+  const limits = PLAN_LIMITS[plan];
+  
+  const isPro = limits.aiMechanic; // Prémium jog (AI és egyéb Pro funkciókhoz)
 
   // --- Calculations ---
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)
@@ -131,20 +139,25 @@ export default async function CarDetailsPage(props: Props) {
   // --- WIDGET LOGIKA ---
   const WidgetParking = <SmartParkingWidget carId={carIdString} activeSession={activeParking} />;
   const WidgetHealth = <CarHealthWidget {...healthProps} />;
-  const WidgetPrediction = <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} />;
+  
+  // PRÉMIUM WIDGETEK: Csak ha Pro
+  const WidgetPrediction = isPro 
+    ? <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} /> 
+    : <PremiumLockWidget title="Prediktív Karbantartás" icon={<Sparkles className="w-5 h-5 text-amber-500" />} />;
+    
+  const WidgetTips = isPro 
+    ? <SmartTipsCard tips={smartTips} /> 
+    : <PremiumLockWidget title="AI Szerelő Tippek" icon={<Lightbulb className="w-5 h-5 text-yellow-400" />} />;
+
   const WidgetCost = <CostCard {...costProps} />;
   const WidgetSales = <SalesWidget car={car} />;
   const WidgetSpecs = <TechnicalSpecs {...techProps} />;
   const WidgetVignette = <VignetteManager carId={carIdString} vignettes={safeVignettes} />;
   const WidgetTires = <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />;
   const WidgetDocs = <DocumentManager carId={carIdString} documents={safeDocs} />;
-  const WidgetTips = <SmartTipsCard tips={smartTips} />;
   const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
-  const WidgetCharts = <AnalyticsCharts events={safeEvents} isPro={true} />;
-  
-  // ITT VÁLTOZTATTUK MEG AZ EVENTLOGOT (Lásd lentebb a definíciót)
+  const WidgetCharts = <AnalyticsCharts events={safeEvents} isPro={isPro} />;
   const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
-  
   const WidgetFuel = <FuelTrackerCard events={safeEvents} isElectric={isElectric} carMileage={car.mileage} />;
 
   // --- MOBILE TABS CONTENT ---
@@ -207,7 +220,7 @@ export default async function CarDetailsPage(props: Props) {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-32 md:pb-20 transition-colors duration-300">
-      <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={true} />
+      <HeaderSection car={car} healthStatus={healthStatus} nextServiceKm={nextServiceKm} kmRemaining={kmRemaining} safeEvents={safeEvents} isPro={isPro} />
       <DesktopActionGrid carId={carIdString} isElectric={isElectric} />
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
         <ResponsiveDashboard mobileTabs={mobileTabs} desktopContent={DesktopLayout} />
@@ -219,7 +232,31 @@ export default async function CarDetailsPage(props: Props) {
 
 // --- SUB-COMPONENTS ---
 
-// *** TÖRLÉS FUNKCIÓVAL BŐVÍTETT EVENTLOG ***
+// *** PRÉMIUM FUNKCIÓ LEZÁRÓ WIDGET ***
+function PremiumLockWidget({ title, icon }: { title: string, icon: React.ReactNode }) {
+    return (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 relative overflow-hidden group">
+            <div className="flex items-center gap-2 mb-4">
+                {icon}
+                <h3 className="font-bold text-slate-400 dark:text-slate-500">{title}</h3>
+            </div>
+            <div className="absolute inset-0 bg-white/60 dark:bg-slate-950/60 backdrop-blur-sm z-10 flex flex-col items-center justify-center text-center p-4">
+                <Lock className="w-8 h-8 text-amber-500 mb-2" />
+                <p className="text-sm font-bold text-slate-900 dark:text-white">Prémium Funkció</p>
+                <Link href="/pricing" className="mt-3 text-xs font-bold text-white bg-amber-500 px-4 py-2 rounded-lg hover:bg-amber-600 transition-colors">
+                    Feloldás
+                </Link>
+            </div>
+            {/* Fake Content Background */}
+            <div className="space-y-3 opacity-30 blur-sm pointer-events-none">
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
+            </div>
+        </div>
+    )
+}
+
 function EventLog({ events, carId }: any) {
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -453,8 +490,6 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
             )}
             
             <div className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-end pb-8 pt-20 md:pt-0 md:pb-0 md:justify-center">
-                {/* --- MÓDOSÍTÁS: padding-top hozzáadása az env(safe-area-inset-top) értékkel --- */}
-                {/* Eredeti: absolute top-0 left-0 right-0 p-4 md:p-6 ... */}
                 <div className="absolute top-0 left-0 right-0 z-30 px-4 pb-4 md:px-6 md:pb-6 flex justify-between items-center pt-[calc(env(safe-area-inset-top)+1rem)]">
                     <Link href="/" className="flex items-center gap-2 text-white/80 hover:text-white bg-black/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-all hover:bg-white/10">
                         <Warehouse className="w-4 h-4" />

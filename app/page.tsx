@@ -4,15 +4,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { getSubscriptionStatus, checkLimit, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
+import { getSubscriptionStatus, PLAN_LIMITS, type SubscriptionPlan } from '@/utils/subscription'
 import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
-import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map } from 'lucide-react';
+import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, ArrowRight, Search, Map, Crown, Sparkles } from 'lucide-react';
 import HeaderNav from '@/components/HeaderNav';
 import QuickMileageForm from '@/components/QuickMileageForm';
-import TripPlannerModal from '@/components/TripPlannerModal';
 import { Metadata } from 'next'
 
-// Cím beállítása a Manifest duplikáció elkerülésére
 export const metadata: Metadata = {
   title: {
     absolute: "Prémium Garázsmenedzsment"
@@ -24,7 +22,6 @@ const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { lo
 const AiMechanic = dynamic(() => import('@/components/AiMechanic'), { loading: () => null });
 const CongratulationModal = dynamic(() => import('@/components/CongratulationModal'), { loading: () => null });
 const GamificationWidget = dynamic(() => import('@/components/GamificationWidget'), { loading: () => null });
-const ReminderChecker = dynamic(() => import('@/components/ReminderChecker'), { loading: () => null });
 const WeatherWidget = dynamic(() => import('@/components/DashboardWidgets').then(m => ({ default: m.WeatherWidget })), { loading: () => null });
 const FuelWidget = dynamic(() => import('@/components/FuelWidget'), { loading: () => null });
 const MarketplaceSection = dynamic(() => import('@/components/MarketplaceSection'), { loading: () => null });
@@ -43,6 +40,10 @@ async function DashboardComponent() {
 
   if (!user) return redirect('/login')
 
+  // --- ELŐFIZETÉS & LIMITEK LEKÉRÉSE ---
+  const { plan, isTrial } = await getSubscriptionStatus(supabase, user.id);
+  const limits = PLAN_LIMITS[plan];
+
   // --- ADATLEKÉRÉSEK ---
   let cars: any[] = []
   let myCars: any[] = []      
@@ -54,16 +55,7 @@ async function DashboardComponent() {
   let fleetHealth = 100 
   let latestCarId = null
   let badges: any[] = []
-  let subscription: any = null
-  let plan: SubscriptionPlan = 'free'; 
-  let canAddCar = true;
-  let canUseAi = false;
   let totalCostAllTime = 0;
-
-  plan = 'lifetime';
-  subscription = { plan_type: 'lifetime', status: 'active' };
-  canAddCar = true;
-  canUseAi = true;
 
   const { data: carsData } = await supabase
       .from('cars')
@@ -80,6 +72,10 @@ async function DashboardComponent() {
       )
       latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   }
+
+  // --- JOGOSULTSÁGOK ÉRVÉNYESÍTÉSE ---
+  const canAddCar = myCars.length < limits.maxCars;
+  const canUseAi = limits.aiMechanic;
 
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
@@ -153,31 +149,34 @@ async function DashboardComponent() {
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
       </div>
 
-      <CongratulationModal currentPlan={subscription?.plan_type || 'free'} />
-      {FEATURES.aiMechanic && canUseAi ? <AiMechanic isPro={true} /> : null}
+      <CongratulationModal currentPlan={plan} />
+      
+      {/* AI MECHANIC: Csak ha a csomag engedi */}
+      {canUseAi ? <AiMechanic isPro={true} /> : null}
+      
       <ChangelogModal />
       
-      {/* --- MÓDOSÍTÁS 1: A Navigációt lejjebb toljuk (pt-[env(safe-area-inset-top)]) --- */}
       <nav 
         className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]" 
       >
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300 mt-2">
 
-          {/* Left: HeaderNav */}
           <div className="flex items-center">
             <HeaderNav />
           </div>
 
-          {/* Right controls */}
           <div className="flex items-center gap-3">
             <Link href="/trip-planner" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
               <Map className="w-4 h-4" /> Úttervező
             </Link>
-            <Link href="/trip-planner" className="md:hidden p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-              <Map className="w-5 h-5" />
-            </Link>
-            <Link href="/pricing" className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-              <span className="text-sm">🚀</span> Early Access Pro
+            
+            {/* --- PLAN BADGE (Dinamikus) --- */}
+            <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm ${
+                plan === 'free' ? 'bg-slate-100 text-slate-500 border-slate-200' : 
+                plan === 'lifetime' ? 'bg-purple-100 text-purple-600 border-purple-200' :
+                'bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/30 text-emerald-600'
+            }`}>
+              {plan === 'lifetime' ? <><Crown className="w-3 h-3"/> Lifetime</> : isTrial ? 'Early Access Pro' : plan === 'free' ? 'Starter' : 'Pro Plan'}
             </Link>
             
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
@@ -196,7 +195,6 @@ async function DashboardComponent() {
         </div>
       </nav>
 
-      {/* --- MÓDOSÍTÁS 2: A tartalomnak helyet hagyunk fentről (safe-area + 6rem) --- */}
       <div 
         className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]"
       >
@@ -228,11 +226,11 @@ async function DashboardComponent() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[220px]">
-                       <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-50"><span className="font-bold text-lg">💰</span></div>
-                       <div>
-                           <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Elmúlt 30 nap</p>
-                           <p className="text-lg font-black text-slate-900 dark:text-white">{spentLast30Days.toLocaleString()}</p>
-                       </div>
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-50"><span className="font-bold text-lg">💰</span></div>
+                        <div>
+                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Elmúlt 30 nap</p>
+                            <p className="text-lg font-black text-slate-900 dark:text-white">{spentLast30Days.toLocaleString()}</p>
+                        </div>
                     </div>
                 </div>
             )}
@@ -255,8 +253,9 @@ async function DashboardComponent() {
                               <span className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500"><CarFront className="w-5 h-5" /></span>
                               Saját Garázs
                           </h3>
-                          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                              {myCars.length} / ∞
+                          {/* LIMIT KIJELZŐ */}
+                          <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${!canAddCar ? 'bg-red-50 text-red-500 border-red-100 dark:bg-red-900/20 dark:border-red-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
+                              {myCars.length} / {limits.maxCars === 999 ? '∞' : limits.maxCars}
                           </span>
                       </div>
                       
@@ -265,7 +264,8 @@ async function DashboardComponent() {
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {FEATURES.addCar && (
+                          {/* --- ÚJ AUTÓ HOZZÁADÁSA VAGY LIMIT ZÁR --- */}
+                          {canAddCar ? (
                              <Link 
                                href="/cars/new" 
                                className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white/30 dark:bg-slate-800/30 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
@@ -275,6 +275,15 @@ async function DashboardComponent() {
                                  </div>
                                  <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
                                  <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat ingyen</span>
+                             </Link>
+                          ) : (
+                             /* LOCKED STATE */
+                             <Link href="/pricing" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
+                                 <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
+                                     <Lock className="w-8 h-8" />
+                                 </div>
+                                 <span className="font-bold text-slate-500 text-lg">Limit elérve</span>
+                                 <span className="text-xs text-amber-500 font-bold mt-2 uppercase tracking-wide px-3 py-1 bg-amber-500/10 rounded-full">Válts Pro-ra a bővítéshez</span>
                              </Link>
                           )}
                       </div>
@@ -299,6 +308,23 @@ async function DashboardComponent() {
             </div>
 
             <div className="lg:col-span-4 space-y-8">
+              
+              {/* HA INGYENES A CSOMAG, REKLÁMOZZUK A PRO-T */}
+              {plan === 'free' && (
+                   <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white text-center shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
+                       <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>
+                       <div className="absolute top-0 right-0 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
+                       <Sparkles className="w-8 h-8 text-yellow-300 mx-auto mb-3 animate-pulse" />
+                       <h3 className="text-xl font-black uppercase italic mb-2 relative z-10">Hiányzik az AI Szerelő?</h3>
+                       <p className="text-sm text-indigo-100 mb-6 relative z-10 leading-relaxed">
+                           A mesterséges intelligencia, a korlátlan garázs és a prémium funkciók csak egy kattintásra vannak.
+                       </p>
+                       <Link href="/pricing" className="inline-block w-full bg-white text-indigo-600 font-bold py-3.5 rounded-xl shadow-lg hover:bg-indigo-50 transition-colors relative z-10 uppercase tracking-wider text-sm">
+                           Pro Csomag Megnézése
+                       </Link>
+                   </div>
+               )}
+
               <Link href="/showroom" className="block relative group overflow-hidden rounded-3xl shadow-xl transition-transform hover:scale-[1.02]">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-600 to-red-700"></div>
                 <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>

@@ -30,7 +30,7 @@ export const IntroLoader = ({ onComplete }: { onComplete: () => void }) => {
 
   const bootSequence = [
     { time: 100, msg: "RENDSZERMAG INTEGRITÁS ELLENŐRZÉSE...", icon: Shield },
-    { time: 600, msg: "APEX AI MAG: ONLINE", icon: Cpu },
+    { time: 600, msg: "Gemini 2.5 AI: INDÍTÁSRA KÉSZ", icon: Cpu },
     { time: 1100, msg: "KVANTUM-TITKOSÍTÁS AKTIVÁLÁSA...", icon: Server },
     { time: 1700, msg: "SZENZOROK KALIBRÁLÁSA (BIOMETRIA)...", icon: Activity },
     { time: 2200, msg: "DYNAMICSENSE OS: INDÍTÁSRA KÉSZ", icon: Zap },
@@ -125,7 +125,7 @@ export const IntroLoader = ({ onComplete }: { onComplete: () => void }) => {
 
               <div className="flex flex-col items-center mt-4">
                  <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-primary/50 to-transparent mb-2"></div>
-                 <span className="text-[11px] font-bold text-slate-500 tracking-widest uppercase">DynamicSense OS v4.2</span>
+                 <span className="text-[11px] font-bold text-slate-500 tracking-widest uppercase">DynamicSense v2.5 Béta</span>
               </div>
            </div>
 
