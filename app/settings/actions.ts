@@ -5,31 +5,24 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-// --- 1. PROFIL FRISSÍTÉSE (MÓDOSÍTVA) ---
+// --- 1. PROFIL FRISSÍTÉSE ---
 export async function updateProfile(formData: FormData) {
     const supabase = await createClient()
     
     const fullName = String(formData.get('full_name'))
-    // Itt a változás: nem fájlt várunk, hanem egy útvonalat (string)
     const avatarPath = formData.get('avatar_path') as string | null
     const deleteAvatar = formData.get('delete_avatar') === 'true'
 
-    // User lekérése
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return redirect('/login')
 
     let avatarUrlToSave: string | null = user.user_metadata?.avatar_url || null;
 
-    // --- 1. Kép törlése ---
     if (deleteAvatar) {
         avatarUrlToSave = null;
-        // Opcionális: A régi képet törölhetnéd a storage-ból is itt admin klienssel, 
-        // de az URL nullázása is elég a UI szempontjából.
     }
 
-    // --- 2. Új kép beállítása (Ha érkezett útvonal a klienstől) ---
     if (avatarPath && avatarPath.length > 0) {
-        // Lekérjük a publikus URL-t a feltöltött útvonal alapján
         const { data: { publicUrl } } = supabase
             .storage
             .from('avatars')
@@ -38,7 +31,6 @@ export async function updateProfile(formData: FormData) {
         avatarUrlToSave = publicUrl;
     }
 
-    // --- 3. Profil adatok mentése ---
     const { error: updateError } = await supabase.auth.updateUser({
         data: { 
             full_name: fullName, 
@@ -57,7 +49,7 @@ export async function updateProfile(formData: FormData) {
     return redirect(`/settings?success=${encodeURIComponent('Profil sikeresen frissítve')}`)
 }
 
-// ... (A fájl többi része - updatePreferences, signOutAction, deleteAccountAction - VÁLTOZATLAN marad) ...
+// --- 2. BEÁLLÍTÁSOK FRISSÍTÉSE ---
 export async function updatePreferences(formData: FormData) {
     const supabase = await createClient()
     const notifyEmail = formData.get('notify_email') === 'on'
@@ -82,12 +74,14 @@ export async function updatePreferences(formData: FormData) {
     return redirect(`/settings?success=${encodeURIComponent('Beállítások elmentve')}`)
 }
 
+// --- 3. KIJELENTKEZÉS ---
 export async function signOutAction() {
     const supabase = await createClient()
     await supabase.auth.signOut()
     return redirect('/login')
 }
 
+// --- 4. FIÓK TÖRLÉSE (JAVÍTVA) ---
 export async function deleteAccountAction() {
     const supabase = await createClient()
     
@@ -101,6 +95,9 @@ export async function deleteAccountAction() {
 
     const supabaseAdmin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
 
+    // Hibakezeléshez változó
+    let errorMessage: string | null = null;
+
     try {
         // --- A. Autók leválasztása ---
         const { error: unlinkError } = await supabaseAdmin
@@ -108,7 +105,8 @@ export async function deleteAccountAction() {
             .update({ user_id: null }) 
             .eq('user_id', user.id)
 
-        if (unlinkError) return redirect(`/settings?error=${encodeURIComponent('Nem sikerült az autók mentése.')}`)
+        // Redirect helyett hibát dobunk, hogy a catch elkapja
+        if (unlinkError) throw new Error('Nem sikerült az autók leválasztása.')
 
         // --- B. Avatar kép törlése (Storage) ---
         if (user.user_metadata?.avatar_url) {
@@ -117,27 +115,42 @@ export async function deleteAccountAction() {
                 const fileName = urlParts[urlParts.length - 1];
                 if (fileName) await supabaseAdmin.storage.from('avatars').remove([fileName]);
             } catch (e) {
-                console.warn("Avatar törlése nem sikerült.")
+                console.warn("Avatar törlése nem sikerült, de folytatjuk.")
             }
         }
 
         // --- C. KAPCSOLÓDÓ TÁBLÁK TAKARÍTÁSA ---
         const tablesToCleanup = ['profiles', 'subscriptions', 'api_keys', 'direct_messages', 'friendships', 'group_members'];
         for (const table of tablesToCleanup) {
+            // A delete hívásokat nem kell feltétlenül awaitelni blokkolóan, ha nem kritikus a hiba,
+            // de a biztonság kedvéért itt megvárjuk.
             await supabaseAdmin.from(table).delete().eq('user_id', user.id);
-            await supabaseAdmin.from(table).delete().eq('id', user.id); // profiles esetén gyakran id=user_id
+            // Biztonsági ID alapú törlés (ha a tábla szerkezete olyan)
+            if (table === 'profiles') {
+                 await supabaseAdmin.from(table).delete().eq('id', user.id);
+            }
         }
 
         // --- D. Felhasználó VÉGLEGES törlése ---
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
-        if (deleteError) return redirect(`/settings?error=${encodeURIComponent(`Sikertelen törlés: ${deleteError.message}`)}`)
+        if (deleteError) throw new Error(`Sikertelen felhasználó törlés: ${deleteError.message}`)
 
         // --- E. Kijelentkeztetés ---
         await supabase.auth.signOut()
 
     } catch (err: any) {
-        return redirect(`/settings?error=${encodeURIComponent(`Váratlan hiba: ${err.message}`)}`)
+        console.error("Törlési hiba:", err);
+        // Itt mentjük el a hibaüzenetet, de NEM redirectelünk még
+        errorMessage = err.message || 'Váratlan hiba történt';
     }
 
+    // --- REDIRECT ZÓNA (A try-catch blokkon kívül) ---
+    
+    // Ha volt hiba, visszaküldjük a settings oldalra
+    if (errorMessage) {
+        return redirect(`/settings?error=${encodeURIComponent(errorMessage)}`)
+    }
+
+    // Ha minden sikeres volt, mehet a login oldalra
     return redirect(`/login?message=${encodeURIComponent('A fiókod sikeresen törölve lett.')}`)
 }
