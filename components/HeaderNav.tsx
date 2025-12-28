@@ -5,8 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X, Gauge, Map, Search, Users, FileText, Lock, Sparkles } from 'lucide-react';
 
-// --- PROPS DEFINÍCIÓ ---
-// Ezeket a szülő (page.tsx) adja át, hogy tudjuk, mit mutassunk
 interface HeaderNavProps {
   isPro?: boolean;
 }
@@ -44,20 +42,29 @@ export default function HeaderNav({ isPro = false }: HeaderNavProps) {
             <span className="text-lg">🔥</span> Showroom
           </Link>
 
-          {/* Szerviz Térkép - Csak Pro-knak, vagy lakat */}
+          {/* Szerviz Térkép - ID HOZZÁADVA */}
           {isPro ? (
-              <Link href="/services" prefetch className="flex items-center gap-1 hover:text-blue-500 transition-colors">
+              <Link 
+                href="/services" 
+                id="tour-service-map" // <--- ITT AZ ID
+                prefetch 
+                className="flex items-center gap-1 hover:text-blue-500 transition-colors"
+              >
                 <Map className="w-4 h-4" /> Szerviz Térkép
               </Link>
           ) : (
-              <Link href="/pricing" className="flex items-center gap-1 text-slate-400 hover:text-amber-500 transition-colors group">
+              <Link 
+                href="/pricing" 
+                id="tour-service-map" // <--- ITT IS, HOGY MINDIG MEGLEGYEN
+                className="flex items-center gap-1 text-slate-400 hover:text-amber-500 transition-colors group"
+              >
                 <Lock className="w-3 h-3 group-hover:hidden" />
                 <Map className="w-4 h-4 hidden group-hover:block" /> 
                 Szerviz Térkép
               </Link>
           )}
 
-          {/* VIN Kereső - Csak Pro-knak, vagy lakat */}
+          {/* VIN Kereső */}
           {isPro ? (
               <Link href="/check" prefetch className="flex items-center gap-1 hover:text-emerald-500 transition-colors">
                 <Search className="w-4 h-4" /> VIN Kereső
@@ -83,7 +90,7 @@ export default function HeaderNav({ isPro = false }: HeaderNavProps) {
         </button>
       </div>
 
-      {/* Mobile sheet - opens downward */}
+      {/* Mobile sheet */}
       <div className={`fixed inset-0 z-50 transition-opacity ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
         <div className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity ${open ? 'opacity-100' : 'opacity-0'}`} onClick={() => setOpen(false)} />
 
@@ -119,7 +126,6 @@ export default function HeaderNav({ isPro = false }: HeaderNavProps) {
                 <span className="font-semibold text-slate-700 dark:text-slate-200">Showroom</span>
               </Link>
 
-              {/* MOBIL PRÉMIUM GOMBOK */}
               {isPro ? (
                   <>
                     <Link href="/check" prefetch onClick={() => setOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">

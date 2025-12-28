@@ -281,3 +281,34 @@ body {
     placeholder-slate-400 dark:placeholder-slate-500 transition-all appearance-none;
   }
 }
+
+/* driver.js popover testreszabás */
+.driver-popover.driverjs-theme {
+  background-color: #ffffff;
+  color: #1f2937;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  padding: 16px;
+}
+
+.driver-popover.driverjs-theme .driver-popover-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.driver-popover.driverjs-theme .driver-popover-description {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+/* Sötét mód támogatás (ha az oldalad class="dark"-ot használ) */
+.dark .driver-popover.driverjs-theme {
+  background-color: #1e293b; /* Slate-800 */
+  color: #f8fafc;
+}
+
+.dark .driver-popover.driverjs-theme .driver-popover-description {
+  color: #cbd5e1;
+}

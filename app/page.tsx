@@ -10,6 +10,7 @@ import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, Arr
 import HeaderNav from '@/components/HeaderNav';
 import QuickMileageForm from '@/components/QuickMileageForm';
 import { Metadata } from 'next'
+import OnboardingTour from '@/components/OnboardingTour'; // ÚJ IMPORT
 
 export const metadata: Metadata = {
   title: {
@@ -149,6 +150,9 @@ async function DashboardComponent() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
       
+      {/* 1. ONBOARDING TÚRA MEGHÍVÁSA */}
+      <OnboardingTour />
+
       {/* HÁTTÉR EFFEKTEK */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
@@ -214,7 +218,8 @@ async function DashboardComponent() {
         className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]"
       >
         
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* 2. ID: tour-welcome */}
+        <div id="tour-welcome" className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> {greeting},
@@ -223,75 +228,88 @@ async function DashboardComponent() {
                   {user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]}
               </h1>
             </div>
-            {cars.length > 0 && (
-                <div className="w-full lg:w-auto bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-2 border border-white/20 dark:border-slate-700 shadow-xl flex flex-col sm:flex-row gap-2">
-                    <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[200px]">
-                        <div className="relative w-10 h-10 flex-shrink-0">
-                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                <path className="text-slate-200 dark:text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
-                                <path className={`${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeDasharray={`${fleetHealth}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className={`text-[10px] font-black ${fleetHealth === 100 ? 'text-emerald-600' : 'text-slate-600 dark:text-slate-300'}`}>{fleetHealth}%</span>
-                            </div>
-                        </div>
-                        <div>
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Flotta Egészség</p>
-                            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{hasServices ? 'Kalkulált érték' : 'Nincs adat'}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[220px]">
-                        <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-50"><span className="font-bold text-lg">💰</span></div>
-                        <div>
-                            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Elmúlt 30 nap</p>
-                            <p className="text-lg font-black text-slate-900 dark:text-white">{spentLast30Days.toLocaleString()}</p>
-                        </div>
-                    </div>
-                </div>
-            )}
+            
+            {/* 3. ID: tour-stats */}
+            <div id="tour-stats">
+              {cars.length > 0 && (
+                  <div className="w-full lg:w-auto bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-2 border border-white/20 dark:border-slate-700 shadow-xl flex flex-col sm:flex-row gap-2">
+                      <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[200px]">
+                          <div className="relative w-10 h-10 flex-shrink-0">
+                              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                  <path className="text-slate-200 dark:text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+                                  <path className={`${fleetHealth === 100 ? 'text-emerald-500' : fleetHealth > 50 ? 'text-amber-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeDasharray={`${fleetHealth}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                              </svg>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className={`text-[10px] font-black ${fleetHealth === 100 ? 'text-emerald-600' : 'text-slate-600 dark:text-slate-300'}`}>{fleetHealth}%</span>
+                              </div>
+                          </div>
+                          <div>
+                              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Flotta Egészség</p>
+                              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{hasServices ? 'Kalkulált érték' : 'Nincs adat'}</p>
+                          </div>
+                      </div>
+                      <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[220px]">
+                          <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-50"><span className="font-bold text-lg">💰</span></div>
+                          <div>
+                              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Elmúlt 30 nap</p>
+                              <p className="text-lg font-black text-slate-900 dark:text-white">{spentLast30Days.toLocaleString()}</p>
+                          </div>
+                      </div>
+                  </div>
+              )}
+            </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-8">
               
-              {/* AUTÓK LISTÁJA */}
-              <div className="space-y-6">
-                  <div className="flex items-center justify-between px-2">
-                      <h3 className="text-xl font-bold flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600"><CarFront className="w-5 h-5" /></span>
-                          Saját Garázs
-                      </h3>
-                      {/* LIMIT KIJELZÉS */}
-                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${isCarLimitReached ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                          {myCars.length} / {limits.maxCars === 999 ? '∞' : limits.maxCars}
-                      </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {myCars.map((car: any) => (
-                          <CarCard key={car.id} car={car} />
-                      ))}
+              {FEATURES.mileageLog && myCars.length > 0 && (
+                  <QuickMileageForm 
+                      cars={myCars} 
+                      latestCarId={latestCarId} 
+                  />
+              )}
+
+              {(myCars.length > 0 || FEATURES.addCar || sharedCars.length > 0) && (
+                  <div className="space-y-6">
+                      <div className="flex items-center justify-between px-2">
+                          <h3 className="text-xl font-bold flex items-center gap-2">
+                              <span className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600"><CarFront className="w-5 h-5" /></span>
+                              Saját Garázs
+                          </h3>
+                          {/* LIMIT KIJELZÉS */}
+                          <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${isCarLimitReached ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                              {myCars.length} / {limits.maxCars === 999 ? '∞' : limits.maxCars}
+                          </span>
+                      </div>
                       
-                      {/* ÚJ AUTÓ GOMB: Csak ha belefér a limitbe */}
-                      {!isCarLimitReached ? (
-                         <Link href="/cars/new" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-400 transition-all cursor-pointer">
-                             <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                                 <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500" />
-                             </div>
-                             <span className="font-bold text-slate-500 group-hover:text-slate-900">Új jármű hozzáadása</span>
-                         </Link>
-                      ) : (
-                         /* LOCKED STATE - Ha elérte a limitet */
-                         <Link href="/pricing" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
-                             <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
-                                 <Lock className="w-8 h-8" />
-                             </div>
-                             <span className="font-bold text-slate-500">Limit elérve</span>
-                             <span className="text-xs text-amber-500 font-bold mt-2 uppercase tracking-wide">Válts Pro-ra a bővítéshez</span>
-                         </Link>
-                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {myCars.map((car: any) => (
+                              <CarCard key={car.id} car={car} />
+                          ))}
+                          
+                          {/* 4. ID: tour-add-car */}
+                          {/* ÚJ AUTÓ GOMB: Csak ha belefér a limitbe */}
+                          {!isCarLimitReached ? (
+                             <Link href="/cars/new" id="tour-add-car" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-400 transition-all cursor-pointer">
+                                 <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                                     <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500" />
+                                 </div>
+                                 <span className="font-bold text-slate-500 group-hover:text-slate-900">Új jármű hozzáadása</span>
+                             </Link>
+                          ) : (
+                             /* LOCKED STATE - Ha elérte a limitet */
+                             <Link href="/pricing" id="tour-add-car" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
+                                 <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
+                                     <Lock className="w-8 h-8" />
+                                 </div>
+                                 <span className="font-bold text-slate-500">Limit elérve</span>
+                                 <span className="text-xs text-amber-500 font-bold mt-2 uppercase tracking-wide">Válts Pro-ra a bővítéshez</span>
+                             </Link>
+                          )}
+                      </div>
                   </div>
-              </div>
+              )}
 
               {FEATURES.sharedCars && sharedCars.length > 0 && (
                   <div className="space-y-6 pt-8 border-t border-slate-200 dark:border-slate-800">
