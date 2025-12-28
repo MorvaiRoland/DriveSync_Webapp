@@ -16,6 +16,8 @@ const parseNullableString = (val: FormDataEntryValue | null) => {
   return str && str !== '' && str !== 'null' ? str : null;
 }
 
+
+
 // --- 1. ÚJ AUTÓ LÉTREHOZÁSA ---
 export async function addCar(formData: FormData) {
   const supabase = await createClient()
@@ -23,10 +25,25 @@ export async function addCar(formData: FormData) {
   if (!user) return redirect('/login')
 
   const vinRaw = formData.get('vin');
-  const vin = vinRaw ? String(vinRaw).trim().toUpperCase() : '';
+  // Szóközök eltávolítása és nagybetűsítés
+  const vin = vinRaw ? String(vinRaw).trim().toUpperCase().replace(/\s/g, '') : '';
 
+  // 1. Üresség ellenőrzése
   if (!vin) {
     return redirect(`/cars/new?error=${encodeURIComponent('Az alvázszám (VIN) megadása kötelező!')}`);
+  }
+
+  // 2. HOSSZ ELLENŐRZÉSE (ÚJ RÉSZ)
+  // A szabványos VIN 17 karakter. 
+  // (Megjegyzés: Ha 1981 előtti oldtimereket is támogatsz, ezt a feltételt ki kell venni vagy módosítani kell)
+  if (vin.length !== 17) {
+    return redirect(`/cars/new?error=${encodeURIComponent(`Az alvázszámnak pontosan 17 karakternek kell lennie! (Jelenleg: ${vin.length})`)}`);
+  }
+
+  // 3. OPCIONÁLIS: Érvénytelen karakterek ellenőrzése (I, O, Q nem szerepelhet VIN-ben)
+  const invalidVinChars = /[^A-HJ-NPR-Z0-9]/;
+  if (invalidVinChars.test(vin)) {
+     return redirect(`/cars/new?error=${encodeURIComponent('Az alvázszám érvénytelen karaktereket tartalmaz (pl. I, O, Q nem megengedett)!')}`);
   }
 
   const carData = {

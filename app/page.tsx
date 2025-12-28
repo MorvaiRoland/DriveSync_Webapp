@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   }
 }
 
-// Dynamic imports
+// Dynamic imports - Jobb teljesítményért
 const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { loading: () => null });
 const AiMechanic = dynamic(() => import('@/components/AiMechanic'), { loading: () => null });
 const CongratulationModal = dynamic(() => import('@/components/CongratulationModal'), { loading: () => null });
@@ -48,7 +48,6 @@ async function DashboardComponent() {
   // Jogosultságok
   const canUseAi = limits.aiMechanic;
   const canTripPlan = limits.tripPlanner;
-  
   const isPro = limits.aiMechanic;
 
   // --- ADATLEKÉRÉSEK ---
@@ -82,7 +81,6 @@ async function DashboardComponent() {
 
   // Autó hozzáadás limit ellenőrzése
   const isCarLimitReached = myCars.length >= limits.maxCars;
-
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
   if (cars.length > 0) {
@@ -136,39 +134,31 @@ async function DashboardComponent() {
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
 
-  const isHighMiler = cars.some(c => c.mileage >= 200000);
-  const isAdmin = recentActivity.length > 0;
-  const isEcoDriver = fleetHealth >= 90;
-  badges = [
-      { id: 'high-miler', name: 'High Miler', icon: '🛣️', description: '200.000+ km.', earned: isHighMiler, color: 'from-purple-500 to-indigo-600 text-white' },
-      { id: 'eco-driver', name: 'Eco Driver', icon: '🍃', description: 'Flotta egészség >90%.', earned: isEcoDriver, color: 'from-emerald-400 to-green-600 text-white' },
-      { id: 'admin', name: 'Pontos Admin', icon: '📅', description: 'Aktív használat.', earned: isAdmin, color: 'from-blue-400 to-blue-600 text-white' }
-  ];
-
-  // --- OKOS MEGJELENÍTÉSI LOGIKA ---
+  // --- JAVÍTOTT MEGJELENÍTÉSI LOGIKA (ONBOARDING vs CHANGELOG) ---
   
   // 1. Van-e autója?
   const hasCars = cars.length > 0;
   
-  // 2. Fiók kora (órában)
-  // Ha a user.created_at valamiért hiányzik, fallback a mostani időre (így 0 órásnak tűnik)
-  const userCreated = new Date(user.created_at || new Date().toISOString());
-  const now = new Date();
-  const accountAgeHours = (now.getTime() - userCreated.getTime()) / (1000 * 60 * 60);
+  // 2. Fiók kora (órában) - Biztonságos számítás
+  const userCreatedAtString = user.created_at || new Date().toISOString();
+  const userCreatedTime = new Date(userCreatedAtString).getTime();
+  const nowTime = Date.now();
+  // Ha a dátum érvénytelen, 0-nak vesszük (friss user)
+  const diffInMs = isNaN(userCreatedTime) ? 0 : nowTime - userCreatedTime;
+  const accountAgeHours = diffInMs / (1000 * 60 * 60);
 
-  // 3. TÚRA logika:
-  // Csak akkor mutatjuk, ha NINCS autója ÉS a fiókja fiatalabb, mint 24 óra.
-  // Így a visszatérő, de autótlan felhasználókat nem zaklatjuk.
+  // 3. TÚRA: Csak ha NINCS autója ÉS friss a fiók (< 24 óra)
   const showTour = !hasCars && accountAgeHours < 24;
 
-  // 4. CHANGELOG logika:
-  // Csak akkor mutatjuk, ha VAN autója (aktív felhasználó).
+  // 4. CHANGELOG: Csak ha VAN autója (aktív user)
   const showChangelog = hasCars;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
       
-      {/* ONBOARDING TÚRA - Feltételes megjelenítés */}
+      {/* 1. ONBOARDING TÚRA */}
+      {/* Ez a komponens csak akkor töltődik be, ha a fenti feltétel igaz. */}
+      {/* Belül a localStorage ellenőrzi, hogy látta-e már. */}
       {showTour && <OnboardingTour />}
 
       {/* HÁTTÉR EFFEKTEK */}
@@ -183,21 +173,18 @@ async function DashboardComponent() {
       {/* AI MECHANIC: Csak ha a csomag engedi */}
       {canUseAi ? <AiMechanic isPro={true} /> : null}
       
-      {/* CHANGELOG: Csak ha van autója */}
+      {/* 2. CHANGELOG */}
+      {/* Csak akkor, ha már aktív user (van autója) */}
       {showChangelog && <ChangelogModal />}
       
-      <nav 
-        className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]" 
-      >
+      <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300 mt-2">
 
           <div className="flex items-center">
-            {/* HeaderNav megkapja az isPro propot */}
             <HeaderNav isPro={isPro} />
           </div>
 
           <div className="flex items-center gap-3">
-            {/* ÚTTERVEZŐ GOMB - LIMIT KEZELÉSSEL */}
             {canTripPlan ? (
                 <Link href="/trip-planner" className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
                   <Map className="w-4 h-4" /> Úttervező
@@ -208,7 +195,6 @@ async function DashboardComponent() {
                 </Link>
             )}
             
-            {/* --- PLAN BADGE (Dinamikus) --- */}
             <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm ${
                 plan === 'free' ? 'bg-slate-100 text-slate-500 border-slate-200' : 
                 plan === 'lifetime' ? 'bg-purple-100 text-purple-600 border-purple-200' :
@@ -233,11 +219,9 @@ async function DashboardComponent() {
         </div>
       </nav>
 
-      <div 
-        className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]"
-      >
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]">
         
-        {/* 2. ID: tour-welcome */}
+        {/* TOUR ELEMENT 1: Üdvözlő fejléc */}
         <div id="tour-welcome" className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
@@ -248,7 +232,7 @@ async function DashboardComponent() {
               </h1>
             </div>
             
-            {/* 3. ID: tour-stats */}
+            {/* TOUR ELEMENT 2: Statisztikák (csak ha van autó) */}
             <div id="tour-stats">
               {cars.length > 0 && (
                   <div className="w-full lg:w-auto bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-2 border border-white/20 dark:border-slate-700 shadow-xl flex flex-col sm:flex-row gap-2">
@@ -296,7 +280,6 @@ async function DashboardComponent() {
                               <span className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600"><CarFront className="w-5 h-5" /></span>
                               Saját Garázs
                           </h3>
-                          {/* LIMIT KIJELZÉS */}
                           <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${isCarLimitReached ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                               {myCars.length} / {limits.maxCars === 999 ? '∞' : limits.maxCars}
                           </span>
@@ -307,8 +290,7 @@ async function DashboardComponent() {
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {/* 4. ID: tour-add-car */}
-                          {/* ÚJ AUTÓ GOMB: Csak ha belefér a limitbe */}
+                          {/* TOUR ELEMENT 3: Új autó gomb */}
                           {!isCarLimitReached ? (
                              <Link href="/cars/new" id="tour-add-car" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-400 transition-all cursor-pointer">
                                   <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
@@ -317,7 +299,6 @@ async function DashboardComponent() {
                                   <span className="font-bold text-slate-500 group-hover:text-slate-900">Új jármű hozzáadása</span>
                              </Link>
                           ) : (
-                             /* LOCKED STATE - Ha elérte a limitet */
                              <Link href="/pricing" id="tour-add-car" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
                                   <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
                                       <Lock className="w-8 h-8" />

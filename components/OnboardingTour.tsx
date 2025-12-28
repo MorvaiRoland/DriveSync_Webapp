@@ -1,72 +1,95 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 
 export default function OnboardingTour() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   useEffect(() => {
-    // 1. Ellenőrizzük a böngészőben, látta-e már (localStorage)
-    // Ez védi meg attól, hogy frissítéskor (F5) újra előjöjjön 24 órán belül.
-    const hasSeenTour = localStorage.getItem('dynamicsense_tour_completed');
+    if (!mounted) return;
+
+    // 1. KULCS VÁLTOZTATÁS: Átírtam '_v2'-re, hogy teszteléskor biztosan lefusson újra!
+    // Élesben majd visszanevezheted simára.
+    const TOUR_KEY = 'dynamicsense_tour_completed_v2';
+    const hasSeenTour = localStorage.getItem(TOUR_KEY);
     
     if (hasSeenTour) {
+        console.log("Onboarding: A felhasználó már látta a túrát.");
         return;
     }
 
-    const driverObj = driver({
-      showProgress: true,
-      animate: true,
-      allowClose: true,
-      doneBtnText: 'Befejezés',
-      nextBtnText: 'Tovább',
-      prevBtnText: 'Vissza',
-      progressText: '{{current}} / {{total}}',
-      popoverClass: 'driverjs-theme',
-      
-      steps: [
-        { 
-            element: '#tour-welcome', 
-            popover: { 
-                title: 'Üdv a DynamicSense-ben! 👋', 
-                description: 'Ez a te digitális garázsod. Nézzük meg gyorsan, mit hol találsz!' 
-            } 
-        },
-        { 
-            element: '#tour-add-car', 
-            popover: { 
-                title: 'Első Autó Hozzáadása 🚗', 
-                description: 'Itt tudod rögzíteni az első járművedet. Ez a legfontosabb lépés az induláshoz.' 
-            } 
-        },
-        // Megjegyzés: Ellenőrizd, hogy a #tour-service-map elem létezik-e a Dashboardon, 
-        // különben a driver.js hibát dobhat vagy átugorja.
-        // { 
-        //     element: '#tour-stats', 
-        //     popover: { 
-        //         title: 'Költségek & Statisztika 📊', 
-        //         description: 'Itt látod majd összesítve, mennyit költöttél az autódra az elmúlt hónapban.' 
-        //     } 
-        // },
-      ],
-
-      // Fontos: Akár a "Befejezés", akár a "Bezárás" (X), akár a "félrekattintás" történik,
-      // a túra befejezettnek minősül.
-      onDestroyStarted: () => {
-        localStorage.setItem('dynamicsense_tour_completed', 'true');
-        driverObj.destroy();
-      },
-    });
-
-    // Indítás
+    // 2. KÉSLELTETETT INDÍTÁS + DOM ELLENŐRZÉS
+    // Nem csak várunk, hanem ellenőrizzük is, hogy létezik-e az elem.
     const timer = setTimeout(() => {
+        const welcomeElement = document.getElementById('tour-welcome');
+        const addCarElement = document.getElementById('tour-add-car');
+
+        // Ha még mindig nincs betöltve a fő elem, nem indítjuk el a hibák elkerülése végett
+        if (!welcomeElement) {
+            console.warn("Onboarding: #tour-welcome elem nem található, túra kihagyva.");
+            return;
+        }
+
+        const driverObj = driver({
+          showProgress: true,
+          animate: true,
+          allowClose: true,
+          doneBtnText: 'Kész',
+          nextBtnText: 'Tovább',
+          prevBtnText: 'Vissza',
+          progressText: '{{current}} / {{total}}',
+          popoverClass: 'driverjs-theme', // Ezt a CSS-t majd definiálni kell a globals.css-ben, vagy vedd ki
+          
+          steps: [
+            { 
+                element: '#tour-welcome', 
+                popover: { 
+                    title: 'Üdv a DynamicSense-ben! 👋', 
+                    description: 'Ez a te digitális garázsod. Kezdjük egy gyors bemutatóval!',
+                    side: "bottom", 
+                    align: 'start'
+                } 
+            },
+            // DINAMIKUS LÉPÉS: Csak akkor adjuk hozzá, ha létezik a gomb (pl. nincs elérve a limit)
+            ...(addCarElement ? [{ 
+                element: '#tour-add-car', 
+                popover: { 
+                    title: 'Első Autó Hozzáadása 🚗', 
+                    description: 'Itt tudod rögzíteni az első járművedet. Ez a legfontosabb lépés az induláshoz.',
+                    side: "bottom" as const
+                } 
+            }] : []),
+            { 
+                element: '#tour-stats', 
+                popover: { 
+                    title: 'Statisztikák 📊', 
+                    description: 'Itt látod majd a flotta állapotát és a költségeket.',
+                    side: "top" 
+                } 
+            }
+          ],
+
+          onDestroyStarted: () => {
+            // Ha a user bezárja vagy végigér, elmentjük
+            localStorage.setItem(TOUR_KEY, 'true');
+            driverObj.destroy();
+          },
+        });
+
+        console.log("Onboarding: Túra indítása...");
         driverObj.drive();
-    }, 1500); // Kicsit több időt adunk a Next.js hidrálásnak
+
+    }, 2000); // 2 másodpercet adunk a Next.js-nek, hogy mindent kirajzoljon
 
     return () => clearTimeout(timer);
 
-  }, []);
+  }, [mounted]);
 
   return null;
 }
