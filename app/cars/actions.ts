@@ -16,11 +16,11 @@ const parseNullableString = (val: FormDataEntryValue | null) => {
   return str && str !== '' && str !== 'null' ? str : null;
 }
 
-// --- 1. ÚJ AUTÓ LÉTREHOZÁSA ---
-// actions.ts
 
-// ... (importok maradnak)
 
+
+
+// --- 1. ÚJ AUTÓ LÉTREHOZÁSA (JAVÍTOTT) ---
 export async function addCar(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -33,7 +33,6 @@ export async function addCar(formData: FormData) {
     return redirect(`/cars/new?error=${encodeURIComponent('Az alvázszám (VIN) megadása kötelező!')}`);
   }
 
-  // ITT A LÉNYEG: Minden mezőt kiveszünk és formázunk
   const carData = {
     user_id: user.id,
     make: String(formData.get('make')),
@@ -43,7 +42,7 @@ export async function addCar(formData: FormData) {
     year: parseNullableInt(formData.get('year')),
     mileage: parseNullableInt(formData.get('mileage')),
     
-    // Specifikációk (Ezeket már magyarul küldi a form)
+    // Specifikációk
     fuel_type: parseNullableString(formData.get('fuel_type')),
     transmission: parseNullableString(formData.get('transmission')),
     body_type: parseNullableString(formData.get('body_type')),
@@ -52,6 +51,11 @@ export async function addCar(formData: FormData) {
     // Technikai adatok
     engine_size: parseNullableInt(formData.get('engine_size')),
     power_hp: parseNullableInt(formData.get('power_hp')),
+
+    // --- ITT VOLT A HIÁNYZÓ RÉSZ: ---
+    mot_expiry: parseNullableString(formData.get('mot_expiry')),       // Műszaki vizsga
+    insurance_expiry: parseNullableString(formData.get('insurance_expiry')), // Biztosítás
+    // -------------------------------
     
     // Egyéb alapértékek
     is_public_history: false,
@@ -60,9 +64,6 @@ export async function addCar(formData: FormData) {
   }
 
   const { error } = await supabase.from('cars').insert(carData)
-
-  // ... (hibakezelés marad a régi)
-
 
   if (error) {
     console.error('Adatbázis hiba:', error)
