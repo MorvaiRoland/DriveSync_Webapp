@@ -44,6 +44,14 @@ async function DashboardComponent() {
   const { plan, isTrial } = await getSubscriptionStatus(supabase, user.id);
   const limits = PLAN_LIMITS[plan];
 
+  // Jogosultságok
+  const canAddCar = true; // A limit ellenőrzést lejjebb végezzük a darabszám alapján
+  const canUseAi = limits.aiMechanic;
+  const canTripPlan = limits.tripPlanner;
+  
+  // Pro státusz meghatározása a HeaderNav-hoz (ha van AI, akkor Pro-nak tekintjük)
+  const isPro = limits.aiMechanic;
+
   // --- ADATLEKÉRÉSEK ---
   let cars: any[] = []
   let myCars: any[] = []      
@@ -73,10 +81,8 @@ async function DashboardComponent() {
       latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   }
 
-  // --- JOGOSULTSÁGOK ÉRVÉNYESÍTÉSE ---
-  const canAddCar = myCars.length < limits.maxCars;
-  const canUseAi = limits.aiMechanic;
-  const canTripPlan = limits.tripPlanner; // ÚJ LIMIT
+  // Autó hozzáadás limit ellenőrzése
+  const isCarLimitReached = myCars.length >= limits.maxCars;
 
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
@@ -143,6 +149,7 @@ async function DashboardComponent() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
       
+      {/* HÁTTÉR EFFEKTEK */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px]"></div>
@@ -151,6 +158,7 @@ async function DashboardComponent() {
 
       <CongratulationModal currentPlan={plan} />
       
+      {/* AI MECHANIC: Csak ha a csomag engedi */}
       {canUseAi ? <AiMechanic isPro={true} /> : null}
       
       <ChangelogModal />
@@ -161,7 +169,8 @@ async function DashboardComponent() {
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg shadow-black/5 px-4 h-16 flex items-center justify-between transition-all duration-300 mt-2">
 
           <div className="flex items-center">
-            <HeaderNav />
+            {/* HeaderNav megkapja az isPro propot */}
+            <HeaderNav isPro={isPro} />
           </div>
 
           <div className="flex items-center gap-3">
@@ -175,7 +184,8 @@ async function DashboardComponent() {
                   <Lock className="w-4 h-4" /> Úttervező
                 </Link>
             )}
-
+            
+            {/* --- PLAN BADGE (Dinamikus) --- */}
             <Link href="/pricing" className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all shadow-sm ${
                 plan === 'free' ? 'bg-slate-100 text-slate-500 border-slate-200' : 
                 plan === 'lifetime' ? 'bg-purple-100 text-purple-600 border-purple-200' :
@@ -244,53 +254,44 @@ async function DashboardComponent() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-8">
               
-              {FEATURES.mileageLog && myCars.length > 0 && (
-                  <QuickMileageForm 
-                      cars={myCars} 
-                      latestCarId={latestCarId} 
-                  />
-              )}
-
-              {(myCars.length > 0 || FEATURES.addCar || sharedCars.length > 0) && (
-                  <div className="space-y-6">
-                      <div className="flex items-center justify-between px-2">
-                          <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                              <span className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-500"><CarFront className="w-5 h-5" /></span>
-                              Saját Garázs
-                          </h3>
-                          <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${!canAddCar ? 'bg-red-50 text-red-500 border-red-100 dark:bg-red-900/20 dark:border-red-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
-                              {myCars.length} / {limits.maxCars === 999 ? '∞' : limits.maxCars}
-                          </span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {myCars.map((car) => (
-                              <CarCard key={car.id} car={car} />
-                          ))}
-                          
-                          {canAddCar ? (
-                             <Link 
-                               href="/cars/new" 
-                               className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white/30 dark:bg-slate-800/30 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
-                             >
-                                 <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                                     <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500 transition-colors" />
-                                 </div>
-                                 <span className="font-bold text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white text-lg">Új jármű hozzáadása</span>
-                                 <span className="text-xs text-slate-400 mt-1">Bővítsd a garázsodat ingyen</span>
-                             </Link>
-                          ) : (
-                             <Link href="/pricing" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
-                                 <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
-                                     <Lock className="w-8 h-8" />
-                                 </div>
-                                 <span className="font-bold text-slate-500 text-lg">Limit elérve</span>
-                                 <span className="text-xs text-amber-500 font-bold mt-2 uppercase tracking-wide px-3 py-1 bg-amber-500/10 rounded-full">Válts Pro-ra a bővítéshez</span>
-                             </Link>
-                          )}
-                      </div>
+              {/* AUTÓK LISTÁJA */}
+              <div className="space-y-6">
+                  <div className="flex items-center justify-between px-2">
+                      <h3 className="text-xl font-bold flex items-center gap-2">
+                          <span className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600"><CarFront className="w-5 h-5" /></span>
+                          Saját Garázs
+                      </h3>
+                      {/* LIMIT KIJELZÉS */}
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${isCarLimitReached ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                          {myCars.length} / {limits.maxCars === 999 ? '∞' : limits.maxCars}
+                      </span>
                   </div>
-              )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {myCars.map((car: any) => (
+                          <CarCard key={car.id} car={car} />
+                      ))}
+                      
+                      {/* ÚJ AUTÓ GOMB: Csak ha belefér a limitbe */}
+                      {!isCarLimitReached ? (
+                         <Link href="/cars/new" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-400 transition-all cursor-pointer">
+                             <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                                 <Plus className="w-8 h-8 text-slate-400 group-hover:text-amber-500" />
+                             </div>
+                             <span className="font-bold text-slate-500 group-hover:text-slate-900">Új jármű hozzáadása</span>
+                         </Link>
+                      ) : (
+                         /* LOCKED STATE - Ha elérte a limitet */
+                         <Link href="/pricing" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
+                             <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
+                                 <Lock className="w-8 h-8" />
+                             </div>
+                             <span className="font-bold text-slate-500">Limit elérve</span>
+                             <span className="text-xs text-amber-500 font-bold mt-2 uppercase tracking-wide">Válts Pro-ra a bővítéshez</span>
+                         </Link>
+                      )}
+                  </div>
+              </div>
 
               {FEATURES.sharedCars && sharedCars.length > 0 && (
                   <div className="space-y-6 pt-8 border-t border-slate-200 dark:border-slate-800">
@@ -310,17 +311,14 @@ async function DashboardComponent() {
             </div>
 
             <div className="lg:col-span-4 space-y-8">
-              
-              {plan === 'free' && (
-                   <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white text-center shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
+               
+               {/* Ha FREE user, itt reklámozhatod a Pro funkciókat */}
+               {plan === 'free' && (
+                   <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white text-center shadow-xl relative overflow-hidden group cursor-pointer">
                        <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>
-                       <div className="absolute top-0 right-0 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
-                       <Sparkles className="w-8 h-8 text-yellow-300 mx-auto mb-3 animate-pulse" />
-                       <h3 className="text-xl font-black uppercase italic mb-2 relative z-10">Hiányzik az AI Szerelő?</h3>
-                       <p className="text-sm text-indigo-100 mb-6 relative z-10 leading-relaxed">
-                           A mesterséges intelligencia, a korlátlan garázs és a prémium funkciók csak egy kattintásra vannak.
-                       </p>
-                       <Link href="/pricing" className="inline-block w-full bg-white text-indigo-600 font-bold py-3.5 rounded-xl shadow-lg hover:bg-indigo-50 transition-colors relative z-10 uppercase tracking-wider text-sm">
+                       <h3 className="text-xl font-black uppercase italic mb-2 relative z-10">Hiányzik az AI?</h3>
+                       <p className="text-sm text-indigo-100 mb-4 relative z-10">Az AI Szerelő és a korlátlan garázs csak egy kattintásra van.</p>
+                       <Link href="/pricing" className="inline-block w-full bg-white text-indigo-600 font-bold py-3 rounded-xl shadow-lg hover:bg-indigo-50 transition-colors relative z-10">
                            Pro Csomag Megnézése
                        </Link>
                    </div>
