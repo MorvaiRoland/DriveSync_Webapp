@@ -10,7 +10,7 @@ import { Plus, Settings, LogOut, Gauge, CarFront, Users, Lock, CheckCircle2, Arr
 import HeaderNav from '@/components/HeaderNav';
 import QuickMileageForm from '@/components/QuickMileageForm';
 import { Metadata } from 'next'
-import OnboardingTour from '@/components/OnboardingTour'; // ÚJ IMPORT
+import OnboardingTour from '@/components/OnboardingTour';
 
 export const metadata: Metadata = {
   title: {
@@ -46,11 +46,10 @@ async function DashboardComponent() {
   const limits = PLAN_LIMITS[plan];
 
   // Jogosultságok
-  const canAddCar = true; // A limit ellenőrzést lejjebb végezzük a darabszám alapján
+  const canAddCar = true; 
   const canUseAi = limits.aiMechanic;
   const canTripPlan = limits.tripPlanner;
   
-  // Pro státusz meghatározása a HeaderNav-hoz (ha van AI, akkor Pro-nak tekintjük)
   const isPro = limits.aiMechanic;
 
   // --- ADATLEKÉRÉSEK ---
@@ -151,6 +150,7 @@ async function DashboardComponent() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
       
       {/* 1. ONBOARDING TÚRA MEGHÍVÁSA */}
+      {/* Ez mindig renderelődik, de a komponens belül ellenőrzi, hogy látta-e már a user */}
       <OnboardingTour />
 
       {/* HÁTTÉR EFFEKTEK */}
@@ -165,7 +165,9 @@ async function DashboardComponent() {
       {/* AI MECHANIC: Csak ha a csomag engedi */}
       {canUseAi ? <AiMechanic isPro={true} /> : null}
       
-      <ChangelogModal />
+      {/* JAVÍTÁS: A Changelog csak akkor jön be, ha már VAN autója (tehát nem új user) */}
+      {/* Így az új usereknél a túra fut le, a régieknél a changelog */}
+      {cars.length > 0 && <ChangelogModal />}
       
       <nav 
         className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]" 
