@@ -81,6 +81,8 @@ export async function signOutAction() {
     return redirect('/login')
 }
 
+
+
 export async function deleteAccountAction() {
     const supabase = await createClient()
     
@@ -88,75 +90,76 @@ export async function deleteAccountAction() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return redirect('/login')
 
-    // 2. Admin kliens
+    // 2. Admin kliens inicializálása (Kötelező a törléshez)
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceRoleKey) return redirect(`/settings?error=${encodeURIComponent('Szerver hiba (Service Role hiányzik)')}`)
+    if (!serviceRoleKey) return redirect(`/settings?error=${encodeURIComponent('Szerver konfigurációs hiba')}`)
 
     const supabaseAdmin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
 
     let errorMessage: string | null = null;
 
     try {
-        // --- A. Autók leválasztása (HIBATŰRŐ MÓD) ---
-        // Megpróbáljuk leválasztani, de ha hiba van, NEM dobunk 'throw'-t, csak logoljuk.
-        // Így ha nincs autó, vagy adatbázis hiba van ennél a lépésnél, a törlés akkor is folytatódik.
-        const { error: unlinkError } = await supabaseAdmin
+        // --- A. AUTÓK LEVÁLASZTÁSA (MENTÉS) ---
+        // Átállítjuk a user_id-t NULL-ra.
+        // Ha korábban nem futott le az SQL módosítás, itt hiba lenne, de a catch elkapná.
+        const { error: carUnlinkError } = await supabaseAdmin
             .from('cars') 
             .update({ user_id: null }) 
             .eq('user_id', user.id)
 
-        if (unlinkError) {
-            console.warn("Figyelmeztetés: Autók leválasztása nem sikerült (vagy nem volt autó), de folytatjuk:", unlinkError.message)
-        }
+        if (carUnlinkError) console.warn("Autó leválasztás warning:", carUnlinkError.message)
 
-        // --- B. Avatar kép törlése ---
-        if (user.user_metadata?.avatar_url) {
-            try {
-                const urlParts = user.user_metadata.avatar_url.split('/');
-                const fileName = urlParts[urlParts.length - 1];
-                if (fileName) await supabaseAdmin.storage.from('avatars').remove([fileName]);
-            } catch (e) {
-                console.warn("Avatar törlése sikertelen, de nem kritikus.")
-            }
-        }
-
-        // --- C. Egyéb táblák takarítása ---
-        // Itt is "csendes" törlést alkalmazunk: ha egy tábla üres, nem baj.
-        const tablesToCleanup = ['profiles', 'subscriptions', 'api_keys', 'direct_messages', 'friendships', 'group_members'];
+        // --- B. SZERVÍZEK LEVÁLASZTÁSA ---
+        const { error: eventUnlinkError } = await supabaseAdmin
+            .from('events')
+            .update({ user_id: null })
+            .eq('user_id', user.id)
         
-        for (const table of tablesToCleanup) {
-            // Nem vizsgáljuk a hibát, csak megpróbáljuk kitörölni.
-            // Ha a tábla nem létezik vagy üres, a kód fut tovább.
-            await supabaseAdmin.from(table).delete().eq('user_id', user.id);
-            
-            if (table === 'profiles') {
-                 await supabaseAdmin.from(table).delete().eq('id', user.id);
-            }
+        if (eventUnlinkError) console.warn("Events leválasztás warning:", eventUnlinkError.message)
+
+        // --- C. STORAGE FÁJLOK TÖRLÉSE (EZ A HIBA OKA!) ---
+        // Mivel SQL-ben nem engedte a CASCADE-ot, itt töröljük ki a metaadatokat.
+        // Közvetlenül a storage sémából törlünk, hogy megszűnjön a hivatkozás.
+        const { error: storageError } = await supabaseAdmin
+            .schema('storage') // Fontos: átváltunk a storage sémára
+            .from('objects')
+            .delete()
+            .eq('owner', user.id) // A fájl tulajdonosa a user
+
+        if (storageError) {
+            console.error("Storage tisztítási hiba:", storageError)
+            // Nem állunk meg, megpróbáljuk a törlést így is, hátha nem volt fájlja.
         }
 
-        // --- D. A VÉGLEGES TÖRLÉS ---
-        // Ez az egyetlen lépés, ami ha elhasal, akkor tényleg szólnunk kell.
+        // --- D. EGYÉB TÁBLÁK TAKARÍTÁSA ---
+        // Ha az SQL-ben beállítottad a CASCADE-ot a profiles-ra, ez felesleges, de nem árt.
+        const tablesToCleanup = ['subscriptions', 'api_keys', 'direct_messages', 'friendships', 'group_members'];
+        for (const table of tablesToCleanup) {
+            await supabaseAdmin.from(table).delete().eq('user_id', user.id);
+        }
+        // Profil külön (mert ott 'id' a kulcs, nem 'user_id')
+        await supabaseAdmin.from('profiles').delete().eq('id', user.id);
+
+        // --- E. VÉGLEGES TÖRLÉS ---
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
         
         if (deleteError) {
-            // Ha ez a hiba constraint miatt van, próbálunk adni egy értelmesebb üzenetet
             console.error("Végleges törlési hiba:", deleteError);
-            throw new Error(`Nem sikerült a felhasználót törölni az Auth rendszerből. Ok: ${deleteError.message}`)
+            throw new Error(`Nem sikerült törölni a felhasználót. Ok: ${deleteError.message}`)
         }
 
-        // --- E. Kijelentkeztetés ---
+        // --- F. Kijelentkeztetés ---
         await supabase.auth.signOut()
 
     } catch (err: any) {
-        console.error("Kritikus hiba a fiók törlése közben:", err);
-        errorMessage = err.message || 'Váratlan hiba történt a törlés során.';
+        console.error("Kritikus hiba:", err);
+        errorMessage = err.message || 'Váratlan hiba történt.';
     }
 
-    // --- REDIRECT ZÓNA ---
-    
+    // --- Redirect ---
     if (errorMessage) {
         return redirect(`/settings?error=${encodeURIComponent(errorMessage)}`)
     }
 
-    return redirect(`/login?message=${encodeURIComponent('A fiókod sikeresen törölve lett.')}`)
+    return redirect(`/login?message=${encodeURIComponent('A fiókod törölve, az autók megmaradtak.')}`)
 }
