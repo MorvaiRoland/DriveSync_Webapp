@@ -86,11 +86,11 @@ export async function signOutAction() {
 export async function deleteAccountAction() {
     const supabase = await createClient()
     
-    // 1. Felhasználó ellenőrzése
+    // 1. User ellenőrzése
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return redirect('/login')
 
-    // 2. Admin kliens inicializálása (Kötelező a törléshez)
+    // 2. Admin kliens inicializálása
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!serviceRoleKey) return redirect(`/settings?error=${encodeURIComponent('Szerver konfigurációs hiba')}`)
 
@@ -99,9 +99,7 @@ export async function deleteAccountAction() {
     let errorMessage: string | null = null;
 
     try {
-        // --- A. AUTÓK LEVÁLASZTÁSA (MENTÉS) ---
-        // Átállítjuk a user_id-t NULL-ra.
-        // Ha korábban nem futott le az SQL módosítás, itt hiba lenne, de a catch elkapná.
+        // --- A. AUTÓK MEGMENTÉSE (Leválasztás) ---
         const { error: carUnlinkError } = await supabaseAdmin
             .from('cars') 
             .update({ user_id: null }) 
@@ -109,7 +107,7 @@ export async function deleteAccountAction() {
 
         if (carUnlinkError) console.warn("Autó leválasztás warning:", carUnlinkError.message)
 
-        // --- B. SZERVÍZEK LEVÁLASZTÁSA ---
+        // --- B. SZERVÍZEK MEGMENTÉSE ---
         const { error: eventUnlinkError } = await supabaseAdmin
             .from('events')
             .update({ user_id: null })
@@ -117,38 +115,34 @@ export async function deleteAccountAction() {
         
         if (eventUnlinkError) console.warn("Events leválasztás warning:", eventUnlinkError.message)
 
-        // --- C. STORAGE FÁJLOK TÖRLÉSE (EZ A HIBA OKA!) ---
-        // Mivel SQL-ben nem engedte a CASCADE-ot, itt töröljük ki a metaadatokat.
-        // Közvetlenül a storage sémából törlünk, hogy megszűnjön a hivatkozás.
+        // --- C. STORAGE TAKARÍTÁS (Kódból) ---
+        // Ez kritikus, mert az SQL CASCADE itt gyakran nem működik
+        const { data: objects } = await supabaseAdmin
+            .storage
+            .from('avatars') // Vagy más bucket neve, ha van
+            .list(user.id + '/') // Ha mappákba szervezed user ID szerint
+
+        // Ha a fájlok közvetlenül vannak a gyökérben vagy egy 'avatars' mappában a user ID-jával:
+        // A legegyszerűbb, ha kitörlünk mindent a storage.objects táblából az Admin klienssel:
         const { error: storageError } = await supabaseAdmin
-            .schema('storage') // Fontos: átváltunk a storage sémára
+            .schema('storage')
             .from('objects')
             .delete()
-            .eq('owner', user.id) // A fájl tulajdonosa a user
+            .eq('owner', user.id)
+        
+        if (storageError) console.warn("Storage tisztítás warning:", storageError.message)
 
-        if (storageError) {
-            console.error("Storage tisztítási hiba:", storageError)
-            // Nem állunk meg, megpróbáljuk a törlést így is, hátha nem volt fájlja.
-        }
-
-        // --- D. EGYÉB TÁBLÁK TAKARÍTÁSA ---
-        // Ha az SQL-ben beállítottad a CASCADE-ot a profiles-ra, ez felesleges, de nem árt.
-        const tablesToCleanup = ['subscriptions', 'api_keys', 'direct_messages', 'friendships', 'group_members'];
-        for (const table of tablesToCleanup) {
-            await supabaseAdmin.from(table).delete().eq('user_id', user.id);
-        }
-        // Profil külön (mert ott 'id' a kulcs, nem 'user_id')
-        await supabaseAdmin.from('profiles').delete().eq('id', user.id);
-
-        // --- E. VÉGLEGES TÖRLÉS ---
+        // --- D. VÉGLEGES TÖRLÉS ---
+        // Most, hogy az SQL script beállította a CASCADE-ot, ez a parancs
+        // automatikusan viszi magával a profilt, api kulcsokat, usage logokat, mindent.
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
         
         if (deleteError) {
             console.error("Végleges törlési hiba:", deleteError);
-            throw new Error(`Nem sikerült törölni a felhasználót. Ok: ${deleteError.message}`)
+            throw new Error(`Sikertelen törlés: ${deleteError.message}`)
         }
 
-        // --- F. Kijelentkeztetés ---
+        // --- E. Kijelentkeztetés ---
         await supabase.auth.signOut()
 
     } catch (err: any) {
@@ -156,10 +150,9 @@ export async function deleteAccountAction() {
         errorMessage = err.message || 'Váratlan hiba történt.';
     }
 
-    // --- Redirect ---
     if (errorMessage) {
         return redirect(`/settings?error=${encodeURIComponent(errorMessage)}`)
     }
 
-    return redirect(`/login?message=${encodeURIComponent('A fiókod törölve, az autók megmaradtak.')}`)
+    return redirect(`/login?message=${encodeURIComponent('A fiókod sikeresen törölve lett.')}`)
 }
