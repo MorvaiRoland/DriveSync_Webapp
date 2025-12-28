@@ -1,6 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { streamText } from 'ai';
-import { createClient } from 'supabase/server'; // Vagy ahol a tied van
+import { createClient } from '@/supabase/server'; // Használd a helyes import utat!
 
 export const maxDuration = 30;
 
@@ -18,7 +18,62 @@ export async function POST(req: Request) {
 
   if (!user) return new Response('Unauthorized', { status: 401 });
 
-  // Adatok lekérése a kontextushoz
+  // --- 1. RATE LIMIT & ELŐFIZETÉS ELLENŐRZÉS ---
+  
+  // A. Megnézzük, van-e aktív Pro előfizetése (Opcionális, ha a DB-ben van subscriptions tábla)
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('status')
+    .eq('user_id', user.id)
+    .eq('status', 'active') // Vagy ami a te logikád (pl. 'pro', 'trial')
+    .single();
+
+  const isPro = !!subscription; // True, ha van találat
+
+  // B. Ha NEM Pro, ellenőrizzük a napi limitet
+  if (!isPro) {
+    const today = new Date().toISOString().split('T')[0];
+    const LIMIT = 5;
+
+    // Lekérjük a mai használatot
+    const { data: usage } = await supabase
+      .from('user_daily_usage')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    let currentCount = 0;
+
+    if (usage) {
+      // Ha a dátum nem a mai, akkor nullázódik (virtuálisan)
+      if (usage.last_reset_date !== today) {
+        currentCount = 0;
+      } else {
+        currentCount = usage.message_count;
+      }
+    }
+
+    // Ha elérte a limitet, ERROR-t küldünk vissza
+    if (currentCount >= LIMIT) {
+      return new Response(JSON.stringify({ 
+        error: 'LIMIT_REACHED', 
+        message: 'Elérted a napi limitet (5 üzenet).' 
+      }), { 
+        status: 429,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Ha még nem érte el, növeljük a számlálót
+    // (Nem várjuk meg a 'await'-et, hogy gyorsabb legyen a válasz, de hibakezelés miatt érdemes lehet)
+    await supabase.from('user_daily_usage').upsert({
+      user_id: user.id,
+      message_count: currentCount + 1,
+      last_reset_date: today
+    });
+  }
+
+  // --- 2. ADATGYŰJTÉS KONTEXTUSHOZ ---
   const [carsRes, eventsRes] = await Promise.all([
     supabase.from('cars').select('*').eq('user_id', user.id),
     supabase
@@ -32,8 +87,7 @@ export async function POST(req: Request) {
   const cars = carsRes.data || [];
   const events = eventsRes.data || [];
 
-  // Rendszer üzenet (System Prompt)
-  // Fontos: Itt instruáljuk, hogy képes képeket is nézni.
+  // --- 3. SYSTEM PROMPT ---
   const contextText = `
     TE VAGY A DRIVESYNC AI SZERELŐ.
     
@@ -44,18 +98,16 @@ export async function POST(req: Request) {
     - Képes vagy elemezni a felhasználó által feltöltött képeket (pl. műszerfal hibajelzések, motortér, sérülések).
     - Ha képet kapsz, elemezd a látható problémát, és adj tanácsot.
     - Ha hibakódot látsz, magyarázd el.
+    - Mindig a felhasználó konkrét autójára hivatkozz, ha felismered az adatokból.
     
-    Válaszolj magyarul, szakmailag, de érthetően.
+    Válaszolj magyarul, szakmailag, de érthetően, röviden és tömören.
   `;
 
-  // A messages tömb már tartalmazhatja a képet base64 formátumban a frontendről.
-  // A Vercel AI SDK Google provider ezt automatikusan kezeli, ha a struktúra:
-  // { role: 'user', content: [ { type: 'text', text: '...' }, { type: 'image', image: 'base64...' } ] }
-  
+  // --- 4. AI VÁLASZ GENERÁLÁSA ---
   const result = streamText({
-    model: google('gemini-2.5-flash'), // A flash modell gyors és jó képekkel
+    model: google('gemini-2.5-flash'), // Jelenleg a 1.5 Flash a stabil és gyors verzió
     system: contextText,
-    messages, // A frontend által küldött teljes tömböt átadjuk
+    messages, // A képet a frontend base64-ben küldi a messages tömbben, a Vercel AI SDK ezt kezeli
   });
 
   return result.toTextStreamResponse();
