@@ -269,17 +269,24 @@ export default function ServiceMap() {
 
       {/* 2. VEZÉRLŐK (LENT) */}
       <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-end pb-[160px] lg:pb-6 px-4 lg:px-6">
-         <div className="flex justify-between items-end w-full max-w-[420px] lg:max-w-none lg:ml-[440px]">
+         {/* JAVÍTÁS: lg:w-[calc(100%-480px)] hozzáadva, hogy ne lógjon ki jobbra */}
+         <div className="flex justify-between items-end w-full max-w-[420px] lg:max-w-none lg:w-[calc(100%-480px)] lg:ml-[460px]">
+             
+             {/* Bal oldali gombok (Home) */}
              <div className="flex flex-col gap-3 pointer-events-auto">
                 <button onClick={() => router.push('/')} className="w-12 h-12 bg-white dark:bg-zinc-900 shadow-xl shadow-zinc-900/10 rounded-2xl flex items-center justify-center text-zinc-700 dark:text-zinc-200 border border-zinc-100 dark:border-zinc-700 active:scale-95 transition-transform">
                     <Home size={22} />
                 </button>
              </div>
+
+             {/* Jobb oldali gombok (SOS, GPS) */}
              <div className="flex flex-col gap-3 pointer-events-auto items-end">
                 <button onClick={toggleSosMode} className={cn("h-14 px-5 shadow-xl rounded-2xl flex items-center justify-center gap-2 font-black text-white active:scale-95 transition-all border-2 border-white/20", isSosActive ? "bg-red-600 shadow-red-600/40 animate-pulse w-auto" : "w-14 bg-red-500 shadow-red-500/20")}>
                     <Siren size={24} className={cn(isSosActive && "animate-bounce")} />
                     {isSosActive && <span>SOS AKTÍV</span>}
                 </button>
+                
+                {/* Ez volt kint a képernyőről */}
                 <button onClick={handleLocateMe} className="w-12 h-12 bg-indigo-600 shadow-xl shadow-indigo-500/20 rounded-2xl flex items-center justify-center text-white active:scale-95 transition-transform">
                     <Locate size={22} />
                 </button>
