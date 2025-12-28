@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { addCar, claimCar } from '@/app/cars/actions' // Győződj meg róla, hogy a claimCar is exportálva van az actions.ts-ből!
+import { addCar, claimCar } from '@/app/cars/actions'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
@@ -11,6 +11,10 @@ import {
   Palette, FileText, CheckCircle2, AlertCircle, Upload, ChevronDown,
   ArrowLeft, Info, X, Fingerprint, ShieldCheck
 } from 'lucide-react'
+
+// --- ÚJ IMPORTOK ---
+import imageCompression from 'browser-image-compression'
+import { v4 as uuidv4 } from 'uuid'
 
 // --- TÍPUSOK ---
 interface ExistingCar {
@@ -25,25 +29,27 @@ interface ExistingCar {
 }
 
 // --- 1. LIQUID BUTTON (Form Submit) ---
-function SubmitButton({ label = "Mentés a Garázsba", icon }: { label?: string, icon?: React.ReactNode }) {
+// Módosítottuk, hogy fogadjon 'disabled' propot a feltöltés idejére
+function SubmitButton({ label = "Mentés a Garázsba", icon, disabled }: { label?: string, icon?: React.ReactNode, disabled?: boolean }) {
   const { pending } = useFormStatus()
+  const isDisabled = pending || disabled; // Letiltva, ha a form küld, VAGY ha a kép töltődik
 
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={isDisabled}
       className={`
         relative w-full sm:w-auto px-8 py-4 rounded-2xl font-bold tracking-wide transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]
         shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(245,158,11,0.2)]
-        ${pending
+        ${isDisabled
           ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-wait'
           : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-amber-500/30'
         }
       `}
     >
       <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-      <span className={`flex items-center justify-center gap-2 relative z-10 ${pending ? 'opacity-50' : ''}`}>
-        {pending ? 'Feldolgozás...' : (
+      <span className={`flex items-center justify-center gap-2 relative z-10 ${isDisabled ? 'opacity-50' : ''}`}>
+        {isDisabled ? (pending ? 'Mentés...' : 'Feltöltés...') : (
           <>
             {icon || <CheckCircle2 className="w-5 h-5" />}
             <span>{label}</span>
@@ -54,7 +60,7 @@ function SubmitButton({ label = "Mentés a Garázsba", icon }: { label?: string,
   )
 }
 
-// --- 2. GLASS INPUT MEZŐ ---
+// --- 2. GLASS INPUT MEZŐ (Változatlan) ---
 function InputGroup({ label, name, type = "text", placeholder, required = false, uppercase = false, icon, suffix }: any) {
   const [focused, setFocused] = useState(false)
   
@@ -105,7 +111,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
   )
 }
 
-// --- 3. GLASS SELECT MEZŐ ---
+// --- 3. GLASS SELECT MEZŐ (Változatlan) ---
 function SelectGroup({ label, name, children, required = false, icon, value, onChange, disabled }: any) {
   const [focused, setFocused] = useState(false)
 
@@ -159,7 +165,7 @@ function SelectGroup({ label, name, children, required = false, icon, value, onC
   )
 }
 
-// --- 4. KÁRTYA CONTAINER ---
+// --- 4. KÁRTYA CONTAINER (Változatlan) ---
 function FormSection({ title, step, children }: { title: string, step: string, children: React.ReactNode }) {
     return (
         <div className="relative overflow-hidden rounded-3xl bg-white/40 dark:bg-slate-900/40 border border-white/40 dark:border-white/5 backdrop-blur-xl shadow-xl p-6 md:p-8 mb-8 transition-all duration-500 hover:shadow-2xl">
@@ -201,8 +207,12 @@ function CarForm() {
   const [selectedBrandId, setSelectedBrandId] = useState<string>("")
   const [loadingBrands, setLoadingBrands] = useState(true)
   const [loadingModels, setLoadingModels] = useState(false)
+  
+  // KÉPFELTÖLTÉS STATEK
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [uploading, setUploading] = useState(false) // Töltés jelző
+  const [uploadedImagePath, setUploadedImagePath] = useState<string>('') // Kész útvonal
 
   // Duplikált autó lekérése (Ha van found_car_id)
   useEffect(() => {
@@ -247,27 +257,73 @@ function CarForm() {
     fetchModels()
   }, [selectedBrandId, supabase])
 
-  // Képkezelő függvények
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setImagePreview(URL.createObjectURL(file));
+  // --- KÉP TÖMÖRÍTÉS ÉS FELTÖLTÉS ---
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement> | File) => {
+    let file: File | undefined;
+    
+    if (e instanceof File) {
+      file = e;
+    } else if (e.target.files?.[0]) {
+      file = e.target.files[0];
+    }
+
+    if (!file) return;
+
+    // Előnézet beállítása
+    setImagePreview(URL.createObjectURL(file));
+    setUploading(true);
+
+    try {
+      // 1. TÖMÖRÍTÉSI BEÁLLÍTÁSOK
+      const options = {
+        maxSizeMB: 0.8,          // Max 0.8 MB
+        maxWidthOrHeight: 1920,  // Max Full HD
+        useWebWorker: true,
+        fileType: 'image/jpeg'   // JPG-be konvertálás
+      }
+
+      // 2. TÖMÖRÍTÉS
+      console.log(`Eredeti: ${file.size / 1024 / 1024} MB`);
+      const compressedFile = await imageCompression(file, options);
+      console.log(`Tömörített: ${compressedFile.size / 1024 / 1024} MB`);
+
+      // 3. FELTÖLTÉS A 'car-images' BUCKETBE
+      const fileExt = 'jpg';
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const filePath = `cars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('car-images') // A te bucketed neve
+        .upload(filePath, compressedFile);
+
+      if (uploadError) throw uploadError;
+
+      // 4. SIKER -> Útvonal mentése a rejtett mezőbe
+      setUploadedImagePath(filePath);
+
+    } catch (error) {
+      console.error('Hiba:', error);
+      alert('Hiba a kép feltöltésekor!');
+      setImagePreview(null);
+    } finally {
+      setUploading(false);
+    }
   };
+
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true); }
   const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); }
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault(); setIsDragOver(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) setImagePreview(URL.createObjectURL(file));
+    if (file) handleImageChange(file);
   }
 
   // --- A: DUPLIKÁCIÓ ESETÉN MEGJELENŐ KÁRTYA ---
   if (foundCarId && existingCar) {
+    // ... (Ez a rész változatlan, csak a SubmitButton disabled propját kell majd figyelni)
     return (
       <div className="max-w-xl mx-auto pb-20 animate-in zoom-in-95 duration-500">
         <div className="relative overflow-hidden rounded-[2.5rem] bg-white/70 dark:bg-slate-900/70 border-2 border-amber-500/50 backdrop-blur-xl shadow-2xl p-8">
-            
-            {/* Villogó háttér effekt */}
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/20 rounded-full blur-3xl animate-pulse"></div>
             
             <div className="text-center relative z-10">
                 <div className="mx-auto w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-amber-500/30">
@@ -376,9 +432,23 @@ function CarForm() {
                     onDrop={handleDrop}
                     >
                         <input 
-                            type="file" name="image" accept="image/*" onChange={handleImageChange} 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleImageChange} 
                             className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer" 
+                            // name="image" <--- KIVETTÜK A NAME ATTRIBÚTUMOT!
                         />
+                        
+                        {/* REJTETT MEZŐ AZ ÚTVONALLAL */}
+                        <input type="hidden" name="image_url" value={uploadedImagePath} />
+
+                        {/* Töltés visszajelző overlay */}
+                        {uploading && (
+                          <div className="absolute inset-0 z-30 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm">
+                            <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                            <span className="text-white font-bold text-sm tracking-wide">Tömörítés...</span>
+                          </div>
+                        )}
                         
                         {imagePreview ? (
                             <div className="w-full h-full relative">
@@ -392,7 +462,11 @@ function CarForm() {
                                 </div>
                                 <button 
                                     type="button" 
-                                    onClick={(e) => {e.preventDefault(); setImagePreview(null)}}
+                                    onClick={(e) => {
+                                      e.preventDefault(); 
+                                      setImagePreview(null);
+                                      setUploadedImagePath(''); // Törléskor ürítjük az útvonalat is
+                                    }}
                                     className="absolute top-4 right-4 z-30 p-2 bg-black/50 hover:bg-red-500/80 text-white rounded-full backdrop-blur-md transition-colors"
                                 >
                                     <X className="w-4 h-4" />
@@ -420,7 +494,7 @@ function CarForm() {
                         <Info className="w-4 h-4" /> Tipp
                     </h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                        A jó minőségű, tájkép (fekvő) tájolású fotók mutatnak a legjobban a garázsban. Győződj meg róla, hogy a rendszám olvasható.
+                        A jó minőségű, tájkép (fekvő) tájolású fotók mutatnak a legjobban a garázsban. A rendszer automatikusan tömöríti a képeket.
                     </p>
                 </div>
             </div>
@@ -566,7 +640,8 @@ function CarForm() {
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                         Mégse
                     </Link>
-                    <SubmitButton />
+                    {/* ÁTADJUK AZ UPLOADING STATE-T */}
+                    <SubmitButton disabled={uploading} />
                 </div>
             </div>
         </div>

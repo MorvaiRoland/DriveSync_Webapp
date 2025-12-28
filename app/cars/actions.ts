@@ -21,6 +21,7 @@ const parseNullableString = (val: FormDataEntryValue | null) => {
 
 
 // --- 1. ÚJ AUTÓ LÉTREHOZÁSA (JAVÍTOTT) ---
+// --- 1. ÚJ AUTÓ LÉTREHOZÁSA ---
 export async function addCar(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -52,11 +53,14 @@ export async function addCar(formData: FormData) {
     engine_size: parseNullableInt(formData.get('engine_size')),
     power_hp: parseNullableInt(formData.get('power_hp')),
 
-    // --- ITT VOLT A HIÁNYZÓ RÉSZ: ---
+    // Dátumok
     mot_expiry: parseNullableString(formData.get('mot_expiry')),       // Műszaki vizsga
     insurance_expiry: parseNullableString(formData.get('insurance_expiry')), // Biztosítás
-    // -------------------------------
     
+    // --- ÚJ SOR: KÉP ÚTVONAL MENTÉSE ---
+    image_url: parseNullableString(formData.get('image_url')), 
+    // -----------------------------------
+
     // Egyéb alapértékek
     is_public_history: false,
     created_at: new Date().toISOString(),
