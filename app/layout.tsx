@@ -33,8 +33,8 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: '/icons/icon-512.png',
-    shortcut: '/icons/icon-512.png', 
+    icon: '/favicon.png',
+    shortcut: '/favicon.png', 
     apple: [
       { url: '/icons/apple-icon.png' },
       { url: '/icons/apple-icon.png', sizes: '512x512' }
