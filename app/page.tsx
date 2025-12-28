@@ -134,12 +134,12 @@ async function DashboardComponent() {
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
 
-  // --- JAVÍTOTT MEGJELENÍTÉSI LOGIKA (ONBOARDING vs CHANGELOG) ---
+  // --- JAVÍTOTT MEGJELENÍTÉSI LOGIKA ---
   
   // 1. Van-e autója?
   const hasCars = cars.length > 0;
   
-  // 2. Fiók kora (órában) - Biztonságos számítás
+  // 2. Fiók kora (órában)
   const userCreatedAtString = user.created_at || new Date().toISOString();
   const userCreatedTime = new Date(userCreatedAtString).getTime();
   const nowTime = Date.now();
@@ -157,8 +157,7 @@ async function DashboardComponent() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
       
       {/* 1. ONBOARDING TÚRA */}
-      {/* Ez a komponens csak akkor töltődik be, ha a fenti feltétel igaz. */}
-      {/* Belül a localStorage ellenőrzi, hogy látta-e már. */}
+      {/* Csak a fenti szigorú feltételek esetén jelenik meg */}
       {showTour && <OnboardingTour />}
 
       {/* HÁTTÉR EFFEKTEK */}
@@ -174,7 +173,7 @@ async function DashboardComponent() {
       {canUseAi ? <AiMechanic isPro={true} /> : null}
       
       {/* 2. CHANGELOG */}
-      {/* Csak akkor, ha már aktív user (van autója) */}
+      {/* Csak ha már aktív user (van autója) */}
       {showChangelog && <ChangelogModal />}
       
       <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]">
@@ -280,6 +279,7 @@ async function DashboardComponent() {
                               <span className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600"><CarFront className="w-5 h-5" /></span>
                               Saját Garázs
                           </h3>
+                          {/* LIMIT KIJELZÉS */}
                           <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${isCarLimitReached ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                               {myCars.length} / {limits.maxCars === 999 ? '∞' : limits.maxCars}
                           </span>
@@ -299,6 +299,7 @@ async function DashboardComponent() {
                                   <span className="font-bold text-slate-500 group-hover:text-slate-900">Új jármű hozzáadása</span>
                              </Link>
                           ) : (
+                             /* LOCKED STATE - Ha elérte a limitet */
                              <Link href="/pricing" id="tour-add-car" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
                                   <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
                                       <Lock className="w-8 h-8" />
