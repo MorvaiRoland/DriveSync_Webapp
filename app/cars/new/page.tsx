@@ -474,7 +474,7 @@ function CarForm() {
                     </div>
                 </FormSection>
 
-                {/* 2. SZEKCIÓ: SPECIFIKÁCIÓ */}
+               {/* 2. SZEKCIÓ: SPECIFIKÁCIÓ */}
                 <FormSection title="Specifikációk" step="02">
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -483,20 +483,22 @@ function CarForm() {
                         </div>
 
                         <SelectGroup label="Üzemanyag" name="fuel_type" required icon={<Fuel className="w-5 h-5" />}>
+                            <option value="" disabled selected>Válassz...</option>
                             <option value="Dízel">Dízel</option>
                             <option value="Benzin">Benzin</option>
-                            <option value="Hybrid">Hybrid</option>
-                            <option value="Plugin_Hybrid">Plug-in Hybrid</option>
+                            <option value="Hibrid">Hibrid</option>
+                            <option value="Plug-in Hibrid">Plug-in Hibrid</option>
                             <option value="Elektromos">Elektromos</option>
-                            <option value="LPG">LPG / Gáz</option>
+                            <option value="LPG / Gáz">LPG / Gáz</option>
                         </SelectGroup>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <SelectGroup label="Váltó" name="transmission" required>
-                                <option value="manual">Manuális</option>
-                                <option value="automatic">Automata</option>
-                                <option value="cvt">CVT</option>
-                                <option value="robotized">Robotizált</option>
+                                <option value="" disabled selected>Válassz...</option>
+                                <option value="Manuális">Manuális</option>
+                                <option value="Automata">Automata</option>
+                                <option value="Fokozatmentes (CVT)">Fokozatmentes (CVT)</option>
+                                <option value="Robotizált">Robotizált</option>
                             </SelectGroup>
                             <InputGroup label="Motor (cm³)" name="engine_size" type="number" placeholder="pl. 1998" suffix="cm³" />
                         </div>
@@ -504,14 +506,15 @@ function CarForm() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <SelectGroup label="Kivitel" name="body_type">
                                 <option value="" disabled selected>Válassz...</option>
-                                <option value="sedan">Sedan</option>
-                                <option value="kombi">Kombi</option>
-                                <option value="hatchback">Hatchback</option>
-                                <option value="suv">SUV</option>
-                                <option value="coupe">Coupé</option>
-                                <option value="cabrio">Cabrio</option>
-                                <option value="mpv">MPV</option>
-                                <option value="van">Furgon</option>
+                                <option value="Szedán">Szedán</option>
+                                <option value="Kombi">Kombi</option>
+                                <option value="Ferdehátú (Hatchback)">Ferdehátú (Hatchback)</option>
+                                <option value="Városi terepjáró (SUV)">Városi terepjáró (SUV)</option>
+                                <option value="Kupé">Kupé</option>
+                                <option value="Kabrió">Kabrió</option>
+                                <option value="Egyterű (MPV)">Egyterű (MPV)</option>
+                                <option value="Kisbusz / Furgon">Kisbusz / Furgon</option>
+                                <option value="Egyéb">Egyéb</option>
                             </SelectGroup>
                             <SelectGroup label="Szín" name="color" icon={<Palette className="w-5 h-5" />}>
                                 <option value="" disabled selected>Válassz...</option>

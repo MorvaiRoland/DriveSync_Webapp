@@ -666,24 +666,36 @@ function TechnicalSpecs({ car, avgConsumption }: any) {
     const displayTransmission = transmissionTranslations[car.transmission?.toLowerCase()] || car.transmission || '-';
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
-            <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
-                <Gauge className="w-5 h-5 text-slate-400" /> Specifikációk
-            </h3>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-6">
-                <DataPoint label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
-                <DataPoint label="Évjárat" value={car.year} />
-                <DataPoint label="Motor (ccm)" value={car.engine_size ? `${car.engine_size} cm³` : '-'} />
-                <DataPoint label="Teljesítmény" value={car.power_hp ? `${car.power_hp} LE` : '-'} />
-                <DataPoint label="Sebességváltó" value={displayTransmission} />
-                <DataPoint label="Üzemanyag" value={displayFuel} capitalize />
-                <DataPoint label="Szín" value={car.color || '-'} />
-                <DataPoint label="Átlagfogyasztás" value={avgConsumption === 'Nincs adat' ? '-' : avgConsumption} highlight />
-                <div className="col-span-2 border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
-                    <DataPoint label="VIN / Alvázszám" value={car.vin || 'Nincs rögzítve'} mono />
-                </div>
-            </div>
+       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+    <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
+        <Gauge className="w-5 h-5 text-slate-400" /> Specifikációk
+    </h3>
+    <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+        <DataPoint label="Futásteljesítmény" value={car.mileage ? `${car.mileage.toLocaleString()} km` : '-'} />
+        <DataPoint label="Évjárat" value={car.year} />
+        
+        {/* Motor adatok */}
+        <DataPoint label="Motor (ccm)" value={car.engine_size ? `${car.engine_size} cm³` : '-'} />
+        <DataPoint label="Teljesítmény" value={car.power_hp ? `${car.power_hp} LE` : '-'} />
+        
+        {/* Váltó - Most már közvetlenül magyarul jön az DB-ből */}
+        <DataPoint label="Sebességváltó" value={car.transmission || '-'} />
+        
+        {/* Üzemanyag - Ez is magyarul jön */}
+        <DataPoint label="Üzemanyag" value={car.fuel_type || '-'} />
+        
+        {/* Kivitel (Ha meg akarod jeleníteni) */}
+        <DataPoint label="Kivitel" value={car.body_type || '-'} />
+
+        <DataPoint label="Szín" value={car.color || '-'} />
+        
+        <DataPoint label="Átlagfogyasztás" value={avgConsumption === 'Nincs adat' ? '-' : avgConsumption} highlight />
+        
+        <div className="col-span-2 border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
+            <DataPoint label="VIN / Alvázszám" value={car.vin || 'Nincs rögzítve'} mono />
         </div>
+    </div>
+</div>
     )
 }
 
