@@ -11,21 +11,16 @@ interface SwipeCardProps {
 }
 
 export default function SwipeCard({ data, onSwipe, isFront }: SwipeCardProps) {
-  // Mozgás követése
   const x = useMotionValue(0)
   
-  // Forgatás: ha 200px-et húzzuk jobbra, 15 fokot dől jobbra (és fordítva)
   const rotate = useTransform(x, [-200, 200], [-15, 15])
-  
-  // Átlátszóság: a szélek felé haladva elhalványul
   const opacity = useTransform(x, [-250, -150, 0, 150, 250], [0, 1, 1, 1, 0])
 
-  // Overlay színek (Like/Nope jelzés húzáskor)
   const likeOpacity = useTransform(x, [0, 100], [0, 1])
   const nopeOpacity = useTransform(x, [-100, 0], [1, 0])
 
   const handleDragEnd = (event: any, info: PanInfo) => {
-    const threshold = 100 // Minimum ennyit kell húzni a szavazathoz
+    const threshold = 100 
     if (info.offset.x > threshold) {
       onSwipe(data.entryId, 'right')
     } else if (info.offset.x < -threshold) {
@@ -33,17 +28,18 @@ export default function SwipeCard({ data, onSwipe, isFront }: SwipeCardProps) {
     }
   }
 
-  // Ha a kártya a háttérben van (nem az első), fixen áll és kisebb
+  // HÁTTÉR KÁRTYA
   if (!isFront) {
     return (
-      <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-[3rem] border border-slate-200 dark:border-slate-700 scale-[0.9] opacity-40 translate-y-8 blur-[1px] pointer-events-none z-0">
-        <div className="h-4/5 relative overflow-hidden rounded-t-[3rem]">
-          <Image src={data.imageUrl || '/placeholder-car.jpg'} alt="" fill className="object-cover" />
+      <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800 rounded-[2rem] md:rounded-[3rem] border border-slate-200 dark:border-slate-700 scale-[0.9] opacity-40 translate-y-6 md:translate-y-8 blur-[1px] pointer-events-none z-0">
+        <div className="h-full w-full relative overflow-hidden rounded-[2rem] md:rounded-[3rem]">
+          <Image src={data.imageUrl || '/placeholder-car.jpg'} alt="" fill className="object-cover opacity-50" />
         </div>
       </div>
     )
   }
 
+  // ELŐTÉR KÁRTYA
   return (
     <motion.div
       style={{ x, rotate, opacity }}
@@ -51,25 +47,25 @@ export default function SwipeCard({ data, onSwipe, isFront }: SwipeCardProps) {
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
-      className="absolute inset-0 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-2xl cursor-grab z-20 touch-none overflow-hidden"
+      className="absolute inset-0 bg-white dark:bg-slate-900 rounded-[2.5rem] md:rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-2xl cursor-grab z-20 touch-none overflow-hidden flex flex-col"
     >
-      {/* LIKE / NOPE VIZUÁLIS JELEK */}
+      {/* LIKE / NOPE JELZÉSEK */}
       <motion.div 
         style={{ opacity: likeOpacity }} 
-        className="absolute top-10 left-10 z-30 border-4 border-emerald-500 rounded-xl px-4 py-2 -rotate-12 bg-emerald-500/10 backdrop-blur-md"
+        className="absolute top-8 left-8 z-30 border-4 border-emerald-500 rounded-xl px-3 py-1 -rotate-12 bg-emerald-500/10 backdrop-blur-md"
       >
-        <span className="text-emerald-500 font-black text-3xl uppercase italic tracking-tighter">ADOM 🔥</span>
+        <span className="text-emerald-500 font-black text-2xl md:text-3xl uppercase italic tracking-tighter">ADOM 🔥</span>
       </motion.div>
 
       <motion.div 
         style={{ opacity: nopeOpacity }} 
-        className="absolute top-10 right-10 z-30 border-4 border-red-500 rounded-xl px-4 py-2 rotate-12 bg-red-500/10 backdrop-blur-md"
+        className="absolute top-8 right-8 z-30 border-4 border-red-500 rounded-xl px-3 py-1 rotate-12 bg-red-500/10 backdrop-blur-md"
       >
-        <span className="text-red-500 font-black text-3xl uppercase italic tracking-tighter">ÁHH ✖</span>
+        <span className="text-red-500 font-black text-2xl md:text-3xl uppercase italic tracking-tighter">ÁHH ✖</span>
       </motion.div>
 
-      {/* AUTÓ KÉPE (4/5 magasság) */}
-      <div className="h-4/5 relative bg-slate-200 dark:bg-slate-800">
+      {/* AUTÓ KÉPE (Flex-grow kitölti a helyet) */}
+      <div className="flex-1 relative bg-slate-200 dark:bg-slate-800 w-full">
         <Image 
           src={data.imageUrl || '/placeholder-car.jpg'} 
           alt={data.carName} 
@@ -77,30 +73,29 @@ export default function SwipeCard({ data, onSwipe, isFront }: SwipeCardProps) {
           className="object-cover pointer-events-none" 
           priority
         />
-        {/* Árnyékolás a szöveg alá */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
       </div>
 
-      {/* ALSÓ INFORMÁCIÓS SÁV (1/5 magasság) */}
-      <div className="h-1/5 p-8 flex items-center justify-between bg-white dark:bg-slate-900">
-        <div className="space-y-1">
-          <h3 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white leading-none">
+      {/* ALSÓ INFORMÁCIÓS SÁV (Fix magasság helyett paddinggal igazítva) */}
+      <div className="px-5 py-4 md:p-8 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0 min-h-[90px] md:min-h-[120px]">
+        <div className="space-y-1 min-w-0 pr-4">
+          <h3 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white leading-none truncate">
             {data.carName}
           </h3>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20 shrink-0">
               <Zap size={10} className="fill-current" />
-              <span className="text-[10px] font-black uppercase tracking-widest">{data.voteCount} voks</span>
+              <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest">{data.voteCount} voks</span>
             </div>
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">
+            <span className="text-[9px] md:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest italic truncate">
               DynamicSense Verified
             </span>
           </div>
         </div>
 
-        {/* Ikon háttérrel */}
-        <div className="bg-slate-100 dark:bg-accent/50 p-4 rounded-2xl border border-slate-200 dark:border-white/5 text-slate-400 dark:text-muted-foreground group-hover:text-primary transition-colors">
-          <Heart size={24} className="group-hover:fill-current" />
+        {/* Ikon háttérrel - Mobilon kisebb padding */}
+        <div className="bg-slate-100 dark:bg-accent/50 p-3 md:p-4 rounded-2xl border border-slate-200 dark:border-white/5 text-slate-400 dark:text-muted-foreground shrink-0">
+          <Heart size={20} className="md:w-6 md:h-6" />
         </div>
       </div>
     </motion.div>
