@@ -525,7 +525,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 </MagneticButton>
 
                 <MagneticButton 
-                  href="/login" 
+                  href="/login?mode=signup" 
                   className="group relative bg-amber-500 text-slate-950 text-lg font-bold px-10 py-5 rounded-2xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_40px_rgba(245,158,11,0.5)] flex items-center justify-center gap-2 overflow-hidden"
                 >
                     <span className="relative">Ingyenes Regisztráció</span>
