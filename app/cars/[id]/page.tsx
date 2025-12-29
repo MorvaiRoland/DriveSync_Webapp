@@ -629,7 +629,7 @@ function DesktopActionGrid({ carId, isElectric, canServiceMap, canMileageLog }: 
              
              {/* SZERVIZ TÉRKÉP */}
              {canServiceMap ? (
-                 <Link href={`/cars/${carId}/service-map`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 border-slate-200 dark:border-slate-700`}>
+                 <Link href={`/service-map`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 border-slate-200 dark:border-slate-700`}>
                     <MapPin className="w-5 h-5" />Szerviz Térkép
                  </Link>
              ) : (
