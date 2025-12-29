@@ -422,7 +422,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             
             <Link href="/login" className="text-sm font-bold text-slate-800 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Belépés</Link>
             
-            <Link href="/login" className="group relative overflow-hidden bg-slate-900 dark:bg-white text-white dark:text-slate-950 px-6 py-2.5 rounded-full text-sm font-bold transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center gap-2">
+            <Link href="/login?mode=signup" className="group relative overflow-hidden bg-slate-900 dark:bg-white text-white dark:text-slate-950 px-6 py-2.5 rounded-full text-sm font-bold transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center gap-2">
                 <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 dark:via-slate-200/50 to-transparent transform -skew-x-12 transition-all duration-1000 group-hover:left-[100%]" />
                 <span className="relative z-10">Ingyenes Start</span> 
                 <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
