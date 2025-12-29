@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from 'supabase/server' // Vagy 'supabase/server', ellenőrizd az útvonalat!
+import { createClient } from '@/supabase/server' // Vagy 'supabase/server', ellenőrizd az útvonalat!
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
@@ -22,6 +22,16 @@ export async function publishListing(formData: FormData) {
     const isPublic = formData.get('is_public') === 'on'
     const hideServiceCosts = formData.get('hide_service_costs') === 'on'
     const hidePrices = formData.get('hide_prices') === 'on'
+
+    // --- JAVÍTÁS KEZDETE ---
+    // Kiolvassuk, hogy a kliens küldött-e 'is_for_sale' jelet
+    const isForSaleInput = formData.get('is_for_sale') === 'on'
+
+    // A végső logikai döntés:
+    // Ha publikus a piactéren (isPublic), akkor AUTOMATIKUSAN eladó is.
+    // Ha nem publikus, akkor az input dönt (pl. piszkozatban eladó-e).
+    const isForSale = isPublic || isForSaleInput
+    // --- JAVÍTÁS VÉGE ---
     
     // Extrák
     const featuresJson = formData.get('features') as string
@@ -33,8 +43,6 @@ export async function publishListing(formData: FormData) {
     if (!user) return redirect('/login')
 
     // --- 3. KÉPEK KEZELÉSE ---
-    // A kliens elküldte a végleges, szerkesztett listát (régiek + újak vegyesen)
-    // Ez a "Single Source of Truth", tehát ezt mentjük el egy-az-egyben.
     const finalImagesJson = formData.get('final_images_json') as string
     let finalImages: string[] = []
     
@@ -46,7 +54,7 @@ export async function publishListing(formData: FormData) {
         console.error('Hiba a képek feldolgozásakor', e)
     }
 
-    // Fő kép kiválasztása (mindig a lista legelső eleme legyen a fő kép)
+    // Fő kép kiválasztása
     const mainImageUrl = finalImages.length > 0 ? finalImages[0] : null
 
     // Update objektum összeállítása
@@ -54,6 +62,7 @@ export async function publishListing(formData: FormData) {
         price,
         description,
         is_listed_on_marketplace: isPublic,
+        is_for_sale: isForSale, // <--- EZ HIÁNYZOTT! Most már frissül az adatbázisban.
         contact_phone: contactPhone,
         location,
         features,
@@ -61,9 +70,6 @@ export async function publishListing(formData: FormData) {
         hide_prices: hidePrices,
         updated_at: new Date().toISOString(),
         
-        // ITT A LÉNYEG:
-        // Felülírjuk az 'images' tömböt azzal, amit a kliens küldött.
-        // Ha a kliensnél töröltek egy képet, az innen is hiányozni fog, tehát az adatbázisból is törlődik.
         images: finalImages,
         image_url: mainImageUrl 
     }
@@ -73,7 +79,7 @@ export async function publishListing(formData: FormData) {
         .from('cars')
         .update(updateData)
         .eq('id', carId)
-        .eq('user_id', user.id) // Biztonság: Csak a saját autót szerkesztheti
+        .eq('user_id', user.id)
 
     if (error) {
         console.error('Hiba a mentés során:', error)
@@ -82,12 +88,13 @@ export async function publishListing(formData: FormData) {
 
     // 5. Cache frissítése és átirányítás
     revalidatePath('/marketplace')
-    revalidatePath(`/marketplace/${carId}`) // Publikus nézet frissítése
-    revalidatePath(`/marketplace/sell/${carId}`) // Szerkesztő nézet frissítése
+    revalidatePath(`/marketplace/${carId}`)
+    revalidatePath(`/marketplace/sell/${carId}`)
     
     if (isPublic) {
         return redirect('/marketplace')
     } else {
-        return redirect('/marketplace/sell')
+        // Ha csak piszkozat, visszavisszük a szerkesztőbe vagy a főoldalra
+        return redirect('/cars/' + carId) 
     }
 }
