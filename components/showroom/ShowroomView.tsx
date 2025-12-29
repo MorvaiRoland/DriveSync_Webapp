@@ -39,6 +39,7 @@ export default function ShowroomView({ user, activeBattle, entries, myCars, myEn
               <div className="flex items-center gap-2 text-primary font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em]">
                 <Flame size={12} className="fill-current animate-pulse" /> Élő Showroom Battle
               </div>
+              {/* Reszponzív szövegméret: mobilon kisebb (3xl), tableten nagyobb */}
               <h1 className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tighter text-gradient-ocean uppercase italic leading-none break-words">
                 {activeBattle.title}
               </h1>
@@ -60,7 +61,10 @@ export default function ShowroomView({ user, activeBattle, entries, myCars, myEn
         {/* --- FŐ TARTALMI RÁCS --- */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
           
-          {/* JOBB OLDALI SÁV (Voksolási Aréna) - MOBILON EZ LEGYEN FELÜL (order-1) */}
+          {/* JOBB OLDALI SÁV (Voksolási Aréna - JÁTÉK) 
+              MOBILON EZ LEGYEN FELÜL (order-1)
+              ASZTALI GÉPEN JOBB OLDALT (order-2)
+          */}
           <div className="lg:col-span-7 order-1 lg:order-2 w-full">
             <div className="w-full relative flex flex-col items-center">
               
@@ -72,19 +76,19 @@ export default function ShowroomView({ user, activeBattle, entries, myCars, myEn
                 </div>
               </div>
               
-              {/* Swipe Game Konténer - Magasság és padding optimalizálása a gombokhoz */}
-              <div className="w-full max-w-[360px] md:max-w-[420px] relative z-10 mx-auto">
+              {/* SWIPE GAME KONTÉNER 
+                  - h-[540px]: Mobilon fix magasságot adunk, ami elég a kártyának ÉS a gomboknak.
+                  - sm:h-[600px]: Tablettől felfelé növeljük.
+                  - relative: Hogy a tartalom ne lógjon ki.
+              */}
+              <div className="w-full max-w-[360px] md:max-w-[420px] relative z-10 mx-auto h-[540px] sm:h-[600px] lg:h-[650px]">
                 {playableEntries.length > 0 ? (
-                  // Itt a h-[500px] mobilon kisebb, de elég helyet hagy. 
-                  // A pb-4 segít, hogy alul ne vágja le a gombokat.
-                  <div className="h-[520px] sm:h-[580px] lg:h-[620px] w-full relative">
-                    <SwipeGame entries={playableEntries} />
-                  </div>
+                  <SwipeGame entries={playableEntries} />
                 ) : (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="glass rounded-[3rem] md:rounded-[4rem] p-10 md:p-16 border-neon-glow text-center shadow-[0_0_50px_rgba(0,0,0,0.2)] flex flex-col items-center justify-center min-h-[400px]"
+                    className="glass rounded-[3rem] md:rounded-[4rem] p-10 md:p-16 border-neon-glow text-center shadow-[0_0_50px_rgba(0,0,0,0.2)] flex flex-col items-center justify-center h-full max-h-[500px]"
                   >
                     <div className="h-20 w-20 md:h-24 md:w-24 bg-primary/10 rounded-[2rem] flex items-center justify-center mb-6 md:mb-8 text-primary shadow-inner">
                       <Trophy size={40} className="drop-shadow-[0_0_10px_rgba(6,182,212,0.5)] md:w-12 md:h-12" />
@@ -98,13 +102,16 @@ export default function ShowroomView({ user, activeBattle, entries, myCars, myEn
                 )}
               </div>
 
-              {/* Dekoratív fény a háttérben az aréna mögött */}
+              {/* Dekoratív fény a háttérben */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[500px] bg-primary/5 blur-[80px] md:blur-[120px] rounded-full -z-10 pointer-events-none" />
             </div>
           </div>
 
-          {/* BAL OLDALI SÁV (Profil & Szabályok) - MOBILON EZ LEGYEN ALUL (order-2) */}
-          <div className="lg:col-span-5 space-y-6 md:space-y-8 order-2 lg:order-1">
+          {/* BAL OLDALI SÁV (Profil & Szabályok) 
+              MOBILON EZ LEGYEN ALUL (order-2)
+              ASZTALI GÉPEN BAL OLDALT (order-1)
+          */}
+          <div className="lg:col-span-5 space-y-6 md:space-y-8 order-2 lg:order-1 pt-4 lg:pt-0">
             <AnimatePresence mode="wait">
               {myEntryData ? (
                 <motion.div
