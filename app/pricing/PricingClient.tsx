@@ -80,7 +80,7 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
       <nav className="relative z-50 w-full max-w-7xl mx-auto px-6 py-4 md:py-8 flex justify-between items-center">
         <Link href="/" className="group flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors text-sm font-bold">
              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> 
-             <span>Vissza a Garázsba</span>
+             <span>Vissza a főoldalra</span>
         </Link>
       </nav>
 

@@ -21,7 +21,7 @@ export default async function ShowroomPage() {
           <Trophy size={48} className="mx-auto mb-6 text-muted-foreground opacity-20" />
           <h2 className="text-3xl font-black text-foreground mb-4 uppercase italic">Nincs aktív futam</h2>
           <Link href="/" className="bg-ocean-electric px-10 py-4 rounded-2xl text-xs font-black uppercase tracking-widest inline-block">
-            Vissza a Dashboardra
+            Vissza a főoldalra
           </Link>
         </div>
       </div>

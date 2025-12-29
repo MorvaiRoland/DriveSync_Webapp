@@ -43,7 +43,7 @@ export default async function CostAnalyticsPage() {
             className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-secondary/50 dark:bg-white/5 border border-border hover:bg-secondary dark:hover:bg-white/10 transition-all text-sm font-bold backdrop-blur-md shadow-sm dark:shadow-none"
           >
             <span className="group-hover:-translate-x-1 transition-transform text-primary">←</span> 
-            <span className="text-muted-foreground group-hover:text-foreground transition-colors">Dashboard</span>
+            <span className="text-muted-foreground group-hover:text-foreground transition-colors">Vissza a főoldalra</span>
           </a>
         </div>
 

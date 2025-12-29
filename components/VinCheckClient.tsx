@@ -81,7 +81,7 @@ export default function VinCheckClient() {
         <div className="pt-4 md:pt-0 md:absolute md:top-12 md:left-6 z-50">
             <Link href="/" className="group inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all backdrop-blur-md shadow-sm dark:shadow-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                <span className="text-xs font-bold uppercase tracking-wider">Vissza</span>
+                <span className="text-xs font-bold uppercase tracking-wider">Vissza a főoldalra</span>
             </Link>
         </div>
 
