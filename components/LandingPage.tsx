@@ -8,7 +8,7 @@ import {
   BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
   MessageCircle, HelpCircle, Server, Smartphone,
   ChevronDown, Layers, AlertTriangle, Cpu, Gift, Search,
-  Sun, Moon 
+  Sun, Moon, Scale, Gavel, FileWarning, Handshake
 } from 'lucide-react';
 import PromoModal from '@/components/PromoModal'; 
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
@@ -20,7 +20,6 @@ const ThemeToggle = () => {
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
-    // Biztonságos ellenőrzés a hidratálás után
     const storedTheme = localStorage.getItem('theme');
     if (storedTheme === 'light') {
       setIsDark(false);
@@ -221,6 +220,71 @@ const ComparisonSection = () => {
     )
 }
 
+// FAIR PLAY / INTEGRITY SECTION (ÚJ)
+const FairPlaySection = () => {
+  return (
+    <section className="max-w-6xl mx-auto mb-32 px-4">
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 text-white p-8 md:p-12 border border-slate-800 shadow-2xl">
+        {/* Háttér effekt */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[80px] pointer-events-none translate-y-1/2 -translate-x-1/4"></div>
+
+        <div className="relative z-10 text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-amber-500 font-bold text-xs uppercase tracking-widest mb-6">
+            <Scale size={14} /> Community Standards
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold mb-6">A bizalom a valutánk.</h2>
+          <p className="text-slate-400 max-w-2xl mx-auto text-lg leading-relaxed">
+            A DynamicSense célja, hogy megtisztítsa a használtautó-piacot. 
+            A digitális szervizkönyved csak akkor növeli az autód értékét, ha az adatok fedik a valóságot.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Card 1: Valódiság */}
+          <div className="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 hover:border-indigo-500/50 transition-colors group">
+            <div className="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Handshake size={24} />
+            </div>
+            <h3 className="text-xl font-bold mb-3 text-white">Csak Valós Adatok</h3>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Kérjük, hogy csak elvégzett szervizeket rögzíts. A rendszer AI algoritmusa figyeli a futásteljesítmény inkonzisztenciáit. A manipulált adatok a profil törlését vonják maguk után.
+            </p>
+          </div>
+
+          {/* Card 2: Jogi Háttér */}
+          <div className="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 hover:border-red-500/50 transition-colors group">
+            <div className="w-12 h-12 bg-red-500/20 text-red-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Gavel size={24} />
+            </div>
+            <h3 className="text-xl font-bold mb-3 text-white">Jogi Felelősség</h3>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              A kilométeróra visszatekerése és a szervizkönyv hamisítása bűncselekmény (Btk. 348. §). A DynamicSense elhatárolódik minden illegális tevékenységtől, és szükség esetén együttműködik a hatóságokkal.
+            </p>
+          </div>
+
+          {/* Card 3: Értékmegőrzés */}
+          <div className="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors group">
+            <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <FileWarning size={24} />
+            </div>
+            <h3 className="text-xl font-bold mb-3 text-white">Hiteles Eladás</h3>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Eladáskor a vevőd "Read-Only" (csak olvasható) hozzáférést kaphat a történethez. Ha az adatok pontosak, az bizalmat épít és forintokban mérhető értéktöbbletet jelent számodra.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-10 text-center border-t border-slate-800 pt-8">
+           <p className="text-sm text-slate-500 font-mono">
+             "Vezess tisztán, adj el büszkén."
+           </p>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 // TYPEWRITER TEXT
 const TypewriterText = ({ text, speed = 30 }: { text: string, speed?: number }) => {
   const [displayedText, setDisplayedText] = useState('');
@@ -372,7 +436,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
   ];
 
   return (
-    // JAVÍTÁS: overflow-x-hidden és min-h-screen eltávolítva a fő wrapperből a scroll bug elkerülése végett
     <div className="relative w-full flex flex-col font-sans text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 transition-colors duration-500">
       
       {promo && <PromoModal promo={promo} />}
@@ -660,6 +723,9 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 ))}
             </div>
         </section>
+
+        {/* --- FAIR PLAY / INTEGRITY SECTION --- */}
+        <FairPlaySection />
 
         {/* WHY FREE SECTION */}
         <section className="max-w-4xl mx-auto mb-32 w-full px-4">
