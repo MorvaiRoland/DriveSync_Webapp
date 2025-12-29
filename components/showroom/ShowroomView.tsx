@@ -33,7 +33,7 @@ export default function ShowroomView({ user, activeBattle, entries, myCars, myEn
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="space-y-4">
             <Link href="/" className="group inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-all text-[10px] font-black uppercase tracking-[0.2em]">
-              <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" /> Dashboard
+              <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" /> Vissza a főoldalra
             </Link>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-primary font-black text-[10px] uppercase tracking-[0.3em]">
