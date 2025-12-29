@@ -1,28 +1,50 @@
-import { createClient } from 'supabase/server'
-import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { type NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   
-  // LOGOLÁS: Nézzük meg, mi érkezik a szerverre
+  // LOGOLÁS
   const nextParam = searchParams.get('next')
   console.log(`Callback futás. Code: ${code ? 'VAN' : 'NINCS'}, Next paraméter: ${nextParam}`)
 
-  // Ha van next paraméter, azt használjuk, ha nincs, a főoldalt
   const next = nextParam ?? '/'
 
   if (code) {
-    const supabase = await createClient()
+    // 1. LÉPÉS: Sütik elérése
+    const cookieStore = await cookies()
+
+    // 2. LÉPÉS: Kliens létrehozása manuálisan, hogy lássa a sütiket
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch {
+              // A Route Handlerben ez néha dobhat hibát, de a működést nem befolyásolja kritikusan
+            }
+          },
+        },
+      }
+    )
+
+    // 3. LÉPÉS: Kódcsere (Most már látja a verifier sütit!)
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
-      // SIKERES BELÉPÉS
-      
       const forwardedHost = request.headers.get('x-forwarded-host') 
       const isLocalEnv = process.env.NODE_ENV === 'development'
       
-      // Összerakjuk a végleges URL-t
       let finalUrl = ''
       if (isLocalEnv) {
         finalUrl = `${origin}${next}`
@@ -39,6 +61,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Ha hiba volt
+  // Hiba esetén
   return NextResponse.redirect(`${origin}/login?message=Lejárt vagy érvénytelen link`)
 }
