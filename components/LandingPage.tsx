@@ -677,7 +677,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                   Nincs limitált autó szám, nincs letiltott AI funkció. Használd, teszteld, és élvezd!
                </p>
                
-               <Link href="/login" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-emerald-500/30">
+               <Link href="/login?mode=signup" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-emerald-500/30">
                    Regisztrálok az Early Access-re
                </Link>
            </div>
