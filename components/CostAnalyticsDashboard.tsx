@@ -101,7 +101,6 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
 
       // Havi bontás
       const dateKey = new Date(e.event_date).toLocaleDateString('hu-HU', { year: '2-digit', month: 'short' });
-      // ISO kulcs a rendezéshez
       const sortKey = new Date(e.event_date).toISOString().slice(0, 7); 
       
       if (!monthlyData[sortKey]) monthlyData[sortKey] = { name: dateKey, iso: sortKey, total: 0, fuel: 0, service: 0, odo: 0 };
@@ -115,20 +114,19 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
     const avgConsumption = (kmDriven > 0 && fuelLiters > 0) ? (fuelLiters / kmDriven) * 100 : 0;
     const kmSinceService = maxOdo - lastServiceOdo;
     
-    // Éves becslés (Projection)
+    // Éves becslés
     const daysInPeriod = Math.max(1, (now.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
     const projectedAnnualCost = (totalCost / daysInPeriod) * 365;
     const projectedAnnualKm = (kmDriven / daysInPeriod) * 365;
 
-    // Grafikon adat rendezése és kiegészítése
+    // Grafikon adat
     const chartData = Object.keys(monthlyData).sort().map((key, index, keys) => {
         const d = monthlyData[key];
-        // Hatékonyság számítása (csak ha van előző havi km adat)
         const prevKey = keys[index - 1];
         const prevOdo = prevKey ? monthlyData[prevKey].odo : minOdo;
         const monthKm = d.odo > prevOdo ? d.odo - prevOdo : 0;
-        const efficiency = monthKm > 50 ? Math.round(d.total / monthKm) : 0; // 50km alatt zajszűrés
-        return { ...d, efficiency: efficiency > 600 ? 600 : efficiency }; // Sapka a kiugró értékekre
+        const efficiency = monthKm > 50 ? Math.round(d.total / monthKm) : 0;
+        return { ...d, efficiency: efficiency > 600 ? 600 : efficiency };
     });
 
     const pieData = Object.keys(catTotals)
@@ -142,7 +140,7 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
       chartData, pieData,
       topCategory: pieData.length > 0 ? pieData[0] : null,
       recentEvents: filteredEvents.slice().reverse().slice(0, 10),
-      filteredEvents // Exportáláshoz
+      filteredEvents
     };
   }, [events, selectedCar, timeRange]);
 
@@ -176,36 +174,37 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
   const serviceHealth = Math.max(0, 100 - (analytics.kmSinceService / 15000) * 100);
 
   return (
-    <div className="bg-slate-50 text-slate-900 font-sans pb-32 min-h-screen">
+    // Fő konténer: Light mód: slate-50, Dark mód: slate-950 (hogy illeszkedjen a page.tsx-hez)
+    <div className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans pb-32 min-h-screen transition-colors duration-300">
       
-      {/* --- RAGADÓS (Sticky) HEADER NOTCH TÁMOGATÁSSAL --- */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 transition-all pt-[env(safe-area-inset-top)]">
+      {/* --- RAGADÓS HEADER --- */}
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60 transition-all pt-[env(safe-area-inset-top)]">
         <div className="px-4 sm:px-8 py-4">
           <div className="flex flex-col xl:flex-row justify-between xl:items-center gap-4">
             
-            {/* Cím és Betöltés jelző */}
+            {/* Cím */}
             <div className="flex items-center gap-3">
               <div className="bg-blue-600 p-2 rounded-xl text-white shadow-lg shadow-blue-600/20">
                 <Activity size={20} />
               </div>
               <div>
-                <h2 className="text-xl font-black tracking-tight text-slate-900 leading-none">
+                <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
                   Analytics Pro
                 </h2>
-                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-1">
+                <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mt-1">
                   Valós idejű flotta adatok
                 </p>
               </div>
               {loading && <div className="ml-2 w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
             </div>
 
-            {/* Szűrők - Mobilon görgethető */}
+            {/* Szűrők */}
             <div className="flex flex-col sm:flex-row gap-3 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
               <div className="relative group min-w-[140px]">
                 <select 
                   value={selectedCar} 
                   onChange={(e) => setSelectedCar(e.target.value)}
-                  className="appearance-none w-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wide py-2.5 pl-4 pr-10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+                  className="appearance-none w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs uppercase tracking-wide py-2.5 pl-4 pr-10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   <option value="all">Minden Jármű</option>
                   {cars.map(c => <option key={c.id} value={c.id}>{c.plate}</option>)}
@@ -213,13 +212,15 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
                 <ArrowRight className="absolute right-3 top-3 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
               </div>
 
-              <div className="flex bg-slate-100 p-1 rounded-xl whitespace-nowrap">
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl whitespace-nowrap">
                 {[{ id: '30_days', label: '30 Nap' }, { id: 'year', label: '1 Év' }, { id: 'all', label: 'Összes' }].map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setTimeRange(tab.id as TimeRange)}
                     className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                      timeRange === tab.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                      timeRange === tab.id 
+                        ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                     }`}
                   >
                     {tab.label}
@@ -230,7 +231,7 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
               <button 
                 onClick={handleExport}
                 disabled={isExporting}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors disabled:opacity-70 whitespace-nowrap shadow-lg shadow-slate-900/20"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 dark:bg-blue-600 text-white text-xs font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors disabled:opacity-70 whitespace-nowrap shadow-lg shadow-slate-900/20"
               >
                 {isExporting ? <span className="animate-pulse">Export...</span> : <><Download size={14} /> CSV</>}
               </button>
@@ -241,73 +242,72 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
 
       <main className="px-4 sm:px-6 lg:px-8 py-8 space-y-8 max-w-[1600px] mx-auto">
         
-        {/* --- KPI SOR (Bento Grid) --- */}
+        {/* --- KPI SOR --- */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           
           {/* 1. Pénzügy + Trend */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group transition-colors">
             <div className="flex justify-between items-start mb-4">
-              <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">Kiadások</span>
-              <Wallet className="text-slate-200 group-hover:text-blue-500 transition-colors transform group-hover:scale-110 duration-300" />
+              <span className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">Kiadások</span>
+              <Wallet className="text-slate-200 dark:text-slate-700 group-hover:text-blue-500 transition-colors transform group-hover:scale-110 duration-300" />
             </div>
-            <h3 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter">
-              {formatNumber(analytics.totalCost)} <span className="text-lg font-medium text-slate-400">Ft</span>
+            <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
+              {formatNumber(analytics.totalCost)} <span className="text-lg font-medium text-slate-400 dark:text-slate-500">Ft</span>
             </h3>
-            <div className="mt-4 flex items-center gap-2 p-2 bg-slate-50 rounded-xl w-fit">
-              <TrendingUp size={14} className="text-slate-400" />
-              <p className="text-[10px] font-bold text-slate-500">
-                Várható éves: <span className="text-slate-900">{formatNumber(Math.round(analytics.projectedAnnualCost))} Ft</span>
+            <div className="mt-4 flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-xl w-fit">
+              <TrendingUp size={14} className="text-slate-400 dark:text-slate-400" />
+              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-300">
+                Várható éves: <span className="text-slate-900 dark:text-white">{formatNumber(Math.round(analytics.projectedAnnualCost))} Ft</span>
               </p>
             </div>
           </motion.div>
 
-          {/* 2. Hatékonyság (Ft/km) */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900 p-6 rounded-[2rem] shadow-xl shadow-slate-900/10 relative overflow-hidden group text-white">
+          {/* 2. Hatékonyság (Dark kártya - marad sötét, de light módban igazodik) */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-slate-900 dark:bg-blue-600 p-6 rounded-[2rem] shadow-xl shadow-slate-900/10 relative overflow-hidden group text-white transition-colors">
             <div className="flex justify-between items-start mb-4">
               <span className="bg-white/10 text-white/90 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider backdrop-blur-sm">Hatékonyság</span>
               <Gauge className="text-white/20" />
             </div>
             <h3 className="text-3xl sm:text-4xl font-black tracking-tighter">
-              {analytics.costPerKm.toFixed(0)} <span className="text-lg font-medium text-slate-500">Ft/km</span>
+              {analytics.costPerKm.toFixed(0)} <span className="text-lg font-medium text-slate-500 dark:text-blue-200">Ft/km</span>
             </h3>
             <div className="mt-4 flex items-center gap-3">
               <div className={`h-2 w-2 rounded-full animate-pulse ${analytics.costPerKm < 60 ? 'bg-emerald-400' : 'bg-rose-500'}`} />
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-xs text-slate-400 dark:text-blue-100 font-medium">
                 {analytics.costPerKm < 60 ? 'Optimális működés' : 'Magas költségszint'}
               </p>
             </div>
-            {/* Dekoráció */}
             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
           </motion.div>
 
           {/* 3. Fogyasztás */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group transition-colors">
             <div className="flex justify-between items-start mb-4">
-              <span className="bg-amber-50 text-amber-600 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">Üzemanyag</span>
-              <Fuel className="text-slate-200 group-hover:text-amber-500 transition-colors" />
+              <span className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">Üzemanyag</span>
+              <Fuel className="text-slate-200 dark:text-slate-700 group-hover:text-amber-500 transition-colors" />
             </div>
-            <h3 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter">
-              {analytics.avgConsumption > 0 ? analytics.avgConsumption.toFixed(1) : '-'} <span className="text-lg font-medium text-slate-400">L/100</span>
+            <h3 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
+              {analytics.avgConsumption > 0 ? analytics.avgConsumption.toFixed(1) : '-'} <span className="text-lg font-medium text-slate-400 dark:text-slate-500">L/100</span>
             </h3>
-            <p className="text-xs text-slate-500 mt-3 font-medium flex items-center gap-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 font-medium flex items-center gap-1">
               <Car size={12} /> {analytics.kmDriven.toLocaleString()} km futás alapján
             </p>
           </motion.div>
 
            {/* 4. Szerviz Egészség */}
-           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-between">
+           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between transition-colors">
               <div className="flex justify-between items-start">
-                 <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${serviceHealth > 50 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                 <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${serviceHealth > 50 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                     Szerviz
                  </span>
-                 <Wrench className="text-slate-200" />
+                 <Wrench className="text-slate-200 dark:text-slate-700" />
               </div>
               <div>
                 <div className="flex justify-between items-end mb-2">
-                  <span className="text-2xl font-black text-slate-900">{analytics.kmSinceService.toLocaleString()}</span>
-                  <span className="text-[10px] font-bold uppercase text-slate-400 mb-1">km telt el</span>
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">{analytics.kmSinceService.toLocaleString()}</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-1">km telt el</span>
                 </div>
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
                   <motion.div 
                     initial={{ width: 0 }} animate={{ width: `${Math.min(100, (analytics.kmSinceService / 15000) * 100)}%` }}
                     className={`h-full rounded-full ${serviceHealth > 20 ? 'bg-emerald-500' : 'bg-rose-500'}`}
@@ -325,25 +325,23 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
         {/* --- GRAFIKONOK GRID --- */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
           
-          {/* FŐ CHART - Reszponzív magasság */}
+          {/* FŐ CHART */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
-            className="xl:col-span-2 bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6 sm:p-8 relative"
+            className="xl:col-span-2 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-8 relative transition-colors"
           >
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8">
               <div>
-                <h3 className="text-lg font-black text-slate-900">Költség Analízis</h3>
-                <p className="text-xs text-slate-500 font-bold mt-1">Havi költés (Oszlop) vs. Ft/km hatékonyság (Vonal)</p>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Költség Analízis</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-1">Havi költés (Oszlop) vs. Ft/km hatékonyság (Vonal)</p>
               </div>
               
-              {/* Jelmagyarázat */}
-              <div className="flex gap-4 text-[10px] font-bold uppercase tracking-wider">
+              <div className="flex gap-4 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                  <div className="flex items-center gap-2"><div className="w-3 h-3 bg-blue-600 rounded-sm" /> Költés</div>
                  <div className="flex items-center gap-2"><div className="w-3 h-1 bg-red-500 rounded-full" /> Hatékonyság</div>
               </div>
             </div>
 
-            {/* A grafikon magassága dinamikus a képernyőtől függően */}
             <div className="h-[300px] sm:h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={analytics.chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
@@ -353,18 +351,19 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
                       <stop offset="95%" stopColor="#2563eb" stopOpacity={0.2}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  {/* Grid vonalak halványítása dark módban */}
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.15} stroke="currentColor" className="text-slate-400 dark:text-slate-600" />
                   <XAxis 
                     dataKey="name" 
                     axisLine={false} 
                     tickLine={false} 
                     tick={{fill: '#94a3b8', fontSize: 10, fontWeight: 700}} 
                     dy={10} 
-                    minTickGap={30} // Mobilon ne torlódjon
+                    minTickGap={30} 
                   />
                   <YAxis yAxisId="left" hide />
                   <YAxis yAxisId="right" orientation="right" hide />
-                  <Tooltip content={<CustomTooltip />} cursor={{fill: '#f8fafc'}} />
+                  <Tooltip content={<CustomTooltip />} cursor={{fill: 'currentColor', opacity: 0.05}} />
                   <Bar yAxisId="left" dataKey="total" fill="url(#colorBar)" radius={[6, 6, 0, 0]} barSize={24} animationDuration={1500} />
                   <Line yAxisId="right" type="monotone" dataKey="efficiency" stroke="#ef4444" strokeWidth={3} dot={false} activeDot={{r: 6}} animationDuration={2000} />
                 </ComposedChart>
@@ -376,8 +375,8 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
           <div className="space-y-6">
             
             {/* Kördiagram */}
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6">
-              <h3 className="text-lg font-black text-slate-900 mb-6">Kategóriák</h3>
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-6 transition-colors">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white mb-6">Kategóriák</h3>
               <div className="flex items-center justify-center h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -398,15 +397,14 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
                 </ResponsiveContainer>
               </div>
               
-              {/* Custom Legend */}
               <div className="space-y-3 mt-2">
                  {analytics.pieData.slice(0, 4).map((item: any) => (
                     <div key={item.name} className="flex items-center justify-between group cursor-default">
                        <div className="flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 rounded-full ring-2 ring-white shadow-sm" style={{backgroundColor: item.color}} />
-                          <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 transition-colors">{item.name}</span>
+                          <div className="w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-slate-700 shadow-sm" style={{backgroundColor: item.color}} />
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{item.name}</span>
                        </div>
-                       <span className="text-xs font-black text-slate-900">{((item.value / analytics.totalCost) * 100).toFixed(0)}%</span>
+                       <span className="text-xs font-black text-slate-900 dark:text-white">{((item.value / analytics.totalCost) * 100).toFixed(0)}%</span>
                     </div>
                  ))}
               </div>
@@ -433,21 +431,21 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
           </div>
         </div>
 
-        {/* --- TRANZAKCIÓS NAPLÓ (Táblázat) --- */}
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        {/* --- TRANZAKCIÓS NAPLÓ --- */}
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+          <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
              <div>
-                <h3 className="text-lg font-black text-slate-900">Legutóbbi Tranzakciók</h3>
-                <p className="text-xs text-slate-400 font-bold mt-1">Az utolsó 10 rögzített tétel</p>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Legutóbbi Tranzakciók</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-bold mt-1">Az utolsó 10 rögzített tétel</p>
              </div>
-             <button onClick={handleExport} className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+             <button onClick={handleExport} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-4 py-2 rounded-xl transition-all flex items-center gap-2">
                Minden megtekintése <ArrowRight size={14} />
              </button>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-slate-50/50 text-slate-400 uppercase tracking-wider text-[10px] font-black">
+              <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px] font-black">
                 <tr>
                   <th className="px-6 sm:px-8 py-4">Dátum</th>
                   <th className="px-6 py-4">Típus</th>
@@ -456,25 +454,25 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
                   <th className="px-6 sm:px-8 py-4 text-right">Összeg</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {analytics.recentEvents.map((event: any, idx: number) => (
-                  <tr key={idx} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="px-6 sm:px-8 py-4 font-bold text-slate-700">
+                  <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors group">
+                    <td className="px-6 sm:px-8 py-4 font-bold text-slate-700 dark:text-slate-300">
                       {new Date(event.event_date).toLocaleDateString('hu-HU', {month: 'short', day: 'numeric', year: 'numeric'})}
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm" style={{
-                         backgroundColor: COLORS[(event.type || 'other').toLowerCase() as CategoryKey] + '15', // 15 = low opacity hex
+                         backgroundColor: COLORS[(event.type || 'other').toLowerCase() as CategoryKey] + '15',
                          color: COLORS[(event.type || 'other').toLowerCase() as CategoryKey]
                       }}>
                          {CATEGORY_LABELS[(event.type || 'other').toLowerCase() as CategoryKey] || event.type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-medium max-w-[200px] truncate">{event.title || '-'}</td>
-                    <td className="px-6 py-4 text-slate-400 font-mono text-xs text-center">
-                      {event.mileage ? <span className="bg-slate-100 px-2 py-1 rounded text-slate-600 font-bold">{Number(event.mileage).toLocaleString()}</span> : '-'}
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium max-w-[200px] truncate">{event.title || '-'}</td>
+                    <td className="px-6 py-4 text-slate-400 dark:text-slate-500 font-mono text-xs text-center">
+                      {event.mileage ? <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-300 font-bold">{Number(event.mileage).toLocaleString()}</span> : '-'}
                     </td>
-                    <td className="px-6 sm:px-8 py-4 text-right font-black text-slate-900 group-hover:text-blue-600 transition-colors">
+                    <td className="px-6 sm:px-8 py-4 text-right font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       {formatHUF(Number(event.cost))}
                     </td>
                   </tr>
@@ -485,11 +483,11 @@ export default function CostAnalyticsDashboard({ events, cars }: { events: any[]
             {/* Empty State */}
             {analytics.recentEvents.length === 0 && (
               <div className="p-12 text-center flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                   <Car size={32} className="text-slate-300" />
+                <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                   <Car size={32} className="text-slate-300 dark:text-slate-600" />
                 </div>
-                <h4 className="text-slate-900 font-bold">Nincs megjeleníthető adat</h4>
-                <p className="text-slate-400 text-xs mt-1">Válassz másik időszakot vagy autót.</p>
+                <h4 className="text-slate-900 dark:text-white font-bold">Nincs megjeleníthető adat</h4>
+                <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Válassz másik időszakot vagy autót.</p>
               </div>
             )}
           </div>
@@ -507,7 +505,7 @@ function CustomTooltip({ active, payload, label }: any) {
     const eff = payload.find((p: any) => p.dataKey === 'efficiency');
     
     return (
-      <div className="bg-slate-900/90 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-white/10 text-xs z-50 min-w-[180px]">
+      <div className="bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-white/10 dark:border-slate-700/50 text-xs z-50 min-w-[180px]">
         <p className="font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-white/10 pb-2">{label}</p>
         
         <div className="space-y-2">
