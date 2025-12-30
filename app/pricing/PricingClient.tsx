@@ -63,9 +63,9 @@ export default function PricingClient({ initialPlan, userEmail, currentPlan }: P
                         <Rocket className="w-4 h-4 text-indigo-400" />
                         Indulási Ajánlat
                     </div>
-                    <h2 className="text-xl md:text-2xl font-black text-white mb-2">
-                        Az alkalmazás holnap indul!
-                    </h2>
+                   <h2 className="text-xl md:text-2xl font-black text-white mb-2">
+    Új év, új korszak!
+</h2>
                     <p className="text-slate-300 text-sm md:text-base">
                         Az első hónapban minden funkció <span className="text-white font-bold underline decoration-indigo-500 decoration-2">teljesen ingyenes</span> mindenki számára. Nincs apróbetűs rész.
                     </p>
