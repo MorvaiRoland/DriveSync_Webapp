@@ -3,12 +3,11 @@
 import { useState, useMemo, useEffect } from 'react'
 import { 
   ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend, Area
+  PieChart, Pie, Cell, Area
 } from 'recharts'
 import { 
-  TrendingUp, TrendingDown, Wallet, Zap, Calendar, 
-  Download, Car, AlertTriangle, CheckCircle, Wrench, 
-  Fuel, FileText, ArrowRight, Activity, Gauge
+  Wallet, Zap, Car, Wrench, 
+  Fuel, ArrowRight, Activity, Gauge
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -37,11 +36,13 @@ const formatHUF = (val: number) =>
 const formatNumber = (val: number) => 
   new Intl.NumberFormat('hu-HU').format(val);
 
-export default function UltimateDashboard({ events, cars }: { events: any[], cars: any[] }) {
+// FONTOS: Átneveztem UltimateDashboard-ról CostAnalyticsDashboard-ra, hogy egyezzen a page.tsx importjával!
+export default function CostAnalyticsDashboard({ events, cars }: { events: any[], cars: any[] }) {
   const [timeRange, setTimeRange] = useState<TimeRange>('year');
   const [selectedCar, setSelectedCar] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
+  // Szimulált betöltés a sima animációkhoz
   useEffect(() => { setTimeout(() => setLoading(false), 600); }, []);
 
   // --- ANALITIKAI MOTOR (The Brain) ---
@@ -81,7 +82,7 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
       const cost = Number(e.cost) || 0;
       const type = (e.type || 'other').toLowerCase();
       
-      // Kategória felismerés (ha nincs explicit type, title alapján)
+      // Kategória felismerés
       let cat: CategoryKey = 'other';
       const title = (e.title || '').toLowerCase();
       if (type === 'fuel' || title.includes('tank')) cat = 'fuel';
@@ -110,7 +111,7 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
         }
       }
 
-      // Liter becslés (ha nincs adat, cost / 600 Ft)
+      // Liter becslés
       if (cat === 'fuel') {
         fuelLiters += e.volume ? Number(e.volume) : (cost / 620); 
       }
@@ -124,7 +125,6 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
       } else {
         monthlyData[dateKey].other += cost;
       }
-      // Odo frissítés a hónapra (mindig a legnagyobbat vesszük az adott hónapban)
       if (odo > monthlyData[dateKey].odo) monthlyData[dateKey].odo = odo;
     });
 
@@ -136,11 +136,10 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
     
     // Grafikon adat kiegészítése kumulatív és hatékonysági adatokkal
     const chartData = Object.values(monthlyData).map((d: any, index, arr) => {
-        // Havi futás becslése a pontosabb Ft/km érdekében
         const prevOdo = index > 0 ? arr[index-1].odo : minOdo;
         const monthKm = d.odo - prevOdo;
         const efficiency = monthKm > 0 ? Math.round(d.total / monthKm) : 0;
-        return { ...d, efficiency: efficiency > 500 ? 500 : efficiency }; // Capelni a kiugró értékeket a grafikon miatt
+        return { ...d, efficiency: efficiency > 500 ? 500 : efficiency };
     });
 
     const pieData = Object.keys(catTotals)
@@ -158,24 +157,24 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
       chartData,
       pieData,
       topCategory: pieData.length > 0 ? pieData[0] : null,
-      recentEvents: filteredEvents.slice().reverse().slice(0, 5) // Utolsó 5 tétel
+      recentEvents: filteredEvents.slice().reverse().slice(0, 5)
     };
 
   }, [events, selectedCar, timeRange]);
 
-  const serviceHealth = Math.max(0, 100 - (analytics.kmSinceService / 15000) * 100); // 15.000 km periódus feltételezése
+  const serviceHealth = Math.max(0, 100 - (analytics.kmSinceService / 15000) * 100);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20">
+    <div className="bg-slate-50 text-slate-900 font-sans pb-20 rounded-3xl">
       
-      {/* --- FŐ HEADER --- */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-4 sm:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+      {/* --- FŐ HEADER (Szűrő sáv) --- */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-4 sm:px-8 rounded-t-3xl shadow-sm">
+        <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 text-slate-900">
-              <Car className="text-blue-600" />
-              DynamicSense <span className="text-slate-400 font-light">Ultimate</span>
-            </h1>
+            <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-slate-900">
+              <Car className="text-blue-600" size={24} />
+              Részletes Analitika
+            </h2>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
@@ -184,7 +183,7 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
               <select 
                 value={selectedCar} 
                 onChange={(e) => setSelectedCar(e.target.value)}
-                className="appearance-none bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wide py-2.5 pl-4 pr-10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-auto"
+                className="appearance-none bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wide py-2.5 pl-4 pr-10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-auto cursor-pointer hover:bg-slate-200 transition-colors"
               >
                 <option value="all">Teljes Flotta</option>
                 {cars.map(c => <option key={c.id} value={c.id}>{c.plate}</option>)}
@@ -192,7 +191,7 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
               <ArrowRight className="absolute right-3 top-3 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
             </div>
 
-            {/* Időszak Választó (Tabok) */}
+            {/* Időszak Választó */}
             <div className="flex bg-slate-100 p-1 rounded-xl overflow-x-auto">
               {[
                 { id: '30_days', label: '30 Nap' },
@@ -217,13 +216,12 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+      <main className="px-4 sm:px-8 py-8 space-y-8">
         
-        {/* --- KPI SOR (BENTO GRID STYLE) --- */}
+        {/* --- KPI SOR --- */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           
-          {/* 1. Kártya: Összköltség */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-4">
                 <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">Pénzügy</span>
@@ -234,10 +232,8 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
               </h3>
               <p className="text-xs text-slate-500 mt-2 font-medium">A kiválasztott időszakban</p>
             </div>
-            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-blue-500/5 rounded-full blur-xl group-hover:bg-blue-500/10 transition-all" />
           </div>
 
-          {/* 2. Kártya: Valós Hatékonyság (Ft/km) */}
           <div className="bg-slate-900 p-6 rounded-3xl shadow-lg relative overflow-hidden group text-white">
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-4">
@@ -256,8 +252,7 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
             </div>
           </div>
 
-          {/* 3. Kártya: Fogyasztás */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
              <div className="relative z-10">
               <div className="flex justify-between items-start mb-4">
                 <span className="bg-amber-50 text-amber-600 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">Fogyasztás</span>
@@ -272,8 +267,7 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
             </div>
           </div>
 
-           {/* 4. Kártya: Szerviz Állapot */}
-           <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-between">
+           <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-all">
               <div className="flex justify-between items-start">
                  <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${serviceHealth > 50 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                     Szerviz Státusz
@@ -296,10 +290,9 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
           </div>
         </section>
 
-        {/* --- ANALITIKA GRID --- */}
+        {/* --- GRAFIKON ÉS ADAT GRID --- */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* FŐ GRAFIKON (Bal oldal - 2/3) */}
           <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
             <div className="flex justify-between items-center mb-8">
               <div>
@@ -330,7 +323,6 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
             </div>
           </div>
 
-          {/* KATEGÓRIA KÖRDIAGRAM + LISTA (Jobb oldal - 1/3) */}
           <div className="space-y-6">
             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
               <h3 className="text-lg font-black text-slate-900 mb-6">Eloszlás</h3>
@@ -365,7 +357,6 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
               </div>
             </div>
 
-            {/* AI Insight Kicsi Kártya */}
             <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-3xl p-6 text-white shadow-lg">
                <div className="flex items-center gap-2 mb-2">
                   <Zap size={16} className="text-yellow-300" />
@@ -383,7 +374,7 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
         <section className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
              <h3 className="text-lg font-black text-slate-900">Legutóbbi Tranzakciók</h3>
-             <button className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+             <button className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors">
                Teljes napló <ArrowRight size={14} />
              </button>
           </div>
@@ -434,8 +425,7 @@ export default function UltimateDashboard({ events, cars }: { events: any[], car
   )
 }
 
-// --- HELPER KOMPONENSEK ---
-
+// --- HELPER KOMPONENS (Tooltip) ---
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const total = payload.find((p: any) => p.dataKey === 'total');
