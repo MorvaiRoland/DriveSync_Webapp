@@ -891,7 +891,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                        </div>
                        <span>Facebook</span>
                    </a>
-                   <a href="https://instagram.com/dynamicsense" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#E4405F] transition-colors group">
+                   <a href="https://www.instagram.com/dynamicsense2026/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#E4405F] transition-colors group">
                        <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-[#E4405F]/10 transition-colors">
                            <Instagram size={18} />
                        </div>
