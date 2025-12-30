@@ -2,381 +2,460 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, Legend, Cell
+  ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, Legend, Area
 } from 'recharts'
 import { 
-  TrendingUp, TrendingDown, DollarSign, Wallet, Zap, Calendar, 
-  Download, Car, AlertCircle, CheckCircle2, MoreHorizontal, Filter
+  TrendingUp, TrendingDown, Wallet, Zap, Calendar, 
+  Download, Car, AlertTriangle, CheckCircle, Wrench, 
+  Fuel, FileText, ArrowRight, Activity, Gauge
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 
-// --- TÍPUSOK ÉS KONSTANSOK ---
-type TimeRange = 'month' | 'quarter' | 'year' | 'all';
-type CategoryKey = 'fuel' | 'service' | 'insurance' | 'maintenance' | 'parking' | 'other';
+// --- KONFIGURÁCIÓ & TÍPUSOK ---
+type TimeRange = '30_days' | '90_days' | 'year' | 'ytd' | 'all';
+type CategoryKey = 'fuel' | 'service' | 'insurance' | 'maintenance' | 'parking' | 'tax' | 'other';
 
 const COLORS: Record<CategoryKey, string> = {
-  fuel: '#3b82f6',       // Blue-500
-  service: '#ef4444',    // Red-500
-  insurance: '#8b5cf6',  // Violet-500
-  maintenance: '#f59e0b',// Amber-500
-  parking: '#10b981',    // Emerald-500
-  other: '#64748b'       // Slate-500
+  fuel: '#2563eb',       // Blue-600
+  service: '#dc2626',    // Red-600
+  insurance: '#7c3aed',  // Violet-600
+  maintenance: '#d97706',// Amber-600
+  parking: '#059669',    // Emerald-600
+  tax: '#475569',        // Slate-600
+  other: '#94a3b8'       // Slate-400
 };
 
 const CATEGORY_LABELS: Record<CategoryKey, string> = {
   fuel: 'Üzemanyag', service: 'Szerviz', insurance: 'Biztosítás',
-  maintenance: 'Karbantartás', parking: 'Parkolás', other: 'Egyéb'
+  maintenance: 'Karbantartás', parking: 'Parkolás', tax: 'Adó/Illeték', other: 'Egyéb'
 };
 
-// Segédfüggvény a számformázáshoz
-const formatCurrency = (val: number) => 
+const formatHUF = (val: number) => 
   new Intl.NumberFormat('hu-HU', { style: 'currency', currency: 'HUF', maximumFractionDigits: 0 }).format(val);
 
-export default function ProCostAnalytics({ events, cars }: { events: any[], cars: any[] }) {
+const formatNumber = (val: number) => 
+  new Intl.NumberFormat('hu-HU').format(val);
+
+export default function UltimateDashboard({ events, cars }: { events: any[], cars: any[] }) {
   const [timeRange, setTimeRange] = useState<TimeRange>('year');
   const [selectedCar, setSelectedCar] = useState<string>('all');
-  const [activeChart, setActiveChart] = useState<'trend' | 'breakdown'>('trend');
   const [loading, setLoading] = useState(true);
 
-  // Szimulált betöltés az animációkhoz
-  useEffect(() => {
-    setTimeout(() => setLoading(false), 500);
-  }, []);
+  useEffect(() => { setTimeout(() => setLoading(false), 600); }, []);
 
-  // --- KOMPLEX ADATLOGIKA ---
+  // --- ANALITIKAI MOTOR (The Brain) ---
   const analytics = useMemo(() => {
     const now = new Date();
     let startDate = new Date();
     
-    // Időszak szűrés
+    // Időszak logika
     switch (timeRange) {
-      case 'month': startDate.setMonth(now.getMonth() - 1); break;
-      case 'quarter': startDate.setMonth(now.getMonth() - 3); break;
+      case '30_days': startDate.setDate(now.getDate() - 30); break;
+      case '90_days': startDate.setDate(now.getDate() - 90); break;
       case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
-      case 'all': startDate = new Date(0); break;
+      case 'ytd': startDate = new Date(now.getFullYear(), 0, 1); break;
+      case 'all': startDate = new Date(1970, 0, 1); break;
     }
 
-    const filteredEvents = events.filter(e => {
-      const eDate = new Date(e.event_date);
-      const carMatch = selectedCar === 'all' || e.car_id === Number(selectedCar);
-      return carMatch && eDate >= startDate;
-    });
+    // 1. Szűrés
+    const filteredEvents = events
+      .filter(e => {
+        const eDate = new Date(e.event_date);
+        const carMatch = selectedCar === 'all' || e.car_id === Number(selectedCar);
+        return carMatch && eDate >= startDate && eDate <= now;
+      })
+      .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
 
-    // Aggregálás
-    const totalCost = filteredEvents.reduce((acc, e) => acc + Number(e.cost), 0);
-    const categoryTotals: Record<string, number> = {};
+    // 2. Aggregálás változók
+    let totalCost = 0;
+    const catTotals: Record<string, number> = {};
     const monthlyData: Record<string, any> = {};
-    
-    let minKm = Infinity;
-    let maxKm = 0;
+    let fuelLiters = 0;
+    let minOdo = Infinity;
+    let maxOdo = 0;
+    let lastServiceOdo = 0;
+    let lastServiceDate = null;
 
     filteredEvents.forEach(e => {
-      // Kategória detektálás (egyszerűsített logika a példa kedvéért)
+      const cost = Number(e.cost) || 0;
+      const type = (e.type || 'other').toLowerCase();
+      
+      // Kategória felismerés (ha nincs explicit type, title alapján)
       let cat: CategoryKey = 'other';
-      const type = e.type?.toLowerCase() || '';
-      const title = e.title?.toLowerCase() || '';
-      if (type === 'fuel' || title.includes('tankolás')) cat = 'fuel';
-      else if (type === 'service' || title.includes('szerviz')) cat = 'service';
-      else if (title.includes('biztosítás')) cat = 'insurance';
+      const title = (e.title || '').toLowerCase();
+      if (type === 'fuel' || title.includes('tank')) cat = 'fuel';
+      else if (type === 'service' || title.includes('szerviz') || title.includes('olaj')) cat = 'service';
+      else if (title.includes('biztosítás') || title.includes('kgfb')) cat = 'insurance';
       else if (title.includes('parkolás')) cat = 'parking';
-      else if (title.includes('karbantartás')) cat = 'maintenance';
+      else if (title.includes('adó') || title.includes('súlyadó')) cat = 'tax';
+      else if (title.includes('mosás') || title.includes('karbantartás')) cat = 'maintenance';
 
-      // Totálok
-      categoryTotals[cat] = (categoryTotals[cat] || 0) + Number(e.cost);
+      // Összesítések
+      totalCost += cost;
+      catTotals[cat] = (catTotals[cat] || 0) + cost;
 
-      // Idősoros adat
-      const monthKey = new Date(e.event_date).toLocaleDateString('hu-HU', { year: 'numeric', month: 'short' });
-      if (!monthlyData[monthKey]) monthlyData[monthKey] = { name: monthKey, total: 0 };
-      monthlyData[monthKey][cat] = (monthlyData[monthKey][cat] || 0) + Number(e.cost);
-      monthlyData[monthKey].total += Number(e.cost);
-
-      // Km számítás
-      if (e.mileage) {
-        if (e.mileage < minKm) minKm = e.mileage;
-        if (e.mileage > maxKm) maxKm = e.mileage;
+      // Kilométer adatok
+      const odo = Number(e.mileage) || 0;
+      if (odo > 0) {
+        if (odo < minOdo) minOdo = odo;
+        if (odo > maxOdo) maxOdo = odo;
+        
+        // Utolsó szerviz keresése
+        if (cat === 'service') {
+          if (odo > lastServiceOdo) {
+            lastServiceOdo = odo;
+            lastServiceDate = e.event_date;
+          }
+        }
       }
+
+      // Liter becslés (ha nincs adat, cost / 600 Ft)
+      if (cat === 'fuel') {
+        fuelLiters += e.volume ? Number(e.volume) : (cost / 620); 
+      }
+
+      // Idősoros adat (Havi bontás)
+      const dateKey = new Date(e.event_date).toLocaleDateString('hu-HU', { year: 'numeric', month: 'short' });
+      if (!monthlyData[dateKey]) monthlyData[dateKey] = { name: dateKey, total: 0, fuel: 0, service: 0, other: 0, odo: odo };
+      monthlyData[dateKey].total += cost;
+      if (['fuel', 'service'].includes(cat)) {
+        monthlyData[dateKey][cat] += cost;
+      } else {
+        monthlyData[dateKey].other += cost;
+      }
+      // Odo frissítés a hónapra (mindig a legnagyobbat vesszük az adott hónapban)
+      if (odo > monthlyData[dateKey].odo) monthlyData[dateKey].odo = odo;
     });
 
-    const chartData = Object.values(monthlyData);
+    // 3. Számított mutatók
+    const kmDriven = (maxOdo > minOdo && minOdo !== Infinity) ? maxOdo - minOdo : 0;
+    const costPerKm = kmDriven > 0 ? totalCost / kmDriven : 0;
+    const avgConsumption = (kmDriven > 0 && fuelLiters > 0) ? (fuelLiters / kmDriven) * 100 : 0;
+    const kmSinceService = maxOdo - lastServiceOdo;
     
-    // Futásteljesítmény és fajlagos költség
-    const kmDiff = maxKm > minKm && minKm !== Infinity ? maxKm - minKm : 0;
-    const costPerKm = kmDiff > 0 ? totalCost / kmDiff : 0;
+    // Grafikon adat kiegészítése kumulatív és hatékonysági adatokkal
+    const chartData = Object.values(monthlyData).map((d: any, index, arr) => {
+        // Havi futás becslése a pontosabb Ft/km érdekében
+        const prevOdo = index > 0 ? arr[index-1].odo : minOdo;
+        const monthKm = d.odo - prevOdo;
+        const efficiency = monthKm > 0 ? Math.round(d.total / monthKm) : 0;
+        return { ...d, efficiency: efficiency > 500 ? 500 : efficiency }; // Capelni a kiugró értékeket a grafikon miatt
+    });
 
-    // Trend számítás (utolsó hónap vs előző hónap átlaga)
-    const sortedDates = Object.keys(monthlyData).sort();
-    const lastMonthCost = sortedDates.length > 0 ? monthlyData[sortedDates[sortedDates.length - 1]].total : 0;
-    const avgCost = chartData.length > 0 ? totalCost / chartData.length : 0;
-    const trendPercentage = avgCost > 0 ? ((lastMonthCost - avgCost) / avgCost) * 100 : 0;
+    const pieData = Object.keys(catTotals)
+      .map(k => ({ name: CATEGORY_LABELS[k as CategoryKey], value: catTotals[k], color: COLORS[k as CategoryKey] }))
+      .filter(i => i.value > 0)
+      .sort((a, b) => b.value - a.value);
 
     return {
       totalCost,
-      chartData,
-      categoryStats: Object.entries(categoryTotals)
-        .map(([key, value]) => ({ key: key as CategoryKey, value, percentage: (value / totalCost) * 100 }))
-        .sort((a, b) => b.value - a.value),
+      kmDriven,
       costPerKm,
-      kmDriven: kmDiff,
-      trend: trendPercentage,
-      isTrendUp: trendPercentage > 0,
-      projection: totalCost > 0 ? (totalCost / (filteredEvents.length || 1)) * 1.1 : 0 // Egyszerű becslés
+      avgConsumption,
+      kmSinceService,
+      lastServiceDate,
+      chartData,
+      pieData,
+      topCategory: pieData.length > 0 ? pieData[0] : null,
+      recentEvents: filteredEvents.slice().reverse().slice(0, 5) // Utolsó 5 tétel
     };
+
   }, [events, selectedCar, timeRange]);
 
-  const exportReport = () => {
-    alert("Jelentés generálása folyamatban... (CSV letöltés szimuláció)");
-  };
+  const serviceHealth = Math.max(0, 100 - (analytics.kmSinceService / 15000) * 100); // 15.000 km periódus feltételezése
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6 lg:p-8 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20">
       
-      {/* --- HEADER --- */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
-            <Car className="text-blue-600" size={32} />
-            Költség Elemzés
-          </h1>
-          <p className="text-slate-500 mt-1 text-sm font-medium">
-            Részletes betekintés a flotta pénzügyi és műszaki teljesítményébe.
-          </p>
-        </div>
+      {/* --- FŐ HEADER --- */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-4 sm:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between lg:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 text-slate-900">
+              <Car className="text-blue-600" />
+              DynamicSense <span className="text-slate-400 font-light">Ultimate</span>
+            </h1>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
-          <select 
-            value={selectedCar} 
-            onChange={(e) => setSelectedCar(e.target.value)}
-            className="bg-slate-50 border-none text-sm font-bold rounded-xl py-2 px-4 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-          >
-            <option value="all">Minden jármű</option>
-            {cars.map(c => <option key={c.id} value={c.id}>{c.plate} - {c.model}</option>)}
-          </select>
-          
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-
-          {(['month', 'year', 'all'] as const).map((r) => (
-            <button
-              key={r}
-              onClick={() => setTimeRange(r)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                timeRange === r 
-                ? 'bg-slate-900 text-white shadow-lg scale-105' 
-                : 'text-slate-500 hover:bg-slate-100'
-              }`}
-            >
-              {r === 'month' ? '30 Nap' : r === 'year' ? '1 Év' : 'Összes'}
-            </button>
-          ))}
-          
-          <button onClick={exportReport} className="ml-2 p-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Exportálás">
-            <Download size={18} />
-          </button>
-        </div>
-      </div>
-
-      {/* --- KPI GRID --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <KPICard 
-          title="Összköltség" 
-          value={formatCurrency(analytics.totalCost)} 
-          icon={Wallet} 
-          trend={analytics.trend}
-          subtext="az időszakban"
-        />
-        <KPICard 
-          title="Km Költség" 
-          value={`${analytics.costPerKm.toFixed(0)} Ft/km`} 
-          icon={Zap} 
-          subtext={`${analytics.kmDriven.toLocaleString()} km futás alapján`}
-          highlight
-        />
-        <KPICard 
-          title="Havi Átlag" 
-          value={formatCurrency(analytics.totalCost / (analytics.chartData.length || 1))} 
-          icon={Calendar} 
-          subtext="becsült átlag"
-        />
-        <KPICard 
-          title="Következő Hó" 
-          value={`~${formatCurrency(analytics.projection)}`} 
-          icon={TrendingUp} 
-          subtext="AI előrejelzés alapján"
-          color="indigo"
-        />
-      </div>
-
-      {/* --- MAIN CONTENT SPLIT --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Bal oldal: Grafikon */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-slate-200 relative overflow-hidden">
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-xl font-bold text-slate-800">Költségeloszlás Idővonalon</h3>
-            <div className="flex bg-slate-100 rounded-lg p-1">
-              <button 
-                onClick={() => setActiveChart('trend')}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeChart === 'trend' ? 'bg-white shadow text-slate-900' : 'text-slate-400'}`}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Autó Választó */}
+            <div className="relative group">
+              <select 
+                value={selectedCar} 
+                onChange={(e) => setSelectedCar(e.target.value)}
+                className="appearance-none bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wide py-2.5 pl-4 pr-10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-auto"
               >
-                Trend
-              </button>
-              <button 
-                onClick={() => setActiveChart('breakdown')}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeChart === 'breakdown' ? 'bg-white shadow text-slate-900' : 'text-slate-400'}`}
-              >
-                Oszlop
-              </button>
+                <option value="all">Teljes Flotta</option>
+                {cars.map(c => <option key={c.id} value={c.id}>{c.plate}</option>)}
+              </select>
+              <ArrowRight className="absolute right-3 top-3 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
             </div>
-          </div>
 
-          <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              {activeChart === 'trend' ? (
-                <AreaChart data={analytics.chartData}>
-                  <defs>
-                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11}} dy={10} />
-                  <YAxis hide />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area 
-                    type="monotone" 
-                    dataKey="total" 
-                    stroke="#3b82f6" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorTotal)" 
-                  />
-                </AreaChart>
-              ) : (
-                <BarChart data={analytics.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11}} dy={10} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="total" radius={[6, 6, 0, 0]}>
-                    {analytics.chartData.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#3b82f6' : '#60a5fa'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Jobb oldal: Részletes bontás és Insights */}
-        <div className="space-y-6">
-          
-          {/* Kategória lista */}
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center justify-between">
-              Kategóriák
-              <Filter size={16} className="text-slate-400" />
-            </h3>
-            <div className="space-y-5">
-              {analytics.categoryStats.map((cat) => (
-                <div key={cat.key} className="group">
-                  <div className="flex justify-between items-center text-sm mb-2">
-                    <span className="font-bold text-slate-600 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[cat.key]}} />
-                      {CATEGORY_LABELS[cat.key]}
-                    </span>
-                    <span className="font-bold text-slate-900">{formatCurrency(cat.value)}</span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${cat.percentage}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: COLORS[cat.key] }}
-                    />
-                  </div>
-                </div>
+            {/* Időszak Választó (Tabok) */}
+            <div className="flex bg-slate-100 p-1 rounded-xl overflow-x-auto">
+              {[
+                { id: '30_days', label: '30 Nap' },
+                { id: '90_days', label: '90 Nap' },
+                { id: 'year', label: '1 Év' },
+                { id: 'all', label: 'Összes' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setTimeRange(tab.id as TimeRange)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${
+                    timeRange === tab.id 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
               ))}
             </div>
           </div>
+        </div>
+      </header>
 
-          {/* Smart Insights (AI Doboz) */}
-          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 text-white relative overflow-hidden shadow-xl">
-            <div className="absolute top-0 right-0 p-3 opacity-10">
-              <Zap size={100} />
-            </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
+        
+        {/* --- KPI SOR (BENTO GRID STYLE) --- */}
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          {/* 1. Kártya: Összköltség */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="bg-blue-500/20 text-blue-300 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded">Smart Insight</span>
+              <div className="flex justify-between items-start mb-4">
+                <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">Pénzügy</span>
+                <Wallet className="text-slate-300 group-hover:text-blue-500 transition-colors" />
               </div>
-              
-              <h4 className="text-lg font-bold mb-2">Mire figyelj?</h4>
-              
-              {analytics.costPerKm > 60 ? (
-                <p className="text-sm text-slate-300 leading-relaxed">
-                  A kilométerköltséged (<span className="text-white font-bold">{analytics.costPerKm.toFixed(0)} Ft/km</span>) magasabb az iparági átlagnál. Ellenőrizd az üzemanyag-fogyasztást vagy a gyakori szerviz látogatásokat.
-                </p>
-              ) : (
-                <p className="text-sm text-slate-300 leading-relaxed">
-                  A fenntartási költségeid optimálisak. A jelenlegi trend alapján év végéig <span className="text-emerald-400 font-bold">~80.000 Ft</span> megtakarítás várható a tavalyi évhez képest.
-                </p>
-              )}
+              <h3 className="text-3xl font-black text-slate-900 tracking-tighter">
+                {formatNumber(analytics.totalCost)} <span className="text-lg font-medium text-slate-400">Ft</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-2 font-medium">A kiválasztott időszakban</p>
+            </div>
+            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-blue-500/5 rounded-full blur-xl group-hover:bg-blue-500/10 transition-all" />
+          </div>
 
-              <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-3">
-                <CheckCircle2 size={16} className="text-emerald-400" />
-                <span className="text-xs font-medium text-slate-400">Adatok 100%-ban feldolgozva</span>
+          {/* 2. Kártya: Valós Hatékonyság (Ft/km) */}
+          <div className="bg-slate-900 p-6 rounded-3xl shadow-lg relative overflow-hidden group text-white">
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-4">
+                <span className="bg-white/10 text-white/80 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">Hatékonyság</span>
+                <Gauge className="text-white/30" />
+              </div>
+              <h3 className="text-3xl font-black tracking-tighter">
+                {analytics.costPerKm.toFixed(0)} <span className="text-lg font-medium text-slate-400">Ft/km</span>
+              </h3>
+              <div className="mt-2 flex items-center gap-2">
+                <div className={`h-1.5 w-1.5 rounded-full ${analytics.costPerKm < 60 ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                <p className="text-xs text-slate-400 font-medium">
+                  {analytics.costPerKm < 60 ? 'Optimális tartomány' : 'Magas üzemeltetési költség'}
+                </p>
               </div>
             </div>
           </div>
 
-        </div>
-      </div>
+          {/* 3. Kártya: Fogyasztás */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group">
+             <div className="relative z-10">
+              <div className="flex justify-between items-start mb-4">
+                <span className="bg-amber-50 text-amber-600 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">Fogyasztás</span>
+                <Fuel className="text-slate-300 group-hover:text-amber-500 transition-colors" />
+              </div>
+              <h3 className="text-3xl font-black text-slate-900 tracking-tighter">
+                {analytics.avgConsumption > 0 ? analytics.avgConsumption.toFixed(1) : '-'} <span className="text-lg font-medium text-slate-400">L/100km</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-2 font-medium">
+                {analytics.kmDriven.toLocaleString()} km futásteljesítmény alapján
+              </p>
+            </div>
+          </div>
+
+           {/* 4. Kártya: Szerviz Állapot */}
+           <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden flex flex-col justify-between">
+              <div className="flex justify-between items-start">
+                 <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${serviceHealth > 50 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                    Szerviz Státusz
+                 </span>
+                 <Wrench className="text-slate-300" />
+              </div>
+              <div>
+                <div className="flex justify-between items-end mb-1">
+                  <span className="text-2xl font-black text-slate-900">{analytics.kmSinceService.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-slate-400 mb-1">km telt el</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }} animate={{ width: `${Math.min(100, (analytics.kmSinceService / 15000) * 100)}%` }}
+                    className={`h-full rounded-full ${serviceHealth > 20 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2 text-right">Következő: {(15000 - analytics.kmSinceService).toLocaleString()} km múlva</p>
+              </div>
+          </div>
+        </section>
+
+        {/* --- ANALITIKA GRID --- */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* FŐ GRAFIKON (Bal oldal - 2/3) */}
+          <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Költség és Hatékonyság Trend</h3>
+                <p className="text-xs text-slate-500 font-medium">Havi költés (oszlop) vs. Ft/km hatékonyság (vonal)</p>
+              </div>
+              <Activity className="text-blue-600" />
+            </div>
+
+            <div className="h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={analytics.chartData}>
+                  <defs>
+                    <linearGradient id="colorBar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0.3}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 600}} dy={10} />
+                  <YAxis yAxisId="left" hide />
+                  <YAxis yAxisId="right" orientation="right" hide />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar yAxisId="left" dataKey="total" fill="url(#colorBar)" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Line yAxisId="right" type="monotone" dataKey="efficiency" stroke="#ef4444" strokeWidth={3} dot={{r: 4, fill: '#ef4444', strokeWidth: 0}} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* KATEGÓRIA KÖRDIAGRAM + LISTA (Jobb oldal - 1/3) */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+              <h3 className="text-lg font-black text-slate-900 mb-6">Eloszlás</h3>
+              <div className="flex items-center justify-center h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie 
+                      data={analytics.pieData} 
+                      cx="50%" cy="50%" 
+                      innerRadius={60} outerRadius={80} 
+                      paddingAngle={5} 
+                      dataKey="value"
+                    >
+                      {analytics.pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 space-y-3">
+                 {analytics.pieData.slice(0, 4).map((item: any) => (
+                    <div key={item.name} className="flex items-center justify-between text-xs">
+                       <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{backgroundColor: item.color}} />
+                          <span className="font-bold text-slate-600">{item.name}</span>
+                       </div>
+                       <span className="font-bold text-slate-900">{((item.value / analytics.totalCost) * 100).toFixed(0)}%</span>
+                    </div>
+                 ))}
+              </div>
+            </div>
+
+            {/* AI Insight Kicsi Kártya */}
+            <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-3xl p-6 text-white shadow-lg">
+               <div className="flex items-center gap-2 mb-2">
+                  <Zap size={16} className="text-yellow-300" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">Elemzés</span>
+               </div>
+               <p className="text-sm font-medium leading-relaxed opacity-90">
+                 A legnagyobb kiadásod a <span className="font-bold text-white underline decoration-yellow-400">{analytics.topCategory?.name || 'Egyéb'}</span> volt, ami az összköltség <span className="font-bold">{analytics.topCategory ? ((analytics.topCategory.value / analytics.totalCost)*100).toFixed(0) : 0}%</span>-át tette ki.
+                 {analytics.kmSinceService > 10000 && " Javasolt a szerviz időpont foglalása!"}
+               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* --- TRANZAKCIÓS NAPLÓ --- */}
+        <section className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+             <h3 className="text-lg font-black text-slate-900">Legutóbbi Tranzakciók</h3>
+             <button className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+               Teljes napló <ArrowRight size={14} />
+             </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px] font-bold">
+                <tr>
+                  <th className="px-6 py-4">Dátum</th>
+                  <th className="px-6 py-4">Típus</th>
+                  <th className="px-6 py-4">Leírás</th>
+                  <th className="px-6 py-4">Km óra</th>
+                  <th className="px-6 py-4 text-right">Összeg</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {analytics.recentEvents.map((event: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-slate-700 whitespace-nowrap">
+                      {new Date(event.event_date).toLocaleDateString('hu-HU')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider" style={{
+                         backgroundColor: `${COLORS[(event.type || 'other').toLowerCase() as CategoryKey]}20`,
+                         color: COLORS[(event.type || 'other').toLowerCase() as CategoryKey]
+                      }}>
+                         {CATEGORY_LABELS[(event.type || 'other').toLowerCase() as CategoryKey] || event.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 font-medium">{event.title || '-'}</td>
+                    <td className="px-6 py-4 text-slate-500 font-mono text-xs">
+                      {event.mileage ? `${Number(event.mileage).toLocaleString()} km` : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-right font-black text-slate-900">
+                      {formatHUF(Number(event.cost))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {analytics.recentEvents.length === 0 && (
+              <div className="p-8 text-center text-slate-400 text-sm">Nincs adat a kiválasztott időszakban.</div>
+            )}
+          </div>
+        </section>
+
+      </main>
     </div>
   )
 }
 
-// --- KISEBB KOMPONENSEK A TISZTA KÓD ÉRDEKÉBEN ---
-
-function KPICard({ title, value, icon: Icon, trend, subtext, highlight, color = 'blue' }: any) {
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`p-6 rounded-3xl border ${highlight ? 'bg-blue-600 text-white border-blue-500 shadow-blue-200 shadow-xl' : 'bg-white text-slate-900 border-slate-200 shadow-sm'} flex flex-col justify-between h-36 relative overflow-hidden`}
-    >
-      <div className="flex justify-between items-start z-10">
-        <span className={`text-xs font-bold uppercase tracking-wider ${highlight ? 'text-blue-100' : 'text-slate-500'}`}>{title}</span>
-        <Icon size={20} className={highlight ? 'text-blue-200' : `text-${color}-500`} />
-      </div>
-      
-      <div className="z-10">
-        <h2 className="text-2xl font-black tracking-tight">{value}</h2>
-        <div className="flex items-center gap-2 mt-1">
-          {trend !== undefined && (
-            <span className={`flex items-center text-xs font-bold ${trend > 0 ? 'text-red-500' : 'text-emerald-500'} ${highlight && 'text-white'}`}>
-              {trend > 0 ? <TrendingUp size={12} className="mr-1" /> : <TrendingDown size={12} className="mr-1" />}
-              {Math.abs(trend).toFixed(1)}%
-            </span>
-          )}
-          <span className={`text-[10px] font-medium truncate ${highlight ? 'text-blue-100' : 'text-slate-400'}`}>{subtext}</span>
-        </div>
-      </div>
-
-      {/* Háttér dekoráció */}
-      <Icon className={`absolute -bottom-4 -right-4 w-24 h-24 opacity-5 pointer-events-none transform rotate-12`} />
-    </motion.div>
-  )
-}
+// --- HELPER KOMPONENSEK ---
 
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
+    const total = payload.find((p: any) => p.dataKey === 'total');
+    const eff = payload.find((p: any) => p.dataKey === 'efficiency');
+    
     return (
-      <div className="bg-slate-900 text-white text-xs p-3 rounded-xl shadow-xl border border-slate-700/50">
-        <p className="font-bold mb-2 text-slate-400 uppercase tracking-wider">{label}</p>
-        <p className="text-lg font-black mb-1">
-          {new Intl.NumberFormat('hu-HU', { style: 'currency', currency: 'HUF', maximumFractionDigits: 0 }).format(payload[0].value)}
-        </p>
+      <div className="bg-white text-slate-900 p-4 rounded-2xl shadow-xl border border-slate-100 text-xs z-50">
+        <p className="font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2">{label}</p>
+        
+        <div className="flex items-center justify-between gap-6 mb-2">
+           <span className="font-bold text-slate-600">Összesen:</span>
+           <span className="font-black text-blue-600 text-sm">{formatHUF(total?.value || 0)}</span>
+        </div>
+        
+        {eff && eff.value > 0 && (
+          <div className="flex items-center justify-between gap-6">
+             <span className="font-bold text-slate-600">Hatékonyság:</span>
+             <span className="font-black text-red-500">{eff.value} Ft/km</span>
+          </div>
+        )}
       </div>
     );
   }
