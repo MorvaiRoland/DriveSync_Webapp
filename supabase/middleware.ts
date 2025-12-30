@@ -85,8 +85,10 @@ export async function updateSession(request: NextRequest) {
         path === '/' || 
         path.startsWith('/login') || 
         path.startsWith('/register') || 
+        path.startsWith('/changelog') || 
         path.startsWith('/auth') ||
         path.startsWith('/impressum') ||
+         path.startsWith('/support') ||
         path.startsWith('/privacy') ||
         path.startsWith('/terms') || 
         path.startsWith('/update-password') || 
