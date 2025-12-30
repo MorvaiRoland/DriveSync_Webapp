@@ -1,179 +1,261 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Cpu, Activity, Server, Shield, Gauge, Radio } from 'lucide-react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { motion, useSpring, useTransform, useMotionValue, animate, AnimatePresence } from 'framer-motion';
+import { Zap, Cpu, Activity, Server, Shield, Gauge, Radio, AlertTriangle } from 'lucide-react';
 
-// --- SEGÉDKOMPONENS A SZÁMOK SIMA PÖRGÉSÉHEZ ---
-const NumberTicker = ({ value }: { value: number }) => {
-  const [displayValue, setDisplayValue] = useState(value);
-  
+// --- SEGÉDKOMPONENS: FIZIKA ALAPÚ SZÁMLÁLÓ ---
+// Ez biztosítja, hogy a szám mindig szinkronban legyen a csíkkal
+const PhysicsCounter = ({ value }: { value: any }) => {
+  const ref = useRef<HTMLSpanElement>(null);
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDisplayValue(prev => {
-        const diff = value - prev;
-        if (Math.abs(diff) < 5) return value;
-        return prev + Math.round(diff * 0.15); // Sima követés
-      });
-    }, 16);
-    return () => clearInterval(interval);
+    // Feliratkozunk a motionValue változására
+    return value.on("change", (latest: number) => {
+      if (ref.current) {
+        // Formázás: ezres elválasztó, fix szélesség a remegés ellen
+        ref.current.textContent = Math.round(latest).toLocaleString('en-US').replace(/,/g, ' ');
+      }
+    });
   }, [value]);
 
-  return <>{displayValue.toLocaleString()}</>;
+  return <span ref={ref} />;
 };
 
 export const IntroLoader = ({ onComplete }: { onComplete: () => void }) => {
-  const [progress, setProgress] = useState(0);
-  const [rpm, setRpm] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
+  
+  // --- KÖZPONTI VEZÉRLÉS (Motion Values) ---
+  // A 'progress' 0-tól 100-ig megy. Minden más ebből származik.
+  const progress = useMotionValue(0);
+  
+  // Fizikai rugózás (stiffness/damping), hogy "analóg" műszer érzete legyen
+  const smoothProgress = useSpring(progress, { damping: 20, stiffness: 100, mass: 0.5 });
+
+  // Értékek levezetése a rugózott progressből
+  const rpmValue = useTransform(smoothProgress, [0, 100], [0, 9200]); // 0 -> 9200 RPM
+  const rotation = useTransform(smoothProgress, [0, 100], [-120, 120]); // Mutató forgása
+  
+  // Szín interpoláció (Kék -> Cián -> Lila -> Piros)
+  const dynamicColor = useTransform(
+    smoothProgress,
+    [0, 60, 85, 100],
+    ["#3b82f6", "#06b6d4", "#a855f7", "#ef4444"]
+  );
+
+  // Redline állapot figyelése (vibráláshoz)
   const [isRedline, setIsRedline] = useState(false);
 
-  const bootSequence = [
-    { time: 100, msg: "RENDSZERMAG INTEGRITÁS ELLENŐRZÉSE...", icon: Shield },
-    { time: 600, msg: "Gemini 2.5 AI: INDÍTÁSRA KÉSZ", icon: Cpu },
-    { time: 1100, msg: "KVANTUM-TITKOSÍTÁS AKTIVÁLÁSA...", icon: Server },
-    { time: 1700, msg: "SZENZOROK KALIBRÁLÁSA (BIOMETRIA)...", icon: Activity },
-    { time: 2200, msg: "DYNAMICSENSE OS: INDÍTÁSRA KÉSZ", icon: Zap },
-  ];
-
   useEffect(() => {
-    bootSequence.forEach((item) => {
-      setTimeout(() => {
-        setLogs(prev => [...prev.slice(-3), item.msg]);
-      }, item.time);
+    const unsubscribe = smoothProgress.on("change", (v) => {
+      setIsRedline(v > 90);
+    });
+    return () => unsubscribe();
+  }, [smoothProgress]);
+
+  // --- BOOT SZEKVENCIÁK ---
+  useEffect(() => {
+    // Log üzenetek
+    const bootLogs = [
+      { t: 100, msg: "KERNEL_INTEGRITY: OK", icon: Shield },
+      { t: 800, msg: "NEURAL_ENGINE: LINKED", icon: Cpu },
+      { t: 1600, msg: "QUANTUM_ENCRYPTION: ACTIVE", icon: Server },
+      { t: 2400, msg: "BIOMETRIC_SYNC: COMPLETE", icon: Activity },
+      { t: 3000, msg: "SYSTEM_READY", icon: Zap },
+    ];
+
+    bootLogs.forEach(log => {
+      setTimeout(() => setLogs(prev => [...prev.slice(-4), log.msg]), log.t);
     });
 
-    // Fordulatszám és progress fázisok
-    const t1 = setTimeout(() => { setProgress(35); setRpm(2400); }, 200);
-    const t2 = setTimeout(() => { setProgress(65); setRpm(1800); }, 1400); // Visszaváltás érzete
-    const t3 = setTimeout(() => { 
-        setProgress(100); 
-        setRpm(8800); 
-        setIsRedline(true); 
-    }, 2400);
-    const t4 = setTimeout(() => { onComplete(); }, 3800);
+    // --- ANIMÁCIÓS IDŐVONAL ---
+    const sequence = async () => {
+      // 1. Indítás (Gyors felpörgés 30%-ra)
+      animate(progress, 30, { duration: 0.8, ease: "circOut" });
+      await new Promise(r => setTimeout(r, 800));
 
-    return () => [t1, t2, t3, t4].forEach(clearTimeout);
-  }, [onComplete]);
+      // 2. "Váltás" (Kicsit visszaejtjük a fordulatot, majd fel 65%-ra)
+      animate(progress, 25, { duration: 0.2, ease: "easeOut" }); // Visszaejt
+      await new Promise(r => setTimeout(r, 200));
+      animate(progress, 65, { duration: 1.2, ease: "easeInOut" });
+      await new Promise(r => setTimeout(r, 1400));
 
-  // Skála osztások generálása
-  const ticks = useMemo(() => Array.from({ length: 50 }), []);
+      // 3. Padlógáz (Redline 100%)
+      animate(progress, 100, { duration: 0.8, ease: "backOut" });
+      await new Promise(r => setTimeout(r, 1200));
+
+      // 4. Befejezés
+      onComplete();
+    };
+
+    sequence();
+  }, [progress, onComplete]);
+
+  // SVG Skála generálás (240 fokos ív)
+  const radius = 120;
+  const circumference = 2 * Math.PI * radius; // kb 754
+  const visibleArc = circumference * 0.66; // Csak a kör 2/3-a látszik (240 fok)
+  
+  // Ticks generálása
+  const ticks = useMemo(() => Array.from({ length: 61 }), []);
 
   return (
     <motion.div
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.1, filter: "blur(30px)" }}
-      transition={{ duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-950 text-white font-mono overflow-hidden"
+      exit={{ opacity: 0, scale: 1.2, filter: "blur(20px)" }}
+      transition={{ duration: 0.6 }}
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050505] text-white font-mono overflow-hidden selection:bg-none cursor-wait"
     >
-      {/* --- HÁTTÉR EFFEKTEK --- */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/50 to-slate-950 pointer-events-none"></div>
+      {/* --- HÁTTÉR RÁCS (GRID) --- */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]"></div>
       
-      {/* Dinamikus háttérfény */}
-      <div className={`absolute w-[70vw] h-[70vw] rounded-full blur-[180px] transition-all duration-1000 ${isRedline ? 'bg-red-600/15' : 'bg-primary/10'}`}></div>
-
-      {/* --- KÖZPONTI MŰSZEREGYSÉG --- */}
+      {/* Dinamikus Háttérfény (Glow) */}
       <motion.div 
-        className="relative z-10 flex flex-col items-center"
-        animate={isRedline ? { 
-            x: [0, -1, 1, -1, 1, 0],
-            y: [0, 1, -1, 1, -1, 0] 
-        } : {}}
-        transition={{ duration: 0.1, repeat: Infinity }}
+        style={{ backgroundColor: dynamicColor }}
+        className="absolute w-[600px] h-[600px] rounded-full opacity-10 blur-[120px]" 
+      />
+
+      {/* --- FŐ MŰSZEREGYSÉG --- */}
+      <motion.div 
+        className="relative z-10"
+        animate={isRedline ? { x: [-1, 1, -1, 0], y: [1, -1, 0] } : {}}
+        transition={{ duration: 0.05, repeat: Infinity }}
       >
-        <div className="relative w-80 h-80 sm:w-96 sm:h-96 mb-12">
-           
-           {/* Külső statikus skála */}
-           <svg className="absolute inset-0 w-full h-full transform rotate-[130deg]" viewBox="0 0 100 100">
-             {ticks.map((_, i) => (
-                <line 
-                    key={i} 
-                    x1="50" y1="5" x2="50" y2={i % 5 === 0 ? "15" : "10"} 
-                    stroke={i > 38 ? "#ef4444" : "#334155"} 
-                    strokeWidth={i % 5 === 0 ? "1.5" : "0.5"} 
-                    transform={`rotate(${i * 5.6} 50 50)`} 
-                />
-             ))}
-           </svg>
+        <div className="relative w-80 h-80 sm:w-96 sm:h-96 flex items-center justify-center">
+          
+          {/* SVG Canvas */}
+          <svg className="absolute inset-0 w-full h-full rotate-90" viewBox="0 0 300 300">
+            {/* Defs a gradiensekhez */}
+            <defs>
+              <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#3b82f6" />
+                <stop offset="50%" stopColor="#06b6d4" />
+                <stop offset="100%" stopColor="#ef4444" />
+              </linearGradient>
+            </defs>
 
-           {/* Aktív progress ív (Electric Teal) */}
-           <svg className="absolute inset-0 w-full h-full transform rotate-[130deg]" viewBox="0 0 100 100">
-             <motion.circle 
-                cx="50" cy="50" r="42" fill="none" 
-                stroke={isRedline ? "#ef4444" : "#06b6d4"} 
-                strokeWidth="3" strokeDasharray="210" strokeDashoffset="210" strokeLinecap="round"
-                animate={{ strokeDashoffset: 210 - (210 * progress) / 100 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                style={{ filter: `drop-shadow(0 0 15px ${isRedline ? '#ef4444' : '#06b6d4'})` }}
-             />
-           </svg>
+            {/* Skála vonalak (Ticks) */}
+            <g transform="translate(150, 150)">
+              {ticks.map((_, i) => {
+                const angle = -120 + (i * (240 / 60)); // -120-tól +120 fokig
+                const isMajor = i % 10 === 0;
+                const isRedZone = i > 50;
+                return (
+                  <line
+                    key={i}
+                    x1="0" y1={isMajor ? -135 : -140}
+                    x2="0" y2="-125"
+                    stroke={isRedZone ? "#ef4444" : (isMajor ? "#ffffff" : "#334155")}
+                    strokeWidth={isMajor ? 3 : 1}
+                    transform={`rotate(${angle})`}
+                    className="transition-colors duration-300"
+                  />
+                );
+              })}
+            </g>
 
-           {/* Belső digitális kijelző */}
-           <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <motion.div 
-                animate={{ opacity: [0.4, 1, 0.4] }} 
-                transition={{ duration: 2, repeat: Infinity }}
-                className="text-[10px] font-black text-primary tracking-[0.4em] mb-2 uppercase"
-              >
-                Fordulatszám
-              </motion.div>
-              
-              <div className={`text-7xl sm:text-8xl font-black italic tracking-tighter tabular-nums transition-colors duration-300 ${isRedline ? 'text-red-500' : 'text-white'}`}>
-                <NumberTicker value={rpm} />
-              </div>
+            {/* Háttér ív (halvány) */}
+            <circle
+              cx="150" cy="150" r={radius}
+              fill="none"
+              stroke="#1e293b"
+              strokeWidth="12"
+              strokeLinecap="round"
+              strokeDasharray={`${visibleArc} ${circumference}`}
+              strokeDashoffset={0}
+              transform="rotate(120, 150, 150)" // Kezdőpont beállítása
+            />
 
-              <div className="flex flex-col items-center mt-4">
-                 <div className="h-[1px] w-24 bg-gradient-to-r from-transparent via-primary/50 to-transparent mb-2"></div>
-                 <span className="text-[11px] font-bold text-slate-500 tracking-widest uppercase">DynamicSense v2.5 Béta</span>
-              </div>
-           </div>
+            {/* AKTÍV PROGRESS ÍV (A lényeg) */}
+            <motion.circle
+              cx="150" cy="150" r={radius}
+              fill="none"
+              stroke="url(#gaugeGradient)" // Gradiens stroke
+              strokeWidth="12"
+              strokeLinecap="round"
+              strokeDasharray={`${visibleArc} ${circumference}`}
+              // A strokeDashoffset animálása a physics value alapján
+              style={{ 
+                strokeDashoffset: useTransform(smoothProgress, [0, 100], [visibleArc, 0]),
+                filter: "drop-shadow(0 0 8px rgba(59, 130, 246, 0.5))"
+              }}
+              transform="rotate(120, 150, 150)"
+            />
+          </svg>
 
-           {/* "Redline" figyelmeztetés */}
-           <AnimatePresence>
-             {isRedline && (
+          {/* --- KÖZÉPSŐ DIGITÁLIS KIJELZŐ --- */}
+          <div className="absolute flex flex-col items-center justify-center z-20">
+            <motion.div 
+              className="text-xs font-bold tracking-[0.3em] text-slate-500 uppercase mb-2"
+              animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }}
+            >
+              Engine RPM
+            </motion.div>
+
+            {/* A nagy szám */}
+            <div className="flex items-baseline relative">
                 <motion.div 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter"
+                    style={{ color: dynamicColor }}
+                    className={`text-7xl sm:text-8xl font-black italic tracking-tighter tabular-nums ${isRedline ? 'animate-pulse' : ''}`}
                 >
-                    Maximális Teljesítmény
+                    <PhysicsCounter value={rpmValue} />
                 </motion.div>
-             )}
-           </AnimatePresence>
-        </div>
+                
+                {/* Glitch effekt klón (csak redline-nál látszik) */}
+                {isRedline && (
+                     <motion.div 
+                     className="absolute inset-0 text-7xl sm:text-8xl font-black italic tracking-tighter tabular-nums text-red-500/50 mix-blend-screen"
+                     style={{ x: 2, y: -2 }}
+                 >
+                     <PhysicsCounter value={rpmValue} />
+                 </motion.div>
+                )}
+            </div>
 
-        {/* --- RENDSZERNAPLÓ (LOGS) --- */}
-        <div className="h-20 w-80 flex flex-col items-center justify-start">
-            <AnimatePresence mode="popLayout">
-                {logs.map((log, i) => (
-                  <motion.div 
-                    key={log} 
-                    initial={{ opacity: 0, y: 10, filter: "blur(5px)" }} 
-                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} 
-                    exit={{ opacity: 0, y: -10, filter: "blur(5px)" }}
-                    className="flex items-center gap-3 text-[10px] text-slate-400 font-bold uppercase tracking-[0.15em] mb-1"
-                  >
-                    <span className="text-primary font-black">{`//`}</span> {log}
-                  </motion.div>
-                ))}
-            </AnimatePresence>
+            {/* RPM Label */}
+            <div className="text-sm font-semibold text-slate-400 mt-2">x 1000 min⁻¹</div>
+            
+            {/* Warning Box */}
+            <div className="h-6 mt-4">
+                <AnimatePresence>
+                    {isRedline && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                            className="flex items-center gap-2 bg-red-500/20 text-red-400 px-3 py-1 rounded border border-red-500/50"
+                        >
+                            <AlertTriangle size={12} />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Warning: Redline</span>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+          </div>
         </div>
       </motion.div>
 
-      {/* --- ALSÓ DEKORÁCIÓ --- */}
-      <div className="absolute bottom-12 flex items-center gap-8 opacity-20 grayscale">
-          <div className="flex items-center gap-2">
-              <Radio size={14} className="animate-pulse" />
-              <span className="text-[10px] font-black tracking-widest uppercase text-white">Adatátvitel aktív</span>
-          </div>
-          <div className="flex items-center gap-2">
-              <Gauge size={14} />
-              <span className="text-[10px] font-black tracking-widest uppercase text-white">Telemetria: OK</span>
-          </div>
+      {/* --- LOGOK KIÍRÁSA (Terminál stílus) --- */}
+      <div className="absolute bottom-20 w-80 font-mono text-xs">
+         <div className="flex flex-col-reverse gap-1 h-24 mask-image-b-to-t">
+            <AnimatePresence mode='popLayout'>
+                {logs.map((log, i) => (
+                    <motion.div
+                        key={log + i} // Unique key
+                        layout
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center gap-3 text-slate-400"
+                    >
+                        <span className="text-blue-500">➜</span>
+                        <span className="tracking-widest uppercase font-bold text-[10px]">{log}</span>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+         </div>
       </div>
-      
-      {/* Scanline effekt */}
-      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] z-50 bg-[length:100%_4px,4px_100%]"></div>
+
+      {/* --- SCANLINES & TEXTURE --- */}
+      <div className="absolute inset-0 pointer-events-none z-50 bg-[length:100%_3px] bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.2)_50%)] opacity-30"></div>
     </motion.div>
   );
 };
