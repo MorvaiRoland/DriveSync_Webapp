@@ -12,7 +12,6 @@ import {
   ArrowLeft, Info, X, Fingerprint, ShieldCheck
 } from 'lucide-react'
 
-// --- ÚJ IMPORTOK ---
 import imageCompression from 'browser-image-compression'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -28,7 +27,7 @@ interface ExistingCar {
   color?: string
 }
 
-// --- 1. LIQUID BUTTON (Form Submit) ---
+// --- 1. SUBMIT BUTTON ---
 function SubmitButton({ label = "Mentés a Garázsba", icon, disabled }: { label?: string, icon?: React.ReactNode, disabled?: boolean }) {
   const { pending } = useFormStatus()
   const isDisabled = pending || disabled;
@@ -59,7 +58,7 @@ function SubmitButton({ label = "Mentés a Garázsba", icon, disabled }: { label
   )
 }
 
-// --- 2. GLASS INPUT MEZŐ ---
+// --- 2. INPUT GROUP ---
 function InputGroup({ label, name, type = "text", placeholder, required = false, uppercase = false, icon, suffix }: any) {
   const [focused, setFocused] = useState(false)
   
@@ -110,7 +109,7 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
   )
 }
 
-// --- 3. GLASS SELECT MEZŐ ---
+// --- 3. SELECT GROUP ---
 function SelectGroup({ label, name, children, required = false, icon, value, onChange, disabled }: any) {
   const [focused, setFocused] = useState(false)
 
@@ -164,7 +163,7 @@ function SelectGroup({ label, name, children, required = false, icon, value, onC
   )
 }
 
-// --- 4. KÁRTYA CONTAINER ---
+// --- 4. FORM SECTION WRAPPER ---
 function FormSection({ title, step, children }: { title: string, step: string, children: React.ReactNode }) {
     return (
         <div className="relative overflow-hidden rounded-3xl bg-white/40 dark:bg-slate-900/40 border border-white/40 dark:border-white/5 backdrop-blur-xl shadow-xl p-6 md:p-8 mb-8 transition-all duration-500 hover:shadow-2xl">
@@ -183,7 +182,7 @@ function FormSection({ title, step, children }: { title: string, step: string, c
     )
 }
 
-// --- 5. FŐ LOGIKA (FORM + DUPLIKÁCIÓ KEZELÉS) ---
+// --- 5. FŐ FORM COMPONENT ---
 function CarForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -200,7 +199,7 @@ function CarForm() {
   // Statek
   const [existingCar, setExistingCar] = useState<ExistingCar | null>(null)
   const [loadingDuplicate, setLoadingDuplicate] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null) // ÚJ: User ID tárolása
+  const [userId, setUserId] = useState<string | null>(null)
   
   const [brands, setBrands] = useState<{id: number, name: string}[]>([])
   const [models, setModels] = useState<{id: number, name: string}[]>([])
@@ -208,13 +207,16 @@ function CarForm() {
   const [loadingBrands, setLoadingBrands] = useState(true)
   const [loadingModels, setLoadingModels] = useState(false)
   
-  // KÉPFELTÖLTÉS STATEK
+  // KÉP Statek
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadedImagePath, setUploadedImagePath] = useState<string>('')
+  
+  // POWER FOCUS STATE (A speckó inputhoz)
+  const [powerFocused, setPowerFocused] = useState(false)
 
-  // USER BETÖLTÉSE (FONTOS A MAPPÁZÁSHOZ)
+  // User lekérése
   useEffect(() => {
     async function getUser() {
         const { data: { user } } = await supabase.auth.getUser()
@@ -223,7 +225,7 @@ function CarForm() {
     getUser()
   }, [supabase])
 
-  // Duplikált autó lekérése (Ha van found_car_id)
+  // Duplikáció ellenőrzés
   useEffect(() => {
     if (foundCarId) {
       const fetchDuplicate = async () => {
@@ -266,7 +268,7 @@ function CarForm() {
     fetchModels()
   }, [selectedBrandId, supabase])
 
-  // --- KÉP TÖMÖRÍTÉS ÉS FELTÖLTÉS (JAVÍTOTT) ---
+  // KÉPFELTÖLTÉS LOGIKA
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement> | File) => {
     let file: File | undefined;
     
@@ -279,11 +281,10 @@ function CarForm() {
     if (!file) return;
 
     if (!userId) {
-        alert("Kérlek várj, amíg azonosítunk..."); // Biztonsági ellenőrzés
+        alert("Kérlek várj, amíg azonosítunk...");
         return;
     }
 
-    // Előnézet beállítása
     setImagePreview(URL.createObjectURL(file));
     setUploading(true);
 
@@ -296,14 +297,11 @@ function CarForm() {
         fileType: 'image/jpeg'
       }
 
-      console.log(`Eredeti: ${file.size / 1024 / 1024} MB`);
       const compressedFile = await imageCompression(file, options);
-      console.log(`Tömörített: ${compressedFile.size / 1024 / 1024} MB`);
 
-      // 2. FELTÖLTÉS (MAPPÁZVA!)
+      // 2. FELTÖLTÉS (MAPPÁZVA)
       const fileExt = 'jpg';
       const fileName = `${uuidv4()}.${fileExt}`;
-      // Így minden usernek külön mappája lesz: cars/USER_ID/fajlnev.jpg
       const filePath = `cars/${userId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -312,14 +310,11 @@ function CarForm() {
 
       if (uploadError) throw uploadError;
 
-      // 3. PUBLIC URL LEKÉRÉSE (EZ JAVÍTJA A MEGJELENÍTÉST!)
+      // 3. URL LEKÉRÉSE
       const { data: { publicUrl } } = supabase.storage
         .from('car-images')
         .getPublicUrl(filePath);
 
-      console.log("Kép nyilvános linkje:", publicUrl);
-
-      // 4. A TELJES LINKET MENTJÜK EL
       setUploadedImagePath(publicUrl);
 
     } catch (error) {
@@ -339,12 +334,11 @@ function CarForm() {
     if (file) handleImageChange(file);
   }
 
-  // --- A: DUPLIKÁCIÓ ESETÉN MEGJELENŐ KÁRTYA ---
+  // --- A: DUPLIKÁCIÓ KÁRTYA ---
   if (foundCarId && existingCar) {
     return (
       <div className="max-w-xl mx-auto pb-20 animate-in zoom-in-95 duration-500">
         <div className="relative overflow-hidden rounded-[2.5rem] bg-white/70 dark:bg-slate-900/70 border-2 border-amber-500/50 backdrop-blur-xl shadow-2xl p-8">
-            
             <div className="text-center relative z-10">
                 <div className="mx-auto w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-600 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-amber-500/30">
                     <AlertCircle className="w-10 h-10 text-white" />
@@ -354,10 +348,10 @@ function CarForm() {
                     Ez az autó már létezik!
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400 mb-8">
-                    A megadott alvázszám (VIN) alapján megtaláltuk az autót a rendszerben. Nem kell újra felvinned az adatokat.
+                    A megadott alvázszám (VIN) alapján megtaláltuk az autót a rendszerben.
                 </p>
 
-                {/* Autó Adatok Kártya */}
+                {/* Autó Adatok */}
                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 mb-8 text-left">
                     <div className="flex items-center justify-between mb-4 border-b border-slate-200 dark:border-slate-700 pb-4">
                         <div>
@@ -381,32 +375,16 @@ function CarForm() {
                                 <span className="font-mono text-sm font-bold">{existingCar.vin}</span>
                             </div>
                          </div>
-                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-500">
-                                <Calendar className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <span className="block text-xs text-slate-500">Évjárat</span>
-                                <span className="font-bold text-sm">{existingCar.year}</span>
-                            </div>
-                         </div>
                     </div>
                 </div>
 
-                {/* Action Buttons */}
                 <form action={claimCar} className="space-y-4">
                     <input type="hidden" name="car_id" value={existingCar.id} />
-                    
                     <SubmitButton 
                         label="Felvétel a Garázsomba" 
                         icon={<ShieldCheck className="w-5 h-5" />}
                     />
-
-                    <Link 
-                        href="/cars/new" 
-                        onClick={() => router.replace('/cars/new')} // URL reset
-                        className="block w-full text-center py-3 text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-                    >
+                    <Link href="/cars/new" onClick={() => router.replace('/cars/new')} className="block w-full text-center py-3 text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
                         Mégse, elírtam valamit
                     </Link>
                 </form>
@@ -434,7 +412,7 @@ function CarForm() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* BAL OLDAL - KÉP (LG: Col 5) */}
+            {/* BAL OLDAL - KÉP */}
             <div className="lg:col-span-5 lg:sticky lg:top-24 h-fit space-y-6">
                 <div className="relative group">
                     <div className={`
@@ -447,21 +425,11 @@ function CarForm() {
                                 : 'border-slate-300 dark:border-slate-700 hover:border-amber-500/50 hover:bg-slate-100/50 dark:hover:bg-slate-800/50'
                         }
                     `}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
+                    onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
                     >
-                        <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleImageChange} 
-                            className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer" 
-                        />
-                        
-                        {/* REJTETT MEZŐ A TELJES PUBLIC URL-LEL */}
+                        <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer" />
                         <input type="hidden" name="image_url" value={uploadedImagePath} />
 
-                        {/* Töltés visszajelző overlay */}
                         {uploading && (
                           <div className="absolute inset-0 z-30 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm">
                             <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-3"></div>
@@ -479,15 +447,7 @@ function CarForm() {
                                     </div>
                                     <span className="text-white font-bold text-sm tracking-wide shadow-black drop-shadow-md">Kép cseréje</span>
                                 </div>
-                                <button 
-                                    type="button" 
-                                    onClick={(e) => {
-                                      e.preventDefault(); 
-                                      setImagePreview(null);
-                                      setUploadedImagePath(''); 
-                                    }}
-                                    className="absolute top-4 right-4 z-30 p-2 bg-black/50 hover:bg-red-500/80 text-white rounded-full backdrop-blur-md transition-colors"
-                                >
+                                <button type="button" onClick={(e) => { e.preventDefault(); setImagePreview(null); setUploadedImagePath(''); }} className="absolute top-4 right-4 z-30 p-2 bg-black/50 hover:bg-red-500/80 text-white rounded-full backdrop-blur-md transition-colors">
                                     <X className="w-4 h-4" />
                                 </button>
                             </div>
@@ -501,38 +461,24 @@ function CarForm() {
                             </div>
                         )}
                     </div>
-                    {/* Floating Badge */}
-                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg px-4 py-1.5 rounded-full text-xs font-bold text-amber-500 uppercase tracking-widest z-20">
-                        Kiemelt Kép
-                    </div>
                 </div>
-
-                {/* Desktop Info Box */}
                 <div className="hidden lg:block p-6 rounded-3xl bg-amber-500/5 border border-amber-500/10 backdrop-blur-md">
                     <h4 className="font-bold text-amber-600 dark:text-amber-500 mb-2 flex items-center gap-2">
                         <Info className="w-4 h-4" /> Tipp
                     </h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                        A jó minőségű, tájkép (fekvő) tájolású fotók mutatnak a legjobban a garázsban. A rendszer automatikusan tömöríti a képeket.
+                        A jó minőségű, tájkép (fekvő) tájolású fotók mutatnak a legjobban a garázsban.
                     </p>
                 </div>
             </div>
 
-            {/* JOBB OLDAL - ŰRLAPOK (LG: Col 7) */}
+            {/* JOBB OLDAL - ŰRLAPOK */}
             <div className="lg:col-span-7 space-y-6">
                 
                 {/* 1. SZEKCIÓ: ADATOK */}
                 <FormSection title="Alapadatok" step="01">
                     <div className="space-y-6">
-                        <SelectGroup 
-                            label="Gyártó" 
-                            name="brand_select" 
-                            required 
-                            value={selectedBrandId} 
-                            onChange={(e: any) => setSelectedBrandId(e.target.value)} 
-                            disabled={loadingBrands}
-                            icon={<CarFront className="w-5 h-5" />}
-                        >
+                        <SelectGroup label="Gyártó" name="brand_select" required value={selectedBrandId} onChange={(e: any) => setSelectedBrandId(e.target.value)} disabled={loadingBrands} icon={<CarFront className="w-5 h-5" />}>
                             <option value="" disabled>Válassz márkát...</option>
                             {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                             <option value="other">Egyéb / Nem találom</option>
@@ -542,13 +488,7 @@ function CarForm() {
                         {selectedBrandId === "other" || (models.length === 0 && !loadingModels && selectedBrandId !== "") ? (
                             <InputGroup label="Modell" name="model" required placeholder="pl. Focus" />
                         ) : (
-                            <SelectGroup 
-                                label="Modell" 
-                                name="model" 
-                                required 
-                                disabled={!selectedBrandId || loadingModels}
-                                icon={<Settings className="w-5 h-5" />}
-                            >
+                            <SelectGroup label="Modell" name="model" required disabled={!selectedBrandId || loadingModels} icon={<Settings className="w-5 h-5" />}>
                                 <option value="" disabled selected>Válassz típust...</option>
                                 {models.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
                                 <option value="Egyéb">Egyéb</option>
@@ -567,12 +507,58 @@ function CarForm() {
                     </div>
                 </FormSection>
 
-               {/* 2. SZEKCIÓ: SPECIFIKÁCIÓ */}
+                {/* 2. SZEKCIÓ: SPECIFIKÁCIÓ (CUSTOM POWER INPUT) */}
                 <FormSection title="Specifikációk" step="02">
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <InputGroup label="Km óra állás" name="mileage" type="number" placeholder="pl. 154000" required icon={<Gauge className="w-5 h-5" />} />
-                            <InputGroup label="Teljesítmény" name="power_hp" type="number" placeholder="pl. 150" suffix="LE" icon={<Zap className="w-5 h-5" />} />
+                            
+                            {/* --- MÓDOSÍTOTT TELJESÍTMÉNY MEZŐ (Custom UI) --- */}
+                            <div className="group relative">
+                                <label htmlFor="power" className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 ml-1">
+                                    Teljesítmény
+                                </label>
+                                
+                                <div className={`
+                                    relative flex items-center rounded-2xl transition-all duration-300 overflow-hidden
+                                    bg-white/60 dark:bg-slate-800/40 backdrop-blur-md border 
+                                    ${powerFocused 
+                                        ? 'border-amber-500 ring-2 ring-amber-500/10 shadow-lg shadow-amber-500/10' 
+                                        : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20'
+                                    }
+                                `}>
+                                    <div className={`pl-4 pr-2 transition-colors duration-300 ${powerFocused ? 'text-amber-500' : 'text-slate-400'}`}>
+                                        <Zap className="w-5 h-5" />
+                                    </div>
+                                    
+                                    {/* SZÁM INPUT */}
+                                    <input
+                                        type="number"
+                                        name="power" // AZ ACTION EZT OLVASSA KI
+                                        id="power"
+                                        placeholder="pl. 150"
+                                        onFocus={() => setPowerFocused(true)}
+                                        onBlur={() => setPowerFocused(false)}
+                                        className="w-full bg-transparent border-none py-3.5 text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-0 focus:outline-none pl-4"
+                                    />
+                                    
+                                    {/* SZEPARÁTOR */}
+                                    <div className="h-6 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
+                                    
+                                    {/* EGYSÉG VÁLASZTÓ */}
+                                    <div className="relative pr-2">
+                                        <select
+                                            name="power_unit" // AZ ACTION EZT OLVASSA KI
+                                            className="bg-transparent border-none py-2 pl-2 pr-6 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-500 cursor-pointer focus:ring-0 focus:outline-none uppercase appearance-none"
+                                        >
+                                            <option value="hp">LE</option>
+                                            <option value="kw">kW</option>
+                                        </select>
+                                        <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                    </div>
+                                </div>
+                            </div>
+                            {/* --- MÓDOSÍTÁS VÉGE --- */}
                         </div>
 
                         <SelectGroup label="Üzemanyag" name="fuel_type" required icon={<Fuel className="w-5 h-5" />}>
@@ -620,7 +606,6 @@ function CarForm() {
                 {/* 3. SZEKCIÓ: STÁTUSZ & DÁTUMOK */}
                 <FormSection title="Állapot & Lejáratok" step="03">
                     <div className="space-y-8">
-                        {/* Státusz kártyák */}
                         <div className="grid grid-cols-2 gap-4">
                             <label className="relative group cursor-pointer">
                                 <input type="radio" name="status" value="active" defaultChecked className="peer sr-only" />
@@ -630,7 +615,6 @@ function CarForm() {
                                     <span className="font-bold uppercase tracking-widest text-xs">Aktív</span>
                                 </div>
                             </label>
-
                             <label className="relative group cursor-pointer">
                                 <input type="radio" name="status" value="service" className="peer sr-only" />
                                 <div className="absolute inset-0 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-white/10 transition-all duration-300 peer-checked:border-amber-500 peer-checked:bg-amber-500/5 peer-checked:shadow-lg peer-checked:shadow-amber-500/10"></div>
@@ -672,28 +656,22 @@ export default function NewCarPage() {
   return (
     <div className="min-h-screen font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 selection:text-amber-700 dark:selection:text-amber-200 transition-colors duration-500">
       
-      {/* --- FOLYÉKONY HÁTTÉR (Light & Dark) --- */}
+      {/* --- FOLYÉKONY HÁTTÉR --- */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {/* Dark Mode Blobs */}
-        <div className="hidden dark:block">
-            <div className="absolute -top-[20%] -right-[10%] w-[50vw] h-[50vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse-slow"></div>
-            <div className="absolute top-[40%] -left-[10%] w-[40vw] h-[40vw] bg-blue-600/5 rounded-full blur-[100px]"></div>
-            <div className="absolute bottom-[0%] right-[20%] w-[30vw] h-[30vw] bg-emerald-600/5 rounded-full blur-[80px]"></div>
-        </div>
-        {/* Light Mode Blobs */}
-        <div className="block dark:hidden">
-            <div className="absolute -top-[10%] -right-[10%] w-[60vw] h-[60vw] bg-amber-200/40 rounded-full blur-[100px] animate-pulse-slow"></div>
-            <div className="absolute top-[30%] -left-[10%] w-[50vw] h-[50vw] bg-blue-200/30 rounded-full blur-[80px]"></div>
-            <div className="absolute bottom-[0%] right-[10%] w-[40vw] h-[40vw] bg-orange-100/50 rounded-full blur-[80px]"></div>
-        </div>
-        
-        {/* Grain Overlay */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
+           <div className="hidden dark:block">
+               <div className="absolute -top-[20%] -right-[10%] w-[50vw] h-[50vw] bg-amber-600/10 rounded-full blur-[120px] animate-pulse-slow"></div>
+               <div className="absolute top-[40%] -left-[10%] w-[40vw] h-[40vw] bg-blue-600/5 rounded-full blur-[100px]"></div>
+               <div className="absolute bottom-[0%] right-[20%] w-[30vw] h-[30vw] bg-emerald-600/5 rounded-full blur-[80px]"></div>
+           </div>
+           <div className="block dark:hidden">
+               <div className="absolute -top-[10%] -right-[10%] w-[60vw] h-[60vw] bg-amber-200/40 rounded-full blur-[100px] animate-pulse-slow"></div>
+               <div className="absolute top-[30%] -left-[10%] w-[50vw] h-[50vw] bg-blue-200/30 rounded-full blur-[80px]"></div>
+               <div className="absolute bottom-[0%] right-[10%] w-[40vw] h-[40vw] bg-orange-100/50 rounded-full blur-[80px]"></div>
+           </div>
+           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
       </div>
 
       <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-12">
-        
-        {/* FEJLÉC */}
         <div className="mb-12 md:mb-20 text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-amber-600 dark:text-amber-500 text-xs font-bold uppercase tracking-widest mb-6 shadow-sm backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <Zap className="w-3 h-3" /> Garázs Bővítése
@@ -706,7 +684,6 @@ export default function NewCarPage() {
             </p>
         </div>
 
-        {/* ŰRLAP KONTÉNER */}
         <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300">
             <Suspense fallback={
                 <div className="w-full h-96 rounded-[2rem] bg-white/30 dark:bg-slate-900/30 border border-white/20 flex items-center justify-center backdrop-blur-md">
@@ -719,7 +696,6 @@ export default function NewCarPage() {
                 <CarForm />
             </Suspense>
         </div>
-
       </div>
     </div>
   )

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { login, signup, signInWithGoogle, resetPassword } from '@/app/login/action'
 import Link from 'next/link'
-import { motion } from 'framer-motion' // Opcionális animációhoz
+import { motion } from 'framer-motion'
 
 type AuthFormProps = {
   isLogin: boolean
@@ -14,11 +14,33 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [resetMode, setResetMode] = useState(false)
+  
+  // ÚJ: Jelszó állapot és validáció
+  const [passwordInput, setPasswordInput] = useState('')
+  const [isPasswordValid, setIsPasswordValid] = useState(false)
 
   const handleSubmit = () => setLoading(true)
   const showResetMessage = message && (message.toLowerCase().includes('visszaállító') || message.toLowerCase().includes('küldtük'))
 
-  // --- CÍMSOR KOMPONENS (Hogy ne kelljen ismételni) ---
+  // Jelszó követelmények ellenőrzése
+  useEffect(() => {
+    if (isLogin) {
+      setIsPasswordValid(true) // Belépésnél nem validálunk ilyen szigorúan kliens oldalon
+      return
+    }
+
+    const validations = [
+      passwordInput.length >= 6,           // Min. 6 karakter
+      /[a-z]/.test(passwordInput),         // Kisbetű
+      /[A-Z]/.test(passwordInput),         // Nagybetű
+      /[0-9]/.test(passwordInput),         // Szám
+      /[^a-zA-Z0-9]/.test(passwordInput)   // Speciális karakter
+    ]
+
+    setIsPasswordValid(validations.every(Boolean))
+  }, [passwordInput, isLogin])
+
+  // --- CÍMSOR KOMPONENS ---
   const HeaderSection = ({ title, subtitle }: { title: string, subtitle: string }) => (
     <div className="text-center mb-6 lg:mb-8">
       <h2 className="text-2xl lg:text-3xl font-black tracking-tight text-white drop-shadow-md">
@@ -27,6 +49,14 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
       <p className="mt-1 lg:mt-2 text-xs lg:text-sm text-slate-400 font-medium">
         {subtitle}
       </p>
+    </div>
+  )
+
+  // --- JELSZÓ KÖVETELMÉNY LISTA ELEM ---
+  const RequirementItem = ({ met, text }: { met: boolean, text: string }) => (
+    <div className={`flex items-center gap-2 text-[10px] transition-colors duration-300 ${met ? 'text-emerald-400' : 'text-slate-500'}`}>
+      <div className={`w-1.5 h-1.5 rounded-full ${met ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+      <span>{text}</span>
     </div>
   )
 
@@ -109,17 +139,41 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
             
             <div className="relative">
                 <input
-                name="password" type={showPassword ? "text" : "password"} required placeholder="Jelszó"
-                className="block w-full rounded-xl border border-white/10 bg-slate-950/50 py-3 pl-4 pr-10 text-white shadow-inner placeholder:text-slate-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-sm"
+                  name="password" 
+                  type={showPassword ? "text" : "password"} 
+                  required 
+                  placeholder="Jelszó"
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  className="block w-full rounded-xl border border-white/10 bg-slate-950/50 py-3 pl-4 pr-10 text-white shadow-inner placeholder:text-slate-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-sm"
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-amber-500 transition-colors">
-                {showPassword ? (
+                  {showPassword ? (
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                ) : (
+                  ) : (
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                )}
+                  )}
                 </button>
             </div>
+
+            {/* Jelszó követelmények megjelenítése csak Regisztrációnál */}
+            {!isLogin && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }} 
+                animate={{ height: 'auto', opacity: 1 }} 
+                className="px-1 overflow-hidden"
+              >
+                <div className="grid grid-cols-2 gap-1.5 p-3 bg-white/5 rounded-lg border border-white/5">
+                  <div className="col-span-2 mb-1 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                    Jelszó követelmények:
+                  </div>
+                  <RequirementItem met={passwordInput.length >= 6} text="Min. 6 karakter" />
+                  <RequirementItem met={/[A-Z]/.test(passwordInput)} text="Nagybetű" />
+                  <RequirementItem met={/[a-z]/.test(passwordInput)} text="Kisbetű" />
+                  <RequirementItem met={/[0-9]/.test(passwordInput)} text="Szám" />
+                  <RequirementItem met={/[^a-zA-Z0-9]/.test(passwordInput)} text="Speciális jel ($,@,% stb...)" />
+                </div>
+              </motion.div>
+            )}
         </div>
           
         {isLogin && (
@@ -148,8 +202,9 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
         )}
 
         <button
-          type="submit" disabled={loading}
-          className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:grayscale uppercase tracking-wider"
+          type="submit" 
+          disabled={loading || (!isLogin && !isPasswordValid)}
+          className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed uppercase tracking-wider"
         >
           {loading ? 'Feldolgozás...' : (isLogin ? 'Belépés a rendszerbe' : 'Fiók létrehozása')}
         </button>

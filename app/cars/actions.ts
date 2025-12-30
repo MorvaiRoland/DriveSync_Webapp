@@ -16,8 +16,6 @@ const parseNullableString = (val: FormDataEntryValue | null) => {
   return str && str !== '' && str !== 'null' ? str : null;
 }
 
-
-
 // --- 1. ÚJ AUTÓ LÉTREHOZÁSA ---
 export async function addCar(formData: FormData) {
   const supabase = await createClient()
@@ -25,7 +23,6 @@ export async function addCar(formData: FormData) {
   if (!user) return redirect('/login')
 
   const vinRaw = formData.get('vin');
-  // Szóközök eltávolítása és nagybetűsítés
   const vin = vinRaw ? String(vinRaw).trim().toUpperCase().replace(/\s/g, '') : '';
 
   // 1. Üresség ellenőrzése
@@ -33,17 +30,26 @@ export async function addCar(formData: FormData) {
     return redirect(`/cars/new?error=${encodeURIComponent('Az alvázszám (VIN) megadása kötelező!')}`);
   }
 
-  // 2. HOSSZ ELLENŐRZÉSE (ÚJ RÉSZ)
-  // A szabványos VIN 17 karakter. 
-  // (Megjegyzés: Ha 1981 előtti oldtimereket is támogatsz, ezt a feltételt ki kell venni vagy módosítani kell)
+  // 2. HOSSZ ELLENŐRZÉSE
   if (vin.length !== 17) {
     return redirect(`/cars/new?error=${encodeURIComponent(`Az alvázszámnak pontosan 17 karakternek kell lennie! (Jelenleg: ${vin.length})`)}`);
   }
 
-  // 3. OPCIONÁLIS: Érvénytelen karakterek ellenőrzése (I, O, Q nem szerepelhet VIN-ben)
+  // 3. Érvénytelen karakterek ellenőrzése
   const invalidVinChars = /[^A-HJ-NPR-Z0-9]/;
   if (invalidVinChars.test(vin)) {
      return redirect(`/cars/new?error=${encodeURIComponent('Az alvázszám érvénytelen karaktereket tartalmaz (pl. I, O, Q nem megengedett)!')}`);
+  }
+
+  // --- TELJESÍTMÉNY ÁTVÁLTÁS LOGIKA ---
+  const powerInput = parseNullableInt(formData.get('power')); // A beírt szám
+  const powerUnit = formData.get('power_unit') as string;    // 'hp' vagy 'kw'
+  
+  let finalHp = powerInput;
+
+  // Ha van érték és a mértékegység kW, átváltjuk LE-re (1 kW ~= 1.36 LE)
+  if (powerInput && powerUnit === 'kw') {
+      finalHp = Math.round(powerInput * 1.35962);
   }
 
   const carData = {
@@ -63,7 +69,7 @@ export async function addCar(formData: FormData) {
     
     // Technikai adatok
     engine_size: parseNullableInt(formData.get('engine_size')),
-    power_hp: parseNullableInt(formData.get('power_hp')),
+    power_hp: finalHp, // A már átváltott vagy eredeti LE érték
 
     // Dátumok és Kép
     mot_expiry: parseNullableString(formData.get('mot_expiry')),       
@@ -81,7 +87,7 @@ export async function addCar(formData: FormData) {
   if (error) {
     console.error('Adatbázis hiba:', error)
 
-    // Ha a VIN már létezik (Unique constraint hiba: 23505)
+    // Ha a VIN már létezik
     if (error.code === '23505') {
       const { data: existingCar } = await supabase
         .from('cars')
@@ -90,7 +96,6 @@ export async function addCar(formData: FormData) {
         .single();
       
       if (existingCar) {
-        // Átirányítás a duplikáció kezelő oldalra
         return redirect(`/cars/new?found_car_id=${existingCar.id}`);
       }
     }
@@ -103,14 +108,12 @@ export async function addCar(formData: FormData) {
 
 // --- 2. AUTÓ ÁTVÉTELE (CLAIM) ---
 export async function claimCar(formData: FormData) {
-  // 1. Ellenőrizzük, hogy be van-e lépve a user
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
   const carId = String(formData.get('car_id'));
 
-  // 2. Létrehozunk egy ADMIN klienst a Service Role kulccsal az RLS megkerülésére
   const supabaseAdmin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -122,7 +125,6 @@ export async function claimCar(formData: FormData) {
     }
   )
 
-  // 3. Frissítés az ADMIN klienssel: átírjuk a tulajdonost (user_id)
   const { error } = await supabaseAdmin
     .from('cars')
     .update({ 
@@ -136,7 +138,6 @@ export async function claimCar(formData: FormData) {
     return redirect(`/cars/new?found_car_id=${carId}&error=${encodeURIComponent('Hiba az átvételkor: ' + error.message)}`);
   }
 
-  // Siker! Cache törlése és átirányítás az autó adatlapjára
   revalidatePath('/', 'layout') 
   redirect(`/cars/${carId}`)
 }
@@ -149,8 +150,6 @@ export async function updateCar(formData: FormData) {
 
   const carId = String(formData.get('car_id'))
   
-  // Itt minden mezőt felsorolhatsz, amit frissíteni szeretnél
-  // Fontos: a dates és image_url mezőket itt is felveheted, ha szerkeszthetővé teszed őket
   const updateData: any = {
     make: String(formData.get('make')),
     model: String(formData.get('model')),
@@ -164,7 +163,7 @@ export async function updateCar(formData: FormData) {
     .from('cars')
     .update(updateData)
     .eq('id', carId)
-    .eq('user_id', user.id) // Csak a saját autót lehet szerkeszteni
+    .eq('user_id', user.id)
 
   if (error) {
     return redirect(`/cars/${carId}/edit?error=${encodeURIComponent('Hiba a frissítéskor: ' + error.message)}`)
@@ -180,7 +179,6 @@ export async function deleteCar(formData: FormData) {
   const supabase = await createClient()
   const carId = String(formData.get('id') || formData.get('car_id'))
   
-  // Először töröljük a kapcsolódó rekordokat (Foreign Key miatt)
   await supabase.from('events').delete().eq('car_id', carId)
   await supabase.from('service_reminders').delete().eq('car_id', carId)
   await supabase.from('trips').delete().eq('car_id', carId)

@@ -1,6 +1,5 @@
 'use server'
 
-
 import { headers } from 'next/headers'
 import { createClient } from 'supabase/server'
 import { redirect } from 'next/navigation'
@@ -38,6 +37,11 @@ export async function signup(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
+  // Szerver oldali validáció a biztonság kedvéért (ha a kliens oldalt megkerülnék)
+  if (password.length < 6) {
+    return encodedRedirect('/login?mode=signup', 'A jelszónak legalább 6 karakternek kell lennie.')
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -48,7 +52,11 @@ export async function signup(formData: FormData) {
 
   if (error) {
     console.error(error)
-    return encodedRedirect('/login', 'Hiba történt a regisztráció során')
+    // Ha a Supabase dobja a gyenge jelszó hibát (pl. Weak Password)
+    if (error.message.includes("Password") && error.message.includes("weak")) {
+        return encodedRedirect('/login?mode=signup', 'A jelszó túl gyenge. Használj kis- és nagybetűt, számot és szimbólumot.')
+    }
+    return encodedRedirect('/login?mode=signup', 'Hiba történt a regisztráció során. Próbáld újra.')
   }
 
   // Early Access Pro logic (admin configurable)
@@ -91,13 +99,10 @@ export async function signInWithGoogle() {
 }
 
 // --- 4. JELSZÓ VISSZAÁLLÍTÁS KÉRÉSE ---
-// app/login/action.ts
-
 export async function resetPassword(formData: FormData) {
   const supabase = await createClient()
   const email = formData.get('email') as string
   
-  // FIX: Hardcode-oljuk a címet, hogy biztosan egyezzen a böngészővel
   const productionUrl = 'https://www.dynamicsense.hu' 
   
   const siteUrl = process.env.NODE_ENV === 'development' 
@@ -108,8 +113,6 @@ export async function resetPassword(formData: FormData) {
     return encodedRedirect('/login', 'Email megadása kötelező')
   }
 
-  // JAVÍTÁS ITT:
-  // Összerakjuk a teljes visszatérési URL-t, hogy a paraméterek ne vesszenek el
   const callbackUrl = `${siteUrl}/auth/callback?next=/update-password`
   
   console.log("Küldés erre az URL-re:", callbackUrl) // Debug log
@@ -125,6 +128,7 @@ export async function resetPassword(formData: FormData) {
 
   return encodedRedirect('/login', 'Ha létezik a fiók, elküldtük a visszaállító linket.')
 }
+
 // --- 5. ÚJ JELSZÓ MENTÉSE ---
 export async function updateNewPassword(formData: FormData) {
   const supabase = await createClient()
@@ -146,6 +150,9 @@ export async function updateNewPassword(formData: FormData) {
 
   if (error) {
     console.error('Update password error:', error)
+    if (error.message.includes("weak")) {
+        return encodedRedirect('/update-password', 'A jelszó túl gyenge. Min. 6 karakter, vegyes karaktertípusok.')
+    }
     return encodedRedirect('/update-password', 'Nem sikerült módosítani a jelszót')
   }
 
