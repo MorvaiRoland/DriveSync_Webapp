@@ -90,7 +90,8 @@ export async function updateSession(request: NextRequest) {
         path.startsWith('/impressum') ||
          path.startsWith('/support') ||
         path.startsWith('/privacy') ||
-        path.startsWith('/terms') || 
+        path.startsWith('/terms') ||
+        path.startsWith('/admin?key=Xy7v9M_DriveSync_Secure_2025_Admin_Token_h4L9qBzR') ||  
         path.startsWith('/update-password') || 
         path.startsWith('/hirdetes') ||
         path.startsWith('/szolgaltatasok'); // Ha van ilyen, add hozzá!
