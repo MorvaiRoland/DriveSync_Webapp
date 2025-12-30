@@ -8,7 +8,8 @@ import {
   BarChart3, ShieldCheck, Zap, Menu, X, Lock, 
   MessageCircle, HelpCircle, Server, Smartphone,
   ChevronDown, Layers, AlertTriangle, Cpu, Gift, Search,
-  Sun, Moon, Scale, Gavel, FileWarning, Handshake
+  Sun, Moon, Scale, Gavel, FileWarning, Handshake,
+  Facebook, Instagram, Share2, ThumbsUp
 } from 'lucide-react';
 import PromoModal from '@/components/PromoModal'; 
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
@@ -220,7 +221,7 @@ const ComparisonSection = () => {
     )
 }
 
-// FAIR PLAY / INTEGRITY SECTION (ÚJ)
+// FAIR PLAY / INTEGRITY SECTION
 const FairPlaySection = () => {
   return (
     <section className="max-w-6xl mx-auto mb-32 px-4">
@@ -285,6 +286,24 @@ const FairPlaySection = () => {
   );
 };
 
+// TIKTOK ICON (Custom SVG)
+const TikTokIcon = ({ size = 24, className = "" }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+  </svg>
+);
+
 // TYPEWRITER TEXT
 const TypewriterText = ({ text, speed = 30 }: { text: string, speed?: number }) => {
   const [displayedText, setDisplayedText] = useState('');
@@ -340,73 +359,73 @@ const DashboardPreview = () => {
         <div className="grid grid-cols-12 gap-4 p-6 min-h-[450px] bg-slate-50 dark:bg-slate-950/80">
            {/* Sidebar Mock */}
            <div className="hidden md:block col-span-2 space-y-3 border-r border-slate-200 dark:border-white/5 pr-4">
-              <div className="h-8 w-full bg-gradient-to-r from-amber-500/20 to-transparent rounded-lg mb-6 border-l-2 border-amber-500"></div>
-              {[1,2,3,4].map(i => <div key={i} className="h-8 w-full bg-slate-200/50 dark:bg-white/5 rounded-lg"></div>)}
+             <div className="h-8 w-full bg-gradient-to-r from-amber-500/20 to-transparent rounded-lg mb-6 border-l-2 border-amber-500"></div>
+             {[1,2,3,4].map(i => <div key={i} className="h-8 w-full bg-slate-200/50 dark:bg-white/5 rounded-lg"></div>)}
            </div>
 
            <div className="col-span-12 md:col-span-10 grid grid-cols-12 gap-4">
-              {/* Flotta Egészség Card */}
-              <div className="col-span-12 md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden group/card shadow-sm">
-                 <div className="absolute inset-0 bg-emerald-500/5 group-hover/card:bg-emerald-500/10 transition-colors"></div>
-                 <div className="relative w-24 h-24 mb-3">
-                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                      <path className="text-slate-200 dark:text-slate-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
-                      <motion.path 
-                        initial={{ pathLength: 0 }} 
-                        whileInView={{ pathLength: 0.94 }} 
-                        transition={{ duration: 2, ease: "easeOut" }}
-                        className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                        fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" 
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-slate-800 dark:text-white">94%</div>
-                 </div>
-                 <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Flotta Egészség</div>
-              </div>
+             {/* Flotta Egészség Card */}
+             <div className="col-span-12 md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden group/card shadow-sm">
+                <div className="absolute inset-0 bg-emerald-500/5 group-hover/card:bg-emerald-500/10 transition-colors"></div>
+                <div className="relative w-24 h-24 mb-3">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <path className="text-slate-200 dark:text-slate-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+                    <motion.path 
+                      initial={{ pathLength: 0 }} 
+                      whileInView={{ pathLength: 0.94 }} 
+                      transition={{ duration: 2, ease: "easeOut" }}
+                      className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                      fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" 
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-slate-800 dark:text-white">94%</div>
+                </div>
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Flotta Egészség</div>
+             </div>
 
-              {/* Költség Card */}
-              <div className="col-span-12 md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between shadow-sm">
-                 <div className="flex justify-between items-center mb-4">
-                    <div className="h-8 w-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-500"><BarChart3 size={16} /></div>
-                    <span className="text-xs text-slate-400 font-mono">30 NAP</span>
-                 </div>
-                 <div>
-                    <div className="text-3xl font-bold text-slate-800 dark:text-white mb-2">42.500 Ft</div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                       <motion.div initial={{ width: 0 }} whileInView={{ width: "60%" }} transition={{ duration: 1.5 }} className="h-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></motion.div>
-                    </div>
-                 </div>
-              </div>
+             {/* Költség Card */}
+             <div className="col-span-12 md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                   <div className="h-8 w-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-500"><BarChart3 size={16} /></div>
+                   <span className="text-xs text-slate-400 font-mono">30 NAP</span>
+                </div>
+                <div>
+                   <div className="text-3xl font-bold text-slate-800 dark:text-white mb-2">42.500 Ft</div>
+                   <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <motion.div initial={{ width: 0 }} whileInView={{ width: "60%" }} transition={{ duration: 1.5 }} className="h-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></motion.div>
+                   </div>
+                </div>
+             </div>
 
-              {/* AI Szerelő Card */}
-              <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/40 dark:to-slate-900 border border-indigo-200 dark:border-indigo-500/30 rounded-xl p-5 relative overflow-hidden shadow-sm">
-                 <div className="absolute top-0 right-0 p-4 opacity-50"><Sparkles className="text-indigo-400 animate-pulse" /></div>
-                 <div className="flex items-center gap-2 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></div>
-                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-300">AI SZERELŐ ÉLŐ</span>
-                 </div>
-                 <div className="bg-white/80 dark:bg-slate-950/50 rounded-lg p-3 border border-indigo-100 dark:border-indigo-500/20 min-h-[100px]">
-                    <div className="text-xs text-slate-400 mb-1">Kérdés: Mit jelent a P0300?</div>
-                    <div className="text-sm text-slate-700 dark:text-indigo-100 leading-snug">
-                       <TypewriterText text="A P0300 égéskimaradást jelez több hengernél. Ez gyakran gyújtótrafó, gyertya vagy üzemanyag-ellátási hiba. Javaslom a gyertyák ellenőrzését első lépésként." speed={40} />
-                    </div>
-                 </div>
-              </div>
+             {/* AI Szerelő Card */}
+             <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/40 dark:to-slate-900 border border-indigo-200 dark:border-indigo-500/30 rounded-xl p-5 relative overflow-hidden shadow-sm">
+                <div className="absolute top-0 right-0 p-4 opacity-50"><Sparkles className="text-indigo-400 animate-pulse" /></div>
+                <div className="flex items-center gap-2 mb-4">
+                   <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></div>
+                   <span className="text-xs font-bold text-indigo-600 dark:text-indigo-300">AI SZERELŐ ÉLŐ</span>
+                </div>
+                <div className="bg-white/80 dark:bg-slate-950/50 rounded-lg p-3 border border-indigo-100 dark:border-indigo-500/20 min-h-[100px]">
+                   <div className="text-xs text-slate-400 mb-1">Kérdés: Mit jelent a P0300?</div>
+                   <div className="text-sm text-slate-700 dark:text-indigo-100 leading-snug">
+                      <TypewriterText text="A P0300 égéskimaradást jelez több hengernél. Ez gyakran gyújtótrafó, gyertya vagy üzemanyag-ellátási hiba. Javaslom a gyertyák ellenőrzését első lépésként." speed={40} />
+                   </div>
+                </div>
+             </div>
 
-              {/* Bottom Card Mockup */}
-              <div className="col-span-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center gap-4 shadow-sm">
-                 <div className="h-16 w-24 bg-slate-200 dark:bg-slate-800 rounded-lg relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-slate-300 to-slate-200 dark:from-slate-700 dark:to-slate-600"></div>
-                 </div>
-                 <div className="space-y-1">
-                    <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700/50 rounded animate-pulse"></div>
-                    <div className="h-3 w-20 bg-slate-100 dark:bg-slate-800 rounded"></div>
-                 </div>
-                 <div className="ml-auto flex gap-2">
-                    <div className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs border border-emerald-500/20">Aktív</div>
-                 </div>
-              </div>
+             {/* Bottom Card Mockup */}
+             <div className="col-span-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center gap-4 shadow-sm">
+                <div className="h-16 w-24 bg-slate-200 dark:bg-slate-800 rounded-lg relative overflow-hidden">
+                   <div className="absolute inset-0 bg-gradient-to-tr from-slate-300 to-slate-200 dark:from-slate-700 dark:to-slate-600"></div>
+                </div>
+                <div className="space-y-1">
+                   <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700/50 rounded animate-pulse"></div>
+                   <div className="h-3 w-20 bg-slate-100 dark:bg-slate-800 rounded"></div>
+                </div>
+                <div className="ml-auto flex gap-2">
+                   <div className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs border border-emerald-500/20">Aktív</div>
+                </div>
+             </div>
            </div>
         </div>
       </div>
@@ -423,7 +442,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
-    // Passive listener a jobb görgetési teljesítményért
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -448,21 +466,13 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             ? 'bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 py-4 shadow-xl'
             : 'bg-transparent border-transparent py-6'}
         `}
-        style={{}}
       >
         <div
           className="max-w-7xl mx-auto px-6 flex justify-between items-center"
-          style={{
-            marginTop: 'env(safe-area-inset-top)',
-          }}
+          style={{ marginTop: 'env(safe-area-inset-top)' }}
         >
-          <Link href="/" className="flex items-center gap-3 group"
-            style={{}}
-          >
-            <div
-              className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300"
-              style={{}}
-            >
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300">
               <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
             </div>
             <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase hidden sm:block group-hover:text-amber-500 transition-colors duration-300">
@@ -495,7 +505,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden text-slate-600 dark:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors"
-            style={{}}
           >
             {mobileMenuOpen ? <X /> : <Menu />}
           </button>
@@ -535,7 +544,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </AnimatePresence>
       </nav>
 
-      {/* MAIN CONTENT - Relative positioning, z-index 10 */}
+      {/* MAIN CONTENT */}
       <main className="relative z-10 flex-1 flex flex-col pt-32">
         
         {/* HERO SECTION */}
@@ -646,10 +655,10 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                             <path className="text-slate-200 dark:text-slate-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" />
                             <path className="text-emerald-500 drop-shadow-[0_0_15px_rgba(16,185,129,0.4)]" strokeDasharray="94, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center flex-col">
-                            <span className="text-4xl font-black text-slate-900 dark:text-white">94%</span>
-                        </div>
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center flex-col">
+                              <span className="text-4xl font-black text-slate-900 dark:text-white">94%</span>
+                          </div>
                     </div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Flotta Egészség</h3>
                     <p className="text-slate-600 dark:text-slate-400 text-sm">Élő mutató a karbantartások alapján.</p>
@@ -810,7 +819,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
       </main>
 
-      {/* FOOTER */}
+      {/* FOOTER - FRISSÍTETT VERZIÓ */}
       <footer className="relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10 px-6 transition-colors">
          {/* Footer Glow Line */}
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
@@ -836,7 +845,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                    <Link 
                        href="/support" 
                        aria-label="Hibajelentés és Támogatás"
-                       title="Hibajelentés és Támogatás"
                        className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-amber-500 transition-all cursor-pointer border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 hover:scale-105"
                    >
                        <HelpCircle size={18} />
@@ -873,19 +881,42 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 </ul>
             </div>
             
+            {/* SOCIAL MEDIA SZEKCIÓ (ÚJ) */}
             <div>
-               <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Technológia</h4>
-               <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 mb-3 group cursor-default">
-                   <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:text-amber-500 transition-colors"><Server size={16} /></div>
-                   <span>Felhőalapú rendszer</span>
+               <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Közösség</h4>
+               <div className="flex flex-col gap-4">
+                   <a href="https://www.facebook.com/profile.php?id=61585653752179" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#1877F2] transition-colors group">
+                       <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-[#1877F2]/10 transition-colors">
+                           <Facebook size={18} />
+                       </div>
+                       <span>Facebook</span>
+                   </a>
+                   <a href="https://instagram.com/dynamicsense" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#E4405F] transition-colors group">
+                       <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-[#E4405F]/10 transition-colors">
+                           <Instagram size={18} />
+                       </div>
+                       <span>Instagram</span>
+                   </a>
+                   <a href="https://tiktok.com/@dynamicsense" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors group">
+                       <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-slate-200 dark:group-hover:bg-slate-800 transition-colors">
+                           <TikTokIcon size={18} />
+                       </div>
+                       <span>TikTok</span>
+                   </a>
                </div>
-               <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 mb-3 group cursor-default">
-                   <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:text-amber-500 transition-colors"><Smartphone size={16} /></div>
-                   <span>Mobil-optimalizált</span>
-               </div>
-               <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 mb-3 group cursor-default">
-                   <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:text-amber-500 transition-colors"><Lock size={16} /></div>
-                   <span>Banki szintű titkosítás</span>
+               
+               <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                       <ThumbsUp size={12} className="text-amber-500" /> Támogasd a projektet!
+                   </p>
+                   <div className="flex gap-2">
+                       <button className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                           <Share2 size={14} /> Megosztás
+                       </button>
+                       <button className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                           <ThumbsUp size={14} /> Kedvelés
+                       </button>
+                   </div>
                </div>
             </div>
          </div>

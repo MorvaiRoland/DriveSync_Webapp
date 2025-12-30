@@ -85,7 +85,10 @@ export async function updateSession(request: NextRequest) {
         path === '/' || 
         path.startsWith('/login') || 
         path.startsWith('/register') || 
-        path.startsWith('/auth') || 
+        path.startsWith('/auth') ||
+        path.startsWith('/impressum') ||
+        path.startsWith('/privacy') ||
+        path.startsWith('/terms') || 
         path.startsWith('/update-password') || 
         path.startsWith('/hirdetes') ||
         path.startsWith('/szolgaltatasok'); // Ha van ilyen, add hozzá!
