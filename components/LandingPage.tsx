@@ -897,7 +897,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                        </div>
                        <span>Instagram</span>
                    </a>
-                   <a href="https://tiktok.com/@dynamicsense" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors group">
+                   <a href="https://www.tiktok.com/@dynamicsense2026" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors group">
                        <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-slate-200 dark:group-hover:bg-slate-800 transition-colors">
                            <TikTokIcon size={18} />
                        </div>
