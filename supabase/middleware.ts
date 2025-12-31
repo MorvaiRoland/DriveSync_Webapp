@@ -83,7 +83,8 @@ export async function updateSession(request: NextRequest) {
     // Minden más útvonal átirányít a /login-ra.
     const isPublicRoute = 
         path === '/' || 
-        path.startsWith('/login') || 
+        path.startsWith('/login') ||
+        path.startsWith('/check') ||  
         path.startsWith('/register') || 
         path.startsWith('/changelog') || 
         path.startsWith('/auth') ||
