@@ -513,7 +513,7 @@ function CarForm() {
 
   // --- B: NORMÁL ŰRLAP ---
   const currentYear = new Date().getFullYear()
-  const years = Array.from({ length: currentYear - 1980 + 1 }, (_, i) => currentYear - i)
+  const years = Array.from({ length: currentYear - 1900 + 1 }, (_, i) => currentYear - i)
   const colors = ["Fehér", "Fekete", "Ezüst / Szürke", "Kék", "Piros", "Zöld", "Barna / Bézs", "Sárga / Arany", "Narancs", "Egyéb"]
 
   return (
