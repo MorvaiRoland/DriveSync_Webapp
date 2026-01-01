@@ -4,6 +4,7 @@ import { createClient } from '@/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // --- SEGÉDFÜGGVÉNYEK ---
 const parseNullableInt = (val: FormDataEntryValue | null) => {
@@ -208,4 +209,71 @@ export async function toggleCarVisibility(carId: string, isPublic: boolean) {
 
   revalidatePath(`/cars/${carId}`)
   return { success: true }
+}
+export async function scanRegistrationDocument(formData: FormData) {
+  const API_KEY = process.env.GOOGLE_API_KEY;
+
+  if (!API_KEY) {
+    return { error: 'Szerver konfigurációs hiba: Hiányzó API kulcs.' }
+  }
+
+  const file = formData.get('document') as File
+  if (!file) return { error: 'Nincs kép feltöltve.' }
+
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const base64Image = buffer.toString('base64')
+
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    // A Gemini 1.5 Pro vagy Flash modell jobb szövegfelismerésben
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+      Analyze this Hungarian Vehicle Registration Certificate (Forgalmi engedély).
+      Extract the data based on the standard codes (A, B, D.1, etc.) visible on the document.
+      
+      Return a JSON object with these exact keys (use null if not found):
+      - plate: Field 'A' (Rendszám) - Remove hyphens/spaces.
+      - make: Field 'D.1' (Gyártmány).
+      - model: Field 'D.2' or 'D.3' (Típus/Kereskedelmi név).
+      - vin: Field 'E' (Alvázszám).
+      - year: Extract the Year part from Field 'B' (Első nyilvántartásba vétel) or 'I'.
+      - power_kw: Field 'P.2' (Teljesítmény kW-ban) - Number only.
+      - engine_size: Field 'P.1' (Hengerűrtartalom) - Number only.
+      - fuel_type: Field 'P.3' (Hajtóanyag). Map to: "Benzin", "Dízel", "Hibrid", "Elektromos", "LPG / Gáz".
+      - color: Field 'R' (Szín).
+      - mass: Field 'G' (Saját tömeg) - optional.
+
+      IMPORTANT: Return ONLY valid JSON, no markdown formatting.
+    `;
+
+    const imagePart = {
+      inlineData: {
+        data: base64Image,
+        mimeType: file.type,
+      },
+    };
+    
+    const result = await model.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    const text = response.text();
+
+    // JSON tisztítása (ha a modell véletlenül markdown-t küldene)
+    let jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const firstBrace = jsonString.indexOf('{');
+    const lastBrace = jsonString.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+    }
+
+    const data = JSON.parse(jsonString);
+    console.log("🚗 Forgalmi AI Adatok:", data);
+
+    return { success: true, data }
+
+  } catch (error: any) {
+    console.error("❌ AI Hiba:", error.message);
+    return { error: 'Nem sikerült beolvasni a dokumentumot.' }
+  }
 }

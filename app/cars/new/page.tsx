@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { addCar, claimCar } from '@/app/cars/actions'
+import { addCar, claimCar, scanRegistrationDocument } from '@/app/cars/actions'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
@@ -9,7 +9,7 @@ import { useFormStatus } from 'react-dom'
 import {
   CarFront, Calendar, Gauge, Fuel, Zap, Settings,
   Palette, FileText, CheckCircle2, AlertCircle, Upload, ChevronDown,
-  ArrowLeft, Info, X, Fingerprint, ShieldCheck
+  ArrowLeft, Info, X, Fingerprint, ShieldCheck, Scan, Loader2, AlertTriangle
 } from 'lucide-react'
 
 import imageCompression from 'browser-image-compression'
@@ -58,8 +58,8 @@ function SubmitButton({ label = "Mentés a Garázsba", icon, disabled }: { label
   )
 }
 
-// --- 2. INPUT GROUP ---
-function InputGroup({ label, name, type = "text", placeholder, required = false, uppercase = false, icon, suffix }: any) {
+// --- 2. INPUT GROUP (Frissítve defaultValue támogatással) ---
+function InputGroup({ label, name, type = "text", placeholder, required = false, uppercase = false, icon, suffix, defaultValue, onChange }: any) {
   const [focused, setFocused] = useState(false)
   
   return (
@@ -88,6 +88,8 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
           id={name}
           required={required}
           placeholder={placeholder}
+          defaultValue={defaultValue} // Fontos az AI kitöltéshez
+          onChange={onChange}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           className={`
@@ -109,8 +111,8 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
   )
 }
 
-// --- 3. SELECT GROUP ---
-function SelectGroup({ label, name, children, required = false, icon, value, onChange, disabled }: any) {
+// --- 3. SELECT GROUP (Frissítve defaultValue támogatással) ---
+function SelectGroup({ label, name, children, required = false, icon, value, defaultValue, onChange, disabled }: any) {
   const [focused, setFocused] = useState(false)
 
   return (
@@ -138,7 +140,8 @@ function SelectGroup({ label, name, children, required = false, icon, value, onC
           name={name}
           id={name}
           required={required}
-          {...(value !== undefined ? { value } : {})}
+          // Kezeljük a controlled (value) és uncontrolled (defaultValue) módot is
+          {...(value !== undefined ? { value } : { defaultValue })}
           onChange={onChange}
           disabled={disabled}
           onFocus={() => setFocused(true)}
@@ -216,6 +219,11 @@ function CarForm() {
   // POWER FOCUS STATE (A speckó inputhoz)
   const [powerFocused, setPowerFocused] = useState(false)
 
+  // --- ÚJ STATE-EK A SZKENNELÉSHEZ ---
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannedData, setScannedData] = useState<any>(null);
+  const [showScanWarning, setShowScanWarning] = useState(false);
+
   // User lekérése
   useEffect(() => {
     async function getUser() {
@@ -268,7 +276,42 @@ function CarForm() {
     fetchModels()
   }, [selectedBrandId, supabase])
 
-  // KÉPFELTÖLTÉS LOGIKA
+  // --- SZKENNELÉS LOGIKA ---
+  const handleScanClick = () => {
+    document.getElementById('registration-upload')?.click();
+  };
+
+  const handleRegistrationScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    setScannedData(null);
+    setShowScanWarning(false);
+
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+
+      const result = await scanRegistrationDocument(formData);
+
+      if (result.success && result.data) {
+        setScannedData(result.data);
+        setShowScanWarning(true);
+        // Opcionális: Ha nagyon okosak akarunk lenni, itt megkereshetnénk a brand ID-t a szöveg alapján
+      } else {
+        alert("Nem sikerült adatokat kinyerni a képből.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Hiba történt a beolvasás során.");
+    } finally {
+      setIsScanning(false);
+      e.target.value = ''; // Input reset
+    }
+  };
+
+  // KÉPFELTÖLTÉS LOGIKA (Jármű kép)
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement> | File) => {
     let file: File | undefined;
     
@@ -289,7 +332,6 @@ function CarForm() {
     setUploading(true);
 
     try {
-      // 1. TÖMÖRÍTÉS
       const options = {
         maxSizeMB: 0.8,
         maxWidthOrHeight: 1920,
@@ -298,8 +340,6 @@ function CarForm() {
       }
 
       const compressedFile = await imageCompression(file, options);
-
-      // 2. FELTÖLTÉS (MAPPÁZVA)
       const fileExt = 'jpg';
       const fileName = `${uuidv4()}.${fileExt}`;
       const filePath = `cars/${userId}/${fileName}`;
@@ -310,7 +350,6 @@ function CarForm() {
 
       if (uploadError) throw uploadError;
 
-      // 3. URL LEKÉRÉSE
       const { data: { publicUrl } } = supabase.storage
         .from('car-images')
         .getPublicUrl(filePath);
@@ -403,6 +442,68 @@ function CarForm() {
   return (
     <form action={addCar} className="w-full max-w-5xl mx-auto pb-20">
         
+        {/* --- ÚJ: SZKENNELÉS GOMB ÉS FIGYELMEZTETÉS --- */}
+        <div className="mb-8 px-1">
+            <input 
+                type="file" 
+                id="registration-upload" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleRegistrationScan} 
+            />
+            
+            {!showScanWarning ? (
+                <button
+                    type="button"
+                    onClick={handleScanClick}
+                    disabled={isScanning}
+                    className="w-full py-6 sm:py-8 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 bg-white/40 dark:bg-slate-900/40 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all group flex flex-col items-center justify-center gap-3 text-slate-500 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-500 backdrop-blur-md shadow-sm"
+                >
+                    {isScanning ? (
+                        <>
+                            <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
+                            <div className="flex flex-col items-center">
+                                <span className="font-bold text-lg animate-pulse">Forgalmi elemzése...</span>
+                                <span className="text-xs font-medium opacity-60">Ez eltarthat pár másodpercig</span>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-amber-100 dark:group-hover:bg-amber-900/30 transition-colors">
+                                <Scan className="w-8 h-8" />
+                            </div>
+                            <div className="text-center">
+                                <span className="block font-bold text-lg sm:text-xl">Adatok kitöltése Forgalmi Engedély alapján</span>
+                                <span className="block text-sm font-normal opacity-70 mt-1">Kattints ide a fotó feltöltéséhez</span>
+                            </div>
+                        </>
+                    )}
+                </button>
+            ) : (
+                <div className="animate-in zoom-in-95 duration-300 bg-amber-50/90 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 p-4 sm:p-6 rounded-3xl flex flex-col sm:flex-row gap-4 items-center justify-between shadow-lg shadow-amber-500/5 backdrop-blur-md">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center text-center sm:text-left">
+                        <div className="p-3 bg-amber-500 rounded-2xl text-white shadow-lg shadow-amber-500/30 shrink-0">
+                            <AlertTriangle className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg text-amber-800 dark:text-amber-500">Adatok beolvasva!</h3>
+                            <p className="text-amber-700/80 dark:text-amber-400/80 text-sm leading-relaxed mt-1">
+                                A forgalmi engedély alapján kitöltöttük a mezőket. <br className="hidden sm:block"/>
+                                <strong className="uppercase tracking-wide text-amber-900 dark:text-amber-300">Kérlek, ellenőrizd az összes adatot mentés előtt!</strong>
+                            </p>
+                        </div>
+                    </div>
+                    <button 
+                        type="button" 
+                        onClick={() => setShowScanWarning(false)}
+                        className="w-full sm:w-auto px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-bold rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    >
+                        Rendben, értem
+                    </button>
+                </div>
+            )}
+        </div>
+
         {error && (
             <div className="mb-8 bg-red-500/10 border border-red-500/20 backdrop-blur-md p-4 rounded-2xl flex items-center gap-4 text-red-600 dark:text-red-400 animate-in fade-in slide-in-from-top-2">
                 <div className="bg-red-500/20 p-2 rounded-xl"><AlertCircle className="w-5 h-5" /></div>
@@ -483,10 +584,14 @@ function CarForm() {
                             {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                             <option value="other">Egyéb / Nem találom</option>
                         </SelectGroup>
-                        <input type="hidden" name="make" value={selectedBrandName || (selectedBrandId === 'other' ? 'Egyéb' : '')} />
+                        <input type="hidden" name="make" value={selectedBrandName || scannedData?.make || (selectedBrandId === 'other' ? 'Egyéb' : '')} />
 
                         {selectedBrandId === "other" || (models.length === 0 && !loadingModels && selectedBrandId !== "") ? (
-                            <InputGroup label="Modell" name="model" required placeholder="pl. Focus" />
+                            <InputGroup 
+                                key={scannedData?.model}
+                                defaultValue={scannedData?.model}
+                                label="Modell" name="model" required placeholder="pl. Focus" 
+                            />
                         ) : (
                             <SelectGroup label="Modell" name="model" required disabled={!selectedBrandId || loadingModels} icon={<Settings className="w-5 h-5" />}>
                                 <option value="" disabled selected>Válassz típust...</option>
@@ -496,14 +601,26 @@ function CarForm() {
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <InputGroup label="Rendszám" name="plate" placeholder="AA-BB-123" required uppercase icon={<FileText className="w-5 h-5" />} />
-                            <SelectGroup label="Évjárat" name="year" required icon={<Calendar className="w-5 h-5" />}>
-                                <option value="" disabled selected>Év...</option>
+                            <InputGroup 
+                                key={scannedData?.plate}
+                                defaultValue={scannedData?.plate}
+                                label="Rendszám" name="plate" placeholder="AA-BB-123" required uppercase icon={<FileText className="w-5 h-5" />} 
+                            />
+                            <SelectGroup 
+                                key={scannedData?.year}
+                                defaultValue={scannedData?.year}
+                                label="Évjárat" name="year" required icon={<Calendar className="w-5 h-5" />}
+                            >
+                                <option value="" disabled selected={!scannedData?.year}>Év...</option>
                                 {years.map(year => <option key={year} value={year}>{year}</option>)}
                             </SelectGroup>
                         </div>
                         
-                        <InputGroup label="Alvázszám (VIN)" name="vin" placeholder="pl. WVWZZZ..." uppercase required icon={<Fingerprint className="w-5 h-5" />} />
+                        <InputGroup 
+                            key={scannedData?.vin}
+                            defaultValue={scannedData?.vin}
+                            label="Alvázszám (VIN)" name="vin" placeholder="pl. WVWZZZ..." uppercase required icon={<Fingerprint className="w-5 h-5" />} 
+                        />
                     </div>
                 </FormSection>
 
@@ -536,6 +653,8 @@ function CarForm() {
                                         type="number"
                                         name="power" // AZ ACTION EZT OLVASSA KI
                                         id="power"
+                                        key={scannedData?.power_kw}
+                                        defaultValue={scannedData?.power_kw}
                                         placeholder="pl. 150"
                                         onFocus={() => setPowerFocused(true)}
                                         onBlur={() => setPowerFocused(false)}
@@ -549,6 +668,7 @@ function CarForm() {
                                     <div className="relative pr-2">
                                         <select
                                             name="power_unit" // AZ ACTION EZT OLVASSA KI
+                                            defaultValue={scannedData?.power_kw ? "kw" : "hp"}
                                             className="bg-transparent border-none py-2 pl-2 pr-6 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-500 cursor-pointer focus:ring-0 focus:outline-none uppercase appearance-none"
                                         >
                                             <option value="hp">LE</option>
@@ -561,8 +681,12 @@ function CarForm() {
                             {/* --- MÓDOSÍTÁS VÉGE --- */}
                         </div>
 
-                        <SelectGroup label="Üzemanyag" name="fuel_type" required icon={<Fuel className="w-5 h-5" />}>
-                            <option value="" disabled selected>Válassz...</option>
+                        <SelectGroup 
+                            label="Üzemanyag" name="fuel_type" required icon={<Fuel className="w-5 h-5" />}
+                            key={scannedData?.fuel_type}
+                            defaultValue={scannedData?.fuel_type || ""}
+                        >
+                            <option value="" disabled>Válassz...</option>
                             <option value="Dízel">Dízel</option>
                             <option value="Benzin">Benzin</option>
                             <option value="Hibrid">Hibrid</option>
@@ -579,7 +703,11 @@ function CarForm() {
                                 <option value="Fokozatmentes (CVT)">Fokozatmentes (CVT)</option>
                                 <option value="Robotizált">Robotizált</option>
                             </SelectGroup>
-                            <InputGroup label="Motor (cm³)" name="engine_size" type="number" placeholder="pl. 1998" suffix="cm³" />
+                            <InputGroup 
+                                key={scannedData?.engine_size}
+                                defaultValue={scannedData?.engine_size}
+                                label="Motor (cm³)" name="engine_size" type="number" placeholder="pl. 1998" suffix="cm³" 
+                            />
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -595,10 +723,11 @@ function CarForm() {
                                 <option value="Kisbusz / Furgon">Kisbusz / Furgon</option>
                                 <option value="Egyéb">Egyéb</option>
                             </SelectGroup>
-                            <SelectGroup label="Szín" name="color" icon={<Palette className="w-5 h-5" />}>
-                                <option value="" disabled selected>Válassz...</option>
-                                {colors.map(c => <option key={c} value={c}>{c}</option>)}
-                            </SelectGroup>
+                            <InputGroup 
+                                key={scannedData?.color}
+                                defaultValue={scannedData?.color}
+                                label="Szín" name="color" icon={<Palette className="w-5 h-5" />} placeholder="pl. Fekete"
+                            />
                         </div>
                     </div>
                 </FormSection>
