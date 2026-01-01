@@ -227,7 +227,7 @@ export async function scanRegistrationDocument(formData: FormData) {
 
     const genAI = new GoogleGenerativeAI(API_KEY);
     // A Gemini 1.5 Pro vagy Flash modell jobb szövegfelismerésben
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
       Analyze this Hungarian Vehicle Registration Certificate (Forgalmi engedély).
