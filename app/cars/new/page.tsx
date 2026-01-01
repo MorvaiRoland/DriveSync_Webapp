@@ -320,7 +320,7 @@ function CarForm() {
   }, [selectedBrandId, supabase, brands])
 
   // --- SZKENNELÉS LOGIKA ---
-  const handleScanClick = () => {
+ const handleScanClick = () => {
     document.getElementById('registration-upload')?.click();
   };
 
@@ -340,8 +340,7 @@ function CarForm() {
       if (result.success && result.data) {
         const data = result.data;
         
-        // --- ADATOK BETÖLTÉSE A FORMBA ---
-        // 1. Márka keresése (Brand ID feloldása név alapján)
+        // --- 1. MÁRKA KERESÉSE ---
         let foundBrandId = "other";
         if (data.make) {
             const foundBrand = brands.find(b => b.name.toLowerCase().includes(data.make.toLowerCase()) || data.make.toLowerCase().includes(b.name.toLowerCase()));
@@ -349,7 +348,21 @@ function CarForm() {
         }
         setSelectedBrandId(foundBrandId);
 
-        // 2. Többi mező frissítése
+        // --- 2. VÁLTÓ TÍPUS FORDÍTÁSA (0-3 -> Szöveg) ---
+        let transValue = "";
+        if (data.transmission_code !== null && data.transmission_code !== undefined) {
+            const code = data.transmission_code.toString();
+            // 0=mechanikus -> Manuális
+            if (code === '0') transValue = "Manuális";
+            // 1=félautómata -> Robotizált (vagy Automata, de a Robotizált pontosabb)
+            else if (code === '1') transValue = "Robotizált";
+            // 2=automata -> Automata
+            else if (code === '2') transValue = "Automata";
+            // 3=szekvenciális -> Automata (vagy Robotizált, de felhasználói szempontból ez automata)
+            else if (code === '3') transValue = "Automata";
+        }
+
+        // --- 3. FORM STATE FRISSÍTÉSE ---
         setFormState(prev => ({
             ...prev,
             make: data.make || prev.make,
@@ -357,13 +370,13 @@ function CarForm() {
             plate: data.plate || prev.plate,
             vin: data.vin || prev.vin,
             year: data.year ? data.year.toString() : prev.year,
-            mileage: prev.mileage, // Forgalmiban nincs km állás
+            mileage: prev.mileage, 
             power: data.power_kw ? data.power_kw.toString() : prev.power,
             power_unit: data.power_kw ? 'kw' : 'hp',
             engine_size: data.engine_size ? data.engine_size.toString() : prev.engine_size,
             fuel_type: data.fuel_type || prev.fuel_type,
             color: data.color || prev.color,
-            // Próbáljuk megőrizni a user által már beírt adatokat, ha az AI null-t küld
+            transmission: transValue || prev.transmission, // Itt állítjuk be a váltót
         }));
 
         setShowScanWarning(true);

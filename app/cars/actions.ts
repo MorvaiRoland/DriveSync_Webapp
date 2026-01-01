@@ -226,24 +226,27 @@ export async function scanRegistrationDocument(formData: FormData) {
     const base64Image = buffer.toString('base64')
 
     const genAI = new GoogleGenerativeAI(API_KEY);
-    // A Gemini 1.5 Pro vagy Flash modell jobb szövegfelismerésben
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+    // FRISSÍTETT PROMPT A VÁLTÓ KÓDHOZ
     const prompt = `
       Analyze this Hungarian Vehicle Registration Certificate (Forgalmi engedély).
-      Extract the data based on the standard codes (A, B, D.1, etc.) visible on the document.
+      Extract the data based on the standard codes.
       
+      Look specifically for "SEBESSÉGVÁLTÓ FAJTÁJA (KÓDSZÁMA)" usually found on the back side or near section 11/12.
+      The code is a single digit: 0=mechanical, 1=semiautomatic, 2=automatic, 3=sequential.
+
       Return a JSON object with these exact keys (use null if not found):
       - plate: Field 'A' (Rendszám) - Remove hyphens/spaces.
       - make: Field 'D.1' (Gyártmány).
       - model: Field 'D.2' or 'D.3' (Típus/Kereskedelmi név).
       - vin: Field 'E' (Alvázszám).
-      - year: Extract the Year part from Field 'B' (Első nyilvántartásba vétel) or 'I'.
+      - year: Extract the Year part from Field 'B' or 'I'.
       - power_kw: Field 'P.2' (Teljesítmény kW-ban) - Number only.
       - engine_size: Field 'P.1' (Hengerűrtartalom) - Number only.
       - fuel_type: Field 'P.3' (Hajtóanyag). Map to: "Benzin", "Dízel", "Hibrid", "Elektromos", "LPG / Gáz".
       - color: Field 'R' (Szín).
-      - mass: Field 'G' (Saját tömeg) - optional.
+      - transmission_code: The number (0, 1, 2, or 3) for the transmission type.
 
       IMPORTANT: Return ONLY valid JSON, no markdown formatting.
     `;
@@ -259,7 +262,6 @@ export async function scanRegistrationDocument(formData: FormData) {
     const response = await result.response;
     const text = response.text();
 
-    // JSON tisztítása (ha a modell véletlenül markdown-t küldene)
     let jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const firstBrace = jsonString.indexOf('{');
     const lastBrace = jsonString.lastIndexOf('}');
