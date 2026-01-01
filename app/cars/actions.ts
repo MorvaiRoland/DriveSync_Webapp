@@ -17,11 +17,69 @@ const parseNullableString = (val: FormDataEntryValue | null) => {
   return str && str !== '' && str !== 'null' ? str : null;
 }
 
+// --- VALIDÁCIÓS FÜGGVÉNY ---
+function validateCarData(formData: FormData) {
+    const currentYear = new Date().getFullYear();
+    const minYear = 1900;
+    
+    // 1. Évjárat ellenőrzése
+    const year = parseNullableInt(formData.get('year'));
+    if (year) {
+        if (year < minYear || year > currentYear + 1) { // +1 év engedélyezve (modellév miatt)
+            return `Az évjáratnak ${minYear} és ${currentYear + 1} között kell lennie!`;
+        }
+    }
+
+    // 2. Futásteljesítmény ellenőrzése
+    const mileage = parseNullableInt(formData.get('mileage'));
+    if (mileage !== null && mileage < 0) {
+        return 'A kilométeróra állás nem lehet negatív!';
+    }
+
+    // 3. Motor adatok ellenőrzése
+    const engineSize = parseNullableInt(formData.get('engine_size'));
+    if (engineSize !== null && engineSize < 0) {
+        return 'A hengerűrtartalom nem lehet negatív!';
+    }
+
+    const powerInput = parseNullableInt(formData.get('power'));
+    if (powerInput !== null && powerInput < 0) {
+        return 'A teljesítmény nem lehet negatív!';
+    }
+
+    // 4. Dátumok ellenőrzése (ne legyen irreálisan régi)
+    const validateDate = (dateStr: string | null, fieldName: string) => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return null; // Érvénytelen dátumot a DB úgyis eldobja vagy null lesz
+        
+        if (date.getFullYear() < 1980) {
+            return `A ${fieldName} dátuma irreálisan régi!`;
+        }
+        return null;
+    };
+
+    const motError = validateDate(parseNullableString(formData.get('mot_expiry')), 'műszaki vizsga');
+    if (motError) return motError;
+
+    const insError = validateDate(parseNullableString(formData.get('insurance_expiry')), 'biztosítás');
+    if (insError) return insError;
+
+    return null; // Nincs hiba
+}
+
+
 // --- 1. ÚJ AUTÓ LÉTREHOZÁSA ---
 export async function addCar(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
+
+  // --- VALIDÁCIÓ FUTTATÁSA ---
+  const validationError = validateCarData(formData);
+  if (validationError) {
+      return redirect(`/cars/new?error=${encodeURIComponent(validationError)}`);
+  }
 
   const vinRaw = formData.get('vin');
   const vin = vinRaw ? String(vinRaw).trim().toUpperCase().replace(/\s/g, '') : '';
@@ -150,6 +208,12 @@ export async function updateCar(formData: FormData) {
   if (!user) return redirect('/login')
 
   const carId = String(formData.get('car_id'))
+
+  // --- VALIDÁCIÓ FUTTATÁSA FRISSÍTÉSKOR IS ---
+  const validationError = validateCarData(formData);
+  if (validationError) {
+      return redirect(`/cars/${carId}/edit?error=${encodeURIComponent(validationError)}`);
+  }
   
   const updateData: any = {
     make: String(formData.get('make')),
@@ -210,6 +274,7 @@ export async function toggleCarVisibility(carId: string, isPublic: boolean) {
   revalidatePath(`/cars/${carId}`)
   return { success: true }
 }
+
 export async function scanRegistrationDocument(formData: FormData) {
   const API_KEY = process.env.GOOGLE_API_KEY;
 
