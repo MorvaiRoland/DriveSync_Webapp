@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation'
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)) }
 
-// --- BŐVÍTETT KATEGÓRIÁK ---
+// --- KATEGÓRIÁK ---
 const CATEGORIES = [
   { id: 'mechanic', label: 'Szerelő', icon: Wrench, color: 'bg-indigo-500', gradient: 'from-indigo-500 to-blue-600' },
   { id: 'towing', label: 'Autómentés', icon: Siren, color: 'bg-red-600', gradient: 'from-red-500 to-red-700', isEmergency: true },
@@ -30,7 +30,7 @@ const CATEGORIES = [
   { id: 'parking', label: 'Parkoló', icon: SquareParking, color: 'bg-blue-500', gradient: 'from-blue-500 to-cyan-600' },
 ]
 
-// --- Ikon generátor ---
+// --- IKON GENERÁTOR ---
 const createModernIcon = (categoryId: string, isActive = false) => {
   if (typeof window === 'undefined') return L.divIcon({});
   const cat = CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[0];
@@ -53,7 +53,7 @@ const createModernIcon = (categoryId: string, isActive = false) => {
   return L.divIcon({ html, className: '!bg-transparent', iconSize: [40, 48], iconAnchor: [20, 48], popupAnchor: [0, -48] });
 }
 
-// --- Map Logic ---
+// --- MAP LOGIC ---
 function MapController({ onMapClick, isAdding }: { onMapClick: (lat: number, lng: number) => void, isAdding: boolean }) {
   useMapEvents({ click(e) { if (isAdding) onMapClick(e.latlng.lat, e.latlng.lng); } });
   return null;
@@ -73,7 +73,7 @@ function MapFlyTo({ position }: { position: any }) {
 // === FŐ KOMPONENS ===
 export default function ServiceMap() {
   const [partners, setPartners] = useState<any[]>([]) 
-  const [activeCategory, setActiveCategory] = useState('mechanic') // Default kategória
+  const [activeCategory, setActiveCategory] = useState('mechanic')
   const [search, setSearch] = useState('')
   const [mode, setMode] = useState<'view' | 'add'>('view')
   const [loading, setLoading] = useState(false)
@@ -90,10 +90,9 @@ export default function ServiceMap() {
   const dragControls = useDragControls()
 
   // --- API Fetch Logic ---
-  // Most már átadjuk a 'activeCategory'-t a backendnek
   const fetchPlaces = async (lat: number, lng: number, category: string) => {
     setLoading(true);
-    setPartners([]); // Lista ürítése betöltés előtt
+    setPartners([]); 
     try {
         const res = await fetch(`/api/places?lat=${lat}&lng=${lng}&category=${category}`);
         const data = await res.json();
@@ -107,10 +106,8 @@ export default function ServiceMap() {
     }
   };
 
-  // Kategória váltás kezelése
   const handleCategoryChange = (catId: string) => {
       setActiveCategory(catId);
-      // Ha van pozíciónk, azonnal töltsük újra az adatokat az új kategóriával
       if (userLocation) {
           fetchPlaces(userLocation[0], userLocation[1], catId);
       }
@@ -123,7 +120,7 @@ export default function ServiceMap() {
       return;
     }
 
-    setLoading(true); // Opcionális: jelezzük, hogy dolgozunk
+    setLoading(true);
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -135,7 +132,6 @@ export default function ServiceMap() {
         // @ts-ignore
         if(map && map._leaflet_map) map._leaflet_map.flyTo([lat, lng], 15);
 
-        // API hívás az aktuális kategóriával
         const categoryToFetch = isSosActive ? 'towing' : activeCategory;
         fetchPlaces(lat, lng, categoryToFetch);
         setLoading(false);
@@ -143,37 +139,22 @@ export default function ServiceMap() {
       (error) => {
         setLoading(false);
         console.error("Helymeghatározási hiba:", error);
-        
-        switch(error.code) {
-            case error.PERMISSION_DENIED:
-                alert("A helymeghatározás le van tiltva a böngészőben. Kérlek, engedélyezd a címsorban!");
-                break;
-            case error.POSITION_UNAVAILABLE:
-                alert("A helyzeted nem állapítható meg. Próbáld meg később vagy ellenőrizd a Wi-Fi kapcsolatot.");
-                break;
-            case error.TIMEOUT:
-                alert("Időtúllépés a helymeghatározás során.");
-                break;
-            default:
-                alert("Ismeretlen hiba történt a helymeghatározáskor.");
-                break;
-        }
+        alert("Nem sikerült meghatározni a helyzetedet.");
       },
       {
-        enableHighAccuracy: true, // PC-n ez néha segít, néha lassít
-        timeout: 10000,           // 10 másodpercet várunk max
+        enableHighAccuracy: true,
+        timeout: 10000,
         maximumAge: 0
       }
     );
   }
 
-  // SOS Mód
   const toggleSosMode = () => {
     const newState = !isSosActive;
     setIsSosActive(newState);
     
     if (newState) {
-        setActiveCategory('towing'); // UI frissítése
+        setActiveCategory('towing'); 
         if (userLocation) {
             fetchPlaces(userLocation[0], userLocation[1], 'towing');
         } else {
@@ -181,13 +162,22 @@ export default function ServiceMap() {
         }
         setSheetOpen(true);
     } else {
-        // Vissza szerelőre alapból
         setActiveCategory('mechanic');
         if (userLocation) {
             fetchPlaces(userLocation[0], userLocation[1], 'mechanic');
         }
     }
   }
+
+  // --- TELEFONHÍVÁS KEZELŐ (MEGERŐSÍTÉSSEL) ---
+  const handleCall = (e: React.MouseEvent, phoneNumber: string, name: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (confirm(`Biztosan felhívod a következőt: ${name}?`)) {
+        window.location.href = `tel:${phoneNumber}`;
+    }
+  };
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -200,7 +190,6 @@ export default function ServiceMap() {
     }
   }, []);
 
-  // Kereső szűrés (kliens oldalon a már betöltött listából)
   const filteredPartners = useMemo(() => {
     if (!search.trim()) return partners;
     const s = search.trim().toLowerCase();
@@ -241,18 +230,58 @@ export default function ServiceMap() {
           {mode === 'view' && filteredPartners.map(p => (
             <Marker key={p.id} position={[p.latitude, p.longitude]} icon={createModernIcon(p.category)}>
               <Popup closeButton={false} className="custom-popup" offset={[0, -40]}>
-                <div className="p-1 min-w-[220px]">
-                    <div className="flex justify-between items-start mb-1">
-                         <h4 className="font-bold text-zinc-900 text-sm max-w-[160px] leading-tight">{p.name}</h4>
-                         {p.rating && <span className="flex items-center text-xs font-bold text-amber-500 shrink-0"><Star size={10} fill="currentColor" className="mr-1"/>{p.rating}</span>}
+                <div className="p-3 min-w-[240px] font-sans">
+                    {/* FEJLÉC */}
+                    <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-bold text-zinc-900 text-sm leading-tight pr-2">{p.name}</h4>
+                        {p.rating && (
+                            <span className="flex items-center text-xs font-bold text-amber-500 shrink-0 bg-amber-50 px-1.5 py-0.5 rounded">
+                                <Star size={10} fill="currentColor" className="mr-1"/>{p.rating}
+                            </span>
+                        )}
                     </div>
-                    <p className="text-xs text-zinc-500 mb-2">{p.address}</p>
+
+                    {/* CÍM */}
+                    <p className="text-xs text-zinc-500 mb-3 flex items-start gap-1">
+                        <MapPin size={12} className="mt-0.5 shrink-0" />
+                        {p.address}
+                    </p>
+
+                    {/* NYITVATARTÁS */}
                     {p.open_now !== undefined && (
-                        <p className={cn("text-[10px] font-bold mb-2", p.open_now ? "text-green-600" : "text-red-500")}>
-                            {p.open_now ? "NYITVA" : "ZÁRVA"}
-                        </p>
+                        <div className="flex items-center gap-2 mb-3 text-xs">
+                            <span className={cn(
+                                "font-bold px-2 py-0.5 rounded-full flex items-center gap-1",
+                                p.open_now ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                            )}>
+                                <Clock size={10} />
+                                {p.open_now ? "NYITVA" : "ZÁRVA"}
+                            </span>
+                        </div>
                     )}
-                    <button className="w-full py-2 bg-zinc-900 text-white rounded-lg text-xs font-bold">Útvonal</button>
+
+                    {/* GOMBOK */}
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                        {p.phone_number ? (
+                            <button 
+                                onClick={(e) => handleCall(e, p.phone_number, p.name)}
+                                className="flex items-center justify-center gap-2 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors"
+                            >
+                                <Phone size={14} /> Hívás
+                            </button>
+                        ) : (
+                            <button disabled className="py-2 bg-zinc-50 text-zinc-300 rounded-lg text-xs font-bold cursor-not-allowed">Nincs szám</button>
+                        )}
+                        
+                        <a 
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 py-2 bg-zinc-900 text-white hover:bg-zinc-800 rounded-lg text-xs font-bold transition-colors"
+                        >
+                            <Locate size={14} /> Útvonal
+                        </a>
+                    </div>
                 </div>
               </Popup>
             </Marker>
@@ -269,24 +298,22 @@ export default function ServiceMap() {
 
       {/* 2. VEZÉRLŐK (LENT) */}
       <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-end pb-[160px] lg:pb-6 px-4 lg:px-6">
-         {/* JAVÍTÁS: lg:w-[calc(100%-480px)] hozzáadva, hogy ne lógjon ki jobbra */}
          <div className="flex justify-between items-end w-full max-w-[420px] lg:max-w-none lg:w-[calc(100%-480px)] lg:ml-[460px]">
              
-             {/* Bal oldali gombok (Home) */}
+             {/* Bal oldali gombok */}
              <div className="flex flex-col gap-3 pointer-events-auto">
                 <button onClick={() => router.push('/')} className="w-12 h-12 bg-white dark:bg-zinc-900 shadow-xl shadow-zinc-900/10 rounded-2xl flex items-center justify-center text-zinc-700 dark:text-zinc-200 border border-zinc-100 dark:border-zinc-700 active:scale-95 transition-transform">
                     <Home size={22} />
                 </button>
              </div>
 
-             {/* Jobb oldali gombok (SOS, GPS) */}
+             {/* Jobb oldali gombok */}
              <div className="flex flex-col gap-3 pointer-events-auto items-end">
                 <button onClick={toggleSosMode} className={cn("h-14 px-5 shadow-xl rounded-2xl flex items-center justify-center gap-2 font-black text-white active:scale-95 transition-all border-2 border-white/20", isSosActive ? "bg-red-600 shadow-red-600/40 animate-pulse w-auto" : "w-14 bg-red-500 shadow-red-500/20")}>
                     <Siren size={24} className={cn(isSosActive && "animate-bounce")} />
                     {isSosActive && <span>SOS AKTÍV</span>}
                 </button>
                 
-                {/* Ez volt kint a képernyőről */}
                 <button onClick={handleLocateMe} className="w-12 h-12 bg-indigo-600 shadow-xl shadow-indigo-500/20 rounded-2xl flex items-center justify-center text-white active:scale-95 transition-transform">
                     <Locate size={22} />
                 </button>
@@ -353,7 +380,7 @@ export default function ServiceMap() {
                     </div>
                 )}
 
-                {/* KATEGÓRIÁK GÖRGETHETŐ SÁV */}
+                {/* KATEGÓRIÁK */}
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-6 px-6 lg:flex-wrap lg:mx-0 lg:px-0">
                     {CATEGORIES.map(cat => (
                         <button 
@@ -362,8 +389,8 @@ export default function ServiceMap() {
                         hidden={isSosActive && cat.id !== 'towing'}
                         onClick={(e) => { 
                             e.stopPropagation(); 
-                            if (cat.id === 'towing') toggleSosMode(); // Towing klikk -> SOS be
-                            else if (isSosActive) toggleSosMode(); // Más klikk SOS alatt -> SOS ki
+                            if (cat.id === 'towing') toggleSosMode(); 
+                            else if (isSosActive) toggleSosMode(); 
                             
                             if (cat.id !== 'towing') handleCategoryChange(cat.id);
                         }}
@@ -407,7 +434,6 @@ export default function ServiceMap() {
                         )}
                       >
                         <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0", CATEGORIES.find(c=>c.id===p.category)?.color)}>
-                           {/* Ikon kiválasztása dinamikusan */}
                            {(() => {
                                const Icon = CATEGORIES.find(c=>c.id===p.category)?.icon || MapPin;
                                return <Icon size={18} />;
@@ -418,12 +444,23 @@ export default function ServiceMap() {
                           <p className="text-xs text-zinc-500 truncate">{p.address}</p>
                           <div className="flex gap-2 mt-1">
                              {p.rating && <span className="text-[10px] font-bold text-amber-500 flex items-center gap-0.5"><Star size={10} /> {p.rating}</span>}
-                             {p.open_now && <span className="text-[10px] font-bold text-green-600 flex items-center gap-0.5"><Clock size={10} /> Nyitva</span>}
+                             {p.open_now !== undefined && <span className={cn("text-[10px] font-bold flex items-center gap-0.5", p.open_now ? "text-green-600" : "text-red-500")}><Clock size={10} /> {p.open_now ? "Nyitva" : "Zárva"}</span>}
                           </div>
                         </div>
-                        <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white", isSosActive ? "bg-red-600" : "bg-zinc-900")}>
-                             <Phone size={14} />
-                        </div>
+                        
+                        {/* Hívás gomb a listában is */}
+                        {p.phone_number ? (
+                            <button 
+                                onClick={(e) => handleCall(e, p.phone_number, p.name)}
+                                className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white", isSosActive ? "bg-red-600" : "bg-zinc-900")}
+                            >
+                                <Phone size={14} />
+                            </button>
+                        ) : (
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-zinc-200 text-zinc-400">
+                                <Phone size={14} />
+                            </div>
+                        )}
                       </div>
                     ))
                   )}
@@ -431,7 +468,7 @@ export default function ServiceMap() {
 
               </motion.div>
             ) : (
-              // Add Mode (Ez maradt a régi, egyszerűsítettem a kódot a válaszban)
+              // Add Mode
               <motion.div key="add" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-4 pb-20">
                  <p className="text-sm font-bold text-center text-zinc-500">Új hely felvétele fejlesztés alatt...</p>
                  <button onClick={() => setMode('view')} className="w-full py-3 bg-zinc-100 rounded-xl font-bold">Vissza</button>
