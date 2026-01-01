@@ -103,7 +103,9 @@ export default function SupportPage() {
     setIsSubmitting(true);
     formData.append('type', selectedCategory);
     formData.append('deviceInfo', JSON.stringify(deviceInfo));
-    // Itt kellene kezelni a fájl feltöltést a szerver felé is
+    if (file) {
+      formData.append('attachment', file);
+    }
     
     await new Promise(resolve => setTimeout(resolve, 1500));
     
