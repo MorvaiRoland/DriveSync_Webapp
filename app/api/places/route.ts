@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   }
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  const radius = 5000; 
+  const radius = 5000; // 5km
 
   // --- KATEGÓRIA KONFIGURÁCIÓ ---
   let type = 'car_repair';
@@ -57,41 +57,49 @@ export async function GET(request: Request) {
       break;
   }
 
-  // URL összeállítása
-  let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&language=hu&key=${apiKey}`;
+  // 1. Lépés: Keresés (Nearby Search)
+  let searchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&language=hu&key=${apiKey}`;
   
   if (keyword) {
-    url += `&keyword=${encodeURIComponent(keyword)}`;
+    searchUrl += `&keyword=${encodeURIComponent(keyword)}`;
   }
 
   try {
-    const res = await fetch(url);
-    const data = await res.json();
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
 
-    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-       console.error('Google API Error:', data);
+    if (searchData.status !== 'OK' && searchData.status !== 'ZERO_RESULTS') {
+       console.error('Google Search API Error:', searchData);
     }
 
-    // FONTOS: Place Details hívás lenne szükséges a telefonszámhoz minden találatra, 
-    // de az drága (sok API hívás). 
-    // EHELYETT: A Nearby Search néha visszaadja, ha nem, akkor Place Details-t csak kattintásra kellene hívni (optimalizáció).
-    // MOST: Megpróbáljuk kinyerni, ami van, vagy Place Details-t hívni mindenre (LASSÚ LEHET!).
-    // Egyelőre marad a Nearby Search, de tudd, hogy a "phone_number" gyakran üres lesz itt.
-    // Ha biztosra akarsz menni, akkor a frontend-en a "Hívás" gomb megnyomásakor kellene lekérni a részleteket.
+    const results = searchData.results || [];
 
-    const partners = await Promise.all(data.results ? data.results.map(async (place: any) => {
-        // OPTIONÁLIS: Részletek lekérése telefonszámért (VIGYÁZZ A QUOTÁRA!)
-        // Ha ezt bekapcsolod, minden keresés 20x annyi API hívás!
-        // Inkább csak a Place ID-t adjuk vissza, és a frontend kérdezze le kattintáskor.
-        // De a kérés szerint "működjön", így itt egy egyszerűsített megoldás:
-        
+    // 2. Lépés: Részletek lekérése (Details) a telefonszámért
+    // Limitáljuk 12 találatra a sebesség és API költségek miatt
+    const limitedResults = results.slice(0, 12);
+
+    const partners = await Promise.all(limitedResults.map(async (place: any) => {
         let phoneNumber = null;
-        
-        // Ha nagyon kell a telefonszám listázáskor, itt lehetne lekérni:
-        // const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number&key=${apiKey}`;
-        // const detailRes = await fetch(detailUrl);
-        // const detailData = await detailRes.json();
-        // phoneNumber = detailData.result?.formatted_phone_number;
+        let openingText = null;
+
+        try {
+            // Itt kérjük le a telefonszámot (formatted_phone_number) és a nyitvatartást
+            const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number,opening_hours&language=hu&key=${apiKey}`;
+            const detailRes = await fetch(detailUrl);
+            const detailData = await detailRes.json();
+
+            if (detailData.result) {
+                phoneNumber = detailData.result.formatted_phone_number;
+                
+                // Ha van nyitvatartás szöveg, pl. "Jelenleg nyitva" vagy a mai nap
+                if (detailData.result.opening_hours?.weekday_text) {
+                    const todayIndex = (new Date().getDay() + 6) % 7; // Hétfő = 0 korrekció
+                    openingText = detailData.result.opening_hours.weekday_text[todayIndex];
+                }
+            }
+        } catch (err) {
+            console.error('Detail fetch error:', err);
+        }
 
         return {
             id: place.place_id,
@@ -103,12 +111,14 @@ export async function GET(request: Request) {
             rating: place.rating,
             user_ratings_total: place.user_ratings_total,
             open_now: place.opening_hours?.open_now,
-            phone_number: phoneNumber // Vagy place.formatted_phone_number ha Text Search-öt használnál
+            phone_number: phoneNumber, // MOST MÁR ITT LESZ A SZÁM!
+            opening_text: openingText
         };
-    }) : []);
+    }));
 
     return NextResponse.json({ partners });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: 'Failed to fetch places' }, { status: 500 });
   }
 }
