@@ -157,7 +157,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
                <div className="h-4 w-12 bg-foreground rounded-sm" />
             </div>
             <p className="text-[9px] font-mono text-slate-500 opacity-50 uppercase tracking-tighter tabular-nums">
-              Rendszerverzió: v2.5 Béta • Titkosított munkamenet • 2025
+              Rendszerverzió: v2.6 Béta • Titkosított munkamenet • 2026 © Minden jog fenntartva.
             </p>
           </div>
         </footer>
