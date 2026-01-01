@@ -20,23 +20,25 @@ const parseNullableString = (val: FormDataEntryValue | null) => {
 // --- VALIDÁCIÓS FÜGGVÉNY ---
 function validateCarData(formData: FormData) {
     const currentYear = new Date().getFullYear();
-    const minYear = 1900;
     
-    // 1. Évjárat ellenőrzése
+    // *** MODIFIED: Set minimum year to 1900 ***
+    const minYear = 1900; 
+    
+    // 1. Évjárat ellenőrzése (Year check)
     const year = parseNullableInt(formData.get('year'));
     if (year) {
-        if (year < minYear || year > currentYear + 1) { // +1 év engedélyezve (modellév miatt)
+        if (year < minYear || year > currentYear + 1) { // +1 year allowed for model years
             return `Az évjáratnak ${minYear} és ${currentYear + 1} között kell lennie!`;
         }
     }
 
-    // 2. Futásteljesítmény ellenőrzése
+    // 2. Futásteljesítmény ellenőrzése (Mileage check)
     const mileage = parseNullableInt(formData.get('mileage'));
     if (mileage !== null && mileage < 0) {
         return 'A kilométeróra állás nem lehet negatív!';
     }
 
-    // 3. Motor adatok ellenőrzése
+    // 3. Motor adatok ellenőrzése (Engine data check)
     const engineSize = parseNullableInt(formData.get('engine_size'));
     if (engineSize !== null && engineSize < 0) {
         return 'A hengerűrtartalom nem lehet negatív!';
@@ -47,14 +49,17 @@ function validateCarData(formData: FormData) {
         return 'A teljesítmény nem lehet negatív!';
     }
 
-    // 4. Dátumok ellenőrzése (ne legyen irreálisan régi)
+    // 4. Dátumok ellenőrzése (Date check)
+    // Here we can keep 1980 or change it to 1900 as well if you want really old MOT records,
+    // but typically MOT/Insurance applies to current/recent times. 
+    // I'll set this to 1980 as a reasonable cutoff for *validity* dates, but let me know if this needs to be 1900 too.
     const validateDate = (dateStr: string | null, fieldName: string) => {
         if (!dateStr) return null;
         const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return null; // Érvénytelen dátumot a DB úgyis eldobja vagy null lesz
+        if (isNaN(date.getTime())) return null; 
         
         if (date.getFullYear() < 1980) {
-            return `A ${fieldName} dátuma irreálisan régi!`;
+            return `A ${fieldName} dátuma irreálisan régi (1980 előtti)!`;
         }
         return null;
     };
@@ -65,7 +70,7 @@ function validateCarData(formData: FormData) {
     const insError = validateDate(parseNullableString(formData.get('insurance_expiry')), 'biztosítás');
     if (insError) return insError;
 
-    return null; // Nincs hiba
+    return null; // No error
 }
 
 
@@ -101,12 +106,11 @@ export async function addCar(formData: FormData) {
   }
 
   // --- TELJESÍTMÉNY ÁTVÁLTÁS LOGIKA ---
-  const powerInput = parseNullableInt(formData.get('power')); // A beírt szám
-  const powerUnit = formData.get('power_unit') as string;    // 'hp' vagy 'kw'
+  const powerInput = parseNullableInt(formData.get('power')); 
+  const powerUnit = formData.get('power_unit') as string;    
   
   let finalHp = powerInput;
 
-  // Ha van érték és a mértékegység kW, átváltjuk LE-re (1 kW ~= 1.36 LE)
   if (powerInput && powerUnit === 'kw') {
       finalHp = Math.round(powerInput * 1.35962);
   }
@@ -120,22 +124,18 @@ export async function addCar(formData: FormData) {
     year: parseNullableInt(formData.get('year')),
     mileage: parseNullableInt(formData.get('mileage')),
     
-    // Specifikációk
     fuel_type: parseNullableString(formData.get('fuel_type')),
     transmission: parseNullableString(formData.get('transmission')),
     body_type: parseNullableString(formData.get('body_type')),
     color: parseNullableString(formData.get('color')),
     
-    // Technikai adatok
     engine_size: parseNullableInt(formData.get('engine_size')),
-    power_hp: finalHp, // A már átváltott vagy eredeti LE érték
+    power_hp: finalHp, 
 
-    // Dátumok és Kép
     mot_expiry: parseNullableString(formData.get('mot_expiry')),       
     insurance_expiry: parseNullableString(formData.get('insurance_expiry')), 
     image_url: parseNullableString(formData.get('image_url')), 
     
-    // Egyéb alapértékek
     is_public_history: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -146,7 +146,6 @@ export async function addCar(formData: FormData) {
   if (error) {
     console.error('Adatbázis hiba:', error)
 
-    // Ha a VIN már létezik
     if (error.code === '23505') {
       const { data: existingCar } = await supabase
         .from('cars')
