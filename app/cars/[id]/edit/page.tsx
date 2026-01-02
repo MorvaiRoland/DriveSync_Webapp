@@ -149,17 +149,17 @@ export default function EditCarPage() {
               {/* KÉPCSERE */}
               <div className="flex flex-col items-center">
                   <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-2xl md:rounded-[2rem] overflow-hidden border-4 border-white/50 dark:border-slate-700 shadow-2xl mb-4 md:mb-6 bg-slate-200 dark:bg-slate-800 group/image cursor-pointer hover:scale-105 transition-transform duration-500">
-                     {imagePreview || car.image_url ? (
-                         <Image src={imagePreview || car.image_url} alt="Car" fill className="object-cover" />
-                     ) : (
-                         <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                             <CarFront className="w-12 h-12 md:w-16 md:h-16 opacity-50" />
-                         </div>
-                     )}
-                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity backdrop-blur-sm">
-                         <Upload className="w-8 h-8 text-white" />
-                     </div>
-                     <input type="file" name="image" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" ref={fileInputRef} onChange={handleImageChange} />
+                      {imagePreview || car.image_url ? (
+                          <Image src={imagePreview || car.image_url} alt="Car" fill className="object-cover" />
+                      ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
+                              <CarFront className="w-12 h-12 md:w-16 md:h-16 opacity-50" />
+                          </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity backdrop-blur-sm">
+                          <Upload className="w-8 h-8 text-white" />
+                      </div>
+                      <input type="file" name="image" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" ref={fileInputRef} onChange={handleImageChange} />
                   </div>
                   <button type="button" onClick={() => fileInputRef.current?.click()} className="text-xs md:text-sm font-bold text-amber-600 dark:text-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition-colors uppercase tracking-wider flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/10 rounded-full">
                       <Upload className="w-4 h-4" /> Fénykép módosítása
