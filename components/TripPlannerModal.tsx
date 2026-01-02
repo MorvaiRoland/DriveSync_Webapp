@@ -49,6 +49,13 @@ export default function TripPlannerModal({ cars }: { cars: any[] }) {
   const isElectric = selectedCar?.fuel_type === 'Elektromos'
   const unit = isElectric ? 'kWh' : 'L'
 
+  // --- SEGÉDFÜGGVÉNY: Nem enged negatív előjelet beírni ---
+  const preventMinus = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (['-', '+', 'e', 'E'].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
+
   // --- AUTOMATIKUS GPS ÉSZLELÉS ---
   const handleLocateMe = () => {
     if (navigator.geolocation) {
@@ -87,8 +94,6 @@ export default function TripPlannerModal({ cars }: { cars: any[] }) {
   };
 
   const selectAddress = (result: any) => {
-    // Mapbox [lon, lat] sorrendet ad vissza, de a komponensünk [lat, lon]-t vár (vagy fordítva, ellenőrizni kell a TripMap-et)
-    // A TripMaped kódja: .setLngLat([startPos[1], startPos[0]]) -> tehát [lat, lon] bemenetet vár (mert a Mapbox setLngLat([lon, lat])-ot kér)
     const lon = result.center[0];
     const lat = result.center[1];
     
@@ -107,7 +112,6 @@ export default function TripPlannerModal({ cars }: { cars: any[] }) {
     if (startCoords && endCoords && MAPBOX_TOKEN) {
       const fetchRoute = async () => {
         try {
-          // Mapbox Directions API: lon,lat;lon,lat
           const startLonLat = `${startCoords[1]},${startCoords[0]}`;
           const endLonLat = `${endCoords[1]},${endCoords[0]}`;
           
@@ -119,7 +123,6 @@ export default function TripPlannerModal({ cars }: { cars: any[] }) {
             setDistance(route.distance / 1000); // méter -> km
             setDuration(route.duration / 60); // mp -> perc
             
-            // GeoJSON objektum átadása a térképnek
             setRouteGeoJson({
               type: 'Feature',
               properties: {},
@@ -279,21 +282,71 @@ export default function TripPlannerModal({ cars }: { cars: any[] }) {
                   ) : (
                     <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                       <div className="grid grid-cols-2 gap-3">
-                        <div><label className="input-label">Ár ({isElectric ? 'Ft/kWh' : 'Ft/L'})</label><input type="number" value={fuelPrice} onChange={(e) => setFuelPrice(Number(e.target.value))} className="input-field" /></div>
-                        <div><label className="input-label">Fogy. ({unit}/100)</label><input type="number" value={consumption} onChange={(e) => setConsumption(Number(e.target.value))} className="input-field" /></div>
+                        <div>
+                          <label className="input-label">Ár ({isElectric ? 'Ft/kWh' : 'Ft/L'})</label>
+                          <input 
+                            type="number" 
+                            min="0"
+                            onKeyDown={preventMinus}
+                            value={fuelPrice} 
+                            onChange={(e) => setFuelPrice(Number(e.target.value))} 
+                            className="input-field" 
+                          />
+                        </div>
+                        <div>
+                          <label className="input-label">Fogy. ({unit}/100)</label>
+                          <input 
+                            type="number" 
+                            min="0"
+                            onKeyDown={preventMinus}
+                            value={consumption} 
+                            onChange={(e) => setConsumption(Number(e.target.value))} 
+                            className="input-field" 
+                          />
+                        </div>
                       </div>
                       <div>
-                         <label className="input-label flex items-center gap-1">
+                          <label className="input-label flex items-center gap-1">
                            Amortizáció (Ft/km) 
                            <div title="Kopás, értékvesztés, szerviz">
                              <Info className="w-3 h-3 text-slate-400 cursor-help" />
                            </div>
-                         </label>
-                         <div className="relative"><input type="number" value={amortization} onChange={(e) => setAmortization(Number(e.target.value))} className="input-field pl-9" /><TrendingUp className="w-4 h-4 absolute left-3 top-3 text-slate-400" /></div>
+                          </label>
+                          <div className="relative">
+                            <input 
+                              type="number" 
+                              min="0"
+                              onKeyDown={preventMinus}
+                              value={amortization} 
+                              onChange={(e) => setAmortization(Number(e.target.value))} 
+                              className="input-field pl-9" 
+                            />
+                            <TrendingUp className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                          </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div><label className="input-label">Útdíj (Ft)</label><input type="number" value={tollCost} onChange={(e) => setTollCost(Number(e.target.value))} className="input-field" /></div>
-                        <div><label className="input-label">Parkolás (Ft)</label><input type="number" value={parkingCost} onChange={(e) => setParkingCost(Number(e.target.value))} className="input-field" /></div>
+                        <div>
+                          <label className="input-label">Útdíj (Ft)</label>
+                          <input 
+                            type="number" 
+                            min="0"
+                            onKeyDown={preventMinus}
+                            value={tollCost} 
+                            onChange={(e) => setTollCost(Number(e.target.value))} 
+                            className="input-field" 
+                          />
+                        </div>
+                        <div>
+                          <label className="input-label">Parkolás (Ft)</label>
+                          <input 
+                            type="number" 
+                            min="0"
+                            onKeyDown={preventMinus}
+                            value={parkingCost} 
+                            onChange={(e) => setParkingCost(Number(e.target.value))} 
+                            className="input-field" 
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="input-label">Utasok: <span className="text-indigo-500">{passengers} fő</span></label>

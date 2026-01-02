@@ -125,6 +125,13 @@ function EventForm() {
     setTimeout(() => setToast(null), 4000)
   }
 
+  // --- SEGÉDFÜGGVÉNY: Nem enged negatív előjelet beírni ---
+  const preventMinus = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (['-', '+', 'e', 'E'].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
+
   // AI Számla szkennelés
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
@@ -349,25 +356,27 @@ function EventForm() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                  <InputGroup 
-                    label="Dátum" 
-                    name="event_date" 
-                    type="date" 
-                    value={formData.event_date}
-                    onChange={handleChange}
-                    highlight={aiFilled.includes('event_date')}
-                    required 
-                    icon={<Calendar className="w-5 h-5" />}
+                   label="Dátum" 
+                   name="event_date" 
+                   type="date" 
+                   value={formData.event_date}
+                   onChange={handleChange}
+                   highlight={aiFilled.includes('event_date')}
+                   required 
+                   icon={<Calendar className="w-5 h-5" />}
                  />
                  <InputGroup 
-                    label="Km óra állás" 
-                    name="mileage" 
-                    type="number" 
-                    value={formData.mileage}
-                    onChange={handleChange}
-                    highlight={aiFilled.includes('mileage')} 
-                    required 
-                    icon={<Gauge className="w-5 h-5" />}
-                    suffix="km"
+                   label="Km óra állás" 
+                   name="mileage" 
+                   type="number"
+                   min={0}
+                   onKeyDown={preventMinus}
+                   value={formData.mileage}
+                   onChange={handleChange}
+                   highlight={aiFilled.includes('mileage')} 
+                   required 
+                   icon={<Gauge className="w-5 h-5" />}
+                   suffix="km"
                  />
               </div>
 
@@ -406,31 +415,35 @@ function EventForm() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                  <InputGroup 
-                    label="Költség" 
-                    name="cost" 
-                    type="number" 
-                    placeholder="0" 
-                    value={formData.cost}
-                    onChange={handleChange}
-                    highlight={aiFilled.includes('cost')}
-                    required 
-                    icon={<Banknote className="w-5 h-5" />}
-                    suffix="Ft"
+                   label="Költség" 
+                   name="cost" 
+                   type="number"
+                   min={0}
+                   onKeyDown={preventMinus}
+                   placeholder="0" 
+                   value={formData.cost}
+                   onChange={handleChange}
+                   highlight={aiFilled.includes('cost')}
+                   required 
+                   icon={<Banknote className="w-5 h-5" />}
+                   suffix="Ft"
                  />
                  {isFuel && (
                    <InputGroup 
-                      label="Mennyiség" 
-                      name="liters" 
-                      type="number" 
-                      step="0.01" 
-                      placeholder="0.00" 
-                      value={formData.liters}
-                      onChange={handleChange}
-                      highlight={aiFilled.includes('liters')}
-                      required 
-                      icon={<Fuel className="w-5 h-5" />}
-                      suffix="L"
-                    />
+                     label="Mennyiség" 
+                     name="liters" 
+                     type="number" 
+                     min={0}
+                     onKeyDown={preventMinus}
+                     step="0.01" 
+                     placeholder="0.00" 
+                     value={formData.liters}
+                     onChange={handleChange}
+                     highlight={aiFilled.includes('liters')}
+                     required 
+                     icon={<Fuel className="w-5 h-5" />}
+                     suffix="L"
+                   />
                  )}
               </div>
 
@@ -514,9 +527,11 @@ interface InputGroupProps {
   highlight?: boolean
   icon?: React.ReactNode
   suffix?: string
+  min?: string | number
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
 }
 
-function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight, icon, suffix }: InputGroupProps) {
+function InputGroup({ label, name, type = "text", placeholder, required = false, step, value, onChange, highlight, icon, suffix, min, onKeyDown }: InputGroupProps) {
   const [focused, setFocused] = useState(false)
 
   return (
@@ -546,6 +561,8 @@ function InputGroup({ label, name, type = "text", placeholder, required = false,
             name={name} 
             id={name} 
             step={step} 
+            min={min}
+            onKeyDown={onKeyDown}
             value={value}       
             onChange={onChange} 
             required={required} 
