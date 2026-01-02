@@ -1,6 +1,6 @@
 import { createClient } from '@/supabase/server'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Image from 'next/image'
 import { deleteEvent, deleteReminder } from './actions'
 import DocumentManager from './DocumentManager'
@@ -21,7 +21,7 @@ import {
   ShieldCheck, Disc, Snowflake, Sun, Wallet, Banknote, 
   Sparkles, Lightbulb, Plus, Trash2, Gauge, History, 
   ChevronRight, CarFront, Zap, TrendingUp, TrendingDown, 
-  Droplet, MapPin, Calendar, ArrowRight, Search
+  Droplet, MapPin, Calendar, ArrowRight, Search, Eye
 } from 'lucide-react';
 
 // --- TÍPUSOK ---
@@ -31,9 +31,13 @@ type Car = {
   image_url: string | null; mot_expiry: string | null; insurance_expiry: string | null; 
   service_interval_km: number; last_service_mileage: number; fuel_type: string; 
   color: string | null; vin: string | null; share_token?: string | null; 
-  is_for_sale?: boolean | null; hide_prices?: boolean | null; hide_sensitive?: boolean | null;
+  is_for_sale?: boolean | null; 
+  is_listed_on_marketplace?: boolean | null; // <--- EZT A SORT ILLESD BE!
+  hide_prices?: boolean | null; hide_sensitive?: boolean | null;
   transmission?: string | null; engine_size?: number | null; power_hp?: number | null;
   is_public_history?: boolean; 
+  user_id: string; 
+  car_shares?: { email: string }[];
 }
 
 const MOBILE_CARD_SIZES = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
@@ -56,10 +60,38 @@ export default async function CarDetailsPage(props: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) return notFound()
+  if (!user) return redirect('/login')
 
-  const [carRes, eventsRes, remindersRes, tiresRes, docsRes, vigRes, parkingRes] = await Promise.all([
-    supabase.from('cars').select('*').eq('id', params.id).single(),
+  // --- 🛡️ BIZTONSÁGI ELLENŐRZÉS 🛡️ ---
+  // Először csak az autót kérjük le a jogosultságok miatt
+  const { data: carData, error } = await supabase
+    .from('cars')
+    .select('*, car_shares(email)')
+    .eq('id', params.id)
+    .single()
+
+  if (error || !carData) return notFound()
+
+  const car: Car = carData;
+  const isOwner = car.user_id === user.id;
+  const isShared = car.car_shares?.some((share: any) => share.email === user.email);
+  
+  // Van hozzáférése szerkeszteni? (Tulaj vagy Megosztott)
+  const hasEditAccess = isOwner || isShared;
+
+  // Ha NINCS szerkesztési joga, megnézzük, hogy publikus-e
+  if (!hasEditAccess) {
+      const isPublic = car.is_public_history || (car.is_for_sale && car.is_listed_on_marketplace);
+      
+      // Ha NEM publikus és NEM szerkesztheti -> 404 (Láthatatlan)
+      if (!isPublic) {
+          return notFound();
+      }
+      // Ha publikus, akkor továbbengedjük, de 'readOnly' módban lesz a felület
+  }
+
+  // --- ADATLEKÉRÉSEK (Csak ha átjutott a védelmen) ---
+  const [eventsRes, remindersRes, tiresRes, docsRes, vigRes, parkingRes] = await Promise.all([
     supabase.from('events').select('*').eq('car_id', params.id).order('event_date', { ascending: false }),
     supabase.from('service_reminders').select('*').eq('car_id', params.id).order('due_date', { ascending: true }),
     supabase.from('tires').select('*').eq('car_id', params.id).order('is_mounted', { ascending: false }),
@@ -68,13 +100,10 @@ export default async function CarDetailsPage(props: Props) {
     supabase.from('parking_sessions').select('*').eq('car_id', params.id).maybeSingle()
   ])
 
-  if (carRes.error || !carRes.data) return notFound()
-
-  const car: Car = carRes.data
   const safeEvents = eventsRes.data || []
   const safeReminders = remindersRes.data || []
   const safeTires = tiresRes.data || []
-  const safeDocs = docsRes.data || []
+  const safeDocs = docsRes.data || [] // Dokumentumokat elrejthetjük, ha readOnly!
   const safeVignettes = vigRes.data || []
   const activeParking = parkingRes.data || null
 
@@ -85,8 +114,8 @@ export default async function CarDetailsPage(props: Props) {
   const isPro = limits.aiMechanic; 
   const canServiceMap = limits.serviceMap;
   const canVinSearch = limits.vinSearch;
-  const canExport = limits.export; // Export jog
-  const canMileageLog = limits.mileageLog; // Útnyilvántartás jog
+  const canExport = limits.export; 
+  const canMileageLog = limits.mileageLog; 
 
   // --- Calculations ---
   const totalCost = safeEvents.reduce((sum, e) => sum + (e.cost || 0), 0)
@@ -135,39 +164,39 @@ export default async function CarDetailsPage(props: Props) {
   if (smartTips.length === 0) smartTips.push("Minden rendszer rendben. Biztonságos utat!");
 
   const healthProps = { car, oilLife, kmSinceService, serviceIntervalKm, kmRemaining, motStatus, insuranceStatus }
-  const techProps = { car, avgConsumption, isElectric, canVinSearch }
+  const techProps = { car, avgConsumption, isElectric, canVinSearch, hasEditAccess } // hasEditAccess átadva!
   const costProps = { total: totalCost, fuel: fuelCost, service: serviceCost, isElectric }
   const carIdString = car.id.toString();
   const isPublic = car.is_public_history || false; 
 
   // --- WIDGET LOGIKA ---
-  const WidgetParking = <SmartParkingWidget carId={carIdString} activeSession={activeParking} />;
+  const WidgetParking = hasEditAccess ? <SmartParkingWidget carId={carIdString} activeSession={activeParking} /> : null;
   const WidgetHealth = <CarHealthWidget {...healthProps} />;
   
-  const WidgetPrediction = isPro 
+  const WidgetPrediction = isPro && hasEditAccess
     ? <PredictiveMaintenance carId={car.id} carName={`${car.make} ${car.model}`} /> 
-    : <PremiumLockWidget title="Prediktív Karbantartás" icon={<Sparkles className="w-5 h-5 text-amber-500" />} />;
+    : hasEditAccess ? <PremiumLockWidget title="Prediktív Karbantartás" icon={<Sparkles className="w-5 h-5 text-amber-500" />} /> : null;
     
-  const WidgetTips = isPro 
+  const WidgetTips = isPro && hasEditAccess
     ? <SmartTipsCard tips={smartTips} /> 
-    : <PremiumLockWidget title="AI Szerelő Tippek" icon={<Lightbulb className="w-5 h-5 text-yellow-400" />} />;
+    : hasEditAccess ? <PremiumLockWidget title="AI Szerelő Tippek" icon={<Lightbulb className="w-5 h-5 text-yellow-400" />} /> : null;
 
   const WidgetCost = <CostCard {...costProps} />;
   const WidgetSales = <SalesWidget car={car} />;
   const WidgetSpecs = <TechnicalSpecs {...techProps} />;
-  const WidgetVignette = <VignetteManager carId={carIdString} vignettes={safeVignettes} />;
-  const WidgetTires = <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} />;
-  const WidgetDocs = <DocumentManager carId={carIdString} documents={safeDocs} />;
-  const WidgetReminders = <RemindersList reminders={safeReminders} carId={carIdString} />;
+  const WidgetVignette = hasEditAccess ? <VignetteManager carId={carIdString} vignettes={safeVignettes} /> : null;
+  const WidgetTires = hasEditAccess ? <TireHotelCard tires={safeTires} carMileage={car.mileage} carId={carIdString} /> : null;
+  const WidgetDocs = hasEditAccess ? <DocumentManager carId={carIdString} documents={safeDocs} /> : null; // Dokumentumok elrejtése idegenek elől
+  const WidgetReminders = hasEditAccess ? <RemindersList reminders={safeReminders} carId={carIdString} /> : null;
   const WidgetCharts = <AnalyticsCharts events={safeEvents} isPro={isPro} />;
-  const WidgetLog = <EventLog events={safeEvents} carId={carIdString} />;
+  const WidgetLog = <EventLog events={safeEvents} carId={carIdString} hasEditAccess={hasEditAccess} />;
   const WidgetFuel = <FuelTrackerCard events={safeEvents} isElectric={isElectric} carMileage={car.mileage} />;
 
   // --- MOBILE TABS CONTENT ---
   const mobileTabs = {
     overview: (
         <div className="space-y-6">
-            <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
+            {hasEditAccess && <PublicToggle carId={carIdString} isPublicInitial={isPublic} />}
             {WidgetHealth}
             {WidgetCost}
             {WidgetFuel}
@@ -184,7 +213,7 @@ export default async function CarDetailsPage(props: Props) {
   const DesktopLayout = (
     <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
         <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
-            <PublicToggle carId={carIdString} isPublicInitial={isPublic} />
+            {hasEditAccess && <PublicToggle carId={carIdString} isPublicInitial={isPublic} />}
             
             {/* SOR 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -230,23 +259,35 @@ export default async function CarDetailsPage(props: Props) {
          kmRemaining={kmRemaining} 
          safeEvents={safeEvents} 
          isPro={isPro} 
-         canExport={canExport} // ÚJ PROP
+         canExport={canExport} 
+         hasEditAccess={hasEditAccess} // 🛡️ ÁTADVA
       />
       
-      {/* DESKTOP ACTION GRID - SZERVIZ TÉRKÉP ÉS ÚTNYILVÁNTARTÁS LIMITTEL */}
-      <DesktopActionGrid carId={carIdString} isElectric={isElectric} canServiceMap={canServiceMap} canMileageLog={canMileageLog} />
+      {/* DESKTOP ACTION GRID - CSAK HA VAN JOGOSULTSÁG */}
+      {hasEditAccess && (
+          <DesktopActionGrid carId={carIdString} isElectric={isElectric} canServiceMap={canServiceMap} canMileageLog={canMileageLog} />
+      )}
+      
+      {!hasEditAccess && (
+          <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center gap-3 justify-center text-amber-800 dark:text-amber-400 font-bold text-sm">
+                  <Eye className="w-5 h-5" />
+                  <span>Nézői módban vagy. Ez egy nyilvános adatlap.</span>
+              </div>
+          </div>
+      )}
       
       <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-20">
         <ResponsiveDashboard mobileTabs={mobileTabs} desktopContent={DesktopLayout} />
       </div>
-      <MobileBottomNav carId={carIdString} isElectric={isElectric} canMileageLog={canMileageLog} />
+      
+      {hasEditAccess && <MobileBottomNav carId={carIdString} isElectric={isElectric} canMileageLog={canMileageLog} />}
     </div>
   )
 }
 
 // --- SUB-COMPONENTS ---
 
-// *** PRÉMIUM FUNKCIÓ LEZÁRÓ WIDGET ***
 function PremiumLockWidget({ title, icon }: { title: string, icon: React.ReactNode }) {
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 relative overflow-hidden group">
@@ -271,7 +312,7 @@ function PremiumLockWidget({ title, icon }: { title: string, icon: React.ReactNo
     )
 }
 
-function EventLog({ events, carId }: any) {
+function EventLog({ events, carId, hasEditAccess }: any) {
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900">
@@ -292,7 +333,7 @@ function EventLog({ events, carId }: any) {
                                 } shadow-sm`}></div>
 
                                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:border-amber-500/30 hover:shadow-md transition-all relative overflow-hidden">
-                                    <Link href={`/cars/${carId}/events/${event.id}/edit`} className="block p-4 z-0">
+                                    <Link href={hasEditAccess ? `/cars/${carId}/events/${event.id}/edit` : '#'} className={`block p-4 z-0 ${!hasEditAccess && 'cursor-default'}`}>
                                         <div className="flex justify-between items-start mb-2 pr-8"> 
                                             <div>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">
@@ -318,19 +359,22 @@ function EventLog({ events, carId }: any) {
                                             )}
                                         </div>
                                     </Link>
-                                    <div className="absolute top-2 right-2 z-10">
-                                         <form action={deleteEvent}>
-                                            <input type="hidden" name="id" value={event.id} />
-                                            <input type="hidden" name="car_id" value={carId} />
-                                            <button 
-                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                                                title="Bejegyzés törlése"
-                                                type="submit"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                         </form>
-                                    </div>
+                                    
+                                    {hasEditAccess && (
+                                        <div className="absolute top-2 right-2 z-10">
+                                             <form action={deleteEvent}>
+                                                <input type="hidden" name="id" value={event.id} />
+                                                <input type="hidden" name="car_id" value={carId} />
+                                                <button 
+                                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                                                    title="Bejegyzés törlése"
+                                                    type="submit"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                             </form>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -486,7 +530,7 @@ function SummaryBox({ label, value, subLabel }: any) {
   )
 }
 
-function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro, canExport }: any) {
+function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEvents, isPro, canExport, hasEditAccess }: any) {
     return (
         <div className="relative bg-slate-900 w-full overflow-hidden shadow-2xl shrink-0 group min-h-[22rem] md:h-[28rem]">
             {car.image_url && (
@@ -503,18 +547,21 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                         <span className="hidden sm:inline font-bold text-sm">Garázs</span>
                     </Link>
                     <div className="flex items-center gap-3">
-                        {/* --- EXPORT MENU - CSAK HA JOGOSULT --- */}
-                        {canExport ? (
+                        {/* --- EXPORT MENU - CSAK HA JOGOSULT ÉS SZERKESZTHETI --- */}
+                        {hasEditAccess && canExport ? (
                             <ExportMenu car={car} events={safeEvents} />
-                        ) : (
+                        ) : hasEditAccess ? (
                             <Link href="/pricing" className="bg-black/20 hover:bg-black/30 text-white/70 p-2.5 rounded-full backdrop-blur-md border border-white/10 flex items-center gap-1 text-xs font-bold">
                                 <Lock className="w-3 h-3" /> Export
                             </Link>
-                        )}
+                        ) : null}
 
-                        <Link href={`/cars/${car.id}/edit`} className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md transition-colors border border-white/10">
-                            <Pencil className="w-4 h-4" />
-                        </Link>
+                        {/* CSAK HA SZERKESZTHETI */}
+                        {hasEditAccess && (
+                            <Link href={`/cars/${car.id}/edit`} className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md transition-colors border border-white/10">
+                                <Pencil className="w-4 h-4" />
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -537,7 +584,7 @@ function HeaderSection({ car, healthStatus, nextServiceKm, kmRemaining, safeEven
                             <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none mb-1 break-words">
                                 {car.make} <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500">{car.model}</span>
                             </h1>
-                            <p className="text-slate-300/80 font-mono text-lg md:text-xl tracking-widest">{car.plate}</p>
+                            <p className="text-slate-300/80 font-mono text-lg md:text-xl tracking-widest">{hasEditAccess ? car.plate : '***-***'}</p>
                         </div>
                         <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-1 w-full">
                             <StatBadge label="Futásteljesítmény" value={`${car.mileage.toLocaleString()} km`} />
@@ -599,44 +646,44 @@ function DesktopActionGrid({ carId, isElectric, canServiceMap, canMileageLog }: 
     const shine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer";
     return (
         <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-30 hidden md:grid grid-cols-6 gap-4">
-             <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} ${isElectric ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-amber-500 hover:bg-amber-400 text-slate-900'}`}>
+              <Link href={`/cars/${carId}/events/new?type=fuel`} className={`${btnClass} ${isElectric ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-amber-500 hover:bg-amber-400 text-slate-900'}`}>
                 <div className={shine} />
                 {isElectric ? <Zap className="w-5 h-5" /> : <Fuel className="w-5 h-5" />}
                 {isElectric ? 'Töltés' : 'Tankolás'}
-             </Link>
-             <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnClass} bg-slate-800 hover:bg-slate-700 text-white`}>
+              </Link>
+              <Link href={`/cars/${carId}/events/new?type=service`} className={`${btnClass} bg-slate-800 hover:bg-slate-700 text-white`}>
                 <div className={shine} />
                 <Wrench className="w-5 h-5" />Szerviz
-             </Link>
-             <Link href={`/cars/${carId}/reminders/new`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border-slate-200 dark:border-slate-700`}>
+              </Link>
+              <Link href={`/cars/${carId}/reminders/new`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border-slate-200 dark:border-slate-700`}>
                 <Bell className="w-5 h-5" />Emlékeztető
-             </Link>
-             
-             {/* --- ÚTNYILVÁNTARTÁS LIMIT --- */}
-             {canMileageLog ? (
+              </Link>
+              
+              {/* --- ÚTNYILVÁNTARTÁS LIMIT --- */}
+              {canMileageLog ? (
                 <Link href={`/cars/${carId}/trips`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 border-slate-200 dark:border-slate-700`}>
                     <Map className="w-5 h-5" />Útnyilvántartás
                 </Link>
-             ) : (
+              ) : (
                 <Link href="/pricing" className={`${btnClass} bg-slate-100 dark:bg-slate-800/50 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-800`}>
                     <Lock className="w-4 h-4" />Útnyilvántartás
                 </Link>
-             )}
+              )}
 
-             <Link href={`/cars/${carId}/parts`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 border-slate-200 dark:border-slate-700`}>
+              <Link href={`/cars/${carId}/parts`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 border-slate-200 dark:border-slate-700`}>
                 <Package className="w-5 h-5" />Alkatrészek
-             </Link>
-             
-             {/* SZERVIZ TÉRKÉP */}
-             {canServiceMap ? (
-                 <Link href={`/services`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 border-slate-200 dark:border-slate-700`}>
+              </Link>
+              
+              {/* SZERVIZ TÉRKÉP */}
+              {canServiceMap ? (
+                  <Link href={`/services`} className={`${btnClass} bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 border-slate-200 dark:border-slate-700`}>
                     <MapPin className="w-5 h-5" />Szerviz Térkép
-                 </Link>
-             ) : (
-                 <Link href="/pricing" className={`${btnClass} bg-slate-100 dark:bg-slate-800/50 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-800`}>
+                  </Link>
+              ) : (
+                  <Link href="/pricing" className={`${btnClass} bg-slate-100 dark:bg-slate-800/50 text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-800`}>
                     <Lock className="w-4 h-4" />Szerviz Térkép
-                 </Link>
-             )}
+                  </Link>
+              )}
         </div>
     )
 }
@@ -734,7 +781,7 @@ function RemindersList({ reminders, carId }: any) {
     )
 }
 
-function TechnicalSpecs({ car, avgConsumption, canVinSearch }: any) {
+function TechnicalSpecs({ car, avgConsumption, canVinSearch, hasEditAccess }: any) {
     const formatDate = (dateString: string | null) => {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleDateString('hu-HU', {
@@ -751,15 +798,15 @@ function TechnicalSpecs({ car, avgConsumption, canVinSearch }: any) {
                     <Gauge className="w-5 h-5 text-slate-400" /> Specifikációk
                 </h3>
                 {/* VIN KERESŐ GOMB */}
-                {canVinSearch && car.vin ? (
+                {canVinSearch && car.vin && hasEditAccess ? (
                     <a href={`https://vincheck.com/${car.vin}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded flex items-center gap-1 hover:bg-indigo-100 transition-colors">
                         <Search className="w-3 h-3" /> Elemzés
                     </a>
-                ) : (
+                ) : hasEditAccess ? (
                     <Link href="/pricing" className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 px-2 py-1 rounded flex items-center gap-1">
                         <Lock className="w-3 h-3" /> Elemzés
                     </Link>
-                )}
+                ) : null}
             </div>
             
             <div className="grid grid-cols-2 gap-x-4 gap-y-6">
@@ -787,7 +834,7 @@ function TechnicalSpecs({ car, avgConsumption, canVinSearch }: any) {
                 <DataPoint label="Átlagfogyasztás" value={avgConsumption === 'Nincs adat' ? '-' : avgConsumption} highlight />
                 
                 <div className="col-span-2 border-t border-slate-100 dark:border-slate-800 pt-4 mt-2">
-                    <DataPoint label="VIN / Alvázszám" value={car.vin || 'Nincs rögzítve'} mono />
+                    <DataPoint label="VIN / Alvázszám" value={hasEditAccess ? (car.vin || 'Nincs rögzítve') : '*** PRIVÁT ***'} mono />
                 </div>
             </div>
         </div>
