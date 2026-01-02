@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { updateDealerInfo } from '@/app/cars/[id]/actions'
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
-import { X, Check, CarFront, Gauge, Zap, Cog, Tag, Info, FileText, Download, Loader2 } from 'lucide-react'
+import { X, Check, CarFront, Gauge, Zap, Cog, Tag, Download, Loader2, FileText } from 'lucide-react'
 
 // --- SEGÉDFÜGGVÉNYEK ---
 const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
@@ -35,33 +35,33 @@ const COLORS = {
 const FEATURES_CATEGORIES: Record<string, string[]> = {
     'Biztonság': [
         'ABS (blokkolásgátló)', 'ASR (kipörgésgátló)', 'ESP (menetstabilizátor)',
-        'EBD/EBV (elektronikus fékerő-elosztó)', 'MSR (motorféknyomaték szabályzás)',
+        'EBD/EBV (fékerő-elosztó)', 'MSR (motorféknyomaték szab.)', // Rövidítve
         'Vezetőoldali légzsák', 'Utasoldali légzsák', 'Oldallégzsák', 'Függönylégzsák', 'Térdlégzsák',
         'Hátsó oldallégzsák', 'Kikapcsolható utaslégzsák', 'ISOFIX rendszer', 
-        'Guminyomás-ellenőrző rendszer', 'Sávtartó rendszer', 'Sávváltó asszisztens',
-        'Holttér-figyelő rendszer', 'Tábla-felismerő funkció', 'Vészfék asszisztens', 
+        'Guminyomás-ellenőrző', 'Sávtartó rendszer', 'Sávváltó asszisztens',
+        'Holttér-figyelő', 'Tábla-felismerő', 'Vészfék asszisztens', 
         'Fáradtságérzékelő', 'Lejtmenet asszisztens', 'Visszagurulás-gátló',
         'Hátsó keresztirányú forgalomfigyelő', 'Éjjellátó asszisztens', 'Gyalogosvédelem',
         'Riasztó', 'Indításgátló (immobiliser)', 'Központi zár', 'Gyerekzár'
     ],
     'Kényelem': [
         'Manuális klíma', 'Automata klíma', 'Digitális kétzónás klíma', 'Digitális többzónás klíma',
-        'Állófűtés', 'Szervokormány', 'Sebességfüggő szervókormány', 'Tempomat', 
+        'Állófűtés', 'Szervokormány', 'Sebességfüggő szervó', 'Tempomat', 
         'Adaptív tempomat (ACC)', 'Kulcsnélküli nyitás', 'Kulcsnélküli indítás', 'Start-Stop rendszer',
         'Ülésfűtés (elöl)', 'Ülésfűtés (hátul)', 'Ülésszellőztetés', 'Masszírozós ülés',
-        'Elektromos ülésállítás vezetőoldal', 'Elektromos ülésállítás utasoldal',
+        'El. ülésállítás (vezető)', 'El. ülésállítás (utas)', // Rövidítve
         'Memóriás vezetőülés', 'Deréktámasz', 'Combtámasz', 'Kormányfűtés', 
         'Elektromos ablak elöl', 'Elektromos ablak hátul', 'Elektromos tükör', 'Fűthető tükör',
-        'Automatikusan sötétedő belső tükör', 'Automatikusan sötétedő külső tükör',
-        'Elektromosan behajtható külső tükrök', 'Elektromos csomagtérajtó-mozgatás',
-        'Lábbal nyitható csomagtérajtó', 'Hűthető kesztyűtartó', 'Hűthető kartámasz',
-        'Állítható kormány', 'Soft-close (ajtószervó)'
+        'Auto. sötétedő belső tükör', 'Auto. sötétedő külső tükör', // Rövidítve
+        'El. behajtható tükrök', 'El. csomagtérajtó',
+        'Lábbal nyitható csomagtér', 'Hűthető kesztyűtartó', 'Hűthető kartámasz',
+        'Állítható kormány', 'Soft-close'
     ],
     'Multimédia & Navigáció': [
         'Navigációs rendszer', 'Bluetooth kihangosító', 'Android Auto', 'Apple CarPlay', 
         'MirrorLink', 'USB csatlakozó', 'AUX csatlakozó', '12V csatlakozó', '230V csatlakozó',
-        'MP3 lejátszás', 'Hi-Fi', 'Prémium hangrendszer (Bose/Harman)', 'Mélynyomó',
-        'Érintőkijelző', 'Digitális műszerfal', 'Head-up Display (HUD)', 'Vezeték nélküli telefontöltő',
+        'MP3 lejátszás', 'Hi-Fi', 'Prémium hangrendszer', 'Mélynyomó',
+        'Érintőkijelző', 'Digitális műszerfal', 'HUD (Head-Up Display)', 'Vezeték nélküli töltő',
         'Hangvezérlés', 'Gesztusvezérlés', 'Wi-Fi Hotspot', 'Multifunkciós kormánykerék',
         'Hátsó szórakoztató rendszer'
     ],
@@ -78,8 +78,8 @@ const FEATURES_CATEGORIES: Record<string, string[]> = {
     'Műszaki & Sport': [
         'Sportfutómű', 'Állítható felfüggesztés', 'Légrugózás', 'Elektronikus futómű hangolás',
         'Módválasztó (Drive Select)', 'Sportülések', 'Sportkormány', 'Kormányváltó (F1 váltó)',
-        'Részecskeszűrő', 'Start-Stop/Motormegállító rendszer', 'Differenciálzár',
-        'Összkerékhajtás (4WD/AWD)', 'Kerámia fék'
+        'Részecskeszűrő', 'Start-Stop rendszer', 'Differenciálzár',
+        'Összkerékhajtás (4WD)', 'Kerámia fék'
     ],
     'Belső & Kárpit': [
         'Bőrkárpit', 'Műbőr kárpit', 'Alcantara kárpit', 'Plüss kárpit', 'Szövetkárpit',
@@ -109,7 +109,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
       })
   }
 
-  // --- PDF GENERÁLÁS (JAVÍTOTT GRID LOGIKA - NAGYOBB BETŰK) ---
+  // --- PDF GENERÁLÁS (3 OSZLOPOS, TÖMÖRÍTETT) ---
   const handleSaveAndGenerate = async (formData: FormData) => {
     setLoading(true)
     formData.set('features', selectedFeatures.join(','))
@@ -146,23 +146,23 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         let logoBase64 = null;
         if (logoRes.ok) logoBase64 = arrayBufferToBase64(await logoRes.arrayBuffer());
 
-        // --- 1. KOMPAKT FEJLÉC (FIX 20mm) ---
-        const headerHeight = 20;
+        // --- 1. KOMPAKT FEJLÉC (18mm magas) ---
+        const headerHeight = 18;
         doc.setFillColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
         doc.rect(0, 0, pageWidth, headerHeight, 'F');
 
         if (logoBase64) {
-            try { doc.addImage(logoBase64, 'PNG', margin, 3, 14, 14); } catch (e) {}
+            try { doc.addImage(logoBase64, 'PNG', margin, 3, 12, 12); } catch (e) {}
         }
 
         doc.setFontSize(8);
         doc.setTextColor(200, 200, 200);
-        doc.text("DynamicSense | Hivatalos Adatlap", pageWidth - margin, 9, { align: 'right' });
-        doc.text(new Date().toLocaleDateString('hu-HU'), pageWidth - margin, 14, { align: 'right' });
+        doc.text("DynamicSense | Hivatalos Adatlap", pageWidth - margin, 8, { align: 'right' });
+        doc.text(new Date().toLocaleDateString('hu-HU'), pageWidth - margin, 13, { align: 'right' });
 
-        let yPos = headerHeight + 5; // Start: 25mm
+        let yPos = headerHeight + 5; // Start: ~23mm
 
-        // --- 2. CÍM ÉS ÁR (FIX 15mm) ---
+        // --- 2. CÍM ÉS ÁR (15mm) ---
         doc.setTextColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
         doc.setFontSize(18); 
         doc.setFont('Roboto', 'bold');
@@ -181,9 +181,9 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.setFont('Roboto', 'normal');
         doc.text(`${car.plate}   |   DynamicSense Verified`, margin, yPos + 10);
 
-        yPos += 14; // Most vagyunk 39mm-nél
+        yPos += 12; // Most vagyunk 35mm-nél
 
-        // --- 3. KOMPAKT SPECIFIKÁCIÓS SÁV (FIX 12mm) ---
+        // --- 3. KOMPAKT SPECIFIKÁCIÓS SÁV (12mm) ---
         const specHeight = 12;
         
         doc.setFillColor(COLORS.BG_LIGHT[0], COLORS.BG_LIGHT[1], COLORS.BG_LIGHT[2]);
@@ -221,11 +221,10 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
             doc.text(s.v, cX, cY + 4, { align: 'center' });
         });
 
-        yPos += specHeight + 6; // Most vagyunk 57mm-nél
+        yPos += specHeight + 6; // Most vagyunk 53mm-nél
 
-        // --- 4. FELSZERELTSÉG (OPTIMALIZÁLT RÁCS) ---
-        // Cím
-        doc.setFontSize(10);
+        // --- 4. FELSZERELTSÉG (3 OSZLOPOS - TÖKÉLETES TÖRDELÉS) ---
+        doc.setFontSize(10); 
         doc.setTextColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
         doc.setFont('Roboto', 'bold');
         doc.text("FELSZERELTSÉG", margin, yPos);
@@ -234,80 +233,81 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.setLineWidth(0.5);
         doc.line(margin, yPos + 2, margin + 35, yPos + 2); 
         
-        yPos += 6; // Start: ~63mm
+        yPos += 6; // Start: ~59mm
 
-        // Rács Beállítások (NAGYOBB BETŰK)
-        const colCount = 4;
+        // Csoportosítás
+        const groupedFeatures: Record<string, string[]> = {};
+        const otherFeatures: string[] = [];
+        selectedFeatures.forEach(feat => {
+            let found = false;
+            for (const [cat, items] of Object.entries(FEATURES_CATEGORIES)) {
+                if (items.includes(feat)) {
+                    if (!groupedFeatures[cat]) groupedFeatures[cat] = [];
+                    groupedFeatures[cat].push(feat);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) otherFeatures.push(feat);
+        });
+        if (otherFeatures.length > 0) groupedFeatures['EGYÉB'] = otherFeatures;
+
+        // Beállítások a helykihasználáshoz
+        const featFontSize = 8; // Jól olvasható
+        const lineHeight = 5;   // Elegendő sorköz, hogy ne érjenek össze
+        const colCount = 3;     // 3 Oszlop = Nincs átfedés a hosszú magyar szavakkal sem
         const colWidthFeature = (pageWidth - (margin * 2)) / colCount;
-        const featFontSize = 8; // Betűméret növelése (6.5 -> 8)
-        const lineHeight = 4.5; // Sorköz növelése (3.5 -> 4.5)
 
-        // Végigmegyünk a kategóriákon
-        Object.entries(FEATURES_CATEGORIES).forEach(([category, allItems]) => {
-            // Csak a kiválasztott extrákat szűrjük ki ehhez a kategóriához
-            const activeItems = allItems.filter(item => selectedFeatures.includes(item));
-            
-            // Ha nincs kiválasztva semmi ebből a kategóriából, ugorjuk át
-            if (activeItems.length === 0) return;
-
-            // Ellenőrizzük, hogy elfér-e a kategória címe + 1 sor (kb 10mm)
+        Object.entries(groupedFeatures).forEach(([category, feats]) => {
+            // Ellenőrzés: Elfér-e a kategória címe?
             if (yPos > pageHeight - 35) { 
                 doc.addPage();
                 yPos = 20; 
             }
 
-            // Kategória Cím
-            doc.setFontSize(8); // Cím betűméret (7 -> 8)
+            doc.setFontSize(8);
             doc.setTextColor(COLORS.ACCENT[0], COLORS.ACCENT[1], COLORS.ACCENT[2]);
             doc.setFont('Roboto', 'bold');
             doc.text(category.toUpperCase(), margin, yPos);
-            yPos += 5; // Cím sorköz (4 -> 5)
+            yPos += 5;
 
-            // Tételek kirajzolása Gridben
             doc.setFontSize(featFontSize);
             doc.setTextColor(COLORS.TEXT_MAIN[0], COLORS.TEXT_MAIN[1], COLORS.TEXT_MAIN[2]);
             doc.setFont('Roboto', 'normal');
 
-            // Hány sor kell ennek a kategóriának?
-            const rowsNeeded = Math.ceil(activeItems.length / colCount);
+            // Sorok kiszámítása
+            const rowsNeeded = Math.ceil(feats.length / colCount);
 
-            // Ellenőrizzük, hogy az egész blokk kifér-e, vagy legalább egy része
-            // (Itt most soronként ellenőrzünk, a biztonság kedvéért)
-            
             for (let r = 0; r < rowsNeeded; r++) {
-                // Ha elérjük az alját, új oldal
+                // Ellenőrzés: Elfér-e ez a sor?
                 if (yPos > pageHeight - 35) {
                     doc.addPage();
                     yPos = 20;
-                    // Új oldalon érdemes lenne újraírni a kategóriát, de egyszerűsítünk
                 }
 
-                // Az aktuális sor 4 eleme
                 for (let c = 0; c < colCount; c++) {
                     const itemIndex = (r * colCount) + c;
-                    if (itemIndex >= activeItems.length) break;
+                    if (itemIndex >= feats.length) break;
 
-                    const item = activeItems[itemIndex];
+                    const item = feats[itemIndex];
                     const x = margin + (c * colWidthFeature);
                     
                     doc.setFillColor(COLORS.TEXT_LIGHT[0], COLORS.TEXT_LIGHT[1], COLORS.TEXT_LIGHT[2]);
-                    doc.circle(x + 1, yPos - 1, 0.5, 'F'); // Bullet pont
-                    doc.text(item, x + 3.5, yPos);         // Szöveg
+                    doc.circle(x + 1, yPos - 1, 0.5, 'F');
+                    doc.text(item, x + 3.5, yPos); 
                 }
-                
-                yPos += lineHeight; // Következő sor
+                yPos += lineHeight;
             }
-            
-            yPos += 3; // Nagyobb térköz a kategóriák között (2 -> 3)
+            yPos += 2; // Térköz a kategóriák között
         });
 
         // --- 5. LÁBLÉC & QR (DINAMIKUS) ---
-        // Ha nagyon az alján vagyunk, új oldal a láblécnek
+        // Ha nincs elég hely az alján, új oldal
         if (yPos > pageHeight - 30) {
             doc.addPage();
         }
 
-        // Lábléc fixen az oldal aljára (vagy az utolsó oldal aljára)
+        // Lábléc fixen az utolsó oldal aljára
         const footerY = pageHeight - 30;
 
         doc.setDrawColor(220, 220, 220);
