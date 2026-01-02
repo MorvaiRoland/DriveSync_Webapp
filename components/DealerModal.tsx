@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { updateDealerInfo } from '@/app/cars/[id]/actions'
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
-import { X, Check, CarFront, Gauge, Zap, Cog, Tag, Download, Loader2, FileText } from 'lucide-react'
+import { X, Check, CarFront, Gauge, Zap, Cog, Tag, Info, FileText, Download, Loader2 } from 'lucide-react'
 
 // --- SEGÉDFÜGGVÉNYEK ---
 const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
@@ -35,7 +35,7 @@ const COLORS = {
 const FEATURES_CATEGORIES: Record<string, string[]> = {
     'Biztonság': [
         'ABS (blokkolásgátló)', 'ASR (kipörgésgátló)', 'ESP (menetstabilizátor)',
-        'EBD/EBV (fékerő-elosztó)', 'MSR (motorféknyomaték szab.)', // Rövidítve
+        'EBD/EBV (fékerő-elosztó)', 'MSR (motorféknyomaték szab.)',
         'Vezetőoldali légzsák', 'Utasoldali légzsák', 'Oldallégzsák', 'Függönylégzsák', 'Térdlégzsák',
         'Hátsó oldallégzsák', 'Kikapcsolható utaslégzsák', 'ISOFIX rendszer', 
         'Guminyomás-ellenőrző', 'Sávtartó rendszer', 'Sávváltó asszisztens',
@@ -49,10 +49,10 @@ const FEATURES_CATEGORIES: Record<string, string[]> = {
         'Állófűtés', 'Szervokormány', 'Sebességfüggő szervó', 'Tempomat', 
         'Adaptív tempomat (ACC)', 'Kulcsnélküli nyitás', 'Kulcsnélküli indítás', 'Start-Stop rendszer',
         'Ülésfűtés (elöl)', 'Ülésfűtés (hátul)', 'Ülésszellőztetés', 'Masszírozós ülés',
-        'El. ülésállítás (vezető)', 'El. ülésállítás (utas)', // Rövidítve
+        'El. ülésállítás (vezető)', 'El. ülésállítás (utas)',
         'Memóriás vezetőülés', 'Deréktámasz', 'Combtámasz', 'Kormányfűtés', 
         'Elektromos ablak elöl', 'Elektromos ablak hátul', 'Elektromos tükör', 'Fűthető tükör',
-        'Auto. sötétedő belső tükör', 'Auto. sötétedő külső tükör', // Rövidítve
+        'Auto. sötétedő belső tükör', 'Auto. sötétedő külső tükör',
         'El. behajtható tükrök', 'El. csomagtérajtó',
         'Lábbal nyitható csomagtér', 'Hűthető kesztyűtartó', 'Hűthető kartámasz',
         'Állítható kormány', 'Soft-close'
@@ -109,7 +109,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
       })
   }
 
-  // --- PDF GENERÁLÁS (3 OSZLOPOS, TÖMÖRÍTETT) ---
+  // --- PDF GENERÁLÁS (1 OLDALAS LOGIKA) ---
   const handleSaveAndGenerate = async (formData: FormData) => {
     setLoading(true)
     formData.set('features', selectedFeatures.join(','))
@@ -126,7 +126,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         const pageHeight = doc.internal.pageSize.height; // 297mm
         const margin = 10; 
 
-        // Fontok & Logó betöltése
+        // Fontok & Logó
         const fontRegularUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf';
         const fontBoldUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf';
         const logoUrl = window.location.origin + '/icons/icon-512.png'; 
@@ -146,48 +146,48 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         let logoBase64 = null;
         if (logoRes.ok) logoBase64 = arrayBufferToBase64(await logoRes.arrayBuffer());
 
-        // --- 1. KOMPAKT FEJLÉC (18mm magas) ---
-        const headerHeight = 18;
+        // --- 1. EXTRA KOMPAKT FEJLÉC (16mm) ---
+        const headerHeight = 16;
         doc.setFillColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
         doc.rect(0, 0, pageWidth, headerHeight, 'F');
 
         if (logoBase64) {
-            try { doc.addImage(logoBase64, 'PNG', margin, 3, 12, 12); } catch (e) {}
+            try { doc.addImage(logoBase64, 'PNG', margin, 2, 12, 12); } catch (e) {}
         }
 
-        doc.setFontSize(8);
+        doc.setFontSize(7);
         doc.setTextColor(200, 200, 200);
-        doc.text("DynamicSense | Hivatalos Adatlap", pageWidth - margin, 8, { align: 'right' });
-        doc.text(new Date().toLocaleDateString('hu-HU'), pageWidth - margin, 13, { align: 'right' });
+        doc.text("DynamicSense | Hivatalos Adatlap", pageWidth - margin, 6, { align: 'right' });
+        doc.text(new Date().toLocaleDateString('hu-HU'), pageWidth - margin, 11, { align: 'right' });
 
-        let yPos = headerHeight + 5; // Start: ~23mm
+        let yPos = headerHeight + 6; // Start: ~22mm
 
-        // --- 2. CÍM ÉS ÁR (15mm) ---
+        // --- 2. CÍM ÉS ÁR (14mm) ---
         doc.setTextColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
         doc.setFontSize(18); 
         doc.setFont('Roboto', 'bold');
-        doc.text(`${car.make} ${car.model}`, margin, yPos + 5);
+        doc.text(`${car.make} ${car.model}`, margin, yPos + 4);
         
         const priceVal = formData.get('price') as string;
         if (priceVal) {
             const price = parseInt(priceVal).toLocaleString();
             doc.setTextColor(COLORS.ACCENT[0], COLORS.ACCENT[1], COLORS.ACCENT[2]);
             doc.setFontSize(18); 
-            doc.text(`${price} Ft`, pageWidth - margin, yPos + 5, { align: 'right' });
+            doc.text(`${price} Ft`, pageWidth - margin, yPos + 4, { align: 'right' });
         }
 
         doc.setFontSize(8);
         doc.setTextColor(COLORS.TEXT_LIGHT[0], COLORS.TEXT_LIGHT[1], COLORS.TEXT_LIGHT[2]);
         doc.setFont('Roboto', 'normal');
-        doc.text(`${car.plate}   |   DynamicSense Verified`, margin, yPos + 10);
+        doc.text(`${car.plate}   |   DynamicSense Verified`, margin, yPos + 9);
 
-        yPos += 12; // Most vagyunk 35mm-nél
+        yPos += 12; // Most vagyunk 34mm-nél
 
-        // --- 3. KOMPAKT SPECIFIKÁCIÓS SÁV (12mm) ---
-        const specHeight = 12;
+        // --- 3. KOMPAKT SPECIFIKÁCIÓS SÁV (10mm) ---
+        const specHeight = 10;
         
         doc.setFillColor(COLORS.BG_LIGHT[0], COLORS.BG_LIGHT[1], COLORS.BG_LIGHT[2]);
-        doc.roundedRect(margin, yPos, pageWidth - (margin * 2), specHeight, 2, 2, 'F');
+        doc.roundedRect(margin, yPos, pageWidth - (margin * 2), specHeight, 1.5, 1.5, 'F');
 
         const engineDetails = formData.get('engine_details') as string;
         const performance = formData.get('performance_hp') as string;
@@ -208,22 +208,22 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         const colW = (pageWidth - (margin * 2)) / 5;
         specs.forEach((s, i) => {
             const cX = margin + (i * colW) + (colW / 2);
-            const cY = yPos + 4;
+            const cY = yPos + 3.5;
 
             doc.setFontSize(5);
             doc.setTextColor(COLORS.TEXT_LIGHT[0], COLORS.TEXT_LIGHT[1], COLORS.TEXT_LIGHT[2]);
             doc.setFont('Roboto', 'bold');
             doc.text(s.l, cX, cY, { align: 'center' });
 
-            doc.setFontSize(8);
+            doc.setFontSize(7.5);
             doc.setTextColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
             doc.setFont('Roboto', 'bold');
             doc.text(s.v, cX, cY + 4, { align: 'center' });
         });
 
-        yPos += specHeight + 6; // Most vagyunk 53mm-nél
+        yPos += specHeight + 6; // Most vagyunk 50mm-nél. Van még 220mm-ünk!
 
-        // --- 4. FELSZERELTSÉG (3 OSZLOPOS - TÖKÉLETES TÖRDELÉS) ---
+        // --- 4. FELSZERELTSÉG (DINAMIKUS 1 OLDALAS) ---
         doc.setFontSize(10); 
         doc.setTextColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
         doc.setFont('Roboto', 'bold');
@@ -233,11 +233,13 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.setLineWidth(0.5);
         doc.line(margin, yPos + 2, margin + 35, yPos + 2); 
         
-        yPos += 6; // Start: ~59mm
+        yPos += 5;
 
-        // Csoportosítás
+        // Adat előkészítés
         const groupedFeatures: Record<string, string[]> = {};
         const otherFeatures: string[] = [];
+        let totalItemsCount = 0;
+
         selectedFeatures.forEach(feat => {
             let found = false;
             for (const [cat, items] of Object.entries(FEATURES_CATEGORIES)) {
@@ -245,46 +247,57 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
                     if (!groupedFeatures[cat]) groupedFeatures[cat] = [];
                     groupedFeatures[cat].push(feat);
                     found = true;
+                    totalItemsCount++;
                     break;
                 }
             }
-            if (!found) otherFeatures.push(feat);
+            if (!found) {
+                otherFeatures.push(feat);
+                totalItemsCount++;
+            }
         });
         if (otherFeatures.length > 0) groupedFeatures['EGYÉB'] = otherFeatures;
 
-        // Beállítások a helykihasználáshoz
-        const featFontSize = 8; // Jól olvasható
-        const lineHeight = 5;   // Elegendő sorköz, hogy ne érjenek össze
-        const colCount = 3;     // 3 Oszlop = Nincs átfedés a hosszú magyar szavakkal sem
+        // ** DINAMIKUS MÉRETEZÉS - AZ 1 OLDAL TITKA **
+        // Ha sok az adat, csökkentjük a betűméretet és a sorközt
+        let featFontSize = 8;
+        let lineHeight = 5;
+        const colCount = 3;
+
+        if (totalItemsCount > 120) {
+            featFontSize = 6;
+            lineHeight = 3;
+        } else if (totalItemsCount > 80) {
+            featFontSize = 7;
+            lineHeight = 3.5;
+        } else if (totalItemsCount > 50) {
+            featFontSize = 7.5;
+            lineHeight = 4.5;
+        }
+
         const colWidthFeature = (pageWidth - (margin * 2)) / colCount;
 
         Object.entries(groupedFeatures).forEach(([category, feats]) => {
-            // Ellenőrzés: Elfér-e a kategória címe?
-            if (yPos > pageHeight - 35) { 
-                doc.addPage();
-                yPos = 20; 
+            // Ha nagyon a lap alján vagyunk, akkor (és csak akkor) lépünk,
+            // de a betűméret csökkentés miatt ez szinte lehetetlen.
+            if (yPos > pageHeight - 30) {
+                 // doc.addPage(); // KIVETTÜK AZ ÚJ OLDALT, SŰRÍTÜNK HELYETTE
+                 // Ha ide eljutna, az extrém ritka, ilyenkor inkább az aljára írunk
             }
 
-            doc.setFontSize(8);
+            doc.setFontSize(7.5);
             doc.setTextColor(COLORS.ACCENT[0], COLORS.ACCENT[1], COLORS.ACCENT[2]);
             doc.setFont('Roboto', 'bold');
             doc.text(category.toUpperCase(), margin, yPos);
-            yPos += 5;
+            yPos += 3.5;
 
             doc.setFontSize(featFontSize);
             doc.setTextColor(COLORS.TEXT_MAIN[0], COLORS.TEXT_MAIN[1], COLORS.TEXT_MAIN[2]);
             doc.setFont('Roboto', 'normal');
 
-            // Sorok kiszámítása
             const rowsNeeded = Math.ceil(feats.length / colCount);
 
             for (let r = 0; r < rowsNeeded; r++) {
-                // Ellenőrzés: Elfér-e ez a sor?
-                if (yPos > pageHeight - 35) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-
                 for (let c = 0; c < colCount; c++) {
                     const itemIndex = (r * colCount) + c;
                     if (itemIndex >= feats.length) break;
@@ -298,17 +311,17 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
                 }
                 yPos += lineHeight;
             }
-            yPos += 2; // Térköz a kategóriák között
+            yPos += 1.5; // Minimális térköz kategóriák között
         });
 
-        // --- 5. LÁBLÉC & QR (DINAMIKUS) ---
-        // Ha nincs elég hely az alján, új oldal
-        if (yPos > pageHeight - 30) {
-            doc.addPage();
-        }
+        // --- 5. LÁBLÉC & QR (FIX POZÍCIÓ) ---
+        // Mindig az oldal legaljára tesszük, függetlenül attól, hol tart a szöveg.
+        // Mivel 1 oldalasra terveztük, ez fixen jó lesz.
+        const footerY = pageHeight - 28;
 
-        // Lábléc fixen az utolsó oldal aljára
-        const footerY = pageHeight - 30;
+        // Fehér doboz a láblécnek, ha esetleg rálógna a szöveg (törlés)
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, footerY - 5, pageWidth, 30, 'F');
 
         doc.setDrawColor(220, 220, 220);
         doc.setLineWidth(0.1);
@@ -316,9 +329,9 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
 
         const verifyUrl = `${window.location.origin}/verify/${car.id}`;
         const qrDataUrl = await QRCode.toDataURL(verifyUrl, { width: 100, margin: 0 });
-        doc.addImage(qrDataUrl, 'PNG', margin, footerY, 22, 22);
+        doc.addImage(qrDataUrl, 'PNG', margin, footerY, 20, 20);
 
-        const textX = margin + 28;
+        const textX = margin + 25;
         const textY = footerY + 5;
 
         doc.setFontSize(9);
