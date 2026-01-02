@@ -52,6 +52,13 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
   const isElectric = selectedCar?.fuel_type === 'Elektromos'
   const unit = isElectric ? 'kWh' : 'L'
 
+  // --- SEGÉDFÜGGVÉNY: Nem enged negatív előjelet beírni ---
+  const preventMinus = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (['-', '+', 'e', 'E'].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
+
   // GPS
   const handleLocateMe = () => {
     if (navigator.geolocation) {
@@ -147,12 +154,9 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
   }, [selectedCarId]);
 
   return (
-    // JAVÍTÁS: Flex-col mobilon, Flex-row desktopon.
-    // A magasságot a szülő (page.tsx) kezeli.
     <div className="flex h-full flex-col lg:flex-row">
       
-      {/* 1. SZEKCIÓ: TÉRKÉP (Mobilon felül, Desktopon jobb oldalt) */}
-      {/* Mobilon fix magasság (35%), Desktopon flex-1 (maradék hely) */}
+      {/* 1. SZEKCIÓ: TÉRKÉP */}
       <div className="relative h-[35vh] w-full shrink-0 border-b border-slate-200 bg-slate-200 dark:border-slate-800 dark:bg-slate-900 lg:order-2 lg:h-full lg:flex-1 lg:border-b-0">
          <TripMap startPos={startCoords} endPos={endCoords} routeGeoJson={routeGeoJson} />
          
@@ -166,8 +170,7 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
          )}
       </div>
 
-      {/* 2. SZEKCIÓ: VEZÉRLŐPULT (Mobilon alul, Desktopon bal oldalt) */}
-      {/* overflow-y-auto: görgethető tartalom */}
+      {/* 2. SZEKCIÓ: VEZÉRLŐPULT */}
       <div className="custom-scrollbar z-20 flex h-full w-full flex-1 flex-col overflow-y-auto bg-slate-50 shadow-xl dark:bg-slate-950 lg:order-1 lg:w-[450px] lg:flex-none lg:border-r lg:border-slate-200 lg:dark:border-slate-800">
         <div className="space-y-6 p-5 pb-32 lg:p-6 lg:pb-6">
           
@@ -186,9 +189,7 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
              </div>
 
              <div className="group relative">
-                {/* Vonal összekötő */}
                 <div className="absolute -top-5 bottom-6 left-[19px] -z-10 w-0.5 bg-gradient-to-b from-indigo-500 to-amber-500 opacity-30"></div>
-                
                 <div className="absolute left-3 top-3.5 text-amber-500 transition-transform group-focus-within:scale-110"><MapPin className="h-5 w-5" /></div>
                 <input 
                   type="text" placeholder="Hová megyünk?" value={endQuery}
@@ -263,15 +264,29 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
                       <div className="space-y-1">
                          <label className="text-[9px] font-bold uppercase text-slate-400">Üzemanyagár</label>
                          <div className="relative">
-                            <input type="number" value={fuelPrice} onChange={(e) => setFuelPrice(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm dark:border-slate-800 dark:bg-slate-900" />
-                            <div className="absolute left-3 top-2.5 font-serif text-xs font-bold text-slate-400">Ft</div>
+                           <input 
+                              type="number" 
+                              min="0"
+                              onKeyDown={preventMinus}
+                              value={fuelPrice} 
+                              onChange={(e) => setFuelPrice(Number(e.target.value))} 
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm dark:border-slate-800 dark:bg-slate-900" 
+                           />
+                           <div className="absolute left-3 top-2.5 font-serif text-xs font-bold text-slate-400">Ft</div>
                          </div>
                       </div>
                       <div className="space-y-1">
                          <label className="text-[9px] font-bold uppercase text-slate-400">Fogyasztás ({unit})</label>
                          <div className="relative">
-                            <input type="number" value={consumption} onChange={(e) => setConsumption(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm dark:border-slate-800 dark:bg-slate-900" />
-                            <Fuel className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                           <input 
+                              type="number" 
+                              min="0"
+                              onKeyDown={preventMinus}
+                              value={consumption} 
+                              onChange={(e) => setConsumption(Number(e.target.value))} 
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm dark:border-slate-800 dark:bg-slate-900" 
+                           />
+                           <Fuel className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                          </div>
                       </div>
                    </div>
@@ -283,7 +298,14 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
                          <div title="Gumikopás, értékvesztés, szerviz költség becslése"><Info className="h-3 w-3 cursor-help text-slate-400" /></div>
                       </label>
                       <div className="relative">
-                         <input type="number" value={amortization} onChange={(e) => setAmortization(Number(e.target.value))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm dark:border-slate-800 dark:bg-slate-900" />
+                         <input 
+                            type="number" 
+                            min="0"
+                            onKeyDown={preventMinus}
+                            value={amortization} 
+                            onChange={(e) => setAmortization(Number(e.target.value))} 
+                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm dark:border-slate-800 dark:bg-slate-900" 
+                         />
                          <TrendingUp className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                       </div>
                    </div>
@@ -293,12 +315,28 @@ export default function TripPlannerClient({ cars }: { cars: any[] }) {
                       <p className="text-[9px] font-bold uppercase text-slate-400">Egyéb Költségek</p>
                       <div className="grid grid-cols-2 gap-3">
                          <div className="relative">
-                            <input type="number" value={tollCost} onChange={(e) => setTollCost(Number(e.target.value))} className="w-full rounded-xl border-none bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm placeholder:text-slate-300 dark:bg-slate-800" placeholder="Matrica" />
-                            <Coins className="absolute left-3 top-2 h-3.5 w-3.5 text-slate-400" />
+                           <input 
+                              type="number" 
+                              min="0"
+                              onKeyDown={preventMinus}
+                              value={tollCost} 
+                              onChange={(e) => setTollCost(Number(e.target.value))} 
+                              className="w-full rounded-xl border-none bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm placeholder:text-slate-300 dark:bg-slate-800" 
+                              placeholder="Matrica" 
+                           />
+                           <Coins className="absolute left-3 top-2 h-3.5 w-3.5 text-slate-400" />
                          </div>
                          <div className="relative">
-                            <input type="number" value={parkingCost} onChange={(e) => setParkingCost(Number(e.target.value))} className="w-full rounded-xl border-none bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm placeholder:text-slate-300 dark:bg-slate-800" placeholder="Parkolás" />
-                            <ParkingSquare className="absolute left-3 top-2 h-3.5 w-3.5 text-slate-400" />
+                           <input 
+                              type="number" 
+                              min="0"
+                              onKeyDown={preventMinus}
+                              value={parkingCost} 
+                              onChange={(e) => setParkingCost(Number(e.target.value))} 
+                              className="w-full rounded-xl border-none bg-white px-3 py-2 pl-8 text-sm font-bold shadow-sm placeholder:text-slate-300 dark:bg-slate-800" 
+                              placeholder="Parkolás" 
+                           />
+                           <ParkingSquare className="absolute left-3 top-2 h-3.5 w-3.5 text-slate-400" />
                          </div>
                       </div>
                    </div>
