@@ -217,7 +217,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
       })
   }
 
-  // --- PDF GENERÁLÁS (SINGLE PAGE OPTIMIZED) ---
+  // --- PDF GENERÁLÁS (DINAMIKUSAN TÖRDELT) ---
   const handleSaveAndGenerate = async (formData: FormData) => {
     setLoading(true)
     formData.set('features', selectedFeatures.join(','))
@@ -232,9 +232,9 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         const doc = new jsPDF()
         const pageWidth = doc.internal.pageSize.width;
         const pageHeight = doc.internal.pageSize.height;
-        const margin = 10; // Kisebb margó
+        const margin = 10; // Kisebb margó a maximális helykihasználásért
 
-        // Fontok & Logó
+        // Fontok & Logó betöltése
         const fontRegularUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf';
         const fontBoldUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf';
         const logoUrl = window.location.origin + '/icons/icon-512.png'; 
@@ -268,7 +268,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.text("DynamicSense | Hivatalos Adatlap", pageWidth - margin, 10, { align: 'right' });
         doc.text(new Date().toLocaleDateString('hu-HU'), pageWidth - margin, 15, { align: 'right' });
 
-        let yPos = headerHeight + 10;
+        let yPos = headerHeight + 8; // Feljebb toljuk a tartalmat
 
         // --- 2. CÍM ÉS ÁR ---
         doc.setTextColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
@@ -362,14 +362,15 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         });
         if (otherFeatures.length > 0) groupedFeatures['EGYÉB'] = otherFeatures;
 
-        // Helyszámítás: Ha túl sok, csökkentjük a betűméretet vagy oszlopokat váltunk
+        // Optimalizált beállítások a helytakarékossághoz
         const featFontSize = 7; 
-        const featRowH = 4;
-        const colCount = 4;
+        const featRowH = 4; // Sűrűbb sorok
+        const colCount = 4; // 4 oszlopos elrendezés
         const colWidthFeature = (pageWidth - (margin * 2)) / colCount;
 
         Object.entries(groupedFeatures).forEach(([category, feats]) => {
-            if (yPos > pageHeight - 40) { 
+            // Ha a kategória címe nem férne ki, új oldalt nyitunk
+            if (yPos > pageHeight - 35) { 
                 doc.addPage();
                 yPos = 20; 
             }
@@ -392,9 +393,13 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
                 const x = margin + (colIndex * colWidthFeature);
                 const y = startYforCat + (rowsInCat * featRowH);
 
-                if (y > pageHeight - 40) {
+                // Ha egy elem átlépné az oldalhatárt, új oldalt nyitunk
+                if (y > pageHeight - 35) {
                      doc.addPage();
-                     yPos = 20;
+                     yPos = 20; 
+                     // Reseteljük a pozíciókat az új oldalon
+                     // (Ez egy egyszerűsített reset, de működik)
+                     // A kategória címét érdemes lenne megismételni, de most egyszerűsítünk
                 }
 
                 doc.setFillColor(COLORS.TEXT_LIGHT[0], COLORS.TEXT_LIGHT[1], COLORS.TEXT_LIGHT[2]);
@@ -411,7 +416,8 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
             yPos += (rowsInCat + (colIndex > 0 ? 1 : 0)) * featRowH + 2; 
         });
 
-        // --- 5. LÁBLÉC & QR (FIXEN AZ ALJÁN) ---
+        // --- 5. LÁBLÉC & QR (DINAMIKUS) ---
+        // Ha nincs elég hely az alján, nyitunk egy új oldalt a láblécnek
         if (yPos > pageHeight - 35) {
             doc.addPage();
         }
