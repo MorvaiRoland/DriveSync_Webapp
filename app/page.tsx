@@ -3,7 +3,7 @@ import { signOut } from './login/action'
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
-import dynamic from 'next/dynamic'
+import dynamicImport from 'next/dynamic' // Átneveztem, hogy ne akadjon össze a dynamic exporttal
 import { getSubscriptionStatus, PLAN_LIMITS } from '@/utils/subscription'
 import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
 import { Plus, Settings, LogOut, CarFront, Users, Lock, ArrowRight, Map, Crown } from 'lucide-react';
@@ -12,22 +12,27 @@ import QuickMileageForm from '@/components/QuickMileageForm';
 import { Metadata } from 'next'
 import OnboardingTour from '@/components/OnboardingTour';
 
+// --- JAVÍTÁS 1: KÉNYSZERÍTETT FRISSÍTÉS ---
+// Ez biztosítja, hogy a Next.js ne tárolja el a régi, üres állapotot
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export const metadata: Metadata = {
   title: {
     absolute: "Prémium Garázsmenedzsment"
   }
 }
 
-// Dynamic imports - Jobb teljesítményért
-const ChangelogModal = dynamic(() => import('@/components/ChangelogModal'), { loading: () => null });
-const AiMechanic = dynamic(() => import('@/components/AiMechanic'), { loading: () => null });
-const CongratulationModal = dynamic(() => import('@/components/CongratulationModal'), { loading: () => null });
-const GamificationWidget = dynamic(() => import('@/components/GamificationWidget'), { loading: () => null });
-const WeatherWidget = dynamic(() => import('@/components/DashboardWidgets').then(m => ({ default: m.WeatherWidget })), { loading: () => null });
-const FuelWidget = dynamic(() => import('@/components/FuelWidget'), { loading: () => null });
-const MarketplaceSection = dynamic(() => import('@/components/MarketplaceSection'), { loading: () => null });
-const QuickCostOverview = dynamic(() => import('@/components/QuickCostOverview'), { loading: () => null });
-const LandingPage = dynamic(() => import('@/components/LandingPage'), { ssr: true });
+// Dynamic imports
+const ChangelogModal = dynamicImport(() => import('@/components/ChangelogModal'), { loading: () => null });
+const AiMechanic = dynamicImport(() => import('@/components/AiMechanic'), { loading: () => null });
+const CongratulationModal = dynamicImport(() => import('@/components/CongratulationModal'), { loading: () => null });
+const GamificationWidget = dynamicImport(() => import('@/components/GamificationWidget'), { loading: () => null });
+const WeatherWidget = dynamicImport(() => import('@/components/DashboardWidgets').then(m => ({ default: m.WeatherWidget })), { loading: () => null });
+const FuelWidget = dynamicImport(() => import('@/components/FuelWidget'), { loading: () => null });
+const MarketplaceSection = dynamicImport(() => import('@/components/MarketplaceSection'), { loading: () => null });
+const QuickCostOverview = dynamicImport(() => import('@/components/QuickCostOverview'), { loading: () => null });
+const LandingPage = dynamicImport(() => import('@/components/LandingPage'), { ssr: true });
 
 const DEV_SECRET_KEY = "admin"; 
 const FEATURES = {
@@ -45,7 +50,6 @@ async function DashboardComponent() {
   const { plan, isTrial } = await getSubscriptionStatus(supabase, user.id);
   const limits = PLAN_LIMITS[plan];
 
-  // Jogosultságok
   const canUseAi = limits.aiMechanic;
   const canTripPlan = limits.tripPlanner;
   const isPro = limits.aiMechanic;
@@ -53,7 +57,7 @@ async function DashboardComponent() {
   // --- ADATLEKÉRÉSEK ---
   let cars: any[] = []
   let myCars: any[] = []      
-  let sharedCars: any[] = []  
+  let sharedCars: any[] = []   
   let upcomingReminders: any[] = []
   let recentActivity: any[] = []
   let spentLast30Days = 0; 
@@ -63,23 +67,46 @@ async function DashboardComponent() {
   let badges: any[] = []
   let totalCostAllTime = 0;
 
-  const { data: carsData } = await supabase
+  // --- JAVÍTÁS 2: DEBUG LOGOK ÉS LEKÉRDEZÉS ---
+  const { data: carsData, error: carsError } = await supabase
       .from('cars')
       .select('*, events(type, mileage), car_shares(email)')
       .order('created_at', { ascending: false })
   
+  // NÉZD MEG A TERMINÁLT! Itt látni fogod, mit ad vissza az adatbázis
+  console.log("------------------------------------------------")
+  console.log("DASHBOARD DEBUG START")
+  console.log("User Email:", user.email)
+  console.log("User ID:", user.id)
+  console.log("DB Hiba:", carsError)
+  console.log("Nyers autók száma:", carsData?.length)
+  if (carsData && carsData.length > 0) {
+      console.log("Első autó ID:", carsData[0].id)
+      console.log("Első autó User ID:", carsData[0].user_id)
+      console.log("Első autó Megosztások:", JSON.stringify(carsData[0].car_shares))
+  }
+  console.log("------------------------------------------------")
+
   if (carsData) {
       cars = carsData
+      
+      // Saját autók szűrése
       myCars = carsData.filter(car => car.user_id === user.id)
+      
+      // Megosztott autók szűrése - Itt fontos, hogy a car_shares RLS policy jó legyen!
       sharedCars = carsData.filter(car => 
         car.user_id !== user.id && 
         car.car_shares && 
+        Array.isArray(car.car_shares) &&
         car.car_shares.some((share: any) => share.email === user.email)
       )
+
+      console.log("Saját autók:", myCars.length)
+      console.log("Megosztott autók:", sharedCars.length)
+
       latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   }
 
-  // Autó hozzáadás limit ellenőrzése
   const isCarLimitReached = myCars.length >= limits.maxCars;
   const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
 
@@ -134,33 +161,23 @@ async function DashboardComponent() {
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
 
-  // --- JAVÍTOTT MEGJELENÍTÉSI LOGIKA ---
-  
-  // 1. Van-e autója?
+  // --- MEGJELENÍTÉSI LOGIKA ---
   const hasCars = cars.length > 0;
   
-  // 2. Fiók kora (órában)
   const userCreatedAtString = user.created_at || new Date().toISOString();
   const userCreatedTime = new Date(userCreatedAtString).getTime();
   const nowTime = Date.now();
-  // Ha a dátum érvénytelen, 0-nak vesszük (friss user)
   const diffInMs = isNaN(userCreatedTime) ? 0 : nowTime - userCreatedTime;
   const accountAgeHours = diffInMs / (1000 * 60 * 60);
 
-  // 3. TÚRA: Csak ha NINCS autója ÉS friss a fiók (< 24 óra)
   const showTour = !hasCars && accountAgeHours < 24;
-
-  // 4. CHANGELOG: Csak ha VAN autója (aktív user)
   const showChangelog = hasCars;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
       
-      {/* 1. ONBOARDING TÚRA */}
-      {/* Csak a fenti szigorú feltételek esetén jelenik meg */}
       {showTour && <OnboardingTour />}
 
-      {/* HÁTTÉR EFFEKTEK */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px]"></div>
@@ -169,11 +186,8 @@ async function DashboardComponent() {
 
       <CongratulationModal currentPlan={plan} />
       
-      {/* AI MECHANIC: Csak ha a csomag engedi */}
       {canUseAi ? <AiMechanic isPro={true} /> : null}
       
-      {/* 2. CHANGELOG */}
-      {/* Csak ha már aktív user (van autója) */}
       {showChangelog && <ChangelogModal />}
       
       <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]">
@@ -220,7 +234,6 @@ async function DashboardComponent() {
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]">
         
-        {/* TOUR ELEMENT 1: Üdvözlő fejléc */}
         <div id="tour-welcome" className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
@@ -231,7 +244,6 @@ async function DashboardComponent() {
               </h1>
             </div>
             
-            {/* TOUR ELEMENT 2: Statisztikák (csak ha van autó) */}
             <div id="tour-stats">
               {cars.length > 0 && (
                   <div className="w-full lg:w-auto bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-2 border border-white/20 dark:border-slate-700 shadow-xl flex flex-col sm:flex-row gap-2">
@@ -279,7 +291,6 @@ async function DashboardComponent() {
                               <span className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600"><CarFront className="w-5 h-5" /></span>
                               Saját Garázs
                           </h3>
-                          {/* LIMIT KIJELZÉS */}
                           <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${isCarLimitReached ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                               {myCars.length} / {limits.maxCars === 999 ? '∞' : limits.maxCars}
                           </span>
@@ -290,7 +301,6 @@ async function DashboardComponent() {
                               <CarCard key={car.id} car={car} />
                           ))}
                           
-                          {/* TOUR ELEMENT 3: Új autó gomb */}
                           {!isCarLimitReached ? (
                              <Link href="/cars/new" id="tour-add-car" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-400 transition-all cursor-pointer">
                                   <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
@@ -299,7 +309,6 @@ async function DashboardComponent() {
                                   <span className="font-bold text-slate-500 group-hover:text-slate-900">Új jármű hozzáadása</span>
                              </Link>
                           ) : (
-                             /* LOCKED STATE - Ha elérte a limitet */
                              <Link href="/pricing" id="tour-add-car" className="group relative flex flex-col items-center justify-center min-h-[300px] rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 opacity-75 hover:opacity-100 transition-all cursor-pointer">
                                   <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
                                       <Lock className="w-8 h-8" />
@@ -331,7 +340,6 @@ async function DashboardComponent() {
 
             <div className="lg:col-span-4 space-y-8">
                
-               {/* Ha FREE user, itt reklámozhatod a Pro funkciókat */}
                {plan === 'free' && (
                    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white text-center shadow-xl relative overflow-hidden group cursor-pointer">
                        <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>
