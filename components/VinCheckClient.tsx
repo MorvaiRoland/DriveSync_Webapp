@@ -6,7 +6,6 @@ import { Search, ShieldCheck, Calendar, Gauge, Wrench, AlertCircle, CheckCircle2
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 
-// ÁTNEVEZVE: VinCheckClient
 export default function VinCheckClient() {
   const [vin, setVin] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,6 +28,7 @@ export default function VinCheckClient() {
     setError(null)
     setResult(null)
 
+    // 1. Autó keresése
     const { data: car, error: carError } = await supabase
       .from('cars')
       .select('*')
@@ -42,10 +42,12 @@ export default function VinCheckClient() {
       return
     }
 
+    // 2. Csak a SZERVIZ események lekérése (JAVÍTVA)
     const { data: events } = await supabase
       .from('events')
       .select('*')
       .eq('car_id', car.id)
+      .eq('type', 'service') // <--- EZ A SOR SZŰRI KI A TÖBBIT!
       .order('event_date', { ascending: false })
 
     setResult({ car, events })
@@ -170,48 +172,48 @@ export default function VinCheckClient() {
                             <div className="flex flex-col lg:flex-row gap-8 md:gap-12 items-start">
                                 <div className="w-full lg:w-5/12">
                                     <div className="relative aspect-[4/3] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-white/10 shadow-lg dark:shadow-2xl group">
-                                        {result.car.image_url ? (
-                                            <img src={result.car.image_url} alt={result.car.model} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                        ) : (
-                                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 gap-4">
-                                                <Search className="w-10 h-10" />
-                                                <span className="font-medium">Nincs kép</span>
+                                            {result.car.image_url ? (
+                                                <img src={result.car.image_url} alt={result.car.model} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 gap-4">
+                                                    <Search className="w-10 h-10" />
+                                                    <span className="font-medium">Nincs kép</span>
+                                                </div>
+                                            )}
+                                            <div className="absolute top-3 left-3 md:top-4 md:left-4 bg-emerald-500 dark:bg-emerald-500/90 backdrop-blur-md text-white text-[9px] md:text-[10px] font-bold px-2 py-1 md:px-3 md:py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                                                <CheckCircle2 className="w-3 h-3" /> Ellenőrzött VIN
                                             </div>
-                                        )}
-                                        <div className="absolute top-3 left-3 md:top-4 md:left-4 bg-emerald-500 dark:bg-emerald-500/90 backdrop-blur-md text-white text-[9px] md:text-[10px] font-bold px-2 py-1 md:px-3 md:py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                                            <CheckCircle2 className="w-3 h-3" /> Ellenőrzött VIN
-                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="flex-1 w-full">
                                     <div className="mb-8 md:mb-10">
-                                        <div className="text-slate-500 dark:text-slate-400 font-mono text-xs md:text-sm tracking-widest mb-2 uppercase">
-                                            {result.car.make}
-                                        </div>
-                                        <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white tracking-tighter leading-[1.1] md:leading-[0.9] mb-6">
-                                            {result.car.model}
-                                        </h2>
-                                        
-                                        <div className="flex flex-wrap gap-2 md:gap-3">
-                                            <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm dark:shadow-none">
-                                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">VIN</span>
-                                                <span className="font-mono text-emerald-600 dark:text-emerald-400 text-xs md:text-sm font-bold tracking-wider">{result.car.vin}</span>
+                                            <div className="text-slate-500 dark:text-slate-400 font-mono text-xs md:text-sm tracking-widest mb-2 uppercase">
+                                                {result.car.make}
                                             </div>
-                                            <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm dark:shadow-none">
-                                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Rendszám</span>
-                                                <span className="font-mono text-slate-900 dark:text-white text-xs md:text-sm font-bold tracking-wider">{result.car.plate}</span>
+                                            <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white tracking-tighter leading-[1.1] md:leading-[0.9] mb-6">
+                                                {result.car.model}
+                                            </h2>
+                                            
+                                            <div className="flex flex-wrap gap-2 md:gap-3">
+                                                <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm dark:shadow-none">
+                                                    <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">VIN</span>
+                                                    <span className="font-mono text-emerald-600 dark:text-emerald-400 text-xs md:text-sm font-bold tracking-wider">{result.car.vin}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 bg-white dark:bg-slate-800/80 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/50 shadow-sm dark:shadow-none">
+                                                    <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Rendszám</span>
+                                                    <span className="font-mono text-slate-900 dark:text-white text-xs md:text-sm font-bold tracking-wider">{result.car.plate}</span>
+                                                </div>
                                             </div>
-                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3 md:gap-4">
-                                        <DataItem icon={<Calendar className="w-4 h-4 md:w-5 md:h-5" />} label="Évjárat" value={result.car.year} />
-                                        <DataItem icon={<Gauge className="w-4 h-4 md:w-5 md:h-5" />} label="Km óra állás" value={`${result.car.mileage?.toLocaleString()} km`} />
-                                        <DataItem icon={<Fuel className="w-4 h-4 md:w-5 md:h-5" />} label="Üzemanyag" value={result.car.fuel_type} />
-                                        <DataItem icon={<Settings className="w-4 h-4 md:w-5 md:h-5" />} label="Váltó" value={result.car.transmission} />
-                                        <DataItem icon={<Zap className="w-4 h-4 md:w-5 md:h-5" />} label="Teljesítmény" value={result.car.power_hp ? `${result.car.power_hp} LE` : null} sub={result.car.engine_size ? `${result.car.engine_size} cm³` : null} />
-                                        <DataItem icon={<Tag className="w-4 h-4 md:w-5 md:h-5" />} label="Kivitel" value={result.car.body_type} />
+                                            <DataItem icon={<Calendar className="w-4 h-4 md:w-5 md:h-5" />} label="Évjárat" value={result.car.year} />
+                                            <DataItem icon={<Gauge className="w-4 h-4 md:w-5 md:h-5" />} label="Km óra állás" value={`${result.car.mileage?.toLocaleString()} km`} />
+                                            <DataItem icon={<Fuel className="w-4 h-4 md:w-5 md:h-5" />} label="Üzemanyag" value={result.car.fuel_type} />
+                                            <DataItem icon={<Settings className="w-4 h-4 md:w-5 md:h-5" />} label="Váltó" value={result.car.transmission} />
+                                            <DataItem icon={<Zap className="w-4 h-4 md:w-5 md:h-5" />} label="Teljesítmény" value={result.car.power_hp ? `${result.car.power_hp} LE` : null} sub={result.car.engine_size ? `${result.car.engine_size} cm³` : null} />
+                                            <DataItem icon={<Tag className="w-4 h-4 md:w-5 md:h-5" />} label="Kivitel" value={result.car.body_type} />
                                     </div>
                                 </div>
                             </div>
@@ -248,8 +250,7 @@ export default function VinCheckClient() {
                                             <div className={`w-full md:w-1/2 pl-10 md:pl-0 ${isLeft ? 'md:pr-12' : 'md:pl-12'}`}>
                                                 <div className="bg-white dark:bg-[#131722] border border-slate-200 dark:border-slate-800 p-5 md:p-6 rounded-2xl hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-sm dark:shadow-xl group relative overflow-hidden">
                                                     
-                                                    <div className={`absolute top-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br opacity-5 rounded-bl-[3rem] md:rounded-bl-[4rem] transition-opacity group-hover:opacity-10
-                                                        ${event.type === 'service' ? 'from-emerald-600 dark:from-emerald-400 to-transparent' : 'from-blue-600 dark:from-blue-400 to-transparent'}`}></div>
+                                                    <div className={`absolute top-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br opacity-5 rounded-bl-[3rem] md:rounded-bl-[4rem] transition-opacity group-hover:opacity-10 from-emerald-600 dark:from-emerald-400 to-transparent`}></div>
 
                                                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-4">
                                                         <div>
