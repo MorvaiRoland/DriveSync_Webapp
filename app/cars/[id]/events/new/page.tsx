@@ -75,13 +75,14 @@ function EventForm() {
   const [aiFilled, setAiFilled] = useState<string[]>([])
   const [showAiDisclaimer, setShowAiDisclaimer] = useState(false)
   const [toast, setToast] = useState<ToastState | null>(null)
+  const [customTitle, setCustomTitle] = useState('') // "Egyéb" esetén ide ír a user
   
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState<FormState>({
       event_date: getLocalToday(), 
       mileage: '',
-      title: '',
+      title: '', // Ez tárolja a select értékét
       cost: '',
       liters: '',
       location: '',
@@ -125,7 +126,6 @@ function EventForm() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  // --- SEGÉDFÜGGVÉNY: Nem enged negatív előjelet beírni ---
   const preventMinus = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (['-', '+', 'e', 'E'].includes(e.key)) {
       e.preventDefault();
@@ -212,8 +212,33 @@ function EventForm() {
     e.preventDefault()
     setSaving(true)
     
-    const submitData = new FormData(e.target as HTMLFormElement)
-    submitData.set('type', type) 
+    // Végső adatok előkészítése
+    let finalTitle = formData.title;
+    let finalDescription = formData.description;
+
+    // Ha "Egyéb" volt kiválasztva, akkor a customTitle lesz a cím
+    if (formData.title === 'Egyéb') {
+        finalTitle = customTitle;
+    }
+
+    // Ha nincs megjegyzés, akkor a cím kerül bele (ha nem tankolás)
+    if (!isFuel && (!finalDescription || finalDescription.trim() === '')) {
+        finalDescription = finalTitle;
+    }
+    
+    const submitData = new FormData()
+    submitData.set('car_id', carId)
+    submitData.set('type', type)
+    submitData.set('event_date', formData.event_date)
+    submitData.set('mileage', String(formData.mileage))
+    submitData.set('cost', String(formData.cost))
+    submitData.set('location', formData.location)
+    submitData.set('description', finalDescription) // A kiegészített leírás
+    submitData.set('title', finalTitle) // A végleges cím
+
+    if (isFuel) {
+        submitData.set('liters', String(formData.liters))
+    }
 
     try {
         await addEvent(submitData)
@@ -247,16 +272,14 @@ function EventForm() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600 relative overflow-x-hidden">
       
-      {/* NOTCH PADDING BOTTOM */}
       <div className="pb-[env(safe-area-inset-bottom)]">
-
         {/* HÁTTÉR EFFEKTEK */}
         <div className="fixed inset-0 pointer-events-none">
             <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[400px] md:w-[600px] h-[400px] md:h-[600px] bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-[80px] md:blur-[120px] animate-pulse-slow"></div>
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]"></div>
         </div>
 
-        {/* TOAST - Safe area top figyelembe véve */}
+        {/* TOAST */}
         {toast && (
             <div className={`fixed top-[calc(1rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 duration-300 backdrop-blur-md border border-white/10 ${toast.type === 'success' ? 'bg-emerald-500/90 text-white' : 'bg-red-500/90 text-white'}`}>
                 {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
@@ -279,7 +302,6 @@ function EventForm() {
         )}
 
         {/* --- HERO HEADER --- */}
-        {/* NOTCH PADDING TOP - Calc használata a safe area + extra térközért */}
         <div className="relative pt-[calc(env(safe-area-inset-top)+2rem)] pb-10 md:pb-16 px-4 overflow-hidden">
           <div className="max-w-2xl mx-auto text-center relative z-10">
               <Link href={`/cars/${carId}`} className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-6 text-xs md:text-sm font-bold bg-white/50 dark:bg-slate-800/50 px-4 py-2 rounded-full backdrop-blur-sm border border-slate-200 dark:border-slate-700">
@@ -352,7 +374,6 @@ function EventForm() {
           <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-3xl md:rounded-[2.5rem] shadow-2xl p-5 md:p-10 border border-white/20 dark:border-slate-700 relative overflow-hidden">
             
             <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8 relative z-10">
-              <input type="hidden" name="car_id" value={carId} />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                  <InputGroup 
@@ -392,25 +413,41 @@ function EventForm() {
                    icon={<MapPin className="w-5 h-5" />}
                  />
               ) : (
-                 <SelectGroup 
-                    label="Szerviz Típusa" 
-                    name="title" 
-                    value={formData.title}
-                    onChange={handleChange}
-                    required
-                    highlight={aiFilled.includes('title')}
-                    icon={<Wrench className="w-5 h-5" />}
-                 >
-                    <option value="" disabled>Válassz...</option>
-                    {/* Ha van olyan érték, ami nincs a listában (pl AI hozta), jelenjen meg */}
-                    {formData.title && !serviceTypes.some(s => s.name === formData.title) && formData.title !== 'Egyéb' && (
-                        <option value={formData.title}>{formData.title}</option>
+                 <>
+                    <SelectGroup 
+                        label="Szerviz Típusa" 
+                        name="title" 
+                        value={formData.title}
+                        onChange={handleChange}
+                        required
+                        highlight={aiFilled.includes('title')}
+                        icon={<Wrench className="w-5 h-5" />}
+                    >
+                        <option value="" disabled>Válassz...</option>
+                        {formData.title && !serviceTypes.some(s => s.name === formData.title) && formData.title !== 'Egyéb' && (
+                            <option value={formData.title}>{formData.title}</option>
+                        )}
+                        {serviceTypes.map(s => (
+                        <option key={s.id} value={s.name}>{s.name}</option>
+                        ))}
+                        <option value="Egyéb">Egyéb javítás</option>
+                    </SelectGroup>
+
+                    {/* HA EGYÉB, AKKOR ÚJ INPUT */}
+                    {formData.title === 'Egyéb' && (
+                         <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                             <InputGroup 
+                                label="Javítás Típusa" 
+                                name="custom_title" 
+                                placeholder="pl. Váltóolaj csere" 
+                                value={customTitle}
+                                onChange={(e) => setCustomTitle(e.target.value)}
+                                required 
+                                icon={<Wrench className="w-5 h-5" />}
+                             />
+                         </div>
                     )}
-                    {serviceTypes.map(s => (
-                      <option key={s.id} value={s.name}>{s.name}</option>
-                    ))}
-                    <option value="Egyéb">Egyéb javítás</option>
-                 </SelectGroup>
+                 </>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -457,12 +494,15 @@ function EventForm() {
                         value={formData.description}
                         onChange={handleChange}
                         className="block w-full rounded-2xl border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md p-4 text-base md:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all resize-none shadow-sm" 
-                        placeholder="pl. Castrol olaj, MANN szűrő..."
+                        placeholder={formData.title && formData.title !== 'Egyéb' ? `pl. ${formData.title} elvégezve...` : "Részletek..."}
                       ></textarea>
                       <div className="absolute top-4 right-4 pointer-events-none text-slate-400">
                           <FileText className="w-5 h-5" />
                       </div>
                    </div>
+                   <p className="text-[10px] text-slate-400 italic ml-1">
+                      * Ha üresen hagyod, automatikusan "{formData.title === 'Egyéb' ? customTitle : formData.title}" kerül beírásra.
+                   </p>
                  </div>
               )}
 
