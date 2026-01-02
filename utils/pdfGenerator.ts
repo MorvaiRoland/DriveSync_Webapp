@@ -47,12 +47,15 @@ const formatCurrency = (val: number) => {
 
 // --- FŐ GENERÁTOR FÜGGVÉNY ---
 
-export const generatePersonalPDF = async (car: any, events: any[]) => {
+export const generatePersonalPDF = async (car: any, allEvents: any[]) => {
     try {
+        // --- 1. SZŰRÉS: CSAK A SZERVIZ ESEMÉNYEK ---
+        const serviceEvents = allEvents.filter(e => e.type === 'service');
+
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.width;
         
-        // 1. FONTOK BETÖLTÉSE
+        // 2. FONTOK BETÖLTÉSE
         const fontRegular = await loadFont('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf');
         const fontBold = await loadFont('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf');
 
@@ -62,12 +65,17 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
         doc.setFont('Roboto');
 
-        // 2. ADATOK ELŐKÉSZÍTÉSE
-        const totalCost = events.reduce((sum, e) => sum + (e.cost || 0), 0);
-        const mileages = events.map(e => e.mileage).filter(m => m > 0);
+        // 3. ADATOK ELŐKÉSZÍTÉSE (A szűrt listából!)
+        const totalCost = serviceEvents.reduce((sum, e) => sum + (e.cost || 0), 0);
+        
+        // Futásteljesítmény számítás (itt is csak a szervizeket nézzük, vagy az összeset? 
+        // Logikusabb az összesből számolni a futást, de a költséget csak a szervizből.
+        // Itt most a 'distanceDriven' az összes esemény alapján mutatja a dokumentált km-t,
+        // hogy látszódjon, mennyi időt fed le a napló.)
+        const mileages = allEvents.map(e => e.mileage).filter(m => m > 0);
         const distanceDriven = mileages.length > 1 ? (Math.max(...mileages) - Math.min(...mileages)) : 0;
 
-        // 3. LOGÓ BETÖLTÉSE
+        // 4. LOGÓ BETÖLTÉSE
         const logoObj = await loadImage('/icons/icon-512.png'); 
 
         // --- PDF RAJZOLÁS ---
@@ -89,7 +97,8 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         doc.setFont('Roboto', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(148, 163, 184); // Slate-400
-        doc.text("JÁRMŰTÖRTÉNETI JELENTÉS", 50, 26);
+        // Cím módosítva:
+        doc.text("SZERVIZTÖRTÉNETI JELENTÉS", 50, 26);
 
         doc.setFontSize(20);
         doc.setTextColor(245, 158, 11); // Amber-500
@@ -159,17 +168,17 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
         
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        doc.text("ÖSSZES KÖLTSÉG", 14 + (sectionWidth * 0.5), yPos + 8, { align: 'center' });
+        doc.text("SZERVIZ KÖLTSÉG", 14 + (sectionWidth * 0.5), yPos + 8, { align: 'center' }); // Átírva
         doc.setFontSize(12);
         doc.setTextColor(15, 23, 42);
         doc.text(formatCurrency(totalCost), 14 + (sectionWidth * 0.5), yPos + 16, { align: 'center' });
 
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        doc.text("RÖGZÍTETT ESEMÉNY", 14 + (sectionWidth * 1.5), yPos + 8, { align: 'center' });
+        doc.text("ELVÉGZETT SZERVIZ", 14 + (sectionWidth * 1.5), yPos + 8, { align: 'center' }); // Átírva
         doc.setFontSize(12);
         doc.setTextColor(15, 23, 42);
-        doc.text(`${events.length} db`, 14 + (sectionWidth * 1.5), yPos + 16, { align: 'center' });
+        doc.text(`${serviceEvents.length} db`, 14 + (sectionWidth * 1.5), yPos + 16, { align: 'center' });
 
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
@@ -180,11 +189,10 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
 
         yPos += 35;
 
-        // >>> TÁBLÁZAT
-        const tableData = events.map(e => {
-            let typeLabel = e.type === 'fuel' ? 'Tankolás' : 
-                            e.type === 'service' ? 'Szerviz' :
-                            e.type === 'repair' ? 'Javítás' : 'Egyéb';
+        // >>> TÁBLÁZAT (Most már a serviceEvents-ből!)
+        const tableData = serviceEvents.map(e => {
+            // Mivel szűrtünk, a típus mindig 'Szerviz' lesz, de kiírhatjuk.
+            let typeLabel = 'Szerviz';
 
             // --- LEÍRÁS FELÉPÍTÉSE (Vágás nélkül) ---
             let desc = '';
@@ -196,20 +204,8 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
                 desc = e.title;
             }
 
-            // 2. Tankolás infó
-            if (e.type === 'fuel') {
-                const fuelInfo = `${e.liters ? e.liters + 'L ' : ''}Üzemanyag`;
-                if (desc) {
-                    desc = `${fuelInfo} - ${desc}`;
-                } else {
-                    desc = fuelInfo;
-                }
-            }
-
             if (!desc) desc = '-';
 
-            // NINCS TÖBBÉ VÁGÁS (substring)!
-            
             return [
                 new Date(e.event_date).toLocaleDateString('hu-HU'),
                 typeLabel,
@@ -221,7 +217,7 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
 
         autoTable(doc, {
             startY: yPos,
-            head: [['Dátum', 'Típus', 'Leírás', 'Km Állás', 'Költség']],
+            head: [['Dátum', 'Típus', 'Elvégzett munka / Leírás', 'Km Állás', 'Költség']],
             body: tableData,
             theme: 'striped', 
             headStyles: { 
@@ -268,7 +264,7 @@ export const generatePersonalPDF = async (car: any, events: any[]) => {
             }
         });
 
-        const fileName = `${car.make}_${car.model}_${new Date().toISOString().split('T')[0]}.pdf`;
+        const fileName = `Szerviz_${car.make}_${car.model}_${new Date().toISOString().split('T')[0]}.pdf`;
         doc.save(fileName);
 
     } catch (error) {
