@@ -35,24 +35,53 @@ export default function EditCarPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null)
 
+  // --- 🛡️ BIZTONSÁGI JAVÍTÁS: ADATBETÖLTÉS ÉS JOGOSULTSÁG ELLENŐRZÉS 🛡️ ---
   useEffect(() => {
     async function fetchData() {
-      const { data: carData } = await supabase.from('cars').select('*').eq('id', carId).single()
-      if (carData) {
-          setCar(carData)
-          setStatus(carData.status)
+      // 1. Megnézzük, ki van bejelentkezve
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+          router.push('/login')
+          return
       }
+
+      // 2. Lekérjük az autót
+      const { data: carData, error } = await supabase.from('cars').select('*').eq('id', carId).single()
+      
+      if (error || !carData) {
+          // Ha nincs autó, vagy hiba van -> Vissza a főoldalra
+          router.push('/')
+          return
+      }
+
+      // 3. Lekérjük a megosztásokat (hogy tudjuk, jogosult-e a szerkesztésre)
+      const { data: shareData } = await supabase.from('car_shares').select('*').eq('car_id', carId)
+      
+      // --- 🛡️ A KIDOBÓEMBER: JOGOSULTSÁG ELLENŐRZÉS 🛡️ ---
+      const isOwner = carData.user_id === user.id
+      // Ellenőrizzük, hogy a user emailje benne van-e a megosztásokban
+      const isSharedUser = shareData?.some(share => share.email === user.email)
+
+      // Ha NEM tulajdonos és NEM is osztották meg vele -> Redirect
+      if (!isOwner && !isSharedUser) {
+          console.warn("Jogosulatlan hozzáférési kísérlet!")
+          router.push('/') // Visszadobjuk a főoldalra
+          return
+      }
+      // -----------------------------------------------------
+
+      // Ha átjutott az ellenőrzésen, beállítjuk az adatokat
+      setCar(carData)
+      setStatus(carData.status)
+      if (shareData) setShares(shareData)
 
       const { data: tireData } = await supabase.from('tires').select('*').eq('car_id', carId).order('is_mounted', { ascending: false })
       if (tireData) setTires(tireData)
-
-      const { data: shareData } = await supabase.from('car_shares').select('*').eq('car_id', carId)
-      if (shareData) setShares(shareData)
       
       setLoading(false)
     }
     fetchData()
-  }, [carId])
+  }, [carId, router, supabase])
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type })
@@ -98,7 +127,9 @@ export default function EditCarPage() {
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">Betöltés...</div>
-  if (!car) return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-red-500">Autó nem található</div>
+  
+  // Extra védelem rendereléskor is (bár a useEffect elkapja)
+  if (!car) return null 
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-500 relative overflow-x-hidden">
