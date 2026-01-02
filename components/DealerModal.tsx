@@ -217,7 +217,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
       })
   }
 
-  // --- PDF GENERÁLÁS (DINAMIKUSAN TÖRDELT) ---
+  // --- PDF GENERÁLÁS (SINGLE PAGE OPTIMIZED) ---
   const handleSaveAndGenerate = async (formData: FormData) => {
     setLoading(true)
     formData.set('features', selectedFeatures.join(','))
@@ -237,7 +237,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         // Fontok & Logó betöltése
         const fontRegularUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf';
         const fontBoldUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Medium.ttf';
-        const logoUrl = window.location.origin + '/icons/icon-512.png'; 
+        const logoUrl = window.location.origin + '/public/DynamicSense-logo.png'; 
 
         const [fontRegRes, fontBoldRes, logoRes] = await Promise.all([
             fetch(fontRegularUrl),
@@ -255,24 +255,24 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         if (logoRes.ok) logoBase64 = arrayBufferToBase64(await logoRes.arrayBuffer());
 
         // --- 1. KOMPAKT FEJLÉC ---
-        const headerHeight = 22;
+        const headerHeight = 20; // MÉG KISEBB FEJLÉC (22 -> 20)
         doc.setFillColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
         doc.rect(0, 0, pageWidth, headerHeight, 'F');
 
         if (logoBase64) {
-            try { doc.addImage(logoBase64, 'PNG', margin, 3, 16, 16); } catch (e) {}
+            try { doc.addImage(logoBase64, 'PNG', margin, 3, 14, 14); } catch (e) {} // Kisebb logó (16 -> 14)
         }
 
         doc.setFontSize(8);
         doc.setTextColor(200, 200, 200);
-        doc.text("DynamicSense | Hivatalos Adatlap", pageWidth - margin, 10, { align: 'right' });
-        doc.text(new Date().toLocaleDateString('hu-HU'), pageWidth - margin, 15, { align: 'right' });
+        doc.text("DynamicSense | Hivatalos Adatlap", pageWidth - margin, 9, { align: 'right' });
+        doc.text(new Date().toLocaleDateString('hu-HU'), pageWidth - margin, 14, { align: 'right' });
 
-        let yPos = headerHeight + 8; // Feljebb toljuk a tartalmat
+        let yPos = headerHeight + 6; // Kisebb térköz a fejléc alatt (10 -> 6)
 
         // --- 2. CÍM ÉS ÁR ---
         doc.setTextColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
-        doc.setFontSize(20); 
+        doc.setFontSize(18); // Kisebb betű (20 -> 18)
         doc.setFont('Roboto', 'bold');
         doc.text(`${car.make} ${car.model}`, margin, yPos);
         
@@ -280,22 +280,22 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         if (priceVal) {
             const price = parseInt(priceVal).toLocaleString();
             doc.setTextColor(COLORS.ACCENT[0], COLORS.ACCENT[1], COLORS.ACCENT[2]);
-            doc.setFontSize(20); 
+            doc.setFontSize(18); // Kisebb betű (20 -> 18)
             doc.text(`${price} Ft`, pageWidth - margin, yPos, { align: 'right' });
         }
 
-        yPos += 6;
+        yPos += 5;
         
         doc.setFontSize(9);
         doc.setTextColor(COLORS.TEXT_LIGHT[0], COLORS.TEXT_LIGHT[1], COLORS.TEXT_LIGHT[2]);
         doc.setFont('Roboto', 'normal');
         doc.text(`${car.plate}   |   DynamicSense Verified`, margin, yPos);
 
-        yPos += 10;
+        yPos += 8; // Kisebb térköz (10 -> 8)
 
         // --- 3. KOMPAKT SPECIFIKÁCIÓS SÁV ---
         const specYStart = yPos;
-        const specHeight = 16;
+        const specHeight = 14; // Alacsonyabb sáv (16 -> 14)
         
         doc.setFillColor(COLORS.BG_LIGHT[0], COLORS.BG_LIGHT[1], COLORS.BG_LIGHT[2]);
         doc.roundedRect(margin, specYStart, pageWidth - (margin * 2), specHeight, 2, 2, 'F');
@@ -319,23 +319,23 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         const colW = (pageWidth - (margin * 2)) / 5;
         specs.forEach((s, i) => {
             const cX = margin + (i * colW) + (colW / 2);
-            const cY = specYStart + 5;
+            const cY = specYStart + 4; // Kisebb padding
 
             doc.setFontSize(6);
             doc.setTextColor(COLORS.TEXT_LIGHT[0], COLORS.TEXT_LIGHT[1], COLORS.TEXT_LIGHT[2]);
             doc.setFont('Roboto', 'bold');
             doc.text(s.l, cX, cY, { align: 'center' });
 
-            doc.setFontSize(9);
+            doc.setFontSize(8); // Kisebb érték betű (9 -> 8)
             doc.setTextColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
             doc.setFont('Roboto', 'bold');
             doc.text(s.v, cX, cY + 5, { align: 'center' });
         });
 
-        yPos += specHeight + 8;
+        yPos += specHeight + 6; // Kisebb térköz (8 -> 6)
 
         // --- 4. FELSZERELTSÉG (DINAMIKUS TÖRDELÉS) ---
-        doc.setFontSize(11);
+        doc.setFontSize(10); // Kisebb cím (11 -> 10)
         doc.setTextColor(COLORS.DARK[0], COLORS.DARK[1], COLORS.DARK[2]);
         doc.setFont('Roboto', 'bold');
         doc.text("FELSZERELTSÉG", margin, yPos);
@@ -344,7 +344,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.setLineWidth(0.5);
         doc.line(margin, yPos + 2, margin + 35, yPos + 2); 
         
-        yPos += 6;
+        yPos += 5; // Kisebb térköz (6 -> 5)
 
         const groupedFeatures: Record<string, string[]> = {};
         const otherFeatures: string[] = [];
@@ -363,8 +363,8 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         if (otherFeatures.length > 0) groupedFeatures['EGYÉB'] = otherFeatures;
 
         // Optimalizált beállítások a helytakarékossághoz
-        const featFontSize = 7; 
-        const featRowH = 4; // Sűrűbb sorok
+        const featFontSize = 6.5; // Kisebb betű (7 -> 6.5)
+        const featRowH = 3.5; // Sűrűbb sorok (4 -> 3.5)
         const colCount = 4; // 4 oszlopos elrendezés
         const colWidthFeature = (pageWidth - (margin * 2)) / colCount;
 
@@ -375,11 +375,11 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
                 yPos = 20; 
             }
 
-            doc.setFontSize(8);
+            doc.setFontSize(7.5); // Kisebb kategória cím (8 -> 7.5)
             doc.setTextColor(COLORS.ACCENT[0], COLORS.ACCENT[1], COLORS.ACCENT[2]);
             doc.setFont('Roboto', 'bold');
             doc.text(category.toUpperCase(), margin, yPos);
-            yPos += 4;
+            yPos += 3.5; // Kisebb sorköz (4 -> 3.5)
 
             doc.setFontSize(featFontSize);
             doc.setTextColor(COLORS.TEXT_MAIN[0], COLORS.TEXT_MAIN[1], COLORS.TEXT_MAIN[2]);
@@ -398,8 +398,6 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
                      doc.addPage();
                      yPos = 20; 
                      // Reseteljük a pozíciókat az új oldalon
-                     // (Ez egy egyszerűsített reset, de működik)
-                     // A kategória címét érdemes lenne megismételni, de most egyszerűsítünk
                 }
 
                 doc.setFillColor(COLORS.TEXT_LIGHT[0], COLORS.TEXT_LIGHT[1], COLORS.TEXT_LIGHT[2]);
