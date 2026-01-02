@@ -109,7 +109,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
       })
   }
 
-  // --- PDF GENERÁLÁS (JAVÍTOTT GRID LOGIKA) ---
+  // --- PDF GENERÁLÁS (JAVÍTOTT GRID LOGIKA - NAGYOBB BETŰK) ---
   const handleSaveAndGenerate = async (formData: FormData) => {
     setLoading(true)
     formData.set('features', selectedFeatures.join(','))
@@ -236,11 +236,11 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         
         yPos += 6; // Start: ~63mm
 
-        // Rács Beállítások
+        // Rács Beállítások (NAGYOBB BETŰK)
         const colCount = 4;
         const colWidthFeature = (pageWidth - (margin * 2)) / colCount;
-        const featFontSize = 6.5; // Kicsi betű a sok adathoz
-        const lineHeight = 3.5;   // Sűrű sorköz
+        const featFontSize = 8; // Betűméret növelése (6.5 -> 8)
+        const lineHeight = 4.5; // Sorköz növelése (3.5 -> 4.5)
 
         // Végigmegyünk a kategóriákon
         Object.entries(FEATURES_CATEGORIES).forEach(([category, allItems]) => {
@@ -257,11 +257,11 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
             }
 
             // Kategória Cím
-            doc.setFontSize(7);
+            doc.setFontSize(8); // Cím betűméret (7 -> 8)
             doc.setTextColor(COLORS.ACCENT[0], COLORS.ACCENT[1], COLORS.ACCENT[2]);
             doc.setFont('Roboto', 'bold');
             doc.text(category.toUpperCase(), margin, yPos);
-            yPos += 4;
+            yPos += 5; // Cím sorköz (4 -> 5)
 
             // Tételek kirajzolása Gridben
             doc.setFontSize(featFontSize);
@@ -298,7 +298,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
                 yPos += lineHeight; // Következő sor
             }
             
-            yPos += 2; // Kis térköz a kategóriák között
+            yPos += 3; // Nagyobb térköz a kategóriák között (2 -> 3)
         });
 
         // --- 5. LÁBLÉC & QR (DINAMIKUS) ---
