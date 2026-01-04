@@ -16,7 +16,6 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 
 // --- 1. SEGÉD KOMPONENSEK (HELPER COMPONENTS) ---
 
-// THEME TOGGLE BUTTON
 const ThemeToggle = () => {
   const [isDark, setIsDark] = useState(true);
 
@@ -69,7 +68,6 @@ const ThemeToggle = () => {
   );
 };
 
-// MAGNETIC BUTTON
 const MagneticButton = ({ children, className = "", href = "#" }: { children: React.ReactNode, className?: string, href?: string }) => {
   const ref = useRef<HTMLAnchorElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -104,7 +102,6 @@ const MagneticButton = ({ children, className = "", href = "#" }: { children: Re
   );
 };
 
-// SPOTLIGHT CARD
 const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(245,158,11,0.15)" }: any) => {
   const divRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -143,7 +140,6 @@ const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(245,15
   );
 };
 
-// TECH TRUST BAR
 const TechTrustBar = () => {
   const specs = [
     { label: "Titkosítás", value: "AES-256 Banki Szint", icon: <Lock size={16} /> },
@@ -154,27 +150,26 @@ const TechTrustBar = () => {
 
   return (
     <div className="w-full border-y bg-white/50 dark:bg-slate-900/30 border-slate-200 dark:border-white/5 py-8 relative z-10 backdrop-blur-sm transition-colors duration-500 overflow-hidden">
-       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 pointer-events-none"></div>
-       <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 justify-items-center md:justify-items-between">
-             {specs.map((spec, i) => (
-                <div key={i} className="flex items-center gap-3 group cursor-default w-full justify-center md:justify-start">
-                   <div className="text-slate-500 dark:text-slate-600 group-hover:text-emerald-500 transition-colors duration-500 bg-white dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-inner">
-                      {spec.icon}
-                   </div>
-                   <div className="flex flex-col">
-                      <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">{spec.label}</span>
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">{spec.value}</span>
-                   </div>
-                </div>
-             ))}
-          </div>
-       </div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 pointer-events-none"></div>
+        <div className="max-w-7xl mx-auto px-4">
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 justify-items-center md:justify-items-between">
+              {specs.map((spec, i) => (
+                 <div key={i} className="flex items-center gap-3 group cursor-default w-full justify-center md:justify-start">
+                    <div className="text-slate-500 dark:text-slate-600 group-hover:text-emerald-500 transition-colors duration-500 bg-white dark:bg-slate-950/50 p-2.5 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-inner">
+                       {spec.icon}
+                    </div>
+                    <div className="flex flex-col">
+                       <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">{spec.label}</span>
+                       <span className="text-sm font-bold text-slate-800 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white transition-colors">{spec.value}</span>
+                    </div>
+                 </div>
+              ))}
+           </div>
+        </div>
     </div>
   );
 };
 
-// COMPARISON SECTION
 const ComparisonSection = () => {
     return (
       <section className="py-24 max-w-6xl mx-auto px-4">
@@ -184,7 +179,6 @@ const ComparisonSection = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
-          {/* Old Method */}
           <div className="p-8 md:p-12 rounded-[2.5rem] bg-red-50 dark:bg-red-950/10 border border-red-200 dark:border-red-500/10 hover:border-red-500/30 transition-all duration-500 group">
             <div className="flex items-center gap-2 text-red-500 dark:text-red-400 font-mono text-xs mb-6 uppercase tracking-widest font-bold">
                 <AlertTriangle size={14} /> Hagyományos módszer
@@ -198,7 +192,6 @@ const ComparisonSection = () => {
             </ul>
           </div>
   
-          {/* New Method */}
           <div className="p-8 md:p-12 rounded-[2.5rem] bg-emerald-50 dark:bg-emerald-950/10 border border-emerald-200 dark:border-emerald-500/20 relative overflow-hidden group">
             <div className="absolute inset-0 bg-emerald-500/5 blur-[80px] group-hover:bg-emerald-500/10 transition-colors duration-700"></div>
             <div className="relative z-10">
@@ -221,12 +214,10 @@ const ComparisonSection = () => {
     )
 }
 
-// FAIR PLAY / INTEGRITY SECTION
 const FairPlaySection = () => {
   return (
     <section className="max-w-6xl mx-auto mb-32 px-4">
       <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 text-white p-8 md:p-12 border border-slate-800 shadow-2xl">
-        {/* Háttér effekt */}
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[80px] pointer-events-none translate-y-1/2 -translate-x-1/4"></div>
 
@@ -242,7 +233,6 @@ const FairPlaySection = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Card 1: Valódiság */}
           <div className="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 hover:border-indigo-500/50 transition-colors group">
             <div className="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Handshake size={24} />
@@ -253,7 +243,6 @@ const FairPlaySection = () => {
             </p>
           </div>
 
-          {/* Card 2: Jogi Háttér */}
           <div className="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 hover:border-red-500/50 transition-colors group">
             <div className="w-12 h-12 bg-red-500/20 text-red-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Gavel size={24} />
@@ -264,7 +253,6 @@ const FairPlaySection = () => {
             </p>
           </div>
 
-          {/* Card 3: Értékmegőrzés */}
           <div className="bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors group">
             <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <FileWarning size={24} />
@@ -286,7 +274,6 @@ const FairPlaySection = () => {
   );
 };
 
-// TIKTOK ICON (Custom SVG)
 const TikTokIcon = ({ size = 24, className = "" }) => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
@@ -304,7 +291,6 @@ const TikTokIcon = ({ size = 24, className = "" }) => (
   </svg>
 );
 
-// TYPEWRITER TEXT
 const TypewriterText = ({ text, speed = 30 }: { text: string, speed?: number }) => {
   const [displayedText, setDisplayedText] = useState('');
   useEffect(() => {
@@ -320,7 +306,6 @@ const TypewriterText = ({ text, speed = 30 }: { text: string, speed?: number }) 
   return <span>{displayedText}<span className="animate-pulse text-amber-500 font-bold">|</span></span>;
 };
 
-// BACKGROUND GLOWS
 const BackgroundGlows = () => (
   <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
     <div className="absolute top-[-10%] left-[20%] w-[60vw] h-[60vw] bg-amber-600/5 rounded-full blur-[130px] animate-pulse mix-blend-multiply dark:mix-blend-screen" />
@@ -330,7 +315,6 @@ const BackgroundGlows = () => (
   </div>
 );
 
-// 3D DASHBOARD PREVIEW
 const DashboardPreview = () => {
   const { scrollY } = useScroll();
   const rotateX = useTransform(scrollY, [0, 500], [5, 0]);
@@ -343,7 +327,6 @@ const DashboardPreview = () => {
     >
       <div className="relative rounded-2xl border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_0_50px_rgba(0,0,0,0.1)] dark:shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden transition-all duration-700">
         
-        {/* Fake Browser Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50">
           <div className="flex gap-1.5">
             <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50" />
@@ -355,16 +338,13 @@ const DashboardPreview = () => {
           </div>
         </div>
 
-        {/* Dashboard Grid */}
         <div className="grid grid-cols-12 gap-4 p-6 min-h-[450px] bg-slate-50 dark:bg-slate-950/80">
-           {/* Sidebar Mock */}
            <div className="hidden md:block col-span-2 space-y-3 border-r border-slate-200 dark:border-white/5 pr-4">
              <div className="h-8 w-full bg-gradient-to-r from-amber-500/20 to-transparent rounded-lg mb-6 border-l-2 border-amber-500"></div>
              {[1,2,3,4].map(i => <div key={i} className="h-8 w-full bg-slate-200/50 dark:bg-white/5 rounded-lg"></div>)}
            </div>
 
            <div className="col-span-12 md:col-span-10 grid grid-cols-12 gap-4">
-             {/* Flotta Egészség Card */}
              <div className="col-span-12 md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden group/card shadow-sm">
                 <div className="absolute inset-0 bg-emerald-500/5 group-hover/card:bg-emerald-500/10 transition-colors"></div>
                 <div className="relative w-24 h-24 mb-3">
@@ -384,7 +364,6 @@ const DashboardPreview = () => {
                 <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Flotta Egészség</div>
              </div>
 
-             {/* Költség Card */}
              <div className="col-span-12 md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between shadow-sm">
                 <div className="flex justify-between items-center mb-4">
                    <div className="h-8 w-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-500"><BarChart3 size={16} /></div>
@@ -398,7 +377,6 @@ const DashboardPreview = () => {
                 </div>
              </div>
 
-             {/* AI Szerelő Card */}
              <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/40 dark:to-slate-900 border border-indigo-200 dark:border-indigo-500/30 rounded-xl p-5 relative overflow-hidden shadow-sm">
                 <div className="absolute top-0 right-0 p-4 opacity-50"><Sparkles className="text-indigo-400 animate-pulse" /></div>
                 <div className="flex items-center gap-2 mb-4">
@@ -413,7 +391,6 @@ const DashboardPreview = () => {
                 </div>
              </div>
 
-             {/* Bottom Card Mockup */}
              <div className="col-span-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-4 flex items-center gap-4 shadow-sm">
                 <div className="h-16 w-24 bg-slate-200 dark:bg-slate-800 rounded-lg relative overflow-hidden">
                    <div className="absolute inset-0 bg-gradient-to-tr from-slate-300 to-slate-200 dark:from-slate-700 dark:to-slate-600"></div>
@@ -439,6 +416,23 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  
+  // --- ÚJ: VÁLTAKOZÓ KÉRDÉSEK LOGIKÁJA ---
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const questions = [
+    { main: "Eleged van a papírokból?", highlight: "Válts digitalizációra!" },
+    { main: "Folyton elfelejted a szervizt?", highlight: "Mi észben tartjuk." },
+    { main: "Közeleg egy határidő?", highlight: "Ne érjen meglepetés." },
+    { main: "Eladnád később az autód?", highlight: "Legyen értékesebb a múltja!" }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setQuestionIndex((prev) => (prev + 1) % questions.length);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, []);
+  // ---------------------------------------
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -459,7 +453,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
       {promo && <PromoModal promo={promo} />}
       <BackgroundGlows />
 
-      {/* NAVBAR - Fixed Z-index: 100 */}
+      {/* NAVBAR */}
       <nav
         className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500
           ${scrolled
@@ -467,10 +461,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             : 'bg-transparent border-transparent py-6'}
         `}
       >
-        <div
-          className="max-w-7xl mx-auto px-6 flex justify-between items-center"
-          style={{ marginTop: 'env(safe-area-inset-top)' }}
-        >
+        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-8 h-8 relative group-hover:scale-110 transition-transform duration-300">
               <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
@@ -484,17 +475,12 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             <Link href="/check" className="flex items-center gap-1.5 text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
                 <Search size={14} /> VIN Kereső
             </Link>
-            
             <a href="#features" className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors relative group">
                 Funkciók <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-500 transition-all group-hover:w-full"></span>
             </a>
-            
             <div className="h-4 w-px bg-slate-300 dark:bg-slate-800"></div>
-
             <ThemeToggle />
-            
             <Link href="/login" className="text-sm font-bold text-slate-800 dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors">Belépés</Link>
-            
             <Link href="/login?mode=signup" className="group relative overflow-hidden bg-slate-900 dark:bg-white text-white dark:text-slate-950 px-6 py-2.5 rounded-full text-sm font-bold transition-all hover:scale-105 hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center gap-2">
                 <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 dark:via-slate-200/50 to-transparent transform -skew-x-12 transition-all duration-1000 group-hover:left-[100%]" />
                 <span className="relative z-10">Ingyenes Start</span> 
@@ -509,14 +495,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             {mobileMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
-
-        <style jsx global>{`
-          @media (max-width: 768px) {
-            nav > div.max-w-7xl {
-              margin-top: 18px !important;
-            }
-          }
-        `}</style>
 
         <AnimatePresence>
             {mobileMenuOpen && (
@@ -547,7 +525,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
       {/* MAIN CONTENT */}
       <main className="relative z-10 flex-1 flex flex-col pt-32">
         
-        {/* HERO SECTION */}
+        {/* HERO SECTION - FRISSÍTETT VÁLTAKOZÓ KÉRDÉSEKKEL */}
         <section className="flex flex-col items-center text-center max-w-6xl mx-auto mb-20 px-4">
             
             <motion.div 
@@ -563,15 +541,27 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 Early Access: Most minden funkció ingyenes!
             </motion.div>
 
-            <motion.h1 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="text-5xl sm:text-7xl md:text-8xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1] mb-6 drop-shadow-sm dark:drop-shadow-2xl"
-            >
-                Az autód <br className="hidden sm:block" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-600 to-amber-700 dark:from-amber-400 dark:via-orange-500 dark:to-amber-600">digitális agya.</span>
-            </motion.h1>
+            {/* Dinamikus Címsor Konténer */}
+            <div className="h-[180px] sm:h-[240px] md:h-[300px] flex items-center justify-center overflow-hidden mb-6">
+              <AnimatePresence mode="wait">
+                <motion.h1
+                  key={questionIndex}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -30 }}
+                  transition={{ 
+                      duration: 0.6, 
+                      ease: [0.22, 1, 0.36, 1] 
+                  }}
+                  className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1] drop-shadow-sm dark:drop-shadow-2xl"
+                >
+                  {questions[questionIndex].main} <br className="hidden sm:block" />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-600 to-amber-700 dark:from-amber-400 dark:via-orange-500 dark:to-amber-600">
+                    {questions[questionIndex].highlight}
+                  </span>
+                </motion.h1>
+              </AnimatePresence>
+            </div>
 
             <motion.p 
                 initial={{ opacity: 0 }}
@@ -579,7 +569,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 transition={{ duration: 1, delay: 0.4 }}
                 className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed font-light max-w-2xl mx-auto mb-10"
             >
-                A DynamicSense egy mesterséges intelligenciával támogatott, felhőalapú garázs. Költségkövetés, digitális szervizkönyv és flotta menedzsment egy helyen.
+                A **DynamicSense** nem csak egy alkalmazás, hanem az autód hiteles élettörténete. Felejtsd el a papír alapú káoszt: digitális szervizkönyv, költségkövetés és intelligens határidő-napló egy helyen.
             </motion.p>
 
             <motion.div 
@@ -611,7 +601,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         {/* TECH TRUST BAR */}
         <TechTrustBar />
 
-        {/* COMPARISON (Old vs New) */}
+        {/* COMPARISON */}
         <ComparisonSection />
 
         {/* BENTO GRID FEATURES */}
@@ -622,7 +612,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[minmax(180px,auto)]">
-                
                 <SpotlightCard className="col-span-1 md:col-span-2 row-span-2 group border-indigo-200 dark:border-indigo-500/20" spotlightColor="rgba(99,102,241,0.15)">
                     <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:opacity-40 transition-opacity duration-500">
                         <Sparkles size={120} className="text-indigo-200 dark:text-indigo-900" />
@@ -733,25 +722,21 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
         </section>
 
-        {/* --- FAIR PLAY / INTEGRITY SECTION --- */}
         <FairPlaySection />
 
         {/* WHY FREE SECTION */}
         <section className="max-w-4xl mx-auto mb-32 w-full px-4">
            <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-50/80 to-white dark:from-emerald-900/20 dark:to-slate-900/50 p-8 md:p-12 text-center shadow-xl">
                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl animate-pulse"></div>
-               
                <div className="inline-block p-3 bg-emerald-500/10 rounded-2xl mb-6 text-emerald-600 dark:text-emerald-400">
                   <Gift size={32} />
                </div>
-               
                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Miért ingyenes a Pro csomag is?</h2>
                <p className="text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">
-                  Hiszünk abban, hogy a legjobb terméket a közösséggel együtt építhetjük fel. 
-                  Jelenleg a növekedési fázisban vagyunk, ezért <strong className="text-slate-900 dark:text-white">minden korlátot feloldottunk</strong>. 
-                  Nincs limitált autó szám, nincs letiltott AI funkció. Használd, teszteld, és élvezd!
+                 Hiszünk abban, hogy a legjobb terméket a közösséggel együtt építhetjük fel. 
+                 Jelenleg a növekedési fázisban vagyunk, ezért <strong className="text-slate-900 dark:text-white">minden korlátot feloldottunk</strong>. 
+                 Nincs limitált autó szám, nincs letiltott AI funkció. Használd, teszteld, és élvezd!
                </p>
-               
                <Link href="/login?mode=signup" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-emerald-500/30">
                    Regisztrálok az Early Access-re
                </Link>
@@ -819,11 +804,9 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
       </main>
 
-      {/* FOOTER - FRISSÍTETT VERZIÓ */}
+      {/* FOOTER */}
       <footer className="relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10 px-6 transition-colors">
-         {/* Footer Glow Line */}
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
-         
          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="md:col-span-1">
                <Link href="/" className="flex items-center gap-2 mb-6">
@@ -833,20 +816,11 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                <p className="text-slate-600 dark:text-slate-500 text-sm leading-relaxed mb-6">
                    Innovatív autós platform Magyarországon. AI alapú diagnosztika, digitális szervizkönyv és költségmenedzsment – minden egy helyen.
                </p>
-               
                <div className="flex gap-4">
-                   <a 
-                       href="mailto:info.dynamicsense@gmail.com" 
-                       aria-label="Email küldése"
-                       className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-black dark:hover:text-white transition-all cursor-pointer border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 hover:scale-105"
-                   >
+                   <a href="mailto:info.dynamicsense@gmail.com" className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all">
                        <MessageCircle size={18} />
                    </a>
-                   <Link 
-                       href="/support" 
-                       aria-label="Hibajelentés és Támogatás"
-                       className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-amber-500 transition-all cursor-pointer border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 hover:scale-105"
-                   >
+                   <Link href="/support" className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all">
                        <HelpCircle size={18} />
                    </Link>
                </div>
@@ -857,79 +831,42 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
                     <li><a href="#features" className="hover:text-amber-500 transition-colors">Funkciók</a></li>
                     <li><a href="#gamification" className="hover:text-amber-500 transition-colors">Közösség</a></li>
-                    <li>
-                        <Link href="/changelog" className="hover:text-amber-500 transition-colors flex items-center gap-2 group">
-                           Újdonságok
-                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:animate-pulse"></span>
-                        </Link>
-                    </li>
-                    <li>
-                        <Link href="/support" className="hover:text-amber-500 transition-colors flex items-center gap-2">
-                           Hibajelentés & Kapcsolat
-                           <span className="bg-amber-500/10 text-amber-500 text-[10px] px-1.5 py-0.5 rounded">Support</span>
-                        </Link>
-                    </li>
+                    <li><Link href="/changelog" className="hover:text-amber-500 transition-colors">Újdonságok</Link></li>
+                    <li><Link href="/support" className="hover:text-amber-500 transition-colors">Support</Link></li>
                 </ul>
             </div>
 
             <div>
                 <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Jogi Információk</h4>
                 <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
-                    <li><Link href="/privacy" className="hover:text-amber-500 transition-colors">Adatkezelési Tájékoztató</Link></li>
-                    <li><Link href="/terms" className="hover:text-amber-500 transition-colors">Általános Szerződési Feltételek</Link></li>
+                    <li><Link href="/privacy" className="hover:text-amber-500 transition-colors">Adatkezelés</Link></li>
+                    <li><Link href="/terms" className="hover:text-amber-500 transition-colors">ÁSZF</Link></li>
                     <li><Link href="/impressum" className="hover:text-amber-500 transition-colors">Impresszum</Link></li>
                 </ul>
             </div>
             
-            {/* SOCIAL MEDIA SZEKCIÓ (ÚJ) */}
             <div>
                <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Közösség</h4>
                <div className="flex flex-col gap-4">
-                   <a href="https://www.facebook.com/profile.php?id=61585653752179" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#1877F2] transition-colors group">
-                       <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-[#1877F2]/10 transition-colors">
-                           <Facebook size={18} />
-                       </div>
-                       <span>Facebook</span>
+                   <a href="https://www.facebook.com/profile.php?id=61585653752179" target="_blank" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#1877F2] transition-colors">
+                       <Facebook size={18} /> Facebook
                    </a>
-                   <a href="https://www.instagram.com/dynamicsense2026/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#E4405F] transition-colors group">
-                       <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-[#E4405F]/10 transition-colors">
-                           <Instagram size={18} />
-                       </div>
-                       <span>Instagram</span>
+                   <a href="https://www.instagram.com/dynamicsense2026/" target="_blank" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#E4405F] transition-colors">
+                       <Instagram size={18} /> Instagram
                    </a>
-                   <a href="https://www.tiktok.com/@dynamicsense2026" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors group">
-                       <div className="p-2 bg-slate-100 dark:bg-slate-900 rounded-lg group-hover:bg-slate-200 dark:group-hover:bg-slate-800 transition-colors">
-                           <TikTokIcon size={18} />
-                       </div>
-                       <span>TikTok</span>
+                   <a href="https://www.tiktok.com/@dynamicsense2026" target="_blank" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
+                       <TikTokIcon size={18} /> TikTok
                    </a>
-               </div>
-               
-               <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                       <ThumbsUp size={12} className="text-amber-500" /> Támogasd a projektet!
-                   </p>
-                   <div className="flex gap-2">
-                       <button className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                           <Share2 size={14} /> Megosztás
-                       </button>
-                       <button className="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
-                           <ThumbsUp size={14} /> Kedvelés
-                       </button>
-                   </div>
                </div>
             </div>
          </div>
          
          <div className="border-t border-slate-200 dark:border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
-             <p className="text-slate-500 dark:text-slate-600 text-xs font-mono uppercase tracking-widest">
+             <p className="text-slate-500 dark:text-slate-600 text-xs font-mono">
                © {new Date().getFullYear()} DynamicSense Technologies. Minden jog fenntartva.
              </p>
-             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-600 font-mono bg-slate-100 dark:bg-slate-900/50 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-800">
-                 <span className="relative flex h-2 w-2">
-                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                 </span>
+             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-600 font-mono bg-slate-100 dark:bg-slate-900/50 px-3 py-1 rounded-full">
+                 <span className="relative flex h-2 w-2"><span className="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative rounded-full h-2 w-2 bg-emerald-500"></span></span>
                  Rendszer állapota: <span className="text-emerald-600 dark:text-emerald-500 font-bold">Online</span>
              </div>
          </div>
