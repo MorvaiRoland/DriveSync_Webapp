@@ -473,7 +473,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
           <div className="hidden md:flex items-center gap-8">
             <Link href="/check" className="flex items-center gap-1.5 text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
-                <Search size={14} /> VIN Kereső
+                <Search size={14} /> Alvázszám Kereső
             </Link>
             <a href="#features" className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors relative group">
                 Funkciók <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-500 transition-all group-hover:w-full"></span>
@@ -528,40 +528,41 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         {/* HERO SECTION - FRISSÍTETT VÁLTAKOZÓ KÉRDÉSEKKEL */}
         <section className="flex flex-col items-center text-center max-w-6xl mx-auto mb-20 px-4">
             
-            <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 mb-8 hover:border-amber-500/30 transition-colors cursor-default backdrop-blur-md shadow-sm dark:shadow-lg"
-            >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                Early Access: Most minden funkció ingyenes!
-            </motion.div>
+           <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 mb-8 backdrop-blur-md shadow-sm"
+    >
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        Early Access: Most minden funkció ingyenes!
+    </motion.div>
 
-            {/* Dinamikus Címsor Konténer */}
-            <div className="h-[180px] sm:h-[240px] md:h-[300px] flex items-center justify-center overflow-hidden mb-6">
-              <AnimatePresence mode="wait">
-                <motion.h1
-                  key={questionIndex}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -30 }}
-                  transition={{ 
-                      duration: 0.6, 
-                      ease: [0.22, 1, 0.36, 1] 
-                  }}
-                  className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1] drop-shadow-sm dark:drop-shadow-2xl"
-                >
-                  {questions[questionIndex].main} <br className="hidden sm:block" />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-600 to-amber-700 dark:from-amber-400 dark:via-orange-500 dark:to-amber-600">
-                    {questions[questionIndex].highlight}
-                  </span>
-                </motion.h1>
-              </AnimatePresence>
-            </div>
+    {/* Növelt magasságú konténer (h-...) és jobb sormagasság (leading-tight) */}
+    <div className="h-[280px] sm:h-[350px] md:h-[450px] flex items-center justify-center overflow-hidden mb-6">
+      <AnimatePresence mode="wait">
+        <motion.h1
+          key={questionIndex}
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -40 }}
+          transition={{ 
+              duration: 0.6, 
+              ease: [0.22, 1, 0.36, 1] 
+          }}
+          // Kicsit kisebb alapméret (text-4xl -> 5xl), hogy ne lógjon ki
+          className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.2] drop-shadow-sm dark:drop-shadow-2xl px-2"
+        >
+          {questions[questionIndex].main} <br className="hidden sm:block" />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-600 to-amber-700 dark:from-amber-400 dark:via-orange-500 dark:to-amber-600">
+            {questions[questionIndex].highlight}
+          </span>
+        </motion.h1>
+      </AnimatePresence>
+    </div>
 
             <motion.p 
                 initial={{ opacity: 0 }}
@@ -583,7 +584,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                   className="bg-emerald-600 hover:bg-emerald-500 text-white text-lg font-bold px-8 py-5 rounded-2xl transition-all shadow-lg hover:shadow-emerald-500/40 flex items-center justify-center gap-2 border border-emerald-500/50"
                 >
                     <Search className="w-5 h-5" />
-                    <span>VIN Lekérdezés</span>
+                    <span>Alvázszám Lekérdezés</span>
                 </MagneticButton>
 
                 <MagneticButton 
