@@ -23,7 +23,6 @@ const ThemeToggle = () => {
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
-    // Kezdeti állapot ellenőrzése (localStorage vagy rendszer beállítás)
     const storedTheme = localStorage.getItem('theme');
     if (storedTheme === 'light') {
       setIsDark(false);
@@ -51,20 +50,20 @@ const ThemeToggle = () => {
     <button
       onClick={toggleTheme}
       className={`
-        relative flex items-center justify-between w-16 h-8 rounded-full p-1 transition-colors duration-500 cursor-pointer
+        relative flex items-center justify-between w-14 h-8 rounded-full p-1 transition-colors duration-500 cursor-pointer flex-shrink-0
         ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-slate-200 border border-slate-300'}
       `}
       aria-label="Téma váltás"
     >
-      <Sun size={14} className={`z-10 ml-1.5 transition-colors duration-300 ${isDark ? 'text-slate-500' : 'text-amber-500'}`} />
-      <Moon size={14} className={`z-10 mr-1.5 transition-colors duration-300 ${isDark ? 'text-indigo-400' : 'text-slate-400'}`} />
+      <Sun size={14} className={`z-10 ml-1 transition-colors duration-300 ${isDark ? 'text-slate-500' : 'text-amber-500'}`} />
+      <Moon size={14} className={`z-10 mr-1 transition-colors duration-300 ${isDark ? 'text-indigo-400' : 'text-slate-400'}`} />
 
       <motion.div
         className="absolute w-6 h-6 rounded-full shadow-md z-0"
         initial={false}
         animate={{
-          x: isDark ? 32 : 0, // Gomb csúszása
-          backgroundColor: isDark ? '#0f172a' : '#ffffff' // Gomb színe
+          x: isDark ? 24 : 0,
+          backgroundColor: isDark ? '#0f172a' : '#ffffff'
         }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
       />
@@ -74,15 +73,10 @@ const ThemeToggle = () => {
 
 const BackgroundGlows = () => (
   <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none -z-10 bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
-    {/* Felső gradiens */}
     <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-white to-transparent dark:from-slate-900 dark:to-transparent opacity-60" />
-    
-    {/* Színes foltok */}
     <div className="absolute top-[-10%] right-[-5%] w-[40vw] h-[40vw] bg-amber-500/10 rounded-full blur-[100px] animate-pulse" />
     <div className="absolute bottom-[20%] left-[-10%] w-[50vw] h-[50vw] bg-indigo-600/10 rounded-full blur-[120px]" />
     <div className="absolute top-[40%] right-[20%] w-[30vw] h-[30vw] bg-emerald-500/5 rounded-full blur-[80px]" />
-    
-    {/* Zaj textúra a "gritty" hatáshoz */}
     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
   </div>
 );
@@ -97,35 +91,44 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // --- ÚJ FÜGGVÉNY: UGRÁS A TETEJÉRE ---
+  const scrollToTop = (e: React.MouseEvent) => {
+    e.preventDefault(); // Megakadályozza az alapvető navigációt/újratöltést
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth' // Sima görgetés animáció
+    });
+  };
+
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 font-sans transition-colors duration-500">
       <BackgroundGlows />
 
       {/* --- NAVBAR --- */}
       <nav 
-        className={`fixed top-0 w-full z-50 transition-all duration-300 border-b 
+        className={`fixed top-0 w-full z-[100] transition-all duration-300 border-b pt-[env(safe-area-inset-top)]
         ${scrolled || mobileMenuOpen
-          ? 'bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl border-slate-200 dark:border-white/5 py-3 shadow-lg' 
-          : 'bg-transparent border-transparent py-5'}`}
+          ? 'bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-white/5 shadow-lg' 
+          : 'bg-transparent border-transparent'}`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group z-50 relative">
-              <div className="w-9 h-9 relative group-hover:scale-110 transition-transform duration-300">
+        {/* ITT A MÓDOSÍTÁS: w-full és nagyobb padding (px-6 md:px-10) */}
+        <div className="w-full px-6 md:px-10 lg:px-12">
+          <div className="flex justify-between items-center py-4">
+            
+            {/* Logo - Most már a scrollToTop függvényt hívja meg */}
+            <Link href="/" onClick={scrollToTop} className="flex items-center gap-2 group z-50 relative cursor-pointer">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 relative group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
                 <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
               </div>
-              <span className="text-xl font-bold tracking-tight uppercase text-slate-900 dark:text-white">
+              <span className="text-lg sm:text-xl font-bold tracking-tight uppercase text-slate-900 dark:text-white">
                 Dynamic<span className="text-amber-500">Sense</span>
               </span>
             </Link>
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-6">
-              <ThemeToggle /> {/* Téma váltó itt */}
-              
+              <ThemeToggle />
               <div className="h-5 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
-              
               <Link href="/check" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors">
                 Alvázszám kereső
               </Link>
@@ -146,6 +149,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-50 relative"
+              aria-label="Menü megnyitása"
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -156,27 +160,27 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="absolute top-full left-0 w-full bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-2xl md:hidden overflow-hidden"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden bg-white/95 dark:bg-slate-950/95 border-b border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden backdrop-blur-md"
             >
-              <div className="px-4 py-6 flex flex-col gap-4">
+              <div className="px-6 pt-2 pb-6 flex flex-col gap-4">
                 {/* Mobile Theme Toggle Row */}
-                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
                    <span className="font-semibold text-slate-700 dark:text-slate-300">Megjelenés</span>
                    <ThemeToggle />
                 </div>
 
-                <Link href="/check" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+                <Link href="/check" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                   <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600"><Search size={20}/></div>
                   <span className="font-semibold">Alvázszám Kereső</span>
                 </Link>
                 
                 <div className="h-px w-full bg-slate-100 dark:bg-slate-800 my-1"></div>
                 
-                <Link href="/login" className="p-3 font-semibold text-center hover:text-amber-500 transition-colors">Belépés</Link>
-                <Link href="/login?mode=signup" className="w-full bg-amber-500 text-slate-950 font-bold py-4 rounded-xl text-center shadow-lg shadow-amber-500/20 active:scale-95 transition-transform">
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="p-3 font-semibold text-center hover:text-amber-500 transition-colors">Belépés</Link>
+                <Link href="/login?mode=signup" onClick={() => setMobileMenuOpen(false)} className="w-full bg-amber-500 text-slate-950 font-bold py-4 rounded-xl text-center shadow-lg shadow-amber-500/20 active:scale-95 transition-transform">
                   Fiók létrehozása ingyen
                 </Link>
               </div>
@@ -185,20 +189,21 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </AnimatePresence>
       </nav>
 
-      <main className="relative pt-32 lg:pt-40 pb-20 overflow-hidden">
+      {/* --- MAIN CONTENT --- */}
+      <main className="relative pt-28 sm:pt-32 lg:pt-44 pb-20 overflow-hidden">
         
         {/* --- HERO SECTION --- */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24 lg:mb-32">
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-20">
             
             {/* Left Content */}
-            <div className="flex-1 text-center lg:text-left z-10">
+            <div className="flex-1 text-center lg:text-left z-10 w-full">
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-xs font-bold uppercase tracking-wider mb-8"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-6 sm:mb-8"
               >
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-2 w-2 flex-shrink-0">
                   <span className="animate-ping absolute h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                   <span className="relative rounded-full h-2 w-2 bg-amber-500"></span>
                 </span>
@@ -221,7 +226,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-lg text-slate-600 dark:text-slate-400 mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light"
+                className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mb-8 sm:mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light"
               >
                 Felejtsd el a kockás füzetet. AI diagnosztika, költségkövetés és hiteles digitális szervizkönyv egyetlen modern alkalmazásban. 
                 <span className="block mt-2 font-medium text-slate-900 dark:text-white">Most teljesen ingyenes.</span>
@@ -231,25 +236,25 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start w-full sm:w-auto"
               >
                 <Link 
                   href="/login?mode=signup" 
-                  className="px-8 py-4 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-slate-900/20 dark:shadow-white/10 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-slate-900/20 dark:shadow-white/10 flex items-center justify-center gap-2"
                 >
                   Regisztrálok
                   <ChevronRight size={18} />
                 </Link>
                 <Link 
                   href="/check" 
-                  className="px-8 py-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                   <Search size={18} />
                   Alvázszám kereső
                 </Link>
               </motion.div>
 
-              <div className="mt-8 flex items-center justify-center lg:justify-start gap-4 text-xs font-medium text-slate-500">
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 text-xs font-medium text-slate-500">
                 <div className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-500"/> Nincs bankkártya</div>
                 <div className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-500"/> Azonnali hozzáférés</div>
               </div>
@@ -260,7 +265,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
               initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               transition={{ delay: 0.4, duration: 0.8 }}
-              className="flex-1 w-full max-w-lg lg:max-w-none relative z-0"
+              className="flex-1 w-full max-w-xs sm:max-w-lg lg:max-w-none relative z-0 mt-8 lg:mt-0"
             >
                <div className="relative rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-white/10 p-2 shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-700 ease-out">
                  <div className="absolute inset-0 bg-white/50 dark:bg-black/20 backdrop-blur-3xl rounded-3xl -z-10" />
@@ -296,7 +301,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                       transition={{ delay: 1, type: "spring" }}
                       className="absolute bottom-6 right-6 left-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 flex items-center gap-3"
                     >
-                       <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-lg">
+                       <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-lg flex-shrink-0">
                          <ShieldCheck size={20} />
                        </div>
                        <div>
@@ -337,7 +342,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                viewport={{ once: true, margin: "-50px" }}
                 transition={{ delay: i * 0.1 }}
                 className={`group p-8 rounded-[2rem] bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 backdrop-blur-sm transition-all duration-300 ${feature.bg}`}
               >
@@ -355,7 +360,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
         {/* --- BOTTOM CTA --- */}
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-           <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 dark:bg-indigo-950 text-white p-10 md:p-16 text-center shadow-2xl">
+           <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 dark:bg-indigo-950 text-white p-8 md:p-16 text-center shadow-2xl">
               <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 blur-[100px] rounded-full" />
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/30 blur-[100px] rounded-full" />
               
@@ -364,16 +369,16 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 <p className="text-slate-300 text-lg mb-10">
                   Nincs próbaidőszak, nincsenek rejtett költségek. Csak te, az autód, és a nyugalom.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center w-full">
                   <Link 
                     href="/login?mode=signup" 
-                    className="inline-flex items-center justify-center gap-2 bg-amber-500 text-slate-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-amber-400 transition-colors shadow-lg shadow-amber-900/20"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-amber-500 text-slate-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-amber-400 transition-colors shadow-lg shadow-amber-900/20"
                   >
                     Fiók létrehozása
                   </Link>
                   <Link 
                     href="/login" 
-                    className="inline-flex items-center justify-center gap-2 bg-transparent border border-white/20 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-colors"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent border border-white/20 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-colors"
                   >
                     Belépés
                   </Link>
@@ -384,12 +389,13 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
       </main>
 
-      {/* --- FOOTER (EREDETI) --- */}
+      {/* --- FOOTER --- */}
       <footer className="relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10 px-6 transition-colors">
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="md:col-span-1">
-                <Link href="/" className="flex items-center gap-2 mb-6">
+                {/* Logo a footerben is - itt is használhatjuk a scrollToTop-ot */}
+                <Link href="/" onClick={scrollToTop} className="flex items-center gap-2 mb-6 cursor-pointer">
                     <div className="w-8 h-8 relative"><Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain" /></div>
                     <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">Dynamic<span className="text-amber-500">Sense</span></span>
                 </Link>
