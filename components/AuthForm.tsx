@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { login, signup, signInWithGoogle, resetPassword } from '@/app/login/action'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { User, Store } from 'lucide-react' // Importing icons
+import { User, Store } from 'lucide-react'
 
 type AuthFormProps = {
   isLogin: boolean
@@ -16,7 +16,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
   const [loading, setLoading] = useState(false)
   const [resetMode, setResetMode] = useState(false)
   
-  // NEW: Role state ('user' or 'dealer')
+  // Szerepkör állapot ('user' vagy 'dealer')
   const [role, setRole] = useState<'user' | 'dealer'>('user')
 
   const [passwordInput, setPasswordInput] = useState('')
@@ -25,7 +25,6 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
   const handleSubmit = () => setLoading(true)
   const showResetMessage = message && (message.toLowerCase().includes('visszaállító') || message.toLowerCase().includes('küldtük'))
 
-  // Password validation logic
   useEffect(() => {
     if (isLogin) {
       setIsPasswordValid(true) 
@@ -43,7 +42,6 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
     setIsPasswordValid(validations.every(Boolean))
   }, [passwordInput, isLogin])
 
-  // Header Component
   const HeaderSection = ({ title, subtitle }: { title: string, subtitle: string }) => (
     <div className="text-center mb-6 lg:mb-8">
       <h2 className="text-2xl lg:text-3xl font-black tracking-tight text-white drop-shadow-md">
@@ -55,7 +53,6 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
     </div>
   )
 
-  // Password Requirement Item Component
   const RequirementItem = ({ met, text }: { met: boolean, text: string }) => (
     <div className={`flex items-center gap-2 text-[10px] transition-colors duration-300 ${met ? 'text-emerald-400' : 'text-slate-500'}`}>
       <div className={`w-1.5 h-1.5 rounded-full ${met ? 'bg-emerald-400' : 'bg-slate-600'}`} />
@@ -63,7 +60,6 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
     </div>
   )
 
-  // --- PASSWORD RESET MODE ---
   if (resetMode || showResetMessage) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full">
@@ -105,7 +101,6 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
     )
   }
 
-  // --- NORMAL AUTH MODE ---
   return (
     <div className="w-full">
       <HeaderSection 
@@ -113,37 +108,38 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
         subtitle={isLogin ? 'Az intelligencia visszavár.' : 'Válassz fiók típust és csatlakozz.'}
       />
 
-      {/* --- ROLE SELECTOR (ALWAYS VISIBLE NOW) --- */}
-      {/* This ensures users can select 'Dealer' even if they land on the Login tab and click Google immediately */}
-      <div className="grid grid-cols-2 gap-3 mb-6 p-1 bg-slate-900/50 rounded-xl border border-white/10">
-          <button
-              type="button"
-              onClick={() => setRole('user')}
-              className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold transition-all ${
-                  role === 'user' 
-                  ? 'bg-amber-500 text-slate-900 shadow-md' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-          >
-              <User size={16} /> Magánszemély
-          </button>
-          <button
-              type="button"
-              onClick={() => setRole('dealer')}
-              className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold transition-all ${
-                  role === 'dealer' 
-                  ? 'bg-indigo-500 text-white shadow-md' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-          >
-              <Store size={16} /> Kereskedő
-          </button>
-      </div>
+      {/* --- SZEREPKÖR VÁLASZTÓ (CSAK REGISZTRÁCIÓNÁL) --- */}
+      {!isLogin && (
+        <div className="grid grid-cols-2 gap-3 mb-6 p-1 bg-slate-900/50 rounded-xl border border-white/10">
+            <button
+                type="button"
+                onClick={() => setRole('user')}
+                className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold transition-all ${
+                    role === 'user' 
+                    ? 'bg-amber-500 text-slate-900 shadow-md' 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+            >
+                <User size={16} /> Magánszemély
+            </button>
+            <button
+                type="button"
+                onClick={() => setRole('dealer')}
+                className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold transition-all ${
+                    role === 'dealer' 
+                    ? 'bg-indigo-500 text-white shadow-md' 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+            >
+                <Store size={16} /> Kereskedő
+            </button>
+        </div>
+      )}
 
       {/* Google Login */}
       <form action={signInWithGoogle} className="mb-5">
-        {/* Pass selected role to Google sign in as well */}
-        <input type="hidden" name="role" value={role} />
+        {/* Ha belépésnél vagyunk, a role mindig 'user' legyen, különben a választott érték */}
+        <input type="hidden" name="role" value={isLogin ? 'user' : role} />
         
         <button type="submit" className="relative flex w-full items-center justify-center gap-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 px-3 py-2.5 transition-all active:scale-[0.98] group">
            <svg className="h-5 w-5 opacity-80 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24">
@@ -166,7 +162,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
       <form action={isLogin ? login : signup} onSubmit={handleSubmit} className="space-y-4">
         
         {/* HIDDEN INPUT FOR ROLE */}
-        <input type="hidden" name="role" value={role} />
+        {!isLogin && <input type="hidden" name="role" value={role} />}
 
         <div className="space-y-3">
             <input

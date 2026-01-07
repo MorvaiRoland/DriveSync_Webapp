@@ -1,16 +1,16 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { createClient } from 'supabase/server' // Figyelj az elérési útra! (nálad lehet 'supabase/server' vagy '@/utils/supabase/server')
+import { createClient } from 'supabase/server' // Make sure this path is correct for your setup
 import { redirect } from 'next/navigation'
 import { getEarlyAccessConfig } from '@/utils/earlyAccessConfig'
 
-// Segédfüggvény a kód tisztábbá tételéhez
+// Helper function to cleaner code
 function encodedRedirect(path: string, message: string) {
   return redirect(`${path}?message=${encodeURIComponent(message)}`)
 }
 
-// --- 1. BELÉPÉS EMAIL CÍMMEL ---
+// --- 1. LOGIN WITH EMAIL ---
 export async function login(formData: FormData) {
   const supabase = await createClient()
 
@@ -29,19 +29,19 @@ export async function login(formData: FormData) {
   return redirect('/')
 }
 
-// --- 2. REGISZTRÁCIÓ ---
+// --- 2. SIGNUP ---
 export async function signup(formData: FormData) {
   const supabase = await createClient()
   const requestHeaders = await headers()
   const origin = requestHeaders.get('origin')
   const email = formData.get('email') as string
   const password = formData.get('password') as string
-  const role = formData.get('role') as string // Kiolvassuk a rejtett mezőt
+  const role = formData.get('role') as string // Read hidden field
 
-  // Validáljuk a role-t biztonsági okból
+  // Validate role for security
   const validRole = role === 'dealer' ? 'dealer' : 'user';
 
-  // Szerver oldali validáció a biztonság kedvéért (ha a kliens oldalt megkerülnék)
+  // Server-side validation for password length
   if (password.length < 6) {
     return encodedRedirect('/login?mode=signup', 'A jelszónak legalább 6 karakternek kell lennie.')
   }
@@ -52,14 +52,14 @@ export async function signup(formData: FormData) {
     options: {
       emailRedirectTo: `${origin}/auth/callback`,
       data: {
-        role: validRole, // Elmentjük a metaadatokba
+        role: validRole, // Save to metadata
       },
     },
   })
 
   if (error) {
     console.error(error)
-    // Ha a Supabase dobja a gyenge jelszó hibát (pl. Weak Password)
+    // Handle weak password error from Supabase
     if (error.message.includes("Password") && error.message.includes("weak")) {
         return encodedRedirect('/login?mode=signup', 'A jelszó túl gyenge. Használj kis- és nagybetűt, számot és szimbólumot.')
     }
@@ -81,25 +81,23 @@ export async function signup(formData: FormData) {
   return encodedRedirect('/login', 'Sikeres regisztráció! Kérjük, erősítsd meg az email címedet.')
 }
 
-// --- 3. GOOGLE BELÉPÉS (MÓDOSÍTVA) ---
-// Most már fogadja a formData-t, hogy kiolvassa a role-t
-// --- 3. GOOGLE BELÉPÉS (JAVÍTVA) ---
-// --- 3. GOOGLE BELÉPÉS (JAVÍTVA) ---
+// --- 3. GOOGLE SIGN-IN (FIXED) ---
+// Now accepts formData to read the role
 export async function signInWithGoogle(formData: FormData) {
   const supabase = await createClient()
   
   const requestHeaders = await headers()
   const origin = requestHeaders.get('origin')
 
-  // Kiolvassuk a role-t a formból
+  // Read role from form
   const role = (formData.get('role') as string) || 'user';
   const validRole = role === 'dealer' ? 'dealer' : 'user';
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      // JAVÍTÁS: A role-t közvetlenül a visszatérési URL-hez fűzzük!
-      // Így amikor visszajön a Google-től, a route.ts látni fogja a ?role=dealer paramétert
+      // FIX: Append role directly to the return URL!
+      // This way when returning from Google, route.ts sees ?role=dealer parameter
       redirectTo: `${origin}/auth/callback?role=${validRole}`,
       
       queryParams: {
@@ -119,7 +117,7 @@ export async function signInWithGoogle(formData: FormData) {
   }
 }
 
-// --- 4. JELSZÓ VISSZAÁLLÍTÁS KÉRÉSE ---
+// --- 4. PASSWORD RESET REQUEST ---
 export async function resetPassword(formData: FormData) {
   const supabase = await createClient()
   const email = formData.get('email') as string
@@ -136,7 +134,7 @@ export async function resetPassword(formData: FormData) {
 
   const callbackUrl = `${siteUrl}/auth/callback?next=/update-password`
   
-  console.log("Küldés erre az URL-re:", callbackUrl) // Debug log
+  console.log("Sending to URL:", callbackUrl) // Debug log
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: callbackUrl,
@@ -150,7 +148,7 @@ export async function resetPassword(formData: FormData) {
   return encodedRedirect('/login', 'Ha létezik a fiók, elküldtük a visszaállító linket.')
 }
 
-// --- 5. ÚJ JELSZÓ MENTÉSE ---
+// --- 5. SAVE NEW PASSWORD ---
 export async function updateNewPassword(formData: FormData) {
   const supabase = await createClient()
   
@@ -180,7 +178,7 @@ export async function updateNewPassword(formData: FormData) {
   return encodedRedirect('/login', 'Jelszó sikeresen módosítva! Jelentkezz be.')
 }
 
-// --- 6. KIJELENTKEZÉS ---
+// --- 6. SIGN OUT ---
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
