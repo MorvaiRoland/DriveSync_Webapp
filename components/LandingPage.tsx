@@ -91,19 +91,34 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // --- SCROLL TO TOP FUNKCIÓ (LOGO) ---
   const scrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
+    setMobileMenuOpen(false);
+  };
+
+  // --- ÚJ: SCROLL TO FEATURES (FUNKCIÓK GOMB) ---
+  const scrollToFeatures = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const element = document.getElementById('features');
+    if (element) {
+      // Offset a fix navbar miatt (hogy ne takarja ki a címet)
+      const yOffset = -120; 
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+    setMobileMenuOpen(false);
   };
 
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 font-sans transition-colors duration-500 flex flex-col">
       <BackgroundGlows />
 
-      {/* --- NAVBAR (FULL WIDTH) --- */}
+      {/* --- NAVBAR (FULL BLEED) --- */}
       <nav 
         className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-300 border-b pt-[env(safe-area-inset-top)]
         ${scrolled || mobileMenuOpen
@@ -126,7 +141,14 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-6">
               <ThemeToggle />
+              
+              {/* ÚJ: Funkciók gomb */}
+              <a href="#features" onClick={scrollToFeatures} className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors cursor-pointer">
+                Funkciók
+              </a>
+
               <div className="h-5 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
+              
               <Link href="/check" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors">
                 Alvázszám kereső
               </Link>
@@ -169,9 +191,15 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                    <ThemeToggle />
                 </div>
 
+                {/* ÚJ: Mobil Funkciók gomb */}
+                <a href="#features" onClick={scrollToFeatures} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer">
+                  <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600"><Cpu size={20}/></div>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">Funkciók</span>
+                </a>
+
                 <Link href="/check" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                   <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600"><Search size={20}/></div>
-                  <span className="font-semibold">Alvázszám Kereső</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">Alvázszám Kereső</span>
                 </Link>
                 
                 <div className="h-px w-full bg-slate-100 dark:bg-slate-800 my-1"></div>
@@ -186,7 +214,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </AnimatePresence>
       </nav>
 
-      {/* --- MAIN CONTENT (CENTERED, MAX WIDTH) --- */}
+      {/* --- MAIN CONTENT --- */}
       <main className="flex-grow w-full relative pt-28 sm:pt-32 lg:pt-44 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto w-full">
           
@@ -310,8 +338,9 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
           </div>
 
-          {/* --- FEATURES GRID --- */}
-          <div className="mb-24">
+          {/* --- FEATURES GRID (WITH ID) --- */}
+          {/* ÚJ: Hozzáadtuk az ID-t a scroll működéséhez */}
+          <div id="features" className="mb-24 scroll-mt-32">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
               {[
                 { 
@@ -385,11 +414,9 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
       </main>
 
       {/* --- FOOTER (FULL WIDTH) --- */}
-      {/* JAVÍTÁS: A footer most már teljesen kifut a képernyő széléig (w-full) */}
       <footer className="w-full relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10">
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
          
-         {/* A footer belső tartalma középre igazítva, de paddinggal ellátva, hogy ne tapadjon a szélére */}
          <div className="w-full px-6 md:px-10">
              <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                 <div className="md:col-span-1">
@@ -413,7 +440,8 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 <div>
                     <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Termék</h4>
                     <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
-                        <li><a href="#features" className="hover:text-amber-500 transition-colors">Funkciók</a></li>
+                        {/* MÓDOSÍTVA: Működő scroll link */}
+                        <li><a href="#features" onClick={scrollToFeatures} className="hover:text-amber-500 transition-colors cursor-pointer">Funkciók</a></li>
                         <li><Link href="/changelog" className="hover:text-amber-500 transition-colors">Újdonságok</Link></li>
                         <li><Link href="/support" className="hover:text-amber-500 transition-colors">Support</Link></li>
                     </ul>
