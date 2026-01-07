@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   ArrowRight, Search, ShieldCheck, BarChart3, Cpu, 
   MessageCircle, HelpCircle, Facebook, Instagram,
-  Menu, X, CheckCircle2, ChevronRight
+  Menu, X, CheckCircle2, ChevronRight, Sun, Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -17,6 +17,60 @@ const TikTokIcon = ({ size = 24, className = "" }) => (
     <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
   </svg>
 );
+
+// --- TÉMA VÁLTÓ KOMPONENS ---
+const ThemeToggle = () => {
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    // Kezdeti állapot ellenőrzése (localStorage vagy rendszer beállítás)
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme === 'light') {
+      setIsDark(false);
+      document.documentElement.classList.remove('dark');
+    } else {
+      setIsDark(true);
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newStatus = !isDark;
+    setIsDark(newStatus);
+    
+    if (newStatus) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
+  return (
+    <button
+      onClick={toggleTheme}
+      className={`
+        relative flex items-center justify-between w-16 h-8 rounded-full p-1 transition-colors duration-500 cursor-pointer
+        ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-slate-200 border border-slate-300'}
+      `}
+      aria-label="Téma váltás"
+    >
+      <Sun size={14} className={`z-10 ml-1.5 transition-colors duration-300 ${isDark ? 'text-slate-500' : 'text-amber-500'}`} />
+      <Moon size={14} className={`z-10 mr-1.5 transition-colors duration-300 ${isDark ? 'text-indigo-400' : 'text-slate-400'}`} />
+
+      <motion.div
+        className="absolute w-6 h-6 rounded-full shadow-md z-0"
+        initial={false}
+        animate={{
+          x: isDark ? 32 : 0, // Gomb csúszása
+          backgroundColor: isDark ? '#0f172a' : '#ffffff' // Gomb színe
+        }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      />
+    </button>
+  );
+};
 
 const BackgroundGlows = () => (
   <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none -z-10 bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
@@ -44,7 +98,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
   }, []);
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 font-sans">
+    <div className="min-h-screen text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 font-sans transition-colors duration-500">
       <BackgroundGlows />
 
       {/* --- NAVBAR --- */}
@@ -68,10 +122,13 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-6">
+              <ThemeToggle /> {/* Téma váltó itt */}
+              
+              <div className="h-5 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
+              
               <Link href="/check" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors">
                 Alvázszám kereső
               </Link>
-              <div className="h-5 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
               <Link href="/login" className="text-sm font-bold text-slate-900 dark:text-white hover:text-amber-500 transition-colors">
                 Belépés
               </Link>
@@ -105,13 +162,21 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
               className="absolute top-full left-0 w-full bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shadow-2xl md:hidden overflow-hidden"
             >
               <div className="px-4 py-6 flex flex-col gap-4">
-                <Link href="/check" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900">
+                {/* Mobile Theme Toggle Row */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                   <span className="font-semibold text-slate-700 dark:text-slate-300">Megjelenés</span>
+                   <ThemeToggle />
+                </div>
+
+                <Link href="/check" className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                   <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600"><Search size={20}/></div>
                   <span className="font-semibold">Alvázszám Kereső</span>
                 </Link>
+                
                 <div className="h-px w-full bg-slate-100 dark:bg-slate-800 my-1"></div>
-                <Link href="/login" className="p-3 font-semibold text-center">Belépés</Link>
-                <Link href="/login?mode=signup" className="w-full bg-amber-500 text-slate-950 font-bold py-4 rounded-xl text-center shadow-lg shadow-amber-500/20">
+                
+                <Link href="/login" className="p-3 font-semibold text-center hover:text-amber-500 transition-colors">Belépés</Link>
+                <Link href="/login?mode=signup" className="w-full bg-amber-500 text-slate-950 font-bold py-4 rounded-xl text-center shadow-lg shadow-amber-500/20 active:scale-95 transition-transform">
                   Fiók létrehozása ingyen
                 </Link>
               </div>
