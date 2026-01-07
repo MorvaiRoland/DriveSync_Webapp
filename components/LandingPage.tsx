@@ -110,7 +110,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           ? 'bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-white/5 shadow-lg' 
           : 'bg-transparent border-transparent'}`}
       >
-        <div className="w-full px-6 md:px-10"> {/* Full width container with padding */}
+        <div className="w-full px-6 md:px-10">
           <div className="flex justify-between items-center py-4">
             
             {/* Logo */}
@@ -385,70 +385,73 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
       </main>
 
       {/* --- FOOTER (FULL WIDTH) --- */}
-      <footer className="w-full relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10 px-6 md:px-10 transition-colors">
+      {/* JAVÍTÁS: A footer most már teljesen kifut a képernyő széléig (w-full) */}
+      <footer className="w-full relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10">
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
          
-         {/* Footer Content */}
-         <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-            <div className="md:col-span-1">
-                <Link href="/" onClick={scrollToTop} className="flex items-center gap-2 mb-6 cursor-pointer">
-                    <div className="w-8 h-8 relative"><Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain" /></div>
-                    <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">Dynamic<span className="text-amber-500">Sense</span></span>
-                </Link>
-                <p className="text-slate-600 dark:text-slate-500 text-sm leading-relaxed mb-6">
-                    Innovatív autós platform Magyarországon. AI alapú diagnosztika, digitális szervizkönyv és költségmenedzsment – minden egy helyen.
-                </p>
-                <div className="flex gap-4">
-                    <a href="mailto:info.dynamicsense@gmail.com" className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all">
-                        <MessageCircle size={18} />
-                    </a>
-                    <Link href="/support" className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all">
-                        <HelpCircle size={18} />
+         {/* A footer belső tartalma középre igazítva, de paddinggal ellátva, hogy ne tapadjon a szélére */}
+         <div className="w-full px-6 md:px-10">
+             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div className="md:col-span-1">
+                    <Link href="/" onClick={scrollToTop} className="flex items-center gap-2 mb-6 cursor-pointer">
+                        <div className="w-8 h-8 relative"><Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain" /></div>
+                        <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">Dynamic<span className="text-amber-500">Sense</span></span>
                     </Link>
+                    <p className="text-slate-600 dark:text-slate-500 text-sm leading-relaxed mb-6">
+                        Innovatív autós platform Magyarországon. AI alapú diagnosztika, digitális szervizkönyv és költségmenedzsment – minden egy helyen.
+                    </p>
+                    <div className="flex gap-4">
+                        <a href="mailto:info.dynamicsense@gmail.com" className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all">
+                            <MessageCircle size={18} />
+                        </a>
+                        <Link href="/support" className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 transition-all">
+                            <HelpCircle size={18} />
+                        </Link>
+                    </div>
                 </div>
-            </div>
-            
-            <div>
-                <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Termék</h4>
-                <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
-                    <li><a href="#features" className="hover:text-amber-500 transition-colors">Funkciók</a></li>
-                    <li><Link href="/changelog" className="hover:text-amber-500 transition-colors">Újdonságok</Link></li>
-                    <li><Link href="/support" className="hover:text-amber-500 transition-colors">Support</Link></li>
-                </ul>
-            </div>
+                
+                <div>
+                    <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Termék</h4>
+                    <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
+                        <li><a href="#features" className="hover:text-amber-500 transition-colors">Funkciók</a></li>
+                        <li><Link href="/changelog" className="hover:text-amber-500 transition-colors">Újdonságok</Link></li>
+                        <li><Link href="/support" className="hover:text-amber-500 transition-colors">Support</Link></li>
+                    </ul>
+                </div>
 
-            <div>
-                <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Jogi Információk</h4>
-                <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
-                    <li><Link href="/privacy" className="hover:text-amber-500 transition-colors">Adatkezelés</Link></li>
-                    <li><Link href="/terms" className="hover:text-amber-500 transition-colors">ÁSZF</Link></li>
-                    <li><Link href="/impressum" className="hover:text-amber-500 transition-colors">Impresszum</Link></li>
-                </ul>
-            </div>
-            
-            <div>
-               <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Közösség</h4>
-               <div className="flex flex-col gap-4">
-                   <a href="https://www.facebook.com/profile.php?id=61585653752179" target="_blank" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#1877F2] transition-colors">
-                       <Facebook size={18} /> Facebook
-                   </a>
-                   <a href="https://www.instagram.com/dynamicsense2026/" target="_blank" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#E4405F] transition-colors">
-                       <Instagram size={18} /> Instagram
-                   </a>
-                   <a href="https://www.tiktok.com/@dynamicsense2026" target="_blank" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
-                       <TikTokIcon size={18} /> TikTok
-                   </a>
-               </div>
-            </div>
-         </div>
-         
-         <div className="border-t border-slate-200 dark:border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
-             <p className="text-slate-500 dark:text-slate-600 text-xs font-mono">
-               © {new Date().getFullYear()} DynamicSense Technologies. Minden jog fenntartva.
-             </p>
-             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-600 font-mono bg-slate-100 dark:bg-slate-900/50 px-3 py-1 rounded-full">
-                 <span className="relative flex h-2 w-2"><span className="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative rounded-full h-2 w-2 bg-emerald-500"></span></span>
-                 Rendszer állapota: <span className="text-emerald-600 dark:text-emerald-500 font-bold">Online</span>
+                <div>
+                    <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Jogi Információk</h4>
+                    <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
+                        <li><Link href="/privacy" className="hover:text-amber-500 transition-colors">Adatkezelés</Link></li>
+                        <li><Link href="/terms" className="hover:text-amber-500 transition-colors">ÁSZF</Link></li>
+                        <li><Link href="/impressum" className="hover:text-amber-500 transition-colors">Impresszum</Link></li>
+                    </ul>
+                </div>
+                
+                <div>
+                   <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Közösség</h4>
+                   <div className="flex flex-col gap-4">
+                       <a href="https://www.facebook.com/profile.php?id=61585653752179" target="_blank" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#1877F2] transition-colors">
+                           <Facebook size={18} /> Facebook
+                       </a>
+                       <a href="https://www.instagram.com/dynamicsense2026/" target="_blank" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-[#E4405F] transition-colors">
+                           <Instagram size={18} /> Instagram
+                       </a>
+                       <a href="https://www.tiktok.com/@dynamicsense2026" target="_blank" className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
+                           <TikTokIcon size={18} /> TikTok
+                       </a>
+                   </div>
+                </div>
+             </div>
+             
+             <div className="border-t border-slate-200 dark:border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+                 <p className="text-slate-500 dark:text-slate-600 text-xs font-mono">
+                   © {new Date().getFullYear()} DynamicSense Technologies. Minden jog fenntartva.
+                 </p>
+                 <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-600 font-mono bg-slate-100 dark:bg-slate-900/50 px-3 py-1 rounded-full">
+                     <span className="relative flex h-2 w-2"><span className="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative rounded-full h-2 w-2 bg-emerald-500"></span></span>
+                     Rendszer állapota: <span className="text-emerald-600 dark:text-emerald-500 font-bold">Online</span>
+                 </div>
              </div>
          </div>
       </footer>
