@@ -104,19 +104,18 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
     <div className="min-h-screen text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 font-sans transition-colors duration-500">
       <BackgroundGlows />
 
-      {/* --- NAVBAR --- */}
+      {/* --- NAVBAR (FULL BLEED) --- */}
       <nav 
         className={`fixed top-0 w-full z-[100] transition-all duration-300 border-b pt-[env(safe-area-inset-top)]
         ${scrolled || mobileMenuOpen
           ? 'bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-white/5 shadow-lg' 
           : 'bg-transparent border-transparent'}`}
       >
-        {/* MÓDOSÍTVA: Teljes szélesség (w-full) és reszponzív padding */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-  <div className="flex items-center justify-between py-4">
-
+        {/* JAVÍTÁS: Nincs max-w-7xl, helyette w-full és padding */}
+        <div className="w-full px-6 md:px-12">
+          <div className="flex justify-between items-center py-4">
             
-            {/* Logo - Klikkelhető, felugrik a tetejére */}
+            {/* Logo */}
             <Link href="/" onClick={scrollToTop} className="flex items-center gap-2 group z-50 relative cursor-pointer">
               <div className="w-8 h-8 sm:w-9 sm:h-9 relative group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
                 <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
@@ -322,7 +321,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
               { 
                 icon: <Cpu size={32} className="text-indigo-500" />, 
                 title: "AI Szerelő", 
-                desc: "Fotózd le a hibakódot vagy írd le a problémát. A Gemini AI azonnal elemzi és megoldást javasol.",
+                desc: "Fotózd le a hibakódot vagy írd le a hangot. A Gemini AI azonnal elemzi és megoldást javasol.",
                 bg: "hover:bg-indigo-500/5 hover:border-indigo-500/30"
               },
               { 
