@@ -24,7 +24,8 @@ const BackgroundGlows = () => (
   </div>
 );
 
-export default function ShortLandingPage() {
+// ITT A JAVÍTÁS: Hozzáadtuk a promo és updates propokat
+export default function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export default function ShortLandingPage() {
         </section>
       </main>
 
-      {/* FOOTER - EREDETI VERZIÓ */}
+      {/* FOOTER - EREDETI VERZIÓ MEGTARTVA */}
       <footer className="relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10 px-6 transition-colors">
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
