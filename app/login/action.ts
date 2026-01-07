@@ -1,7 +1,7 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { createClient } from 'supabase/server'
+import { createClient } from 'supabase/server' // Figyelj az elérési útra! (nálad lehet 'supabase/server' vagy '@/utils/supabase/server')
 import { redirect } from 'next/navigation'
 import { getEarlyAccessConfig } from '@/utils/earlyAccessConfig'
 
@@ -81,17 +81,30 @@ export async function signup(formData: FormData) {
   return encodedRedirect('/login', 'Sikeres regisztráció! Kérjük, erősítsd meg az email címedet.')
 }
 
-// --- 3. GOOGLE BELÉPÉS ---
-export async function signInWithGoogle() {
+// --- 3. GOOGLE BELÉPÉS (MÓDOSÍTVA) ---
+// Most már fogadja a formData-t, hogy kiolvassa a role-t
+// --- 3. GOOGLE BELÉPÉS (JAVÍTVA) ---
+export async function signInWithGoogle(formData: FormData) {
   const supabase = await createClient()
   
   const requestHeaders = await headers()
   const origin = requestHeaders.get('origin')
 
+  // Kiolvassuk a role-t a formból
+  const role = (formData.get('role') as string) || 'user';
+  const validRole = role === 'dealer' ? 'dealer' : 'user';
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: `${origin}/auth/callback`,
+      // JAVÍTÁS: data helyett queryParams-t használunk!
+      // Ez beleteszi a role-t az URL-be: .../callback?code=...&role=dealer
+      queryParams: {
+        role: validRole,
+        access_type: 'offline',
+        prompt: 'consent',
+      },
     },
   })
 

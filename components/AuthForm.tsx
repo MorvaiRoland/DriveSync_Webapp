@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { login, signup, signInWithGoogle, resetPassword } from '@/app/login/action'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { User, Store } from 'lucide-react' // Ikonok importálása
+import { User, Store } from 'lucide-react' // Importing icons
 
 type AuthFormProps = {
   isLogin: boolean
@@ -16,7 +16,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
   const [loading, setLoading] = useState(false)
   const [resetMode, setResetMode] = useState(false)
   
-  // ÚJ: Szerepkör állapot ('user' vagy 'dealer')
+  // NEW: Role state ('user' or 'dealer')
   const [role, setRole] = useState<'user' | 'dealer'>('user')
 
   const [passwordInput, setPasswordInput] = useState('')
@@ -25,6 +25,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
   const handleSubmit = () => setLoading(true)
   const showResetMessage = message && (message.toLowerCase().includes('visszaállító') || message.toLowerCase().includes('küldtük'))
 
+  // Password validation logic
   useEffect(() => {
     if (isLogin) {
       setIsPasswordValid(true) 
@@ -42,6 +43,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
     setIsPasswordValid(validations.every(Boolean))
   }, [passwordInput, isLogin])
 
+  // Header Component
   const HeaderSection = ({ title, subtitle }: { title: string, subtitle: string }) => (
     <div className="text-center mb-6 lg:mb-8">
       <h2 className="text-2xl lg:text-3xl font-black tracking-tight text-white drop-shadow-md">
@@ -53,6 +55,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
     </div>
   )
 
+  // Password Requirement Item Component
   const RequirementItem = ({ met, text }: { met: boolean, text: string }) => (
     <div className={`flex items-center gap-2 text-[10px] transition-colors duration-300 ${met ? 'text-emerald-400' : 'text-slate-500'}`}>
       <div className={`w-1.5 h-1.5 rounded-full ${met ? 'bg-emerald-400' : 'bg-slate-600'}`} />
@@ -60,16 +63,49 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
     </div>
   )
 
+  // --- PASSWORD RESET MODE ---
   if (resetMode || showResetMessage) {
-     // ... (A resetPassword rész marad változatlan) ...
-     return (
-        // ... másold be a korábbi resetPassword kódot ...
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full">
-            {/* ... tartalom ... */}
-        </motion.div>
-     )
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full">
+        <HeaderSection 
+            title="Jelszó visszaállítása" 
+            subtitle="Add meg a fiókodhoz tartozó email címet." 
+        />
+
+        {message && (
+          <div className={`p-3 rounded-lg text-xs font-medium flex items-start gap-2 border mb-4 ${
+            showResetMessage ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'
+          }`}>
+            <span>{message}</span>
+          </div>
+        )}
+
+        <form action={resetPassword} onSubmit={handleSubmit} className="space-y-4">
+            <div className="group">
+              <input
+                name="email" type="email" required placeholder="Email cím"
+                className="block w-full rounded-xl border border-white/10 bg-slate-950/50 py-3 px-4 text-white shadow-inner placeholder:text-slate-600 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all text-sm"
+              />
+            </div>
+            
+            <button
+              type="submit" disabled={loading || !!showResetMessage}
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 disabled:grayscale"
+            >
+              {loading ? 'Küldés...' : 'Link küldése'}
+            </button>
+        </form>
+
+        <div className="mt-6 text-center">
+            <button onClick={() => { setResetMode(false); setLoading(false); }} className="text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-wider">
+              Vissza a belépéshez
+            </button>
+        </div>
+      </motion.div>
+    )
   }
 
+  // --- NORMAL AUTH MODE ---
   return (
     <div className="w-full">
       <HeaderSection 
@@ -77,7 +113,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
         subtitle={isLogin ? 'Az intelligencia visszavár.' : 'Válassz fiók típust és csatlakozz.'}
       />
 
-      {/* --- ÚJ: SZEREPKÖR VÁLASZTÓ (CSAK REGISZTRÁCIÓNÁL) --- */}
+      {/* --- ROLE SELECTOR (ONLY FOR SIGNUP) --- */}
       {!isLogin && (
         <div className="grid grid-cols-2 gap-3 mb-6 p-1 bg-slate-900/50 rounded-xl border border-white/10">
             <button
@@ -107,8 +143,9 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
 
       {/* Google Login */}
       <form action={signInWithGoogle} className="mb-5">
-        {/* Fontos: Google login esetén a role-t máshogy kell kezelni (pl. metadata-ban átadni), 
-            de egyszerűsítésképp most feltételezzük, hogy az email/pass regisztrációt használják a dealerek */}
+        {/* Pass selected role to Google sign in as well */}
+        <input type="hidden" name="role" value={role} />
+        
         <button type="submit" className="relative flex w-full items-center justify-center gap-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 px-3 py-2.5 transition-all active:scale-[0.98] group">
            <svg className="h-5 w-5 opacity-80 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -129,7 +166,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
 
       <form action={isLogin ? login : signup} onSubmit={handleSubmit} className="space-y-4">
         
-        {/* ÚJ: REJTETT MEZŐ A ROLE-NAK */}
+        {/* HIDDEN INPUT FOR ROLE */}
         {!isLogin && <input type="hidden" name="role" value={role} />}
 
         <div className="space-y-3">
@@ -206,8 +243,8 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
           disabled={loading || (!isLogin && !isPasswordValid)}
           className={`w-full rounded-xl py-3 text-sm font-bold text-white shadow-lg transition-all disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed uppercase tracking-wider
             ${!isLogin && role === 'dealer' 
-                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 shadow-indigo-500/30' 
-                : 'bg-gradient-to-r from-amber-500 to-orange-600 shadow-amber-500/30'
+                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 shadow-indigo-500/30 hover:shadow-indigo-500/50' 
+                : 'bg-gradient-to-r from-amber-500 to-orange-600 shadow-amber-500/30 hover:shadow-amber-500/50'
             }
           `}
         >

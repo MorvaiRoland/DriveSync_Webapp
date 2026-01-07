@@ -4,19 +4,17 @@ import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
   
-  // LOGOLÁS
-  const nextParam = searchParams.get('next')
-  console.log(`Callback futás. Code: ${code ? 'VAN' : 'NINCS'}, Next paraméter: ${nextParam}`)
-
-  const next = nextParam ?? '/'
+  const code = searchParams.get('code')
+  const next = searchParams.get('next') ?? '/'
+  
+  // ITT OLVASSUK KI A ROLE-T (amit az action.ts-ben küldtünk)
+  const roleParam = searchParams.get('role')
 
   if (code) {
-    // 1. LÉPÉS: Sütik elérése
     const cookieStore = await cookies()
 
-    // 2. LÉPÉS: Kliens létrehozása manuálisan, hogy lássa a sütiket
+    // 1. Supabase kliens létrehozása
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -31,36 +29,49 @@ export async function GET(request: NextRequest) {
                 cookieStore.set(name, value, options)
               )
             } catch {
-              // A Route Handlerben ez néha dobhat hibát, de a működést nem befolyásolja kritikusan
+              // Server Component contextben ez néha hibát dobhat, de a Route Handlerben oké
             }
           },
         },
       }
     )
 
-    // 3. LÉPÉS: Kódcsere (Most már látja a verifier sütit!)
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    // 2. Kód beváltása munkamenetre (login)
+    const { error, data } = await supabase.auth.exchangeCodeForSession(code)
     
-    if (!error) {
+    if (!error && data?.user) {
+      
+      // 3. SZEREPKÖR KEZELÉSE GOOGLE LOGIN ESETÉN
+      // Ha a URL-ben ott van, hogy role=dealer, akkor beállítjuk a usernek.
+      if (roleParam === 'dealer') {
+        const userId = data.user.id
+
+        // A. Beírjuk a metaadatokba (hogy a Supabase Auth is tudja)
+        await supabase.auth.updateUser({
+          data: { role: 'dealer' }
+        });
+
+        // B. Beírjuk a public.users táblába (hogy az alkalmazásunk tudja)
+        await supabase
+          .from('users')
+          .update({ role: 'dealer' })
+          .eq('id', userId);
+      }
+
+      // 4. Átirányítás a megfelelő helyre (Dev vs Prod)
       const forwardedHost = request.headers.get('x-forwarded-host') 
       const isLocalEnv = process.env.NODE_ENV === 'development'
       
-      let finalUrl = ''
       if (isLocalEnv) {
-        finalUrl = `${origin}${next}`
+        return NextResponse.redirect(`${origin}${next}`)
       } else if (forwardedHost) {
-        finalUrl = `https://${forwardedHost}${next}`
+        return NextResponse.redirect(`https://${forwardedHost}${next}`)
       } else {
-        finalUrl = `${origin}${next}`
+        return NextResponse.redirect(`${origin}${next}`)
       }
-
-      console.log(`Sikeres belépés, átirányítás ide: ${finalUrl}`)
-      return NextResponse.redirect(finalUrl)
-    } else {
-      console.error('Auth code exchange error:', error)
     }
   }
 
   // Hiba esetén
-  return NextResponse.redirect(`${origin}/login?message=Lejárt vagy érvénytelen link`)
+  return NextResponse.redirect(`${origin}/login?message=Auth hiba`)
 }
