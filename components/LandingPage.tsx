@@ -91,12 +91,12 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- ÚJ FÜGGVÉNY: UGRÁS A TETEJÉRE ---
+  // --- SCROLL TO TOP FUNKCIÓ ---
   const scrollToTop = (e: React.MouseEvent) => {
-    e.preventDefault(); // Megakadályozza az alapvető navigációt/újratöltést
+    e.preventDefault();
     window.scrollTo({
       top: 0,
-      behavior: 'smooth' // Sima görgetés animáció
+      behavior: 'smooth'
     });
   };
 
@@ -111,11 +111,11 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           ? 'bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-white/5 shadow-lg' 
           : 'bg-transparent border-transparent'}`}
       >
-        {/* ITT A MÓDOSÍTÁS: w-full és nagyobb padding (px-6 md:px-10) */}
-        <div className="w-full px-6 md:px-10 lg:px-12">
+        {/* MÓDOSÍTVA: Teljes szélesség (w-full) és reszponzív padding */}
+        <div className="w-full px-4 sm:px-6 md:px-10 lg:px-12">
           <div className="flex justify-between items-center py-4">
             
-            {/* Logo - Most már a scrollToTop függvényt hívja meg */}
+            {/* Logo - Klikkelhető, felugrik a tetejére */}
             <Link href="/" onClick={scrollToTop} className="flex items-center gap-2 group z-50 relative cursor-pointer">
               <div className="w-8 h-8 sm:w-9 sm:h-9 relative group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
                 <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
@@ -166,7 +166,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
               className="md:hidden bg-white/95 dark:bg-slate-950/95 border-b border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden backdrop-blur-md"
             >
               <div className="px-6 pt-2 pb-6 flex flex-col gap-4">
-                {/* Mobile Theme Toggle Row */}
                 <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
                    <span className="font-semibold text-slate-700 dark:text-slate-300">Megjelenés</span>
                    <ThemeToggle />
@@ -229,7 +228,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mb-8 sm:mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light"
               >
                 Felejtsd el a kockás füzetet. AI diagnosztika, költségkövetés és hiteles digitális szervizkönyv egyetlen modern alkalmazásban. 
-                <span className="block mt-2 font-medium text-slate-900 dark:text-white">Most teljesen ingyenes.</span>
+                <span className="block mt-2 font-medium text-slate-900 dark:text-white">Teljesen ingyenes.</span>
               </motion.p>
 
               <motion.div 
