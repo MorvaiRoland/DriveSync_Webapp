@@ -113,33 +113,32 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
         subtitle={isLogin ? 'Az intelligencia visszavár.' : 'Válassz fiók típust és csatlakozz.'}
       />
 
-      {/* --- ROLE SELECTOR (ONLY FOR SIGNUP) --- */}
-      {!isLogin && (
-        <div className="grid grid-cols-2 gap-3 mb-6 p-1 bg-slate-900/50 rounded-xl border border-white/10">
-            <button
-                type="button"
-                onClick={() => setRole('user')}
-                className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold transition-all ${
-                    role === 'user' 
-                    ? 'bg-amber-500 text-slate-900 shadow-md' 
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-            >
-                <User size={16} /> Magánszemély
-            </button>
-            <button
-                type="button"
-                onClick={() => setRole('dealer')}
-                className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold transition-all ${
-                    role === 'dealer' 
-                    ? 'bg-indigo-500 text-white shadow-md' 
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-            >
-                <Store size={16} /> Kereskedő
-            </button>
-        </div>
-      )}
+      {/* --- ROLE SELECTOR (ALWAYS VISIBLE NOW) --- */}
+      {/* This ensures users can select 'Dealer' even if they land on the Login tab and click Google immediately */}
+      <div className="grid grid-cols-2 gap-3 mb-6 p-1 bg-slate-900/50 rounded-xl border border-white/10">
+          <button
+              type="button"
+              onClick={() => setRole('user')}
+              className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold transition-all ${
+                  role === 'user' 
+                  ? 'bg-amber-500 text-slate-900 shadow-md' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+          >
+              <User size={16} /> Magánszemély
+          </button>
+          <button
+              type="button"
+              onClick={() => setRole('dealer')}
+              className={`flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-bold transition-all ${
+                  role === 'dealer' 
+                  ? 'bg-indigo-500 text-white shadow-md' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+          >
+              <Store size={16} /> Kereskedő
+          </button>
+      </div>
 
       {/* Google Login */}
       <form action={signInWithGoogle} className="mb-5">
@@ -167,7 +166,7 @@ export default function AuthForm({ isLogin, message }: AuthFormProps) {
       <form action={isLogin ? login : signup} onSubmit={handleSubmit} className="space-y-4">
         
         {/* HIDDEN INPUT FOR ROLE */}
-        {!isLogin && <input type="hidden" name="role" value={role} />}
+        <input type="hidden" name="role" value={role} />
 
         <div className="space-y-3">
             <input
