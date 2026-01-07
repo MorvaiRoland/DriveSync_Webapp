@@ -1,17 +1,16 @@
 /** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
   dest: 'public',
-  register: true, // Érdemes true-ra tenni, hogy a Next kezelje a regisztrációt
+  register: true,
   skipWaiting: true,
   clientsClaim: true,
   disable: process.env.NODE_ENV === 'development',
 
-  // 🔥 EZEK A KRITIKUS BEÁLLÍTÁSOK A LOOP ELLEN:
+  // PWA Loop védelem és App Router optimalizáció
   cacheStartUrl: false,
-  dynamicStartUrl: false, // EZ KELL NEKED! Ez tiltja le a "/" kényszerített cache-elését.
-  
-  navigateFallback: null, // App Routernél nem lehet fallback HTML
-  navigateFallbackDenylist: [/.*/], // Minden navigációt átengedünk a hálózatnak
+  dynamicStartUrl: false,
+  navigateFallback: null,
+  navigateFallbackDenylist: [/.*/],
 
   buildExcludes: [
     /middleware-manifest\.json$/,
@@ -23,68 +22,50 @@ const withPWA = require('next-pwa')({
   ],
 
   runtimeCaching: [
-    // 1. NAVIGÁCIÓ JAVÍTÁSA:
-    // Minden oldalbetöltés (HTML kérés) kizárólag a hálózatról jöhet.
-    // Ez szünteti meg a fehér képernyőt és a loopot.
     {
+      // Navigáció: Mindig hálózatról, hogy ne legyen beragadt régi verzió (Loop-fix)
       urlPattern: ({ request }) => request.mode === 'navigate',
-      handler: 'NetworkFirst', 
+      handler: 'NetworkFirst',
     },
-    // 2. Statikus JS/CSS fájlok (ezek mehetnek cache-be nyugodtan)
     {
+      // Statikus assetek (JS, CSS)
       urlPattern: /\.(?:js|css)$/i,
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'static-resources',
-        expiration: {
-          maxEntries: 100,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 nap
-        },
+        expiration: { maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 },
       },
     },
-    // 3. Képek cache-elése (Next Image optimalizált képek is)
     {
-      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+      // Képek optimalizált cache-elése
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'images',
-        expiration: {
-          maxEntries: 60,
-          maxAgeSeconds: 30 * 24 * 60 * 60,
-        },
+        expiration: { maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 },
       },
     },
-    // 4. API hívások és szerver oldali kérések (NetworkFirst a biztonság kedvéért)
     {
+      // API és Supabase hívások
       urlPattern: /\/api\/.*/i,
       handler: 'NetworkFirst',
       options: {
         cacheName: 'apis',
-        expiration: {
-          maxEntries: 30,
-          maxAgeSeconds: 24 * 60 * 60,
-        },
         networkTimeoutSeconds: 10,
+        expiration: { maxEntries: 30, maxAgeSeconds: 24 * 60 * 60 },
       },
     },
-    // 5. Külső Fontok és Mapbox
     {
+      // Külső betűtípusok és Mapbox
       urlPattern: /^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|api\.mapbox\.com)\/.*/i,
       handler: 'CacheFirst',
       options: {
         cacheName: 'external-assets',
-        expiration: {
-          maxEntries: 30,
-          maxAgeSeconds: 60 * 24 * 60 * 60,
-        },
+        expiration: { maxEntries: 50, maxAgeSeconds: 60 * 24 * 60 * 60 },
       },
     },
   ],
 });
-
-/* -------------------------------------------------------------------------- */
-/* SECURITY HEADERS                              */
-/* -------------------------------------------------------------------------- */
 
 const cspHeader = `
   default-src 'self';
@@ -100,20 +81,17 @@ const cspHeader = `
   upgrade-insecure-requests;
 `.replace(/\s{2,}/g, ' ').trim();
 
-/* -------------------------------------------------------------------------- */
-/* NEXT CONFIG                                 */
-/* -------------------------------------------------------------------------- */
-
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   compress: true,
 
+  // Mapbox és nehéz libek kényszerített transpile-olása
   transpilePackages: ['react-map-gl', 'mapbox-gl'],
 
   images: {
-    formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 60 * 60 * 24 * 7,
+    formats: ['image/avif', 'image/webp'], // AVIF az elsődleges, mert kisebb és szebb
+    minimumCacheTTL: 604800, // 1 hét másodpercekben
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
@@ -122,7 +100,24 @@ const nextConfig = {
   },
 
   experimental: {
-    optimizePackageImports: ['lucide-react', 'date-fns', 'framer-motion'],
+    // 🔥 REACT COMPILER: Automatikus useMemo/useCallback
+    reactCompiler: true,
+
+    // 🔥 PARTIAL PRERENDERING (PPR): A legfontosabb sebességfaktor.
+    // A statikus váz azonnal betölt, a dinamikus Supabase adatok pedig "beúsznak".
+    ppr: 'incremental',
+
+    // Csomagok, amikből csak a használt részeket fordítjuk be (kisebb bundle)
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      'framer-motion',
+      '@supabase/supabase-js',
+      '@tanstack/react-query',
+      'clsx',
+      'tailwind-merge'
+    ],
+    
     serverActions: {
       bodySizeLimit: '10mb',
     },
@@ -136,10 +131,7 @@ const nextConfig = {
           { key: 'Content-Security-Policy', value: cspHeader },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload',
-          },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
         ],
       },
