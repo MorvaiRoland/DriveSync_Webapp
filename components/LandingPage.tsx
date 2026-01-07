@@ -112,8 +112,9 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           : 'bg-transparent border-transparent'}`}
       >
         {/* MÓDOSÍTVA: Teljes szélesség (w-full) és reszponzív padding */}
-        <div className="w-full px-4 sm:px-6 md:px-10 lg:px-12">
-          <div className="flex justify-between items-center py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div className="flex items-center justify-between py-4">
+
             
             {/* Logo - Klikkelhető, felugrik a tetejére */}
             <Link href="/" onClick={scrollToTop} className="flex items-center gap-2 group z-50 relative cursor-pointer">
