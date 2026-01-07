@@ -321,7 +321,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
               { 
                 icon: <Cpu size={32} className="text-indigo-500" />, 
                 title: "AI Szerelő", 
-                desc: "Fotózd le a hibakódot vagy írd le a hangot. A Gemini AI azonnal elemzi és megoldást javasol.",
+                desc: "Fotózd le a hibakódot vagy írd le a problémát. A Gemini AI azonnal elemzi és megoldást javasol.",
                 bg: "hover:bg-indigo-500/5 hover:border-indigo-500/30"
               },
               { 
