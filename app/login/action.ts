@@ -84,6 +84,7 @@ export async function signup(formData: FormData) {
 // --- 3. GOOGLE BELÉPÉS (MÓDOSÍTVA) ---
 // Most már fogadja a formData-t, hogy kiolvassa a role-t
 // --- 3. GOOGLE BELÉPÉS (JAVÍTVA) ---
+// --- 3. GOOGLE BELÉPÉS (JAVÍTVA) ---
 export async function signInWithGoogle(formData: FormData) {
   const supabase = await createClient()
   
@@ -97,11 +98,11 @@ export async function signInWithGoogle(formData: FormData) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${origin}/auth/callback`,
-      // JAVÍTÁS: data helyett queryParams-t használunk!
-      // Ez beleteszi a role-t az URL-be: .../callback?code=...&role=dealer
+      // JAVÍTÁS: A role-t közvetlenül a visszatérési URL-hez fűzzük!
+      // Így amikor visszajön a Google-től, a route.ts látni fogja a ?role=dealer paramétert
+      redirectTo: `${origin}/auth/callback?role=${validRole}`,
+      
       queryParams: {
-        role: validRole,
         access_type: 'offline',
         prompt: 'consent',
       },
