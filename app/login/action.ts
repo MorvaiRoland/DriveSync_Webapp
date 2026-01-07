@@ -36,6 +36,10 @@ export async function signup(formData: FormData) {
   const origin = requestHeaders.get('origin')
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const role = formData.get('role') as string // Kiolvassuk a rejtett mezőt
+
+  // Validáljuk a role-t biztonsági okból
+  const validRole = role === 'dealer' ? 'dealer' : 'user';
 
   // Szerver oldali validáció a biztonság kedvéért (ha a kliens oldalt megkerülnék)
   if (password.length < 6) {
@@ -47,6 +51,9 @@ export async function signup(formData: FormData) {
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback`,
+      data: {
+        role: validRole, // Elmentjük a metaadatokba
+      },
     },
   })
 

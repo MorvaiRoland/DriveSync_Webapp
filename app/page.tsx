@@ -3,23 +3,22 @@ import { signOut } from './login/action'
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
-import dynamicImport from 'next/dynamic' // Átneveztem, hogy ne akadjon össze a dynamic exporttal
+import dynamicImport from 'next/dynamic'
 import { getSubscriptionStatus, PLAN_LIMITS } from '@/utils/subscription'
 import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
-import { Plus, Settings, LogOut, CarFront, Users, Lock, ArrowRight, Map, Crown } from 'lucide-react';
+import { Plus, Settings, LogOut, CarFront, Users, Lock, Map, Crown, BarChart3, DollarSign, ArrowRight } from 'lucide-react';
 import HeaderNav from '@/components/HeaderNav';
 import QuickMileageForm from '@/components/QuickMileageForm';
 import { Metadata } from 'next'
 import OnboardingTour from '@/components/OnboardingTour';
 
-// --- JAVÍTÁS 1: KÉNYSZERÍTETT FRISSÍTÉS ---
-// Ez biztosítja, hogy a Next.js ne tárolja el a régi, üres állapotot
+// --- KÉNYSZERÍTETT FRISSÍTÉS ---
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Prémium Garázsmenedzsment"
+    absolute: "DynamicSense | Garázs & Kereskedői Portál"
   }
 }
 
@@ -40,12 +39,123 @@ const FEATURES = {
   activityLog: true, gamification: true, weather: true, fuelPrices: true, sharedCars: true,
 };
 
-async function DashboardComponent() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+// --- DEALER DASHBOARD ---
+function DealerDashboard({ user, cars }: { user: any, cars: any[] }) {
+    const totalValue = cars.reduce((sum, car) => sum + (car.purchase_price || 0), 0); // Feltételezve, hogy van purchase_price, vagy 0
 
-  if (!user) return redirect('/login')
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+            {/* Dealer Navbar */}
+            <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]">
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg px-4 h-16 flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-2">
+                        <span className="font-black text-indigo-600 text-lg uppercase tracking-tight">DynamicSense</span>
+                        <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Dealer</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Link href="/settings" className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><Settings size={20}/></Link>
+                        <form action={signOut}>
+                            <button className="p-2 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-500"><LogOut size={20}/></button>
+                        </form>
+                    </div>
+                </div>
+            </nav>
 
+            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]">
+                {/* Üdvözlés */}
+                <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> Kereskedői Portál
+                    </h2>
+                    <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                    {user.user_metadata?.full_name || 'Kereskedés'}
+                    </h1>
+                </div>
+
+                {/* Statisztika Kártyák */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-xl">
+                            <CarFront size={24} />
+                        </div>
+                        <span className="text-xs font-bold bg-green-100 text-green-600 px-2 py-1 rounded">Aktív</span>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-1">{cars.length}</h3>
+                        <p className="text-sm text-slate-500">Jármű a készleten</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-xl">
+                            <DollarSign size={24} />
+                        </div>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-900 dark:text-white">--- Ft</h3>
+                        <p className="text-sm text-slate-500">Becsült készletérték (Hamarosan)</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-xl">
+                            <Users size={24} />
+                        </div>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-900 dark:text-white">0</h3>
+                        <p className="text-sm text-slate-500">Megtekintés ezen a héten</p>
+                    </div>
+                </div>
+
+                {/* Gyorsműveletek */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+                    <Link href="/cars/new" className="flex items-center gap-3 p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors font-bold shadow-lg shadow-indigo-500/20">
+                        <Plus size={20} /> Új autó felvétele
+                    </Link>
+                    <button className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-colors border border-slate-200 dark:border-slate-700 font-bold opacity-50 cursor-not-allowed">
+                        <BarChart3 size={20} /> Statisztikák (Hamarosan)
+                    </button>
+                </div>
+
+                {/* Készlet Lista */}
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Készlet</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {cars.map((car: any) => (
+                        <Link key={car.id} href={`/cars/${car.id}`} className="block bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-colors group">
+                        <div className="h-48 bg-slate-100 dark:bg-slate-900 relative">
+                            {car.image_url ? (
+                                <Image src={car.image_url} alt={car.model} fill className="object-cover" />
+                            ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                                    <CarFront size={48} />
+                                </div>
+                            )}
+                            <div className="absolute top-3 right-3 bg-white/90 dark:bg-slate-950/90 backdrop-blur px-2 py-1 rounded text-xs font-bold">
+                                {car.plate}
+                            </div>
+                        </div>
+                        <div className="p-4">
+                            <h4 className="font-bold text-lg mb-1 group-hover:text-indigo-500 transition-colors">{car.make} {car.model}</h4>
+                            <div className="flex justify-between text-sm text-slate-500">
+                                <span>{car.year}</span>
+                                <span className="font-mono">{car.mileage.toLocaleString()} km</span>
+                            </div>
+                        </div>
+                        </Link>
+                    ))}
+                    {cars.length === 0 && (
+                        <div className="col-span-full text-center py-12 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+                        <p className="text-slate-500 mb-4">Még nincs autód a rendszerben.</p>
+                        <Link href="/cars/new" className="text-indigo-500 font-bold hover:underline">Kezdd el most!</Link>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// --- USER DASHBOARD (Eredeti DashboardComponent) ---
+async function UserDashboard({ user, supabase }: any) {
   // --- ELŐFIZETÉS & LIMITEK LEKÉRÉSE ---
   const { plan, isTrial } = await getSubscriptionStatus(supabase, user.id);
   const limits = PLAN_LIMITS[plan];
@@ -67,51 +177,28 @@ async function DashboardComponent() {
   let badges: any[] = []
   let totalCostAllTime = 0;
 
-  // --- JAVÍTÁS 2: DEBUG LOGOK ÉS LEKÉRDEZÉS ---
-  const { data: carsData, error: carsError } = await supabase
+  const { data: carsData } = await supabase
       .from('cars')
       .select('*, events(type, mileage), car_shares(email)')
       .order('created_at', { ascending: false })
   
-  // NÉZD MEG A TERMINÁLT! Itt látni fogod, mit ad vissza az adatbázis
-  console.log("------------------------------------------------")
-  console.log("DASHBOARD DEBUG START")
-  console.log("User Email:", user.email)
-  console.log("User ID:", user.id)
-  console.log("DB Hiba:", carsError)
-  console.log("Nyers autók száma:", carsData?.length)
-  if (carsData && carsData.length > 0) {
-      console.log("Első autó ID:", carsData[0].id)
-      console.log("Első autó User ID:", carsData[0].user_id)
-      console.log("Első autó Megosztások:", JSON.stringify(carsData[0].car_shares))
-  }
-  console.log("------------------------------------------------")
-
   if (carsData) {
       cars = carsData
-      
-      // Saját autók szűrése
-      myCars = carsData.filter(car => car.user_id === user.id)
-      
-      // Megosztott autók szűrése - Itt fontos, hogy a car_shares RLS policy jó legyen!
-      sharedCars = carsData.filter(car => 
+      myCars = carsData.filter((car:any) => car.user_id === user.id)
+      sharedCars = carsData.filter((car:any) => 
         car.user_id !== user.id && 
         car.car_shares && 
         Array.isArray(car.car_shares) &&
         car.car_shares.some((share: any) => share.email === user.email)
       )
-
-      console.log("Saját autók:", myCars.length)
-      console.log("Megosztott autók:", sharedCars.length)
-
       latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   }
 
   const isCarLimitReached = myCars.length >= limits.maxCars;
-  const hasServices = myCars.some(car => car.events && car.events.some((e: any) => e.type === 'service'));
+  const hasServices = myCars.some((car:any) => car.events && car.events.some((e: any) => e.type === 'service'));
 
   if (cars.length > 0) {
-      const relevantCarIds = [...myCars, ...sharedCars].map(c => c.id);
+      const relevantCarIds = [...myCars, ...sharedCars].map((c:any) => c.id);
       if (relevantCarIds.length > 0) {
           const { data: reminders } = await supabase.from('service_reminders').select('*, cars(make, model)').in('car_id', relevantCarIds).order('due_date', { ascending: true }).limit(3);
           if (reminders) upcomingReminders = reminders;
@@ -123,12 +210,7 @@ async function DashboardComponent() {
           if (allCosts) {
               const now = new Date();
               const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-              const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
-              spentLast30Days = allCosts.filter(e => new Date(e.event_date) >= thirtyDaysAgo).reduce((sum, e) => sum + (e.cost || 0), 0);
-              const spentPrev30Days = allCosts.filter(e => { const d = new Date(e.event_date); return d >= sixtyDaysAgo && d < thirtyDaysAgo; }).reduce((sum, e) => sum + (e.cost || 0), 0);
-              if (spentPrev30Days > 0) spendingTrend = Math.round(((spentLast30Days - spentPrev30Days) / spentPrev30Days) * 100);
-              else if (spentLast30Days > 0) spendingTrend = 100;
-              totalCostAllTime = allCosts.reduce((sum, e) => sum + (e.cost || 0), 0);
+              spentLast30Days = (allCosts || []).filter((e: any) => e.event_date && new Date(e.event_date) >= thirtyDaysAgo).reduce((sum: number, e: any) => sum + (e.cost || 0), 0);
           }
       }
     if (myCars.length > 0) {
@@ -157,21 +239,19 @@ async function DashboardComponent() {
       } else {
          fleetHealth = 100;
       }
-    }
+  }
+  
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
-
-  // --- MEGJELENÍTÉSI LOGIKA ---
   const hasCars = cars.length > 0;
+  const showChangelog = hasCars;
   
   const userCreatedAtString = user.created_at || new Date().toISOString();
   const userCreatedTime = new Date(userCreatedAtString).getTime();
   const nowTime = Date.now();
   const diffInMs = isNaN(userCreatedTime) ? 0 : nowTime - userCreatedTime;
   const accountAgeHours = diffInMs / (1000 * 60 * 60);
-
   const showTour = !hasCars && accountAgeHours < 24;
-  const showChangelog = hasCars;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500 selection:bg-amber-500/30 selection:text-amber-600">
@@ -339,7 +419,7 @@ async function DashboardComponent() {
             </div>
 
             <div className="lg:col-span-4 space-y-8">
-               
+                
                {plan === 'free' && (
                    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white text-center shadow-xl relative overflow-hidden group cursor-pointer">
                        <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-20"></div>
@@ -480,6 +560,7 @@ function CarCard({ car, shared }: { car: any, shared?: boolean }) {
   )
 }
 
+// --- FŐ OLDAL (DÖNTÉSHOZATAL) ---
 export default async function Page({
   searchParams,
 }: {
@@ -489,7 +570,28 @@ export default async function Page({
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
-    return <DashboardComponent />
+    // 2. Szerepkör lekérése a public.users táblából
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    // Alapértelmezett szerepkör 'user', ha nincs adat
+    const role = userData?.role || 'user'
+
+    // 3. Döntés a szerepkör alapján
+    if (role === 'dealer') {
+        const { data: dealerCars } = await supabase
+            .from('cars')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        return <DealerDashboard user={user} cars={dealerCars || []} />
+    } else {
+        return <UserDashboard user={user} supabase={supabase} />
+    }
   }
 
   const params = await searchParams
@@ -502,7 +604,7 @@ export default async function Page({
 
   const secret = params.dev
   if (secret === DEV_SECRET_KEY) {
-    return <DashboardComponent />
+    return <UserDashboard user={{ id: 'dev-user', email: 'dev@test.com' }} supabase={supabase} />
   }
 
   return (
