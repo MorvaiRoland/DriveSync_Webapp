@@ -4,7 +4,8 @@ import CarCard from './components/CarCard'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
-export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
+export const preferredRegion = 'lhr1'; // Kényszerítjük a Londoni régiót
 
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>

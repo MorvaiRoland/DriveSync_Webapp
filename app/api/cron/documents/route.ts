@@ -4,7 +4,8 @@ import { Resend } from 'resend'
 import { render } from '@react-email/render'
 import DocumentExpiryEmail from '@/components/emails/DocumentExpiryEmail' // Ezt mindjárt létrehozzuk
 
-export const dynamic = 'force-dynamic'
+export const runtime = 'edge';
+export const preferredRegion = 'lhr1'; // Kényszerítjük a Londoni régiót
 
 export async function GET(request: Request) {
   try {

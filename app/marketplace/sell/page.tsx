@@ -5,7 +5,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { CarFront, CheckCircle2, AlertCircle, ArrowRight, PlusCircle, ArrowLeft } from 'lucide-react'
 
-export const dynamic = 'force-dynamic'
+export const runtime = 'edge';
+export const preferredRegion = 'lhr1'; // Kényszerítjük a Londoni régiót
 
 export default async function SellCarSelectorPage() {
   const supabase = await createClient()

@@ -12,9 +12,8 @@ import QuickMileageForm from '@/components/QuickMileageForm';
 import { Metadata } from 'next'
 import OnboardingTour from '@/components/OnboardingTour';
 
-// --- KÉNYSZERÍTETT FRISSÍTÉS ---
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const runtime = 'edge';
+export const preferredRegion = 'lhr1'; // Kényszerítjük a Londoni régiót
 
 export const metadata: Metadata = {
   title: {

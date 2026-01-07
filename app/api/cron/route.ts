@@ -5,7 +5,8 @@ import { render } from '@react-email/render'
 import ServiceReminderEmail from '@/components/emails/ServiceReminderEmail'
 
 // Ez biztosítja, hogy mindig friss adatokat kérjen le
-export const dynamic = 'force-dynamic'
+export const runtime = 'edge';
+export const preferredRegion = 'lhr1'; // Kényszerítjük a Londoni régiót
 
 export async function GET(request: Request) {
   try {

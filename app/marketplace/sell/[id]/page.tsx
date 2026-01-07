@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { ArrowLeft, Car, ShieldCheck } from 'lucide-react'
 import SalesForm from './SalesForm'
 
-export const dynamic = 'force-dynamic'
+export const runtime = 'edge';
+export const preferredRegion = 'lhr1'; // Kényszerítjük a Londoni régiót
 
 export default async function SellCarEditorPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;

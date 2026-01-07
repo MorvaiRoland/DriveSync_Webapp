@@ -3,9 +3,8 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
+export const runtime = 'edge';
+export const preferredRegion = 'lhr1'; // Kényszerítjük a Londoni régiót
 // --- TÍPUSOK ---
 type EarlyAccessConfig = {
   early_access_pro: boolean;

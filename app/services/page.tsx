@@ -3,7 +3,8 @@ import ServiceMapWrapper from '@/components/ServiceMapWrapper'
 import { redirect } from 'next/navigation'
 import { getSubscriptionStatus, PLAN_LIMITS } from '@/utils/subscription'
 
-export const dynamic = 'force-dynamic'
+export const runtime = 'edge';
+export const preferredRegion = 'lhr1'; // Kényszerítjük a Londoni régiót
 
 export const metadata = {
   title: 'Szerviz Térkép | DynamicSense',
