@@ -91,7 +91,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- SCROLL TO TOP FUNKCIÓ ---
   const scrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
     window.scrollTo({
@@ -101,18 +100,17 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
   };
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 font-sans transition-colors duration-500">
+    <div className="min-h-screen text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 font-sans transition-colors duration-500 flex flex-col">
       <BackgroundGlows />
 
-      {/* --- NAVBAR (FULL BLEED) --- */}
+      {/* --- NAVBAR (FULL WIDTH) --- */}
       <nav 
-        className={`fixed top-0 w-full z-[100] transition-all duration-300 border-b pt-[env(safe-area-inset-top)]
+        className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-300 border-b pt-[env(safe-area-inset-top)]
         ${scrolled || mobileMenuOpen
           ? 'bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-slate-200 dark:border-white/5 shadow-lg' 
           : 'bg-transparent border-transparent'}`}
       >
-        {/* JAVÍTÁS: Nincs max-w-7xl, helyette w-full és padding */}
-        <div className="w-full px-6 md:px-12">
+        <div className="w-full px-6 md:px-10"> {/* Full width container with padding */}
           <div className="flex justify-between items-center py-4">
             
             {/* Logo */}
@@ -188,212 +186,211 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </AnimatePresence>
       </nav>
 
-      {/* --- MAIN CONTENT --- */}
-      <main className="relative pt-28 sm:pt-32 lg:pt-44 pb-20 overflow-hidden">
-        
-        {/* --- HERO SECTION --- */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24 lg:mb-32">
-          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-20">
-            
-            {/* Left Content */}
-            <div className="flex-1 text-center lg:text-left z-10 w-full">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-6 sm:mb-8"
-              >
-                <span className="relative flex h-2 w-2 flex-shrink-0">
-                  <span className="animate-ping absolute h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative rounded-full h-2 w-2 bg-amber-500"></span>
-                </span>
-                Ingyenes regisztráció
-              </motion.div>
-
-              <motion.h1 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="text-4xl sm:text-5xl lg:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] mb-6 tracking-tight"
-              >
-                Az autód <br className="hidden lg:block"/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600">
-                  digitális agya.
-                </span>
-              </motion.h1>
-
-              <motion.p 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mb-8 sm:mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light"
-              >
-                Felejtsd el a kockás füzetet. AI diagnosztika, költségkövetés és hiteles digitális szervizkönyv egyetlen modern alkalmazásban. 
-                <span className="block mt-2 font-medium text-slate-900 dark:text-white">Teljesen ingyenes.</span>
-              </motion.p>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start w-full sm:w-auto"
-              >
-                <Link 
-                  href="/login?mode=signup" 
-                  className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-slate-900/20 dark:shadow-white/10 flex items-center justify-center gap-2"
-                >
-                  Regisztrálok
-                  <ChevronRight size={18} />
-                </Link>
-                <Link 
-                  href="/check" 
-                  className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                  <Search size={18} />
-                  Alvázszám kereső
-                </Link>
-              </motion.div>
-
-              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 text-xs font-medium text-slate-500">
-                <div className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-500"/> Nincs bankkártya</div>
-                <div className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-500"/> Azonnali hozzáférés</div>
-              </div>
-            </div>
-
-            {/* Right Visual (Abstract Dashboard) */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-              className="flex-1 w-full max-w-xs sm:max-w-lg lg:max-w-none relative z-0 mt-8 lg:mt-0"
-            >
-               <div className="relative rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-white/10 p-2 shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-700 ease-out">
-                 <div className="absolute inset-0 bg-white/50 dark:bg-black/20 backdrop-blur-3xl rounded-3xl -z-10" />
-                 <div className="bg-white dark:bg-slate-950 rounded-[1.25rem] overflow-hidden border border-slate-100 dark:border-white/5 h-[300px] sm:h-[400px] flex flex-col relative">
-                    {/* Fake UI Header */}
-                    <div className="h-14 border-b border-slate-100 dark:border-white/5 flex items-center px-6 justify-between">
-                       <div className="flex gap-2">
-                          <div className="w-3 h-3 rounded-full bg-red-400/80"/>
-                          <div className="w-3 h-3 rounded-full bg-amber-400/80"/>
-                          <div className="w-3 h-3 rounded-full bg-emerald-400/80"/>
-                       </div>
-                       <div className="h-2 w-20 bg-slate-100 dark:bg-slate-800 rounded-full"/>
-                    </div>
-                    {/* Fake UI Body */}
-                    <div className="p-6 grid grid-cols-2 gap-4 h-full">
-                       <div className="col-span-2 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-xl p-4 flex flex-col justify-center items-start border border-indigo-500/20">
-                          <div className="h-2 w-16 bg-indigo-500/20 rounded mb-2"/>
-                          <div className="h-6 w-32 bg-indigo-500/40 rounded"/>
-                       </div>
-                       <div className="bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-white/5 p-4">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 mb-3"/>
-                          <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded mb-2"/>
-                          <div className="h-2 w-2/3 bg-slate-200 dark:bg-slate-800 rounded"/>
-                       </div>
-                       <div className="bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-white/5 p-4 flex items-center justify-center">
-                          <div className="w-20 h-20 rounded-full border-4 border-amber-500/30 border-t-amber-500"/>
-                       </div>
-                    </div>
-                    {/* Notification Pop */}
-                    <motion.div 
-                      initial={{ y: 50, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 1, type: "spring" }}
-                      className="absolute bottom-6 right-6 left-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 flex items-center gap-3"
-                    >
-                       <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-lg flex-shrink-0">
-                         <ShieldCheck size={20} />
-                       </div>
-                       <div>
-                         <div className="text-xs font-bold text-slate-900 dark:text-white">Diagnosztika kész</div>
-                         <div className="text-[10px] text-slate-500">Minden rendszer normális.</div>
-                       </div>
-                    </motion.div>
-                 </div>
-               </div>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* --- FEATURES GRID --- */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-            {[
-              { 
-                icon: <Cpu size={32} className="text-indigo-500" />, 
-                title: "AI Szerelő", 
-                desc: "Fotózd le a hibakódot vagy írd le a hangot. A Gemini AI azonnal elemzi és megoldást javasol.",
-                bg: "hover:bg-indigo-500/5 hover:border-indigo-500/30"
-              },
-              { 
-                icon: <ShieldCheck size={32} className="text-emerald-500" />, 
-                title: "Digitális Könyv", 
-                desc: "Hiteles szervizmúlt, ami pénzt ér eladáskor. Minden beavatkozás egy helyen, kereshetően.",
-                bg: "hover:bg-emerald-500/5 hover:border-emerald-500/30"
-              },
-              { 
-                icon: <BarChart3 size={32} className="text-amber-500" />, 
-                title: "Költségkövető", 
-                desc: "Tankolások, szervizek, biztosítás. Lásd vizuálisan, mennyibe kerül valójában az autód.",
-                bg: "hover:bg-amber-500/5 hover:border-amber-500/30"
-              }
-            ].map((feature, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ delay: i * 0.1 }}
-                className={`group p-8 rounded-[2rem] bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 backdrop-blur-sm transition-all duration-300 ${feature.bg}`}
-              >
-                <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">{feature.title}</h3>
-                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {feature.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* --- BOTTOM CTA --- */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-           <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 dark:bg-indigo-950 text-white p-8 md:p-16 text-center shadow-2xl">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 blur-[100px] rounded-full" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/30 blur-[100px] rounded-full" />
+      {/* --- MAIN CONTENT (CENTERED, MAX WIDTH) --- */}
+      <main className="flex-grow w-full relative pt-28 sm:pt-32 lg:pt-44 pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto w-full">
+          
+          {/* --- HERO SECTION --- */}
+          <div className="mb-24 lg:mb-32">
+            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-20">
               
-              <div className="relative z-10 max-w-2xl mx-auto">
-                <h2 className="text-3xl md:text-5xl font-bold mb-6">Kezdd el ma, ingyen.</h2>
-                <p className="text-slate-300 text-lg mb-10">
-                  Nincs próbaidőszak, nincsenek rejtett költségek. Csak te, az autód, és a nyugalom.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center w-full">
+              {/* Left Content */}
+              <div className="flex-1 text-center lg:text-left z-10 w-full">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-6 sm:mb-8"
+                >
+                  <span className="relative flex h-2 w-2 flex-shrink-0">
+                    <span className="animate-ping absolute h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                  Ingyenes regisztráció
+                </motion.div>
+
+                <motion.h1 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-4xl sm:text-5xl lg:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] mb-6 tracking-tight"
+                >
+                  Az autód <br className="hidden lg:block"/>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600">
+                    digitális agya.
+                  </span>
+                </motion.h1>
+
+                <motion.p 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mb-8 sm:mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light"
+                >
+                  Felejtsd el a kockás füzetet. AI diagnosztika, költségkövetés és hiteles digitális szervizkönyv egyetlen modern alkalmazásban. 
+                  <span className="block mt-2 font-medium text-slate-900 dark:text-white">Teljesen ingyenes.</span>
+                </motion.p>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start w-full sm:w-auto"
+                >
                   <Link 
                     href="/login?mode=signup" 
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-amber-500 text-slate-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-amber-400 transition-colors shadow-lg shadow-amber-900/20"
+                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-slate-900/20 dark:shadow-white/10 flex items-center justify-center gap-2"
                   >
-                    Fiók létrehozása
+                    Regisztrálok
+                    <ChevronRight size={18} />
                   </Link>
                   <Link 
-                    href="/login" 
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent border border-white/20 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-colors"
+                    href="/check" 
+                    className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
                   >
-                    Belépés
+                    <Search size={18} />
+                    Alvázszám kereső
                   </Link>
+                </motion.div>
+
+                <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 text-xs font-medium text-slate-500">
+                  <div className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-500"/> Nincs bankkártya</div>
+                  <div className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-emerald-500"/> Azonnali hozzáférés</div>
                 </div>
               </div>
-           </div>
-        </div>
 
+              {/* Right Visual */}
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                transition={{ delay: 0.4, duration: 0.8 }}
+                className="flex-1 w-full max-w-xs sm:max-w-lg lg:max-w-none relative z-0 mt-8 lg:mt-0"
+              >
+                 <div className="relative rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-white/10 p-2 shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-700 ease-out">
+                   <div className="absolute inset-0 bg-white/50 dark:bg-black/20 backdrop-blur-3xl rounded-3xl -z-10" />
+                   <div className="bg-white dark:bg-slate-950 rounded-[1.25rem] overflow-hidden border border-slate-100 dark:border-white/5 h-[300px] sm:h-[400px] flex flex-col relative">
+                      <div className="h-14 border-b border-slate-100 dark:border-white/5 flex items-center px-6 justify-between">
+                         <div className="flex gap-2">
+                            <div className="w-3 h-3 rounded-full bg-red-400/80"/>
+                            <div className="w-3 h-3 rounded-full bg-amber-400/80"/>
+                            <div className="w-3 h-3 rounded-full bg-emerald-400/80"/>
+                         </div>
+                         <div className="h-2 w-20 bg-slate-100 dark:bg-slate-800 rounded-full"/>
+                      </div>
+                      <div className="p-6 grid grid-cols-2 gap-4 h-full">
+                         <div className="col-span-2 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-xl p-4 flex flex-col justify-center items-start border border-indigo-500/20">
+                            <div className="h-2 w-16 bg-indigo-500/20 rounded mb-2"/>
+                            <div className="h-6 w-32 bg-indigo-500/40 rounded"/>
+                         </div>
+                         <div className="bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-white/5 p-4">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 mb-3"/>
+                            <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded mb-2"/>
+                            <div className="h-2 w-2/3 bg-slate-200 dark:bg-slate-800 rounded"/>
+                         </div>
+                         <div className="bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-white/5 p-4 flex items-center justify-center">
+                            <div className="w-20 h-20 rounded-full border-4 border-amber-500/30 border-t-amber-500"/>
+                         </div>
+                      </div>
+                      <motion.div 
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 1, type: "spring" }}
+                        className="absolute bottom-6 right-6 left-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 flex items-center gap-3"
+                      >
+                         <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-lg flex-shrink-0">
+                           <ShieldCheck size={20} />
+                         </div>
+                         <div>
+                           <div className="text-xs font-bold text-slate-900 dark:text-white">Diagnosztika kész</div>
+                           <div className="text-[10px] text-slate-500">Minden rendszer normális.</div>
+                         </div>
+                      </motion.div>
+                   </div>
+                 </div>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* --- FEATURES GRID --- */}
+          <div className="mb-24">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+              {[
+                { 
+                  icon: <Cpu size={32} className="text-indigo-500" />, 
+                  title: "AI Szerelő", 
+                  desc: "Fotózd le a hibakódot vagy írd le a hangot. A Gemini AI azonnal elemzi és megoldást javasol.",
+                  bg: "hover:bg-indigo-500/5 hover:border-indigo-500/30"
+                },
+                { 
+                  icon: <ShieldCheck size={32} className="text-emerald-500" />, 
+                  title: "Digitális Könyv", 
+                  desc: "Hiteles szervizmúlt, ami pénzt ér eladáskor. Minden beavatkozás egy helyen, kereshetően.",
+                  bg: "hover:bg-emerald-500/5 hover:border-emerald-500/30"
+                },
+                { 
+                  icon: <BarChart3 size={32} className="text-amber-500" />, 
+                  title: "Költségkövető", 
+                  desc: "Tankolások, szervizek, biztosítás. Lásd vizuálisan, mennyibe kerül valójában az autód.",
+                  bg: "hover:bg-amber-500/5 hover:border-amber-500/30"
+                }
+              ].map((feature, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ delay: i * 0.1 }}
+                  className={`group p-8 rounded-[2rem] bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 backdrop-blur-sm transition-all duration-300 ${feature.bg}`}
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-xl font-bold mb-3 text-slate-900 dark:text-white">{feature.title}</h3>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {feature.desc}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* --- BOTTOM CTA --- */}
+          <div>
+             <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 dark:bg-indigo-950 text-white p-8 md:p-16 text-center shadow-2xl">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 blur-[100px] rounded-full" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/30 blur-[100px] rounded-full" />
+                
+                <div className="relative z-10 max-w-2xl mx-auto">
+                  <h2 className="text-3xl md:text-5xl font-bold mb-6">Kezdd el ma, ingyen.</h2>
+                  <p className="text-slate-300 text-lg mb-10">
+                    Nincs próbaidőszak, nincsenek rejtett költségek. Csak te, az autód, és a nyugalom.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center w-full">
+                    <Link 
+                      href="/login?mode=signup" 
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-amber-500 text-slate-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-amber-400 transition-colors shadow-lg shadow-amber-900/20"
+                    >
+                      Fiók létrehozása
+                    </Link>
+                    <Link 
+                      href="/login" 
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-transparent border border-white/20 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-colors"
+                    >
+                      Belépés
+                    </Link>
+                  </div>
+                </div>
+             </div>
+          </div>
+        </div>
       </main>
 
-      {/* --- FOOTER --- */}
-      <footer className="relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10 px-6 transition-colors">
+      {/* --- FOOTER (FULL WIDTH) --- */}
+      <footer className="w-full relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10 px-6 md:px-10 transition-colors">
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
-         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+         
+         {/* Footer Content */}
+         <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="md:col-span-1">
-                {/* Logo a footerben is - itt is használhatjuk a scrollToTop-ot */}
                 <Link href="/" onClick={scrollToTop} className="flex items-center gap-2 mb-6 cursor-pointer">
                     <div className="w-8 h-8 relative"><Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" fill className="object-contain" /></div>
                     <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">Dynamic<span className="text-amber-500">Sense</span></span>
