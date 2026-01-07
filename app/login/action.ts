@@ -89,16 +89,21 @@ export async function signInWithGoogle(formData: FormData) {
   const requestHeaders = await headers()
   const origin = requestHeaders.get('origin')
 
-  // Read role from form
+  // 1. Kiolvassuk a role-t a formból
   const role = (formData.get('role') as string) || 'user';
   const validRole = role === 'dealer' ? 'dealer' : 'user';
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      // FIX: Append role directly to the return URL!
-      // This way when returning from Google, route.ts sees ?role=dealer parameter
+      // 2. A visszatérési URL-ben is küldjük (a Callback route számára)
       redirectTo: `${origin}/auth/callback?role=${validRole}`,
+      
+      // 3. FONTOS: Ide mentjük a metaadatot, hogy az SQL Trigger lássa!
+      // @ts-ignore
+      data: {
+        role: validRole,
+      },
       
       queryParams: {
         access_type: 'offline',
