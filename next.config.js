@@ -6,7 +6,7 @@ const withPWA = require('next-pwa')({
   clientsClaim: true,
   disable: process.env.NODE_ENV === 'development',
 
-  // PWA Loop védelem és App Router optimalizáció
+  // PWA Loop védelem (App Router optimalizáció)
   cacheStartUrl: false,
   dynamicStartUrl: false,
   navigateFallback: null,
@@ -23,12 +23,12 @@ const withPWA = require('next-pwa')({
 
   runtimeCaching: [
     {
-      // Navigáció: Mindig hálózatról, hogy ne legyen beragadt régi verzió (Loop-fix)
+      // Navigáció: Mindig hálózatról, hogy elkerüljük a PWA-k klasszikus loop hibáit
       urlPattern: ({ request }) => request.mode === 'navigate',
       handler: 'NetworkFirst',
     },
     {
-      // Statikus assetek (JS, CSS)
+      // Statikus fájlok (JS, CSS) - StaleWhileRevalidate a gyors betöltésért
       urlPattern: /\.(?:js|css)$/i,
       handler: 'StaleWhileRevalidate',
       options: {
@@ -37,7 +37,7 @@ const withPWA = require('next-pwa')({
       },
     },
     {
-      // Képek optimalizált cache-elése
+      // Képek optimalizálása a cache-ben
       urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
       handler: 'StaleWhileRevalidate',
       options: {
@@ -46,7 +46,7 @@ const withPWA = require('next-pwa')({
       },
     },
     {
-      // API és Supabase hívások
+      // API kérések és Supabase auth/data (rövidebb lejárattal)
       urlPattern: /\/api\/.*/i,
       handler: 'NetworkFirst',
       options: {
@@ -56,7 +56,7 @@ const withPWA = require('next-pwa')({
       },
     },
     {
-      // Külső betűtípusok és Mapbox
+      // Fontok és Mapbox - Ezek ritkán változnak, mehet a CacheFirst
       urlPattern: /^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|api\.mapbox\.com)\/.*/i,
       handler: 'CacheFirst',
       options: {
@@ -66,6 +66,10 @@ const withPWA = require('next-pwa')({
     },
   ],
 });
+
+/* -------------------------------------------------------------------------- */
+/* SECURITY HEADERS                                                           */
+/* -------------------------------------------------------------------------- */
 
 const cspHeader = `
   default-src 'self';
@@ -81,17 +85,25 @@ const cspHeader = `
   upgrade-insecure-requests;
 `.replace(/\s{2,}/g, ' ').trim();
 
+/* -------------------------------------------------------------------------- */
+/* NEXT CONFIG                                                                */
+/* -------------------------------------------------------------------------- */
+
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   compress: true,
 
-  // Mapbox és nehéz libek kényszerített transpile-olása
+  // 🔥 JAVÍTÁS: A React Compiler 2026-ban már stabil, nem experimental!
+  compiler: {
+    reactCompiler: true,
+  },
+
   transpilePackages: ['react-map-gl', 'mapbox-gl'],
 
   images: {
-    formats: ['image/avif', 'image/webp'], // AVIF az elsődleges, mert kisebb és szebb
-    minimumCacheTTL: 604800, // 1 hét másodpercekben
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 604800, // 1 hét
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
@@ -100,14 +112,9 @@ const nextConfig = {
   },
 
   experimental: {
-    // 🔥 REACT COMPILER: Automatikus useMemo/useCallback
-    reactCompiler: true,
+    // 🔥 JAVÍTÁS: A 'ppr' helyett az új 'cacheComponents' kulcsot használjuk
+    cacheComponents: true,
 
-    // 🔥 PARTIAL PRERENDERING (PPR): A legfontosabb sebességfaktor.
-    // A statikus váz azonnal betölt, a dinamikus Supabase adatok pedig "beúsznak".
-    ppr: 'incremental',
-
-    // Csomagok, amikből csak a használt részeket fordítjuk be (kisebb bundle)
     optimizePackageImports: [
       'lucide-react',
       'date-fns',
@@ -117,7 +124,6 @@ const nextConfig = {
       'clsx',
       'tailwind-merge'
     ],
-    
     serverActions: {
       bodySizeLimit: '10mb',
     },
