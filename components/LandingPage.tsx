@@ -84,6 +84,21 @@ const BackgroundGlows = () => (
 export default function LandingPage({ promo, updates }: { promo?: any, updates: any[] }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // --- ÚJ: SZÖVEG VÁLTÓ LOGIKA ---
+  const [index, setIndex] = useState(0);
+ const questions = [
+  "Túllépnél végre a kockás füzet korszakán?",
+  "Digitális jövőt adnál a garázsodnak?",
+  "Készen állsz egy átláthatóbb autózásra?"
+];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % questions.length);
+    }, 4000); // 4 másodpercenként vált
+    return () => clearInterval(timer);
+  }, [questions.length]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -91,22 +106,16 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // --- SCROLL TO TOP FUNKCIÓ (LOGO) ---
   const scrollToTop = (e: React.MouseEvent) => {
     e.preventDefault();
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setMobileMenuOpen(false);
   };
 
-  // --- ÚJ: SCROLL TO FEATURES (FUNKCIÓK GOMB) ---
   const scrollToFeatures = (e: React.MouseEvent) => {
     e.preventDefault();
     const element = document.getElementById('features');
     if (element) {
-      // Offset a fix navbar miatt (hogy ne takarja ki a címet)
       const yOffset = -120; 
       const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
       window.scrollTo({ top: y, behavior: 'smooth' });
@@ -118,7 +127,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
     <div className="min-h-screen text-slate-900 dark:text-slate-200 selection:bg-amber-500/30 font-sans transition-colors duration-500 flex flex-col">
       <BackgroundGlows />
 
-      {/* --- NAVBAR (FULL BLEED) --- */}
       <nav 
         className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-300 border-b pt-[env(safe-area-inset-top)]
         ${scrolled || mobileMenuOpen
@@ -127,8 +135,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
       >
         <div className="w-full px-6 md:px-10">
           <div className="flex justify-between items-center py-4">
-            
-            {/* Logo */}
             <Link href="/" onClick={scrollToTop} className="flex items-center gap-2 group z-50 relative cursor-pointer">
               <div className="w-8 h-8 sm:w-9 sm:h-9 relative group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
                 <Image src="/DynamicSense-logo.png" alt="Logo" fill className="object-contain" />
@@ -138,17 +144,12 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
               </span>
             </Link>
 
-            {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-6">
               <ThemeToggle />
-              
-              {/* ÚJ: Funkciók gomb */}
               <a href="#features" onClick={scrollToFeatures} className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors cursor-pointer">
                 Funkciók
               </a>
-
               <div className="h-5 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
-              
               <Link href="/check" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors">
                 Alvázszám kereső
               </Link>
@@ -165,7 +166,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
               </Link>
             </div>
 
-            {/* Mobile Menu Toggle */}
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-50 relative"
@@ -176,7 +176,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           </div>
         </div>
 
-        {/* Mobile Dropdown */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
@@ -190,20 +189,15 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                    <span className="font-semibold text-slate-700 dark:text-slate-300">Megjelenés</span>
                    <ThemeToggle />
                 </div>
-
-                {/* ÚJ: Mobil Funkciók gomb */}
                 <a href="#features" onClick={scrollToFeatures} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer">
                   <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600"><Cpu size={20}/></div>
                   <span className="font-semibold text-slate-700 dark:text-slate-200">Funkciók</span>
                 </a>
-
                 <Link href="/check" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
                   <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600"><Search size={20}/></div>
                   <span className="font-semibold text-slate-700 dark:text-slate-200">Alvázszám Kereső</span>
                 </Link>
-                
                 <div className="h-px w-full bg-slate-100 dark:bg-slate-800 my-1"></div>
-                
                 <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="p-3 font-semibold text-center hover:text-amber-500 transition-colors">Belépés</Link>
                 <Link href="/login?mode=signup" onClick={() => setMobileMenuOpen(false)} className="w-full bg-amber-500 text-slate-950 font-bold py-4 rounded-xl text-center shadow-lg shadow-amber-500/20 active:scale-95 transition-transform">
                   Fiók létrehozása ingyen
@@ -214,7 +208,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </AnimatePresence>
       </nav>
 
-      {/* --- MAIN CONTENT --- */}
       <main className="flex-grow w-full relative pt-28 sm:pt-32 lg:pt-44 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto w-full">
           
@@ -222,7 +215,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           <div className="mb-24 lg:mb-32">
             <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-20">
               
-              {/* Left Content */}
               <div className="flex-1 text-center lg:text-left z-10 w-full">
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
@@ -236,26 +228,40 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                   Ingyenes regisztráció
                 </motion.div>
 
-                <motion.h1 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-4xl sm:text-5xl lg:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] mb-6 tracking-tight"
-                >
-                  Az autód <br className="hidden lg:block"/>
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600">
-                    digitális agya.
-                  </span>
-                </motion.h1>
+                {/* --- MÓDOSÍTOTT VÁLTAKOZÓ CÍM --- */}
+                <div className="h-[120px] sm:h-[160px] lg:h-[220px] flex flex-col justify-start overflow-hidden">
+                   <motion.h1 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-4xl sm:text-5xl lg:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] tracking-tight"
+                  >
+                    Az autód <br className="hidden lg:block"/>
+                    <div className="relative mt-2">
+                      <AnimatePresence mode="wait">
+                        <motion.span
+                          key={index}
+                          initial={{ opacity: 0, y: 30 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -30 }}
+                          transition={{ duration: 0.6, ease: "circOut" }}
+                          className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 whitespace-nowrap lg:whitespace-normal"
+                        >
+                          {questions[index]}
+                        </motion.span>
+                      </AnimatePresence>
+                    </div>
+                  </motion.h1>
+                </div>
 
                 <motion.p 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mb-8 sm:mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light"
+                  className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mb-8 sm:mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light mt-4"
                 >
                   Felejtsd el a kockás füzetet. AI diagnosztika, költségkövetés és hiteles digitális szervizkönyv egyetlen modern alkalmazásban. 
-                  <span className="block mt-2 font-medium text-slate-900 dark:text-white">Teljesen ingyenes.</span>
+                  <span className="block mt-2 font-medium text-slate-900 dark:text-white">Vedd át az irányítást az autód felett.</span>
                 </motion.p>
 
                 <motion.div 
@@ -286,7 +292,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 </div>
               </div>
 
-              {/* Right Visual */}
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
@@ -338,8 +343,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
           </div>
 
-          {/* --- FEATURES GRID (WITH ID) --- */}
-          {/* ÚJ: Hozzáadtuk az ID-t a scroll működéséhez */}
           <div id="features" className="mb-24 scroll-mt-32">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
               {[
@@ -382,8 +385,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </div>
           </div>
 
-          {/* --- BOTTOM CTA --- */}
-          <div>
+          <div className="mb-20">
              <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 dark:bg-indigo-950 text-white p-8 md:p-16 text-center shadow-2xl">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/20 blur-[100px] rounded-full" />
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/30 blur-[100px] rounded-full" />
@@ -413,7 +415,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </div>
       </main>
 
-      {/* --- FOOTER (FULL WIDTH) --- */}
       <footer className="w-full relative z-10 border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 pt-20 pb-10">
          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
          
@@ -440,7 +441,6 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                 <div>
                     <h4 className="text-slate-900 dark:text-white font-bold mb-6 tracking-wide">Termék</h4>
                     <ul className="space-y-4 text-sm text-slate-600 dark:text-slate-400">
-                        {/* MÓDOSÍTVA: Működő scroll link */}
                         <li><a href="#features" onClick={scrollToFeatures} className="hover:text-amber-500 transition-colors cursor-pointer">Funkciók</a></li>
                         <li><Link href="/changelog" className="hover:text-amber-500 transition-colors">Újdonságok</Link></li>
                         <li><Link href="/support" className="hover:text-amber-500 transition-colors">Support</Link></li>
@@ -474,7 +474,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
              
              <div className="border-t border-slate-200 dark:border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
                  <p className="text-slate-500 dark:text-slate-600 text-xs font-mono">
-                   © {new Date().getFullYear()} DynamicSense Technologies. Minden jog fenntartva.
+                    © {new Date().getFullYear()} DynamicSense Technologies. Minden jog fenntartva.
                  </p>
                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-600 font-mono bg-slate-100 dark:bg-slate-900/50 px-3 py-1 rounded-full">
                      <span className="relative flex h-2 w-2"><span className="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative rounded-full h-2 w-2 bg-emerald-500"></span></span>
