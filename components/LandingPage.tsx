@@ -237,7 +237,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
                     transition={{ delay: 0.1 }}
                     className="text-4xl sm:text-5xl lg:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] tracking-tight"
                   >
-                    Az autód <br className="hidden lg:block"/>
+                    Lépj szintet... <br className="hidden lg:block"/>
                     <div className="relative mt-2">
                       <AnimatePresence mode="wait">
                         <motion.span
