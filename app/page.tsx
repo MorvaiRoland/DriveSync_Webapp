@@ -11,11 +11,9 @@ import HeaderNav from '@/components/HeaderNav';
 import QuickMileageForm from '@/components/QuickMileageForm';
 import { Metadata } from 'next'
 import OnboardingTour from '@/components/OnboardingTour';
-import { Suspense } from 'react'; // Suspense a betöltéshez
+import { Suspense } from 'react';
 
-// Optimalizálás: Node.js runtime stabilabb adatbázis kapcsolatokhoz Vercelen,
-// hacsak nem használsz Supabase Accelerate-et. Ha Edge kell, maradhat 'edge'.
-export const runtime = 'edge'; 
+export const runtime = 'edge';
 export const preferredRegion = 'lhr1';
 
 export const metadata: Metadata = {
@@ -24,10 +22,10 @@ export const metadata: Metadata = {
   }
 }
 
-// Dynamic imports - Skeletonokkal, hogy ne "ugorjon" a kép
+// --- DYNAMIC IMPORTS & SKELETONS ---
 const LoadingWidget = () => <div className="h-32 w-full bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />;
 
-const ChangelogModal = dynamicImport(() => import('@/components/ChangelogModal'), { ssr: false }); // Csak kliens oldalon
+const ChangelogModal = dynamicImport(() => import('@/components/ChangelogModal'), { ssr: false });
 const AiMechanic = dynamicImport(() => import('@/components/AiMechanic'), { ssr: false });
 const CongratulationModal = dynamicImport(() => import('@/components/CongratulationModal'), { ssr: false });
 const GamificationWidget = dynamicImport(() => import('@/components/GamificationWidget'), { loading: LoadingWidget });
@@ -43,7 +41,7 @@ const FEATURES = {
   activityLog: true, gamification: true, weather: true, fuelPrices: true, sharedCars: true,
 };
 
-// --- HELPER COMPONENT: CarCard (Optimalizált képpel) ---
+// --- HELPER COMPONENT: CarCard ---
 function CarCard({ car, shared, priority = false }: { car: any, shared?: boolean, priority?: boolean }) {
   return (
     <div className={`relative group flex flex-col bg-white dark:bg-slate-800 rounded-[2rem] overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 border border-slate-100 dark:border-slate-700 h-full ${shared ? 'ring-2 ring-blue-500/30' : ''}`}>
@@ -54,7 +52,6 @@ function CarCard({ car, shared, priority = false }: { car: any, shared?: boolean
               alt={`${car.make} ${car.model}`} 
               fill 
               className="object-cover group-hover:scale-105 transition-transform duration-700" 
-              // Ha ez az első kártya, akkor priority (azonnal tölt), különben lazy
               priority={priority}
               loading={priority ? undefined : "lazy"}
               sizes={MOBILE_CARD_SIZES}
@@ -96,16 +93,104 @@ function CarCard({ car, shared, priority = false }: { car: any, shared?: boolean
 
 // --- DEALER DASHBOARD ---
 function DealerDashboard({ user, cars }: { user: any, cars: any[] }) {
-    // ... A DealerDashboard kódja változatlan maradhat, mert egyszerű ...
-    // Helytakarékosság miatt itt most csak a placeholder, a te kódodban hagyd meg az eredetit
-    return <div className="p-10 text-center">Dealer Dashboard Loaded (Include original code here)</div>
+    const totalValue = cars.reduce((sum, car) => sum + (car.purchase_price || 0), 0); 
+
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+            {/* Dealer Navbar */}
+            <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]">
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg px-4 h-16 flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-2">
+                        <span className="font-black text-indigo-600 text-lg uppercase tracking-tight">DynamicSense</span>
+                        <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Dealer</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Link href="/settings" className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><Settings size={20}/></Link>
+                        <form action={signOut}>
+                            <button className="p-2 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-500"><LogOut size={20}/></button>
+                        </form>
+                    </div>
+                </div>
+            </nav>
+
+            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]">
+                {/* Üdvözlés */}
+                <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> Kereskedői Portál
+                    </h2>
+                    <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                    {user.user_metadata?.full_name || 'Kereskedés'}
+                    </h1>
+                </div>
+
+                {/* Statisztika Kártyák */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-xl">
+                            <CarFront size={24} />
+                        </div>
+                        <span className="text-xs font-bold bg-green-100 text-green-600 px-2 py-1 rounded">Aktív</span>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-1">{cars.length}</h3>
+                        <p className="text-sm text-slate-500">Jármű a készleten</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-xl">
+                            <DollarSign size={24} />
+                        </div>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-900 dark:text-white">--- Ft</h3>
+                        <p className="text-sm text-slate-500">Becsült készletérték (Hamarosan)</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 rounded-xl">
+                            <Users size={24} />
+                        </div>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-900 dark:text-white">0</h3>
+                        <p className="text-sm text-slate-500">Megtekintés ezen a héten</p>
+                    </div>
+                </div>
+
+                {/* Gyorsműveletek */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+                    <Link href="/cars/new" className="flex items-center gap-3 p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors font-bold shadow-lg shadow-indigo-500/20">
+                        <Plus size={20} /> Új autó felvétele
+                    </Link>
+                    <button className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition-colors border border-slate-200 dark:border-slate-700 font-bold opacity-50 cursor-not-allowed">
+                        <BarChart3 size={20} /> Statisztikák (Hamarosan)
+                    </button>
+                </div>
+
+                {/* Készlet Lista */}
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Készlet</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {cars.map((car: any, index: number) => (
+                        // Itt is használjuk az új CarCard-ot, az elsőre priority-t téve
+                         <CarCard key={car.id} car={car} priority={index === 0} />
+                    ))}
+                    {cars.length === 0 && (
+                        <div className="col-span-full text-center py-12 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+                        <p className="text-slate-500 mb-4">Még nincs autód a rendszerben.</p>
+                        <Link href="/cars/new" className="text-indigo-500 font-bold hover:underline">Kezdd el most!</Link>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    )
 }
 
-
-// --- USER DASHBOARD (MASSIVELY OPTIMIZED) ---
+// --- USER DASHBOARD (OPTIMALIZÁLT) ---
 async function UserDashboard({ user, supabase }: any) {
   
-  // 1. PÁRHUZAMOSÍTÁS (Promise.all): Az összes kritikus adat lekérése egyszerre
+  // 1. PÁRHUZAMOSÍTÁS: Adatok lekérése egyszerre (Promise.all)
   const [subscriptionResult, carsResult] = await Promise.all([
     getSubscriptionStatus(supabase, user.id),
     supabase
@@ -122,18 +207,18 @@ async function UserDashboard({ user, supabase }: any) {
   const canTripPlan = limits.tripPlanner;
   const isPro = limits.aiMechanic;
 
-  // Adatfeldolgozás (synchronous logic - gyors)
+  // Szűrés memória-szinten (gyorsabb, mint külön DB hívások)
   const myCars = carsData.filter((car:any) => car.user_id === user.id);
   const sharedCars = carsData.filter((car:any) => 
     car.user_id !== user.id && 
     car.car_shares?.some((share: any) => share.email === user.email)
   );
   
-  const cars = carsData; // Minden autó
+  const cars = carsData;
   const latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   const relevantCarIds = cars.map((c:any) => c.id);
   
-  // 2. KÖR: Másodlagos adatok lekérése PÁRHUZAMOSAN (csak ha van autó)
+  // 2. KÖR: Csak ha van autó, akkor kérünk le Reminder/History/Cost adatokat
   let upcomingReminders: any[] = [];
   let recentActivity: any[] = [];
   let spentLast30Days = 0;
@@ -157,7 +242,7 @@ async function UserDashboard({ user, supabase }: any) {
       .reduce((sum: number, e: any) => sum + (e.cost || 0), 0);
   }
 
-  // Egészség számítás (kicsit optimalizálva)
+  // Egészség számítás (memóriából)
   const hasServices = myCars.some((car:any) => car.events?.some((e: any) => e.type === 'service'));
   let fleetHealth = 100;
 
@@ -168,7 +253,6 @@ async function UserDashboard({ user, supabase }: any) {
         const interval = car.service_interval_km || 15000;
         let lastServiceKm = car.last_service_mileage || 0;
         
-        // Memóriában lévő adatokból dolgozunk, nem hívunk DB-t
         const serviceEvents = car.events?.filter((e: any) => e.type === 'service') || [];
         if (serviceEvents.length > 0) {
             const maxEventKm = Math.max(...serviceEvents.map((e: any) => e.mileage));
@@ -187,18 +271,15 @@ async function UserDashboard({ user, supabase }: any) {
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'Jó reggelt' : hour < 18 ? 'Szép napot' : 'Szép estét';
   
-  // Dátum logika
   const userCreatedTime = new Date(user.created_at || Date.now()).getTime();
   const accountAgeHours = (Date.now() - userCreatedTime) / 36e5;
   const showTour = !cars.length && accountAgeHours < 24;
 
-  // --- RENDER ---
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-500">
       
       {showTour && <OnboardingTour />}
 
-      {/* Háttér effektek - simple CSS instead of JS where possible */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[120px]"></div>
@@ -209,7 +290,6 @@ async function UserDashboard({ user, supabase }: any) {
       {canUseAi && <AiMechanic isPro={true} />}
       {cars.length > 0 && <ChangelogModal />}
       
-      {/* NAVBAR START */}
       <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg px-4 h-16 flex items-center justify-between mt-2">
           <div className="flex items-center"><HeaderNav isPro={isPro} /></div>
@@ -228,11 +308,9 @@ async function UserDashboard({ user, supabase }: any) {
           </div>
         </div>
       </nav>
-      {/* NAVBAR END */}
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]">
         
-        {/* HEADER SECTION */}
         <div id="tour-welcome" className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div>
               <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
@@ -246,7 +324,6 @@ async function UserDashboard({ user, supabase }: any) {
             <div id="tour-stats">
               {cars.length > 0 && (
                   <div className="w-full lg:w-auto bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl p-2 border border-white/20 dark:border-slate-700 shadow-xl flex flex-col sm:flex-row gap-2">
-                      {/* Health Widget */}
                       <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[200px]">
                           <div className="relative w-10 h-10 flex-shrink-0">
                               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
@@ -262,7 +339,6 @@ async function UserDashboard({ user, supabase }: any) {
                               <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{hasServices ? 'Kalkulált érték' : 'Nincs adat'}</p>
                           </div>
                       </div>
-                      {/* Cost Widget */}
                       <div className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-sm min-w-[220px]">
                           <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-50"><span className="font-bold text-lg">💰</span></div>
                           <div>
@@ -276,7 +352,6 @@ async function UserDashboard({ user, supabase }: any) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* LEFT COLUMN: CARS */}
             <div className="lg:col-span-8 space-y-8">
               
               {FEATURES.mileageLog && myCars.length > 0 && (
@@ -295,7 +370,6 @@ async function UserDashboard({ user, supabase }: any) {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Priority-t adunk az első autónak a gyors megjelenítésért */}
                       {myCars.map((car: any, index: number) => (
                           <CarCard key={car.id} car={car} priority={index === 0} />
                       ))}
@@ -326,13 +400,12 @@ async function UserDashboard({ user, supabase }: any) {
                           </h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {sharedCars.map((car:any) => <CarCard key={car.id} car={car} shared={true} />)}
+                          {sharedCars?.map((car: any) => <CarCard key={car.id} car={car} shared={true} />)}
                       </div>
                   </div>
               )}
             </div>
 
-            {/* RIGHT COLUMN: WIDGETS */}
             <div className="lg:col-span-4 space-y-8">
                
                {plan === 'free' && (
@@ -356,7 +429,6 @@ async function UserDashboard({ user, supabase }: any) {
                 </div>
               </Link>
 
-              {/* Streaming Content: Ezek a widgetek később töltődnek be, nem blokkolják a fő tartalmat */}
               <Suspense fallback={<LoadingWidget />}>
                   <MarketplaceSection />
               </Suspense>
@@ -420,7 +492,7 @@ async function UserDashboard({ user, supabase }: any) {
   )
 }
 
-// --- PAGE COMPONENT (OPTIMIZED) ---
+// --- MAIN PAGE COMPONENT ---
 export default async function Page({
   searchParams,
 }: {
@@ -430,7 +502,7 @@ export default async function Page({
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
-    // 1. PÁRHUZAMOSÍTÁS: Role lekérése és dealer autók lekérése, ha kell, ne várjon
+    // 1. PÁRHUZAMOSÍTÁS: Role lekérése
     const { data: userData } = await supabase
       .from('users')
       .select('role')
@@ -455,7 +527,7 @@ export default async function Page({
   const params = await searchParams
   if (params.check !== undefined) return redirect('/check');
 
-  // 1. PÁRHUZAMOSÍTÁS: Promóció és Updatek egyszerre
+  // 1. PÁRHUZAMOSÍTÁS: Landing page adatok
   const [promoRes, updatesRes] = await Promise.all([
       supabase.from('promotions').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('release_notes').select('*').order('release_date', { ascending: false }).limit(5)
