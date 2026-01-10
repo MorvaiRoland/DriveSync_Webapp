@@ -205,16 +205,16 @@ export default function EditCarPage() {
                       
                       <SelectGroup label="Kivitel" name="body_type" defaultValue={car.body_type}>
                           <option value="" disabled>Válassz...</option>
-                          <option value="sedan">Sedan / Limuzin</option>
-                          <option value="kombi">Kombi / Touring</option>
-                          <option value="hatchback">Ferdehátú</option>
-                          <option value="suv">SUV / Terepjáró</option>
-                          <option value="crossover">Crossover</option>
-                          <option value="coupe">Coupé</option>
-                          <option value="cabrio">Cabriolet</option>
-                          <option value="mpv">Egyterű</option>
-                          <option value="pickup">Pickup</option>
-                          <option value="van">Kisbusz</option>
+                          <option value="Sedan">Sedan / Limuzin</option>
+                          <option value="Kombi">Kombi / Touring</option>
+                          <option value="Ferdehátú">Ferdehátú</option>
+                          <option value="SUV">SUV / Terepjáró</option>
+                          <option value="Crossover">Crossover</option>
+                          <option value="Coupé">Coupé</option>
+                          <option value="Kabrio">Kabrió</option>
+                          <option value="Egyterű">Egyterű</option>
+                          <option value="Pickup">Pickup</option>
+                          <option value="Kisbusz">Kisbusz</option>
                       </SelectGroup>
 
                       <InputGroup label="Rendszám" name="plate" defaultValue={car.plate} required uppercase />
@@ -238,10 +238,10 @@ export default function EditCarPage() {
                       </SelectGroup>
 
                       <SelectGroup label="Váltó" name="transmission" defaultValue={car.transmission || "manual"}>
-                          <option value="manual">Manuális</option>
-                          <option value="automatic">Automata</option>
-                          <option value="cvt">Fokozatmentes</option>
-                          <option value="robotized">Robotizált</option>
+                          <option value="Manuális">Manuális</option>
+                          <option value="Automata">Automata</option>
+                          <option value="Fokozatmentes">Fokozatmentes</option>
+                          <option value="Robotizált">Robotizált</option>
                       </SelectGroup>
 
                       <InputGroup label="Hengerűrtartalom" name="engine_size" type="number" defaultValue={car.engine_size} placeholder="pl. 1998" suffix="cm³" />
