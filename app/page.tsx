@@ -3,7 +3,7 @@ import { signOut } from './login/action'
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
-import dynamicImport from 'next/dynamic' // Ez maradhat a LandingPage miatt
+import dynamicImport from 'next/dynamic'
 import { getSubscriptionStatus, PLAN_LIMITS } from '@/utils/subscription'
 import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
 import { Plus, Settings, LogOut, CarFront, Users, Lock, Map, Crown, BarChart3, DollarSign, ArrowRight } from 'lucide-react';
@@ -13,7 +13,12 @@ import { Metadata } from 'next'
 import OnboardingTour from '@/components/OnboardingTour';
 import { Suspense } from 'react';
 
-// --- ÚJ IMPORTOK A LAZY FILEBÓL ---
+// --- SERVER COMPONENTS ---
+// Ezeket normál módon importáljuk, mert szerver oldali logikát (cookie/db) használnak
+import MarketplaceSection from '@/components/MarketplaceSection';
+
+// --- CLIENT COMPONENTS (LAZY) ---
+// Ezek jönnek a külön fájlból, mert 'use client' és 'ssr: false' kell nekik
 import { 
   ChangelogModal, 
   AiMechanic, 
@@ -21,10 +26,10 @@ import {
   GamificationWidget, 
   WeatherWidget, 
   FuelWidget, 
-  MarketplaceSection, 
   QuickCostOverview 
 } from '@/components/DashboardLazyComponents';
-// Ezt másold be a page.tsx elejére, az importok után:
+
+// Loading Skeleton
 const LoadingWidget = () => <div className="h-32 w-full bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />;
 
 export const runtime = 'edge';
@@ -36,7 +41,7 @@ export const metadata: Metadata = {
   }
 }
 
-// LandingPage maradhat itt, mert SSR: true (vagy default)
+// LandingPage maradhat itt (default import)
 const LandingPage = dynamicImport(() => import('@/components/LandingPage'), { ssr: true });
 
 const DEV_SECRET_KEY = "admin"; 
@@ -97,10 +102,8 @@ function CarCard({ car, shared, priority = false }: { car: any, shared?: boolean
 
 // --- DEALER DASHBOARD ---
 function DealerDashboard({ user, cars }: { user: any, cars: any[] }) {
-    // ... A DealerDashboard kódja változatlan maradhat, mert egyszerű ...
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
-            {/* Dealer Navbar */}
             <nav className="absolute left-0 right-0 z-50 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]">
                 <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-lg px-4 h-16 flex items-center justify-between mt-2">
                     <div className="flex items-center gap-2">
@@ -117,7 +120,6 @@ function DealerDashboard({ user, cars }: { user: any, cars: any[] }) {
             </nav>
 
             <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 pb-32 pt-[calc(env(safe-area-inset-top)+6rem)]">
-                {/* Üdvözlés */}
                 <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <h2 className="text-slate-500 dark:text-slate-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> Kereskedői Portál
@@ -127,7 +129,6 @@ function DealerDashboard({ user, cars }: { user: any, cars: any[] }) {
                     </h1>
                 </div>
 
-                {/* Statisztika Kártyák */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
                         <div className="flex justify-between items-start mb-4">
@@ -161,7 +162,6 @@ function DealerDashboard({ user, cars }: { user: any, cars: any[] }) {
                     </div>
                 </div>
 
-                {/* Gyorsműveletek */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                     <Link href="/cars/new" className="flex items-center gap-3 p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-colors font-bold shadow-lg shadow-indigo-500/20">
                         <Plus size={20} /> Új autó felvétele
@@ -171,11 +171,9 @@ function DealerDashboard({ user, cars }: { user: any, cars: any[] }) {
                     </button>
                 </div>
 
-                {/* Készlet Lista */}
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Készlet</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {cars.map((car: any, index: number) => (
-                        // Itt is használjuk az új CarCard-ot, az elsőre priority-t téve
                          <CarCard key={car.id} car={car} priority={index === 0} />
                     ))}
                     {cars.length === 0 && (
@@ -193,7 +191,6 @@ function DealerDashboard({ user, cars }: { user: any, cars: any[] }) {
 // --- USER DASHBOARD (OPTIMALIZÁLT) ---
 async function UserDashboard({ user, supabase }: any) {
   
-  // 1. PÁRHUZAMOSÍTÁS: Adatok lekérése egyszerre (Promise.all)
   const [subscriptionResult, carsResult] = await Promise.all([
     getSubscriptionStatus(supabase, user.id),
     supabase
@@ -210,7 +207,6 @@ async function UserDashboard({ user, supabase }: any) {
   const canTripPlan = limits.tripPlanner;
   const isPro = limits.aiMechanic;
 
-  // Szűrés memória-szinten (gyorsabb, mint külön DB hívások)
   const myCars = carsData.filter((car:any) => car.user_id === user.id);
   const sharedCars = carsData.filter((car:any) => 
     car.user_id !== user.id && 
@@ -221,7 +217,6 @@ async function UserDashboard({ user, supabase }: any) {
   const latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
   const relevantCarIds = cars.map((c:any) => c.id);
   
-  // 2. KÖR: Csak ha van autó, akkor kérünk le Reminder/History/Cost adatokat
   let upcomingReminders: any[] = [];
   let recentActivity: any[] = [];
   let spentLast30Days = 0;
@@ -237,7 +232,6 @@ async function UserDashboard({ user, supabase }: any) {
     recentActivity = activitiesRes.data || [];
     const allCosts = costsRes.data || [];
 
-    // Költség számítás
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     spentLast30Days = allCosts
@@ -245,7 +239,6 @@ async function UserDashboard({ user, supabase }: any) {
       .reduce((sum: number, e: any) => sum + (e.cost || 0), 0);
   }
 
-  // Egészség számítás (memóriából)
   const hasServices = myCars.some((car:any) => car.events?.some((e: any) => e.type === 'service'));
   let fleetHealth = 100;
 
@@ -432,6 +425,7 @@ async function UserDashboard({ user, supabase }: any) {
                 </div>
               </Link>
 
+              {/* Streaming Content: A Server Componentet Suspense-el töltjük */}
               <Suspense fallback={<LoadingWidget />}>
                   <MarketplaceSection />
               </Suspense>
@@ -505,7 +499,6 @@ export default async function Page({
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
-    // 1. PÁRHUZAMOSÍTÁS: Role lekérése
     const { data: userData } = await supabase
       .from('users')
       .select('role')
@@ -530,7 +523,6 @@ export default async function Page({
   const params = await searchParams
   if (params.check !== undefined) return redirect('/check');
 
-  // 1. PÁRHUZAMOSÍTÁS: Landing page adatok
   const [promoRes, updatesRes] = await Promise.all([
       supabase.from('promotions').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       supabase.from('release_notes').select('*').order('release_date', { ascending: false }).limit(5)
