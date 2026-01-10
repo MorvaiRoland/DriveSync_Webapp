@@ -1,88 +1,93 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
+import React from 'react';
+import { Trophy } from 'lucide-react';
 
-type Badge = {
-  id: string
-  name: string
-  icon: string
-  description: string
-  earned: boolean
-  color: string // Tailwind class, pl. 'from-green-400 to-green-600'
+// 1. DEFINIÁLJUK, HOGY NÉZ KI EGY JELVÉNY
+export interface Badge {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  achieved: boolean;
+  progress: string;
 }
 
-export default function GamificationWidget({ badges }: { badges: Badge[] }) {
-  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null)
+// 2. DEFINIÁLJUK, MIT FOGAD A KOMPONENS (A PROPS-OT)
+interface GamificationWidgetProps {
+  badges: Badge[]; // Ez a sor szünteti meg a piros aláhúzást a page.tsx-ben!
+}
 
-  // Számoljuk ki, hányat szerzett meg
-  const earnedCount = badges.filter(b => b.earned).length
-  const progress = Math.round((earnedCount / badges.length) * 100)
+export default function GamificationWidget({ badges }: GamificationWidgetProps) {
+  // Megszámoljuk, hányat szereztél meg
+  const achievedCount = badges.filter(b => b.achieved).length;
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6">
+    <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700/50 overflow-hidden relative">
       {/* Fejléc */}
-      <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
+      <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md flex justify-between items-center">
         <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <span className="text-xl">🏆</span>
+          <Trophy className="w-5 h-5 text-amber-500" />
           Eredmények
         </h3>
-        <span className="text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-full">
-          {earnedCount} / {badges.length}
+        <span className="text-xs font-bold px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300">
+          {achievedCount} / {badges.length}
         </span>
       </div>
 
-      {/* Progress Bar */}
-      <div className="h-1 w-full bg-slate-100 dark:bg-slate-700">
+      {/* Progress Bar (Csík) */}
+      <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-900">
         <div 
-          className="h-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all duration-1000" 
-          style={{ width: `${progress}%` }}
+          className="h-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-1000"
+          style={{ width: `${(achievedCount / Math.max(badges.length, 1)) * 100}%` }}
         ></div>
       </div>
 
-      {/* Badge Grid */}
+      {/* Jelvények listája */}
       <div className="p-5">
-        <div className="flex justify-between gap-2">
-          {badges.map((badge) => (
-            <div 
-              key={badge.id}
-              onClick={() => setSelectedBadge(badge)}
-              className={`relative group cursor-pointer flex-1 aspect-square rounded-xl flex items-center justify-center text-3xl transition-all duration-300 border-2 
-                ${badge.earned 
-                  ? 'bg-gradient-to-br border-transparent shadow-lg scale-100 ' + badge.color 
-                  : 'bg-slate-50 dark:bg-slate-900 border-dashed border-slate-300 dark:border-slate-700 grayscale opacity-50 hover:opacity-75 hover:scale-105'
+        {badges.length === 0 ? (
+          <div className="text-center py-4 text-slate-400 text-sm italic">
+            Nincs elérhető eredmény.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {badges.map((badge) => (
+              <div 
+                key={badge.id} 
+                className={`flex items-center gap-4 p-3 rounded-2xl border transition-all duration-300 ${
+                  badge.achieved 
+                    ? 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800' 
+                    : 'bg-slate-50 dark:bg-slate-900/30 border-slate-100 dark:border-slate-800 opacity-60 grayscale hover:grayscale-0 hover:opacity-100'
                 }`}
-            >
-              <span className="drop-shadow-md filter">{badge.icon}</span>
-              
-              {/* Ha megszerezte, kis pipa a sarokban */}
-              {badge.earned && (
-                <div className="absolute -top-2 -right-2 bg-white text-green-500 rounded-full p-0.5 shadow-sm border border-slate-100">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              >
+                {/* Ikon */}
+                <div className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl text-2xl shadow-sm border ${
+                    badge.achieved
+                    ? 'bg-white dark:bg-slate-800 border-amber-100 dark:border-amber-700'
+                    : 'bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700'
+                }`}>
+                  {badge.icon}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
 
-        {/* Info Box (ha rákattint egyre) */}
-        <div className="mt-4 min-h-[60px] text-center animate-in fade-in duration-300">
-          {selectedBadge ? (
-            <div>
-              <p className={`text-sm font-bold ${selectedBadge.earned ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
-                {selectedBadge.name}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {selectedBadge.description}
-              </p>
-              {!selectedBadge.earned && (
-                <p className="text-[10px] text-amber-500 font-bold uppercase mt-2 tracking-wider">Még nem szerezted meg</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 italic pt-2">Kattints egy ikonra a részletekért!</p>
-          )}
-        </div>
+                {/* Szöveg */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-0.5">
+                    <h4 className={`text-sm font-bold truncate ${badge.achieved ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+                      {badge.name}
+                    </h4>
+                    <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                      {badge.progress}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">
+                    {badge.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }

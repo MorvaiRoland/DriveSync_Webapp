@@ -50,6 +50,8 @@ const FEATURES = {
   activityLog: true, gamification: true, weather: true, fuelPrices: true, sharedCars: true,
 };
 
+
+
 // --- HELPER COMPONENT: CarCard ---
 function CarCard({ car, shared, priority = false }: { car: any, shared?: boolean, priority?: boolean }) {
   return (
@@ -212,6 +214,61 @@ async function UserDashboard({ user, supabase }: any) {
     car.user_id !== user.id && 
     car.car_shares?.some((share: any) => share.email === user.email)
   );
+  // ... (ez a rész már megvan a kódodban, a myCars szűrés után) ...
+  
+  // --- ÚJ RÉSZ: JELVÉNYEK (BADGES) KISZÁMÍTÁSA ---
+  // Nem kell hozzá adatbázis, kiszámoljuk a meglévő adatokból!
+  
+  const totalMileage = myCars.reduce((sum: number, car: any) => sum + (car.mileage || 0), 0);
+  const hasElectric = myCars.some((car: any) => car.fuel_type === 'Elektromos' || car.fuel_type === 'Plug-in Hibrid');
+  const carCount = myCars.length;
+  const hasServiceHistory = myCars.some((car: any) => car.events && car.events.length > 0);
+
+  // Itt definiáljuk a jelvényeket és a feltételeket
+  const badges = [
+    {
+      id: 'first_car',
+      name: 'Garázs Tulaj',
+      icon: '🔑',
+      description: 'Hozzáadtad az első autódat a rendszerhez.',
+      achieved: carCount >= 1,
+      progress: carCount >= 1 ? '1/1' : '0/1'
+    },
+    {
+      id: 'fleet_boss',
+      name: 'Flotta Főnök',
+      icon: '😎',
+      description: 'Legalább 3 autó parkol a garázsodban.',
+      achieved: carCount >= 3,
+      progress: `${Math.min(carCount, 3)}/3`
+    },
+    {
+      id: 'world_traveler',
+      name: 'Világutazó',
+      icon: '🌍',
+      description: 'A flotta összesített futásteljesítménye elérte a 100,000 km-t.',
+      achieved: totalMileage >= 100000,
+      progress: `${Math.floor(Math.min(totalMileage, 100000) / 1000)}k/100k`
+    },
+    {
+      id: 'eco_warrior',
+      name: 'Zöld Hullám',
+      icon: '⚡',
+      description: 'Van elektromos vagy hibrid autód.',
+      achieved: hasElectric,
+      progress: hasElectric ? '1/1' : '0/1'
+    },
+    {
+      id: 'caring_owner',
+      name: 'Gondos Gazda',
+      icon: '🛠️',
+      description: 'Rögzítettél már szerviz vagy költség eseményt.',
+      achieved: hasServiceHistory,
+      progress: hasServiceHistory ? '1/1' : '0/1'
+    }
+  ];
+  
+  // --- JELVÉNYEK VÉGE ---
   
   const cars = carsData;
   const latestCarId = myCars.length > 0 ? myCars[0].id : (cars.length > 0 ? cars[0].id : null);
@@ -430,7 +487,7 @@ async function UserDashboard({ user, supabase }: any) {
                   <MarketplaceSection />
               </Suspense>
 
-              {FEATURES.gamification && <GamificationWidget badges={[]} />}
+             {FEATURES.gamification && <GamificationWidget badges={badges} />}
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
                   {FEATURES.weather && <WeatherWidget />}
