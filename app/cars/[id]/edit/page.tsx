@@ -231,7 +231,7 @@ export default function EditCarPage() {
                       <SelectGroup label="Üzemanyag" name="fuel_type" defaultValue={car.fuel_type}>
                           <option value="Dízel">Dízel</option>
                           <option value="Benzin">Benzin</option>
-                          <option value="Hybrid">Hybrid</option>
+                          <option value="Hibrid">Hibrid</option>
                           <option value="Plugin_Hybrid">Plug-in Hybrid</option>
                           <option value="Elektromos">Elektromos</option>
                           <option value="LPG">LPG / Gáz</option>

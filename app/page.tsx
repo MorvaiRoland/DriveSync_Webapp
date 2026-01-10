@@ -220,7 +220,7 @@ async function UserDashboard({ user, supabase }: any) {
   // Nem kell hozzá adatbázis, kiszámoljuk a meglévő adatokból!
   
   const totalMileage = myCars.reduce((sum: number, car: any) => sum + (car.mileage || 0), 0);
-  const hasElectric = myCars.some((car: any) => car.fuel_type === 'Elektromos' || car.fuel_type === 'Plug-in Hibrid');
+  const hasElectric = myCars.some((car: any) => car.fuel_type === 'Elektromos' || car.fuel_type === 'Plug-in Hibrid' || car.fuel_type === 'Hibrid');
   const carCount = myCars.length;
   const hasServiceHistory = myCars.some((car: any) => car.events && car.events.length > 0);
 
