@@ -246,9 +246,9 @@ async function UserDashboard({ user, supabase }: any) {
       id: 'world_traveler',
       name: 'Világutazó',
       icon: '🌍',
-      description: 'A flotta összesített futásteljesítménye elérte a 100,000 km-t.',
-      achieved: totalMileage >= 100000,
-      progress: `${Math.floor(Math.min(totalMileage, 100000) / 1000)}k/100k`
+      description: 'A flotta összesített futásteljesítménye elérte a 500,000 km-t.',
+      achieved: totalMileage >= 500000,
+      progress: `${Math.floor(Math.min(totalMileage, 500000) / 1000)}k/500k`
     },
     {
       id: 'eco_warrior',
