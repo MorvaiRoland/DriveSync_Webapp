@@ -3,7 +3,7 @@ import { signOut } from './login/action'
 import Link from 'next/link'
 import Image from 'next/image'
 import { redirect } from 'next/navigation'
-import dynamicImport from 'next/dynamic'
+import dynamicImport from 'next/dynamic' // Ez maradhat a LandingPage miatt
 import { getSubscriptionStatus, PLAN_LIMITS } from '@/utils/subscription'
 import { MOBILE_CARD_SIZES } from '@/utils/imageOptimization'
 import { Plus, Settings, LogOut, CarFront, Users, Lock, Map, Crown, BarChart3, DollarSign, ArrowRight } from 'lucide-react';
@@ -12,6 +12,20 @@ import QuickMileageForm from '@/components/QuickMileageForm';
 import { Metadata } from 'next'
 import OnboardingTour from '@/components/OnboardingTour';
 import { Suspense } from 'react';
+
+// --- ÚJ IMPORTOK A LAZY FILEBÓL ---
+import { 
+  ChangelogModal, 
+  AiMechanic, 
+  CongratulationModal, 
+  GamificationWidget, 
+  WeatherWidget, 
+  FuelWidget, 
+  MarketplaceSection, 
+  QuickCostOverview 
+} from '@/components/DashboardLazyComponents';
+// Ezt másold be a page.tsx elejére, az importok után:
+const LoadingWidget = () => <div className="h-32 w-full bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />;
 
 export const runtime = 'edge';
 export const preferredRegion = 'lhr1';
@@ -22,17 +36,7 @@ export const metadata: Metadata = {
   }
 }
 
-// --- DYNAMIC IMPORTS & SKELETONS ---
-const LoadingWidget = () => <div className="h-32 w-full bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />;
-
-const ChangelogModal = dynamicImport(() => import('@/components/ChangelogModal'), { ssr: false });
-const AiMechanic = dynamicImport(() => import('@/components/AiMechanic'), { ssr: false });
-const CongratulationModal = dynamicImport(() => import('@/components/CongratulationModal'), { ssr: false });
-const GamificationWidget = dynamicImport(() => import('@/components/GamificationWidget'), { loading: LoadingWidget });
-const WeatherWidget = dynamicImport(() => import('@/components/DashboardWidgets').then(m => ({ default: m.WeatherWidget })), { loading: LoadingWidget, ssr: false });
-const FuelWidget = dynamicImport(() => import('@/components/FuelWidget'), { loading: LoadingWidget, ssr: false });
-const MarketplaceSection = dynamicImport(() => import('@/components/MarketplaceSection'), { loading: LoadingWidget });
-const QuickCostOverview = dynamicImport(() => import('@/components/QuickCostOverview'), { loading: LoadingWidget });
+// LandingPage maradhat itt, mert SSR: true (vagy default)
 const LandingPage = dynamicImport(() => import('@/components/LandingPage'), { ssr: true });
 
 const DEV_SECRET_KEY = "admin"; 
@@ -93,8 +97,7 @@ function CarCard({ car, shared, priority = false }: { car: any, shared?: boolean
 
 // --- DEALER DASHBOARD ---
 function DealerDashboard({ user, cars }: { user: any, cars: any[] }) {
-    const totalValue = cars.reduce((sum, car) => sum + (car.purchase_price || 0), 0); 
-
+    // ... A DealerDashboard kódja változatlan maradhat, mert egyszerű ...
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
             {/* Dealer Navbar */}
