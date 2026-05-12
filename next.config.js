@@ -108,24 +108,106 @@ const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   compress: true,
+  productionBrowserSourceMaps: false,
 
-  transpilePackages: ['react-map-gl', 'mapbox-gl'],
+  // 🚀 AGGRESSZÍV TRANSPILING OPTIMALIZÁCIÓ
+  transpilePackages: ['react-map-gl', 'mapbox-gl', 'framer-motion', '@mapbox/polyline'],
 
   images: {
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 60 * 60 * 24 * 7,
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    minimumCacheTTL: 60 * 60 * 24 * 365, // 1 év versioning miatt
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co' },
       { protocol: 'https', hostname: '**.googleusercontent.com' },
+      { protocol: 'https', hostname: 'maps.googleapis.com' },
+      { protocol: 'https', hostname: 'api.mapbox.com' },
     ],
+    // Agresszív optimalizáció
+    unoptimized: false,
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
   experimental: {
-    optimizePackageImports: ['lucide-react', 'date-fns', 'framer-motion'],
+    // 🔥 BUNDLE OPTIMALIZÁCIÓ
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      'framer-motion',
+      '@radix-ui/react-slot',
+      'recharts',
+    ],
+    
+    // Dinamikus bundle splitting
+    dynamicIO: true,
+    
     serverActions: {
       bodySizeLimit: '10mb',
+      allowedOrigins: ['*'],
     },
+
+    // TypeScript teljesítményi fejlesztések
+    parallelServerBuildTraces: true,
+    parallelServerCompiles: true,
+  },
+
+  // 🎯 WEBPACK OPTIMALIZÁCIÓ
+  webpack: (config, { isServer }) => {
+    config.optimization = {
+      ...config.optimization,
+      minimize: true,
+      moduleIds: 'deterministic',
+      runtimeChunk: 'single',
+      splitChunks: {
+        chunks: 'all',
+        maxAsyncRequests: 30,
+        maxInitialRequests: 30,
+        minSize: 20000,
+        maxSize: 244000,
+        cacheGroups: {
+          // AI SDK-k elkülönítése
+          aiSdks: {
+            test: /[\\/]node_modules[\\/](@ai-sdk|ai)[\\/]/,
+            name: 'ai-sdks',
+            priority: 100,
+            reuseExistingChunk: true,
+          },
+          // Map librariesmapping
+          mapLibraries: {
+            test: /[\\/]node_modules[\\/](mapbox-gl|leaflet|react-leaflet)[\\/]/,
+            name: 'map-libs',
+            priority: 90,
+            reuseExistingChunk: true,
+          },
+          // PDF generator libraries
+          pdfLibs: {
+            test: /[\\/]node_modules[\\/](jspdf|jspdf-autotable|@react-pdf)[\\/]/,
+            name: 'pdf-libs',
+            priority: 80,
+            reuseExistingChunk: true,
+          },
+          // Animation libraries
+          animations: {
+            test: /[\\/]node_modules[\\/](framer-motion|react-confetti|canvas-confetti)[\\/]/,
+            name: 'animations',
+            priority: 70,
+            reuseExistingChunk: true,
+          },
+          // Vendor libraries
+          vendors: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            priority: 10,
+            reuseExistingChunk: true,
+            enforce: true,
+          },
+        },
+      },
+    };
+
+    return config;
   },
 
   async headers() {
