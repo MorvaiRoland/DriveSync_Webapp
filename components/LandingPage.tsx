@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
-import { motion, Variants, AnimatePresence } from 'framer-motion';
+import { motion, Variants, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import {
   ArrowRight, Search, ShieldCheck, BarChart3, Cpu,
-  Menu, X, Sun, Moon, Zap, Star, Globe, CheckCircle2, ChevronRight, Activity
+  Menu, X, Sun, Moon, Zap, Star, Globe, CheckCircle2, ChevronRight, Activity, CarFront
 } from 'lucide-react';
 
 // ==========================================
@@ -15,17 +15,37 @@ import {
 const translations = {
   hu: {
     nav: { features: "Funkciók", testimonials: "Vélemények", pricing: "Árazás", login: "Bejelentkezés", startFree: "Kezdés ingyen" },
-    hero: { badge: "A jövő garázsmenedzsmentje", title1: "Intelligens", title2: "Flotta Irányítás", desc: "Minden adat, szervizmúlt és AI szerelő asszisztens egyetlen platformon. Kereskedőknek és magánszemélyeknek.", ctaPrimary: "Kezdj el most ingyen", ctaSecondary: "Alvázszám kereső", users: "Boldog felhasználó csatlakozott" },
-    features: { title: "Minden, amire az autódnak szüksége van", f1_title: "AI Szerelő Asszisztens", f1_desc: "Készíts egy fotót a műszerfal hibakódjáról, és a mesterséges intelligencia azonnal elemzi a problémát, valamint megoldási javaslatokat ad valós időben.", f2_title: "Hiteles Szervizkönyv", f2_desc: "Rögzíts minden beavatkozást, csatolj számlákat és fotókat. Egy megbízható, felhő alapú digitális szervizkönyv, ami növeli az autód értékét eladáskor.", f3_title: "Precíziós Költségkövetés", f3_desc: "Tankolások, biztosítások, súlyadók egy helyen. Lásd másodpercre pontosan, mennyibe kerül a flottád vagy autód fenntartása havonta, vizuális grafikonokkal." },
+    hero: { badge: "VISIONOS DESIGN EDITION", title1: "A jövő garázsa", title2: "a te kezedben", desc: "Minden adat, szervizmúlt és AI szerelő asszisztens egyetlen lélegzetelállító platformon. Kereskedőknek és magánszemélyeknek.", ctaPrimary: "Kezdj el most ingyen", ctaSecondary: "Alvázszám kereső", users: "Boldog felhasználó csatlakozott" },
+    features: { title: "Minden, amire az autódnak szüksége van.", f1_title: "AI Szerelő Asszisztens", f1_desc: "Készíts egy fotót a műszerfal hibakódjáról, és a mesterséges intelligencia azonnal elemzi a problémát, valamint megoldási javaslatokat ad valós időben.", f2_title: "Hiteles Szervizkönyv", f2_desc: "Rögzíts minden beavatkozást, csatolj számlákat és fotókat. Egy megbízható, felhő alapú digitális szervizkönyv, ami növeli az autód értékét eladáskor.", f3_title: "Precíziós Költségkövetés", f3_desc: "Tankolások, biztosítások, súlyadók egy helyen. Lásd másodpercre pontosan, mennyibe kerül a flottád vagy autód fenntartása havonta, vizuális grafikonokkal." },
     testimonials: { title: "Mit mondanak a felhasználóink?" },
-    footer: { desc: "A legfejlettebb digitális garázs platform autótulajdonosok és flottakezelők számára.", links: "Linkek", legal: "Jogi", privacy: "Adatvédelem", terms: "ÁSZF", rights: "Minden jog fenntartva." }
+    footer: { desc: "A legfejlettebb digitális garázs platform autótulajdonosok és flottakezelők számára.", links: "Linkek", legal: "Jogi", privacy: "Adatvédelem", terms: "ÁSZF", rights: "Minden jog fenntartva." },
+    reviews: [
+      { name: 'Kovács Péter', text: 'Végre egy átlátható felület, ahol minden kiadást egy helyen vezethetek. Az AI szerelő nagyon profi!' },
+      { name: 'Tóth Anita', text: 'Használtautó vásárlás után egyből ide töltöttem fel mindent. A szervizkönyv funkció hiánypótló a piacon.' },
+      { name: 'Nagy Gábor', text: 'A flottakezelés sosem volt még ilyen egyszerű. Pontosan látom melyik autónak mikor jár le a vizsgája.' },
+      { name: 'Szabó László', text: 'Nagyon szép és gyors az oldal. Örülök, hogy megtaláltam ezt a rendszert, mindenkinek ajánlom.' },
+      { name: 'Horváth Eszter', text: 'Már nem felejtem el az olajcserét, mert a rendszer automatikusan szól. Imádom!' },
+      { name: 'Varga Bálint', text: 'Autószerelőként is lenyűgözőnek találom az AI diagnosztikát. Sok időt spórol meg nekem.' },
+      { name: 'Farkas Dóra', text: 'A férjem autóját és az enyémet is egy helyen tudjuk kezelni. A grafikonok nagyon látványosak.' },
+      { name: 'Kiss Zoltán', text: 'Tökéletes eszköz a kiadások kontrollálásához. Látom, hogy mennyit eszik az autó valójában.' }
+    ]
   },
   en: {
     nav: { features: "Features", testimonials: "Reviews", pricing: "Pricing", login: "Log in", startFree: "Start for free" },
-    hero: { badge: "The future of garage management", title1: "Intelligent", title2: "Fleet Control", desc: "All data, service history, and an AI mechanic assistant on a single platform. For dealers and individuals.", ctaPrimary: "Start for free now", ctaSecondary: "VIN Search", users: "Happy users joined" },
-    features: { title: "Everything your car needs", f1_title: "AI Mechanic Assistant", f1_desc: "Take a photo of the dashboard error code, and our AI instantly analyzes the problem and provides real-time solution suggestions.", f2_title: "Verified Service History", f2_desc: "Log every maintenance, attach invoices and photos. A reliable cloud-based digital service book that increases your car's resale value.", f3_title: "Precision Cost Tracking", f3_desc: "Refueling, insurance, taxes in one place. See exactly how much it costs to maintain your fleet or car monthly with visual charts." },
-    testimonials: { title: "What our users say" },
-    footer: { desc: "The most advanced digital garage platform for car owners and fleet managers.", links: "Links", legal: "Legal", privacy: "Privacy Policy", terms: "Terms of Service", rights: "All rights reserved." }
+    hero: { badge: "VISIONOS DESIGN EDITION", title1: "The future garage", title2: "in your hands", desc: "All data, service history, and an AI mechanic assistant on a single breathtaking platform. For dealers and individuals.", ctaPrimary: "Start for free now", ctaSecondary: "VIN Search", users: "Happy users joined" },
+    features: { title: "Everything your car needs.", f1_title: "AI Mechanic Assistant", f1_desc: "Take a photo of the dashboard error code, and our AI instantly analyzes the problem and provides real-time solution suggestions.", f2_title: "Verified Service History", f2_desc: "Log every maintenance, attach invoices and photos. A reliable cloud-based digital service book that increases your car's resale value.", f3_title: "Precision Cost Tracking", f3_desc: "Refueling, insurance, taxes in one place. See exactly how much it costs to maintain your fleet or car monthly with visual charts." },
+    testimonials: { title: "What our users say." },
+    footer: { desc: "The most advanced digital garage platform for car owners and fleet managers.", links: "Links", legal: "Legal", privacy: "Privacy Policy", terms: "Terms of Service", rights: "All rights reserved." },
+    reviews: [
+      { name: 'Peter Kovacs', text: 'Finally a transparent interface where I can track all expenses in one place. The AI mechanic is very professional!' },
+      { name: 'Anita Toth', text: 'After buying a used car, I uploaded everything here immediately. The service book feature is a gap-filler in the market.' },
+      { name: 'Gabor Nagy', text: 'Fleet management has never been this easy. I see exactly when each car\'s inspection expires.' },
+      { name: 'Laszlo Szabo', text: 'Very beautiful and fast site. I am glad I found this system, I recommend it to everyone.' },
+      { name: 'Esther Horvath', text: 'I no longer forget oil changes because the system notifies me automatically. I love it!' },
+      { name: 'Balint Varga', text: 'Even as a car mechanic, I find the AI diagnostics impressive. It saves me a lot of time.' },
+      { name: 'Dora Farkas', text: 'We can manage both my husband\'s and my car in one place. The charts are very spectacular.' },
+      { name: 'Zoltan Kiss', text: 'Perfect tool for controlling expenses. I can see how much the car actually consumes.' }
+    ]
   }
 };
 
@@ -41,7 +61,7 @@ const fadeUp: Variants = {
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
 
 // ==========================================
@@ -56,7 +76,7 @@ const ThemeToggle = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
-  if (!mounted) return <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse"></div>;
+  if (!mounted) return <div className="w-10 h-10 rounded-full bg-slate-200/50 dark:bg-slate-800/50 animate-pulse"></div>;
 
   const currentTheme = theme === 'system' ? systemTheme : theme;
   const isDark = currentTheme === 'dark';
@@ -64,11 +84,11 @@ const ThemeToggle = () => {
   return (
     <button
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+      className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/50 dark:bg-black/50 border border-white/40 dark:border-white/10 backdrop-blur-md shadow-sm hover:scale-105 transition-all cursor-pointer"
       aria-label="Toggle Theme"
     >
-      <Sun className={`absolute w-5 h-5 transition-all duration-500 ${isDark ? 'opacity-0 scale-50 rotate-90' : 'opacity-100 scale-100 rotate-0 text-amber-500'}`} />
-      <Moon className={`absolute w-5 h-5 transition-all duration-500 ${isDark ? 'opacity-100 scale-100 rotate-0 text-indigo-400' : 'opacity-0 scale-50 -rotate-90'}`} />
+      <Sun className={`absolute w-5 h-5 transition-all duration-500 ${isDark ? 'opacity-0 scale-50 rotate-90' : 'opacity-100 scale-100 rotate-0 text-slate-700'}`} />
+      <Moon className={`absolute w-5 h-5 transition-all duration-500 ${isDark ? 'opacity-100 scale-100 rotate-0 text-white' : 'opacity-0 scale-50 -rotate-90'}`} />
     </button>
   );
 };
@@ -77,9 +97,9 @@ const LanguageToggle = ({ lang, setLang }: { lang: Lang, setLang: (l: Lang) => v
   return (
     <button
       onClick={() => setLang(lang === 'hu' ? 'en' : 'hu')}
-      className="flex items-center gap-2 px-3 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-sm font-bold text-slate-700 dark:text-slate-300"
+      className="flex items-center gap-2 px-3 h-10 rounded-full bg-white/50 dark:bg-black/50 border border-white/40 dark:border-white/10 backdrop-blur-md shadow-sm hover:scale-105 transition-all text-sm font-semibold text-slate-700 dark:text-white"
     >
-      <Globe className="w-4 h-4 text-slate-500" />
+      <Globe className="w-4 h-4 opacity-70" />
       <span>{lang.toUpperCase()}</span>
     </button>
   );
@@ -95,8 +115,15 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [lang, setLangState] = useState<Lang>('hu');
 
+  // Progress Bar hooks
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
   useEffect(() => {
-    // Load language preference from local storage
     const savedLang = localStorage.getItem('app_lang') as Lang;
     if (savedLang && (savedLang === 'hu' || savedLang === 'en')) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -118,50 +145,58 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
   const t = translations[lang];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0B] selection:bg-indigo-500/30 font-sans overflow-hidden transition-colors duration-500">
-      {/* --- BACKGROUND EFFECTS --- */}
-      <div className="fixed inset-0 pointer-events-none z-0 flex justify-center">
-        <div className="absolute top-[-20%] w-[1000px] h-[600px] bg-indigo-500/10 dark:bg-indigo-500/20 blur-[120px] rounded-full mix-blend-screen animate-pulse-slow"></div>
-        <div className="absolute top-[20%] right-[-10%] w-[600px] h-[600px] bg-cyan-500/10 dark:bg-cyan-500/15 blur-[150px] rounded-full mix-blend-screen"></div>
-        <div className="absolute bottom-[-10%] left-[-10%] w-[800px] h-[800px] bg-purple-500/10 dark:bg-purple-500/15 blur-[150px] rounded-full mix-blend-screen"></div>
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] dark:opacity-[0.04] mix-blend-overlay"></div>
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] selection:bg-indigo-500/30 font-sans overflow-hidden transition-colors duration-700">
+      
+      {/* --- SCROLL PROGRESS BAR --- */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 origin-left z-[100]"
+        style={{ scaleX }}
+      />
+
+      {/* --- APPLE GLASS BACKGROUND AURORA --- */}
+      <div className="fixed inset-0 pointer-events-none z-0 flex justify-center items-center overflow-hidden">
+        {/* Soft colorful blobs that create the glassmorphism base */}
+        <div className="absolute top-[-10%] right-[-5%] w-[400px] md:w-[800px] h-[400px] md:h-[800px] bg-indigo-400/20 dark:bg-indigo-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[400px] md:w-[800px] h-[400px] md:h-[800px] bg-purple-400/20 dark:bg-purple-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute top-[30%] left-[20%] w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-cyan-300/20 dark:bg-cyan-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
+        {/* Subtle noise texture */}
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] dark:opacity-[0.06] mix-blend-overlay"></div>
       </div>
 
-      {/* --- NAVBAR --- */}
+      {/* --- VISIONOS NAVBAR --- */}
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/70 dark:bg-[#0A0A0B]/70 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800/50 shadow-sm' : 'bg-transparent pt-4'}`}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className={`fixed top-4 inset-x-0 z-50 transition-all duration-500 px-4`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+        <div className={`max-w-5xl mx-auto h-16 flex items-center justify-between px-6 rounded-full transition-all duration-500 ${scrolled ? 'bg-white/60 dark:bg-black/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(255,255,255,0.02)]' : 'bg-transparent'}`}>
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-              <Zap className="w-5 h-5 fill-white" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
+              <Zap className="w-4 h-4 fill-white" />
             </div>
-            <span className="font-black text-xl tracking-tight text-slate-900 dark:text-white">Dynamic<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">Sense</span></span>
+            <span className="font-semibold text-lg tracking-tight text-slate-900 dark:text-white">Dynamic<span className="text-slate-500 dark:text-slate-400">Sense</span></span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <div className="flex gap-6 text-sm font-bold text-slate-600 dark:text-slate-400">
-              <a href="#features" className="hover:text-slate-900 dark:hover:text-white transition-colors">{t.nav.features}</a>
-              <a href="#testimonials" className="hover:text-slate-900 dark:hover:text-white transition-colors">{t.nav.testimonials}</a>
-              <a href="#pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors">{t.nav.pricing}</a>
+            <div className="flex gap-6 text-sm font-medium text-slate-600 dark:text-slate-300">
+              <a href="#features" className="hover:text-black dark:hover:text-white transition-colors">{t.nav.features}</a>
+              <a href="#testimonials" className="hover:text-black dark:hover:text-white transition-colors">{t.nav.testimonials}</a>
             </div>
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800"></div>
+            <div className="h-4 w-px bg-slate-300 dark:bg-slate-700"></div>
             <div className="flex items-center gap-3">
               <LanguageToggle lang={lang} setLang={setLang} />
               <ThemeToggle />
-              <Link href="/login" className="hidden lg:flex items-center text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              <Link href="/login" className="hidden lg:flex items-center text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white transition-colors ml-2">
                 {t.nav.login}
               </Link>
-              <Link href="/login?mode=signup" className="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold hover:bg-indigo-600 dark:hover:bg-indigo-50 dark:hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-500/20 transition-all">
+              <Link href="/login?mode=signup" className="px-5 py-2 rounded-full bg-black/90 dark:bg-white/90 text-white dark:text-black text-sm font-medium hover:scale-105 transition-transform shadow-lg backdrop-blur-md">
                 {t.nav.startFree}
               </Link>
             </div>
           </div>
 
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-slate-600 dark:text-slate-400">
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 text-slate-800 dark:text-white">
             {mobileMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
@@ -170,23 +205,23 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="md:hidden overflow-hidden bg-white/95 dark:bg-[#0A0A0B]/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800"
+              initial={{ height: 0, opacity: 0, y: -20 }}
+              animate={{ height: "auto", opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -20 }}
+              className="md:hidden mt-4 mx-auto max-w-5xl overflow-hidden bg-white/70 dark:bg-black/70 backdrop-blur-3xl border border-white/40 dark:border-white/10 rounded-3xl shadow-2xl"
             >
-              <div className="p-4 space-y-4 flex flex-col">
-                <a href="#features" onClick={() => setMobileMenuOpen(false)} className="block p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 font-bold text-slate-700 dark:text-slate-300">{t.nav.features}</a>
-                <a href="#testimonials" onClick={() => setMobileMenuOpen(false)} className="block p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 font-bold text-slate-700 dark:text-slate-300">{t.nav.testimonials}</a>
-                <div className="h-px bg-slate-100 dark:bg-slate-800 w-full my-2"></div>
-                <div className="flex gap-4 p-3">
+              <div className="p-6 flex flex-col gap-4">
+                <a href="#features" onClick={() => setMobileMenuOpen(false)} className="block p-3 rounded-2xl hover:bg-white/50 dark:hover:bg-white/10 font-medium text-slate-800 dark:text-slate-200">{t.nav.features}</a>
+                <a href="#testimonials" onClick={() => setMobileMenuOpen(false)} className="block p-3 rounded-2xl hover:bg-white/50 dark:hover:bg-white/10 font-medium text-slate-800 dark:text-slate-200">{t.nav.testimonials}</a>
+                <div className="h-px bg-slate-200 dark:bg-slate-800 w-full my-2"></div>
+                <div className="flex justify-between items-center px-3">
                   <LanguageToggle lang={lang} setLang={setLang} />
                   <ThemeToggle />
                 </div>
-                <Link href="/login" className="w-full p-4 text-center rounded-xl font-bold bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white">
+                <Link href="/login" className="w-full p-4 mt-2 text-center rounded-2xl font-medium bg-white/50 dark:bg-white/10 text-slate-900 dark:text-white border border-white/40 dark:border-white/5">
                   {t.nav.login}
                 </Link>
-                <Link href="/login?mode=signup" className="w-full p-4 text-center rounded-xl font-bold bg-indigo-600 text-white">
+                <Link href="/login?mode=signup" className="w-full p-4 text-center rounded-2xl font-medium bg-black dark:bg-white text-white dark:text-black">
                   {t.nav.startFree}
                 </Link>
               </div>
@@ -195,239 +230,186 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </AnimatePresence>
       </motion.nav>
 
-      <main className="relative z-10 pt-32 pb-20 lg:pt-48 lg:pb-32 px-4">
-        {/* --- ULTRA MODERN HERO --- */}
-        <section className="max-w-7xl mx-auto flex flex-col items-center text-center">
-          <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-8 max-w-4xl flex flex-col items-center">
+      <main className="relative z-10 pt-32 pb-20 md:pt-40 lg:pt-56 lg:pb-32 px-4">
+        {/* --- APPLE GLASS HERO --- */}
+        <section className="max-w-6xl mx-auto flex flex-col items-center text-center">
+          <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-6 md:space-y-8 flex flex-col items-center w-full">
             
-            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-indigo-600 dark:text-indigo-400 text-sm font-bold tracking-wide backdrop-blur-sm">
-              <span className="relative flex h-2 w-2 mr-1">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-              </span>
+            <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-slate-800 dark:text-slate-300 text-xs font-semibold tracking-widest backdrop-blur-md shadow-sm uppercase">
+              <Zap className="w-3.5 h-3.5 text-indigo-500" />
               {t.hero.badge}
             </motion.div>
 
-            <motion.h1 variants={fadeUp} className="text-6xl sm:text-7xl lg:text-[5.5rem] font-black tracking-tighter leading-[1.05]">
+            <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl lg:text-[6.5rem] font-semibold tracking-tighter leading-[1.05] max-w-5xl">
               <span className="text-slate-900 dark:text-white block">{t.hero.title1}</span>
-              <span className="bg-gradient-to-r from-indigo-500 via-cyan-400 to-indigo-500 bg-[length:200%_auto] animate-gradient bg-clip-text text-transparent block pb-2 drop-shadow-sm">
+              <span className="text-slate-500 dark:text-slate-400 block pb-2">
                 {t.hero.title2}
               </span>
             </motion.h1>
 
-            <motion.p variants={fadeUp} className="text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed font-medium">
+            <motion.p variants={fadeUp} className="text-lg md:text-xl lg:text-2xl text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed font-medium tracking-tight px-2">
               {t.hero.desc}
             </motion.p>
 
-            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-4">
-              <Link href="/login?mode=signup" className="group relative px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-2xl overflow-hidden shadow-2xl hover:shadow-indigo-500/25 transition-all duration-300 hover:-translate-y-1 w-full sm:w-auto flex justify-center items-center">
-                <span className="relative z-10 flex items-center gap-2">
+            <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-6 px-4">
+              <div className="relative group w-full sm:w-auto">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full blur opacity-30 group-hover:opacity-70 transition duration-500"></div>
+                <Link href="/login?mode=signup" className="relative px-8 py-4 w-full sm:w-auto bg-black/90 dark:bg-white/90 text-white dark:text-black font-medium rounded-full overflow-hidden shadow-2xl hover:scale-[1.02] transition-all duration-300 flex justify-center items-center gap-2 backdrop-blur-xl">
                   {t.hero.ctaPrimary} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <span className="relative z-10 absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 text-white transition-opacity duration-300">
-                  {t.hero.ctaPrimary} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </Link>
-              <Link href="/check" className="px-8 py-4 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-bold rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all flex justify-center items-center gap-2 w-full sm:w-auto group">
-                <Search className="w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                </Link>
+              </div>
+              <Link href="/check" className="px-8 py-4 bg-white/40 dark:bg-white/5 backdrop-blur-2xl border border-white/60 dark:border-white/10 text-slate-900 dark:text-white font-medium rounded-full hover:bg-white/60 dark:hover:bg-white/10 hover:scale-[1.02] transition-all flex justify-center items-center gap-2 w-full sm:w-auto shadow-sm group">
+                <Search className="w-5 h-5 opacity-50 group-hover:text-indigo-500 group-hover:opacity-100 transition-colors" />
                 {t.hero.ctaSecondary}
               </Link>
             </motion.div>
-            
-            <motion.div variants={fadeUp} className="flex items-center gap-4 pt-8">
-              <div className="flex -space-x-3">
-                 <div className="w-10 h-10 rounded-full border-2 border-white dark:border-[#0A0A0B] bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">S</div>
-                 <div className="w-10 h-10 rounded-full border-2 border-white dark:border-[#0A0A0B] bg-cyan-100 dark:bg-cyan-900/50 flex items-center justify-center text-xs font-bold text-cyan-600 dark:text-cyan-400">T</div>
-                 <div className="w-10 h-10 rounded-full border-2 border-white dark:border-[#0A0A0B] bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center text-xs font-bold text-purple-600 dark:text-purple-400">R</div>
-                 <div className="w-10 h-10 rounded-full border-2 border-white dark:border-[#0A0A0B] bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-900 dark:text-white shadow-sm">+10k</div>
-              </div>
-              <div className="text-sm font-medium text-slate-500">
-                <span className="font-bold text-slate-900 dark:text-white">{t.hero.users}</span>
-              </div>
-            </motion.div>
           </motion.div>
 
-          {/* Abstract Dashboard Mockup */}
+          {/* VisionOS Glass Mockup */}
           <motion.div 
-            initial={{ opacity: 0, y: 100 }}
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-5xl mt-20 relative"
+            transition={{ duration: 1.2, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full mt-16 md:mt-24 relative perspective-[2000px] px-2 md:px-0"
           >
-            {/* Soft Glow Behind Mockup */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent dark:from-[#0A0A0B] z-20 h-full w-full pointer-events-none"></div>
-            
-            <div className="relative rounded-[2rem] bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 p-2 shadow-2xl shadow-slate-200/50 dark:shadow-black/50 backdrop-blur-xl">
-              <div className="rounded-[1.5rem] bg-white dark:bg-[#0A0A0B] border border-slate-100 dark:border-slate-800/50 overflow-hidden w-full aspect-[16/9] md:aspect-[21/9] flex flex-col relative">
+            <div className="relative rounded-[2rem] md:rounded-[2.5rem] bg-white/30 dark:bg-white/5 border border-white/50 dark:border-white/10 p-2 md:p-4 shadow-[0_30px_60px_rgba(0,0,0,0.1)] dark:shadow-[0_30px_60px_rgba(0,0,0,0.4)] backdrop-blur-3xl transform md:rotate-x-12 md:hover:rotate-x-0 transition-transform duration-1000 ease-out">
+              <div className="rounded-[1.5rem] md:rounded-[2rem] bg-white/70 dark:bg-black/60 border border-white/50 dark:border-white/5 overflow-hidden w-full aspect-auto md:aspect-[21/9] flex flex-col relative backdrop-blur-md min-h-[300px] md:min-h-0">
                 
-                {/* Mockup Header */}
-                <div className="h-12 border-b border-slate-100 dark:border-slate-800 flex items-center px-4 gap-2">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-slate-200 dark:bg-slate-700"></div>
-                    <div className="w-3 h-3 rounded-full bg-slate-200 dark:bg-slate-700"></div>
-                    <div className="w-3 h-3 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                {/* Header */}
+                <div className="h-10 md:h-14 border-b border-white/20 dark:border-white/5 flex items-center px-4 md:px-6 gap-3">
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-slate-300/80 dark:bg-slate-700/80"></div>
+                    <div className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-slate-300/80 dark:bg-slate-700/80"></div>
+                    <div className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-slate-300/80 dark:bg-slate-700/80"></div>
                   </div>
                 </div>
 
-                {/* Mockup Body Grid */}
-                <div className="flex-1 p-6 grid grid-cols-12 gap-6 relative">
+                {/* Content */}
+                <div className="flex-1 p-4 md:p-8 flex flex-col md:grid md:grid-cols-12 gap-6 md:gap-8 relative overflow-hidden">
                   
-                  {/* Floating AI Card */}
+                  {/* Floating AI Glass Card - Hidden on very small mobile, visible otherwise */}
                   <motion.div 
                     animate={{ y: [0, -15, 0] }}
                     transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-                    className="absolute -right-4 top-8 w-64 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl p-4 z-30"
+                    className="hidden sm:block absolute right-0 md:-right-6 top-4 md:top-10 w-64 md:w-72 bg-white/70 dark:bg-white/10 backdrop-blur-3xl rounded-3xl border border-white/60 dark:border-white/10 shadow-2xl p-4 md:p-5 z-30"
                   >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center">
-                        <Cpu className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                        <Cpu className="w-5 h-5 md:w-6 md:h-6 text-indigo-500 dark:text-indigo-400" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-slate-500">AI Asszisztens</div>
-                        <div className="text-sm font-black text-slate-900 dark:text-white">Diagnózis kész</div>
+                        <div className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400">AI Assistant</div>
+                        <div className="text-sm md:text-base font-semibold text-slate-900 dark:text-white">Analysis Complete</div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="h-2 w-full bg-slate-100 dark:bg-slate-700 rounded-full"></div>
-                      <div className="h-2 w-4/5 bg-slate-100 dark:bg-slate-700 rounded-full"></div>
+                    <div className="space-y-2 md:space-y-2.5">
+                      <div className="h-1.5 md:h-2 w-full bg-black/10 dark:bg-white/10 rounded-full"></div>
+                      <div className="h-1.5 md:h-2 w-3/4 bg-black/10 dark:bg-white/10 rounded-full"></div>
                     </div>
                   </motion.div>
 
-                  <div className="col-span-3 space-y-4">
-                    <div className="h-8 w-1/2 bg-slate-100 dark:bg-slate-800 rounded-lg"></div>
-                    <div className="space-y-2">
-                      <div className="h-4 w-full bg-slate-50 dark:bg-slate-800/50 rounded-md"></div>
-                      <div className="h-4 w-5/6 bg-slate-50 dark:bg-slate-800/50 rounded-md"></div>
-                      <div className="h-4 w-full bg-slate-50 dark:bg-slate-800/50 rounded-md"></div>
+                  <div className="col-span-12 md:col-span-4 space-y-4 md:space-y-6">
+                    <div className="h-8 md:h-10 w-3/4 md:w-2/3 bg-black/5 dark:bg-white/5 rounded-xl"></div>
+                    <div className="space-y-2.5 md:space-y-3">
+                      <div className="h-3 md:h-4 w-full bg-black/5 dark:bg-white/5 rounded-lg"></div>
+                      <div className="h-3 md:h-4 w-5/6 bg-black/5 dark:bg-white/5 rounded-lg"></div>
+                      <div className="h-3 md:h-4 w-full bg-black/5 dark:bg-white/5 rounded-lg"></div>
                     </div>
                   </div>
-                  <div className="col-span-9 grid grid-cols-2 gap-4">
-                     <div className="h-32 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center"><Activity className="w-4 h-4 text-emerald-600" /></div>
-                        <div className="h-6 w-1/3 bg-slate-200 dark:bg-slate-700 rounded-md"></div>
+                  <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mt-4 md:mt-0">
+                     <div className="h-28 md:h-40 bg-white/40 dark:bg-white/5 border border-white/40 dark:border-white/5 rounded-[1.5rem] md:rounded-3xl p-4 md:p-6 flex flex-col justify-between shadow-sm hover:bg-white/50 transition-colors">
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-emerald-500/10 flex items-center justify-center"><Activity className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" /></div>
+                        <div className="h-6 md:h-8 w-1/2 bg-black/5 dark:bg-white/5 rounded-lg md:rounded-xl"></div>
                      </div>
-                     <div className="h-32 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
-                        <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center"><BarChart3 className="w-4 h-4 text-amber-600" /></div>
-                        <div className="h-6 w-1/2 bg-slate-200 dark:bg-slate-700 rounded-md"></div>
+                     <div className="h-28 md:h-40 bg-white/40 dark:bg-white/5 border border-white/40 dark:border-white/5 rounded-[1.5rem] md:rounded-3xl p-4 md:p-6 flex flex-col justify-between shadow-sm hover:bg-white/50 transition-colors">
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-amber-500/10 flex items-center justify-center"><BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-amber-500" /></div>
+                        <div className="h-6 md:h-8 w-1/3 bg-black/5 dark:bg-white/5 rounded-lg md:rounded-xl"></div>
                      </div>
-                     <div className="col-span-2 h-40 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl"></div>
+                     <div className="col-span-1 sm:col-span-2 h-32 md:h-48 bg-white/40 dark:bg-white/5 border border-white/40 dark:border-white/5 rounded-[1.5rem] md:rounded-3xl shadow-sm"></div>
                   </div>
                 </div>
-
               </div>
             </div>
           </motion.div>
         </section>
 
-        {/* --- ZIG-ZAG FEATURES SECTION --- */}
-        <section id="features" className="max-w-7xl mx-auto py-32 space-y-32">
-          
-          <div className="text-center max-w-2xl mx-auto mb-20">
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">{t.features.title}</h2>
+        {/* --- GLASS FEATURES SECTION --- */}
+        <section id="features" className="max-w-6xl mx-auto py-24 md:py-40 space-y-24 md:space-y-40">
+          <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20 px-4">
+            <h2 className="text-3xl md:text-5xl lg:text-6xl font-semibold text-slate-900 dark:text-white tracking-tighter">{t.features.title}</h2>
           </div>
 
           {/* Feature 1 */}
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} className="order-2 lg:order-1 relative h-[400px] rounded-[2rem] bg-gradient-to-br from-indigo-500/5 to-cyan-500/5 border border-indigo-500/10 flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-50 mix-blend-overlay"></div>
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute w-64 h-64 bg-indigo-500/20 rounded-full blur-[60px]"></motion.div>
-              <div className="relative z-10 w-24 h-24 rounded-3xl bg-white dark:bg-slate-900 shadow-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800">
-                <Cpu className="w-12 h-12 text-indigo-500" />
+          <div className="grid lg:grid-cols-2 gap-12 md:gap-20 items-center">
+            <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-1 lg:order-1 relative w-full aspect-video lg:aspect-square rounded-[2rem] lg:rounded-[3rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex items-center justify-center overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent group-hover:opacity-70 transition-opacity"></div>
+              <div className="relative z-10 w-24 h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-3xl bg-white/80 dark:bg-black/50 shadow-xl flex items-center justify-center border border-white/50 dark:border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform duration-500">
+                <Cpu className="w-10 h-10 lg:w-12 lg:h-12 text-indigo-500" />
               </div>
             </motion.div>
-            <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} className="order-1 lg:order-2 space-y-6">
-              <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                <Cpu className="w-6 h-6" />
-              </div>
-              <h3 className="text-3xl font-black text-slate-900 dark:text-white">{t.features.f1_title}</h3>
-              <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">{t.features.f1_desc}</p>
-              <ul className="space-y-3 pt-4">
-                {['Okos hibakód elemzés', 'Gyors megoldási javaslatok', 'Többnyelvű támogatás'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 font-medium text-slate-700 dark:text-slate-300">
-                    <CheckCircle2 className="w-5 h-5 text-indigo-500" /> {item}
-                  </li>
-                ))}
-              </ul>
+            <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-2 lg:order-2 space-y-4 md:space-y-6 px-2">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-slate-900 dark:text-white">{t.features.f1_title}</h3>
+              <p className="text-base sm:text-lg md:text-xl text-slate-500 dark:text-slate-400 leading-relaxed tracking-tight">{t.features.f1_desc}</p>
             </motion.div>
           </div>
 
           {/* Feature 2 */}
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} className="order-1 space-y-6">
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <h3 className="text-3xl font-black text-slate-900 dark:text-white">{t.features.f2_title}</h3>
-              <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">{t.features.f2_desc}</p>
-              <Link href="/login?mode=signup" className="inline-flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition-colors">
-                Tudj meg többet <ChevronRight className="w-4 h-4" />
-              </Link>
+          <div className="grid lg:grid-cols-2 gap-12 md:gap-20 items-center">
+            <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-2 lg:order-1 space-y-4 md:space-y-6 px-2">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-slate-900 dark:text-white">{t.features.f2_title}</h3>
+              <p className="text-base sm:text-lg md:text-xl text-slate-500 dark:text-slate-400 leading-relaxed tracking-tight">{t.features.f2_desc}</p>
             </motion.div>
-            <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} className="order-2 relative h-[400px] rounded-[2rem] bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border border-emerald-500/10 flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-50 mix-blend-overlay"></div>
-              <motion.div animate={{ rotate: -360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute w-64 h-64 bg-emerald-500/20 rounded-full blur-[60px]"></motion.div>
-              <div className="relative z-10 w-24 h-24 rounded-3xl bg-white dark:bg-slate-900 shadow-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800">
-                <ShieldCheck className="w-12 h-12 text-emerald-500" />
+            <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-1 lg:order-2 relative w-full aspect-video lg:aspect-square rounded-[2rem] lg:rounded-[3rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex items-center justify-center overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent group-hover:opacity-70 transition-opacity"></div>
+              <div className="relative z-10 w-24 h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-3xl bg-white/80 dark:bg-black/50 shadow-xl flex items-center justify-center border border-white/50 dark:border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform duration-500">
+                <ShieldCheck className="w-10 h-10 lg:w-12 lg:h-12 text-emerald-500" />
               </div>
             </motion.div>
           </div>
 
           {/* Feature 3 */}
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} className="order-2 lg:order-1 relative h-[400px] rounded-[2rem] bg-gradient-to-br from-amber-500/5 to-orange-500/5 border border-amber-500/10 flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-50 mix-blend-overlay"></div>
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }} className="absolute w-64 h-64 bg-amber-500/20 rounded-full blur-[60px]"></motion.div>
-              <div className="relative z-10 w-24 h-24 rounded-3xl bg-white dark:bg-slate-900 shadow-2xl flex items-center justify-center border border-slate-200 dark:border-slate-800">
-                <BarChart3 className="w-12 h-12 text-amber-500" />
+          <div className="grid lg:grid-cols-2 gap-12 md:gap-20 items-center">
+            <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-1 lg:order-1 relative w-full aspect-video lg:aspect-square rounded-[2rem] lg:rounded-[3rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex items-center justify-center overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent group-hover:opacity-70 transition-opacity"></div>
+              <div className="relative z-10 w-24 h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-3xl bg-white/80 dark:bg-black/50 shadow-xl flex items-center justify-center border border-white/50 dark:border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform duration-500">
+                <BarChart3 className="w-10 h-10 lg:w-12 lg:h-12 text-amber-500" />
               </div>
             </motion.div>
-            <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} className="order-1 lg:order-2 space-y-6">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                <BarChart3 className="w-6 h-6" />
-              </div>
-              <h3 className="text-3xl font-black text-slate-900 dark:text-white">{t.features.f3_title}</h3>
-              <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">{t.features.f3_desc}</p>
+            <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-2 lg:order-2 space-y-4 md:space-y-6 px-2">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-slate-900 dark:text-white">{t.features.f3_title}</h3>
+              <p className="text-base sm:text-lg md:text-xl text-slate-500 dark:text-slate-400 leading-relaxed tracking-tight">{t.features.f3_desc}</p>
             </motion.div>
           </div>
-
         </section>
 
-        {/* --- SCROLLING MARQUEE TESTIMONIALS --- */}
-        <section id="testimonials" className="py-32 overflow-hidden">
-          <div className="text-center max-w-2xl mx-auto mb-16 px-4">
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">{t.testimonials.title}</h2>
+        {/* --- GLASS MARQUEE TESTIMONIALS --- */}
+        <section id="testimonials" className="py-24 md:py-32 overflow-hidden">
+          <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20 px-4">
+            <h2 className="text-3xl md:text-5xl font-semibold text-slate-900 dark:text-white tracking-tighter">{t.testimonials.title}</h2>
           </div>
           
           <div className="relative flex overflow-x-hidden group">
-            {/* Gradient masks for smooth edges */}
-            <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-white dark:from-[#0A0A0B] to-transparent z-10"></div>
-            <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-white dark:from-[#0A0A0B] to-transparent z-10"></div>
+            <div className="absolute inset-y-0 left-0 w-20 md:w-40 bg-gradient-to-r from-[#F5F5F7] dark:from-[#000000] to-transparent z-10"></div>
+            <div className="absolute inset-y-0 right-0 w-20 md:w-40 bg-gradient-to-l from-[#F5F5F7] dark:from-[#000000] to-transparent z-10"></div>
 
             <motion.div 
               animate={{ x: ["0%", "-50%"] }}
-              transition={{ repeat: Infinity, duration: 40, ease: "linear" }}
-              className="flex gap-6 px-3"
+              transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
+              className="flex gap-4 md:gap-8 px-2 md:px-4"
             >
               {[...Array(2)].map((_, arrayIdx) => (
-                <div key={arrayIdx} className="flex gap-6">
-                  {/* Reviews Data */}
-                  {[
-                    { name: 'Kovács Péter', text: 'Végre egy átlátható felület, ahol minden kiadást egy helyen vezethetek. Az AI szerelő nagyon profi!' },
-                    { name: 'Tóth Anita', text: 'Használtautó vásárlás után egyből ide töltöttem fel mindent. A szervizkönyv funkció hiánypótló a piacon.' },
-                    { name: 'Nagy Gábor', text: 'A flottakezelés sosem volt még ilyen egyszerű. Pontosan látom melyik autónak mikor jár le a vizsgája.' },
-                    { name: 'Szabó László', text: 'Nagyon szép és gyors az oldal. Örülök, hogy megtaláltam ezt a rendszert, mindenkinek ajánlom.' }
-                  ].map((review, idx) => (
-                    <div key={`${arrayIdx}-${idx}`} className="w-[350px] shrink-0 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 flex flex-col justify-between">
-                      <div className="flex gap-1 mb-6">
-                         {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />)}
+                <div key={arrayIdx} className="flex gap-4 md:gap-8">
+                  {t.reviews.map((review, idx) => (
+                    <div key={`${arrayIdx}-${idx}`} className="w-[300px] sm:w-[350px] md:w-[400px] shrink-0 bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-2xl rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-10 flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:-translate-y-1 transition-transform duration-300">
+                      <div className="flex gap-1.5 mb-6 md:mb-8">
+                         {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 md:w-5 md:h-5 fill-slate-800 text-slate-800 dark:fill-white dark:text-white opacity-80" />)}
                       </div>
-                      <p className="text-slate-700 dark:text-slate-300 font-medium mb-8 leading-relaxed">&quot;{review.text}&quot;</p>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-400">
+                      <p className="text-base sm:text-lg md:text-xl text-slate-700 dark:text-slate-300 font-medium mb-8 md:mb-10 leading-relaxed tracking-tight">&quot;{review.text}&quot;</p>
+                      <div className="flex items-center gap-3 md:gap-4">
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center font-semibold text-slate-900 dark:text-white text-sm md:text-base">
                           {review.name.charAt(0)}
                         </div>
-                        <div className="font-bold text-slate-900 dark:text-white">{review.name}</div>
+                        <div className="font-semibold text-slate-900 dark:text-white tracking-tight text-sm md:text-base">{review.name}</div>
                       </div>
                     </div>
                   ))}
@@ -438,38 +420,38 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </section>
       </main>
 
-      {/* --- FOOTER --- */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 py-16 px-4 bg-white dark:bg-[#0A0A0B] relative z-10">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 mb-16">
-            <div className="col-span-2 lg:col-span-2 space-y-6">
-              <Link href="/" className="inline-block font-black text-2xl tracking-tight text-slate-900 dark:text-white">
-                Dynamic<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-cyan-500">Sense</span>
+      {/* --- GLASS FOOTER --- */}
+      <footer className="border-t border-slate-200/50 dark:border-white/10 py-16 md:py-20 px-4 bg-transparent relative z-10 backdrop-blur-3xl">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 mb-16 md:mb-20">
+            <div className="col-span-1 sm:col-span-2 lg:col-span-2 space-y-6">
+              <Link href="/" className="inline-block font-semibold text-2xl tracking-tight text-slate-900 dark:text-white">
+                Dynamic<span className="text-slate-400">Sense</span>
               </Link>
-              <p className="text-slate-600 dark:text-slate-400 max-w-sm leading-relaxed">
+              <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed tracking-tight font-medium text-sm md:text-base">
                 {t.footer.desc}
               </p>
             </div>
             
-            <div className="space-y-4">
-              <h4 className="font-bold text-slate-900 dark:text-white">{t.footer.links}</h4>
-              <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                <li><a href="#features" className="hover:text-indigo-500 transition-colors">{t.nav.features}</a></li>
-                <li><a href="#testimonials" className="hover:text-indigo-500 transition-colors">{t.nav.testimonials}</a></li>
-                <li><a href="#pricing" className="hover:text-indigo-500 transition-colors">{t.nav.pricing}</a></li>
+            <div className="space-y-4 md:space-y-6">
+              <h4 className="font-semibold text-slate-900 dark:text-white tracking-tight">{t.footer.links}</h4>
+              <ul className="space-y-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+                <li><a href="#features" className="hover:text-black dark:hover:text-white transition-colors">{t.nav.features}</a></li>
+                <li><a href="#testimonials" className="hover:text-black dark:hover:text-white transition-colors">{t.nav.testimonials}</a></li>
+                <li><a href="#pricing" className="hover:text-black dark:hover:text-white transition-colors">{t.nav.pricing}</a></li>
               </ul>
             </div>
 
-            <div className="space-y-4">
-              <h4 className="font-bold text-slate-900 dark:text-white">{t.footer.legal}</h4>
-              <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-                <li><Link href="/privacy" className="hover:text-indigo-500 transition-colors">{t.footer.privacy}</Link></li>
-                <li><Link href="/terms" className="hover:text-indigo-500 transition-colors">{t.footer.terms}</Link></li>
+            <div className="space-y-4 md:space-y-6">
+              <h4 className="font-semibold text-slate-900 dark:text-white tracking-tight">{t.footer.legal}</h4>
+              <ul className="space-y-3 text-sm font-medium text-slate-500 dark:text-slate-400">
+                <li><Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors">{t.footer.privacy}</Link></li>
+                <li><Link href="/terms" className="hover:text-black dark:hover:text-white transition-colors">{t.footer.terms}</Link></li>
               </ul>
             </div>
           </div>
           
-          <div className="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-500">
+          <div className="pt-8 border-t border-slate-200/50 dark:border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs md:text-sm font-medium text-slate-400">
             <p>&copy; {new Date().getFullYear()} DynamicSense. {t.footer.rights}</p>
           </div>
         </div>
