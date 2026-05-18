@@ -140,17 +140,10 @@ const nextConfig = {
       'recharts',
     ],
     
-    // Dinamikus bundle splitting
-    dynamicIO: true,
-    
     serverActions: {
       bodySizeLimit: '10mb',
       allowedOrigins: ['*'],
     },
-
-    // TypeScript teljesítményi fejlesztések
-    parallelServerBuildTraces: true,
-    parallelServerCompiles: true,
   },
 
   // 🎯 WEBPACK OPTIMALIZÁCIÓ
