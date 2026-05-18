@@ -110,6 +110,9 @@ const nextConfig = {
   compress: true,
   productionBrowserSourceMaps: false,
 
+  // Turbopack compatibility
+  turbopack: {},
+
   // 🚀 AGGRESSZÍV TRANSPILING OPTIMALIZÁCIÓ
   transpilePackages: ['react-map-gl', 'mapbox-gl', 'framer-motion', '@mapbox/polyline'],
 
