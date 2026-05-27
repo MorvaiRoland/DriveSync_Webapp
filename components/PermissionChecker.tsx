@@ -113,20 +113,20 @@ export default function PermissionManager() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed top-20 left-4 right-4 md:left-auto md:right-8 md:w-96 bg-slate-900/95 backdrop-blur-md border border-slate-800 p-5 rounded-3xl z-50 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-4 duration-500">
+    <div className="fixed top-20 left-4 right-4 md:left-auto md:right-8 md:w-96 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 p-5 rounded-3xl z-50 shadow-[0_20px_50px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-top-4 duration-500">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-white font-black text-lg tracking-tight">App Engedélyek</h3>
-          <p className="text-slate-400 text-xs mt-1">
+          <h3 className="text-white font-bold text-lg uppercase tracking-wide">App Engedélyek</h3>
+          <p className="text-zinc-400 text-xs mt-1 font-medium">
             Az app teljes funkcionalitásához szükség van pár engedélyre.
           </p>
         </div>
         <button 
           onClick={handleDismiss} 
-          className="p-2 -mr-2 -mt-2 hover:bg-white/10 rounded-full transition-colors group"
+          className="p-2 -mr-2 -mt-2 hover:bg-zinc-800 rounded-full transition-colors group"
           aria-label="Bezárás"
         >
-          <X className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
+          <X className="w-5 h-5 text-zinc-500 group-hover:text-white transition-colors" />
         </button>
       </div>
 

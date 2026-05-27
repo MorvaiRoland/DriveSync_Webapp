@@ -10,14 +10,49 @@ import ServiceReminderEmail from '@/components/emails/ServiceReminderEmail'
 import { randomBytes } from 'crypto'
 import { v4 as uuidv4 } from 'uuid'
 
+// --- ACCESS CONTROL HELPER ---
+
+async function verifyCarAccess(supabase: any, carId: string, writeRequired: boolean = true) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: car } = await supabase
+    .from('cars')
+    .select('*, car_shares(email)')
+    .eq('id', carId)
+    .single()
+
+  if (!car) return null
+
+  const isOwner = car.user_id === user.id
+  const isShared = car.car_shares?.some((share: any) => share.email === user.email)
+
+  if (isOwner || isShared) {
+    return { user, car }
+  }
+
+  if (writeRequired) {
+    return null
+  }
+
+  const isPublic = car.is_public_history || (car.is_for_sale && car.is_listed_on_marketplace)
+  if (isPublic) {
+    return { user, car }
+  }
+
+  return null
+}
+
 // --- 1. ESEMÉNYEK KEZELÉSE ---
 
 export async function addEvent(formData: FormData) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return redirect('/login')
+  const car_id = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, car_id, true)
+  if (!carAccess) return redirect('/login')
+  const { user } = carAccess
 
-  const car_id = formData.get('car_id')
   const type = String(formData.get('type'))
   const mileage = parseInt(String(formData.get('mileage')))
 
@@ -55,9 +90,12 @@ export async function addEvent(formData: FormData) {
 
 export async function updateEvent(formData: FormData) {
   const supabase = await createClient()
-  
-  const eventId = String(formData.get('event_id'))
   const carId = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+
+  const eventId = String(formData.get('event_id'))
   const type = String(formData.get('type'))
   
   const updateData = {
@@ -86,8 +124,12 @@ export async function updateEvent(formData: FormData) {
 
 export async function deleteEvent(formData: FormData) {
   const supabase = await createClient()
+  const carId = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+
   const eventId = formData.get('event_id')
-  const carId = formData.get('car_id')
   await supabase.from('events').delete().eq('id', eventId)
   revalidatePath(`/cars/${carId}`)
 }
@@ -96,10 +138,11 @@ export async function deleteEvent(formData: FormData) {
 
 export async function addReminder(formData: FormData) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return redirect('/login')
-
-  const car_id = formData.get('car_id')
+  const car_id = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, car_id, true)
+  if (!carAccess) return redirect('/login')
+  const { user } = carAccess
   
   const reminderData = {
     car_id: car_id,
@@ -126,8 +169,12 @@ export async function addReminder(formData: FormData) {
 
 export async function deleteReminder(formData: FormData) {
   const supabase = await createClient()
+  const carId = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+
   const id = formData.get('id')
-  const carId = formData.get('car_id')
   await supabase.from('service_reminders').delete().eq('id', id)
   revalidatePath(`/cars/${carId}`)
 }
@@ -137,6 +184,9 @@ export async function deleteReminder(formData: FormData) {
 export async function resetServiceCounter(formData: FormData) {
     const supabase = await createClient()
     const carId = String(formData.get('car_id'))
+    
+    const carAccess = await verifyCarAccess(supabase, carId, true)
+    if (!carAccess) return redirect('/login')
     
     const { data: car } = await supabase.from('cars').select('mileage').eq('id', carId).single()
     
@@ -154,11 +204,11 @@ export async function resetServiceCounter(formData: FormData) {
 
 export async function updateCar(formData: FormData) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) return redirect('/login')
-
   const carId = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+  const { user } = carAccess
   
   // Segédfüggvény: Üres string esetén null-t ad vissza, egyébként számot
   const parseNullableInt = (key: string) => {
@@ -241,6 +291,9 @@ export async function deleteCar(formData: FormData) {
   const supabase = await createClient()
   const carId = String(formData.get('car_id'))
   
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+  
   await supabase.from('trips').delete().eq('car_id', carId)
   await supabase.from('tires').delete().eq('car_id', carId)
   await supabase.from('events').delete().eq('car_id', carId)
@@ -261,11 +314,12 @@ export async function deleteCar(formData: FormData) {
 
 export async function addTire(formData: FormData) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return redirect('/login')
-
   const carId = String(formData.get('car_id'))
   
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+  const { user } = carAccess
+
   const tireData = {
     user_id: user.id,
     car_id: carId,
@@ -284,9 +338,12 @@ export async function addTire(formData: FormData) {
 
 export async function deleteTire(formData: FormData) {
   const supabase = await createClient()
-  const tireId = String(formData.get('tire_id'))
   const carId = String(formData.get('car_id'))
   
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+
+  const tireId = String(formData.get('tire_id'))
   await supabase.from('tires').delete().eq('id', tireId)
   revalidatePath(`/cars/${carId}`)
 }
@@ -294,10 +351,12 @@ export async function deleteTire(formData: FormData) {
 export async function swapTire(formData: FormData) {
   const supabase = await createClient()
   const carId = String(formData.get('car_id'))
-  const newTireId = String(formData.get('tire_id')) 
   
-  const { data: car } = await supabase.from('cars').select('mileage').eq('id', carId).single()
-  if (!car) return;
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+  const { car } = carAccess
+
+  const newTireId = String(formData.get('tire_id')) 
 
   const { data: currentMounted } = await supabase
     .from('tires')
@@ -316,7 +375,7 @@ export async function swapTire(formData: FormData) {
            is_mounted: false, 
            mounted_at_mileage: null,
            total_distance: (currentMounted.total_distance || 0) + validDistance
-        })
+         })
         .eq('id', currentMounted.id)
   }
 
@@ -337,11 +396,12 @@ export async function swapTire(formData: FormData) {
 
 export async function addTrip(formData: FormData) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return redirect('/login')
-
   const car_id = String(formData.get('car_id'))
   
+  const carAccess = await verifyCarAccess(supabase, car_id, true)
+  if (!carAccess) return redirect('/login')
+  const { user } = carAccess
+
   // Koordináták kinyerése
   const start_lat = formData.get('start_lat')
   const start_lng = formData.get('start_lng')
@@ -378,9 +438,12 @@ export async function addTrip(formData: FormData) {
 
 export async function deleteTrip(formData: FormData) {
   const supabase = await createClient()
-  const tripId = String(formData.get('trip_id'))
   const carId = String(formData.get('car_id'))
   
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+
+  const tripId = String(formData.get('trip_id'))
   await supabase.from('trips').delete().eq('id', tripId)
   
   revalidatePath(`/cars/${carId}/trips`)
@@ -390,10 +453,11 @@ export async function deleteTrip(formData: FormData) {
 
 export async function addPart(formData: FormData) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return redirect('/login')
-
-  const car_id = formData.get('car_id')
+  const car_id = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, car_id, true)
+  if (!carAccess) return redirect('/login')
+  const { user } = carAccess
   
   const partData = {
     user_id: user.id,
@@ -412,9 +476,12 @@ export async function addPart(formData: FormData) {
 
 export async function deletePart(formData: FormData) {
   const supabase = await createClient()
-  const partId = String(formData.get('part_id'))
   const carId = String(formData.get('car_id'))
   
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) return redirect('/login')
+
+  const partId = String(formData.get('part_id'))
   await supabase.from('parts').delete().eq('id', partId)
   
   revalidatePath(`/cars/${carId}/parts`)
@@ -422,9 +489,13 @@ export async function deletePart(formData: FormData) {
 
 export async function uploadDocument(formData: FormData) {
   const supabase = await createClient()
+  const carId = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) throw new Error('Hozzáférés megtagadva')
+  const { user } = carAccess
 
   // MÁR NEM FÁJLT VÁRUNK, HANEM ADATOKAT
-  const carId = formData.get('car_id') as string
   const name = formData.get('name') as string
   const filePath = formData.get('file_path') as string
   const fileType = formData.get('file_type') as string
@@ -432,9 +503,6 @@ export async function uploadDocument(formData: FormData) {
   if (!filePath || !carId) {
     throw new Error('Hiányzó adatok')
   }
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Nem vagy bejelentkezve')
 
   // CSAK ADATBÁZIS MENTÉS TÖRTÉNIK
   const { error: dbError } = await supabase
@@ -458,9 +526,13 @@ export async function uploadDocument(formData: FormData) {
 
 export async function deleteDocument(formData: FormData) {
   const supabase = await createClient()
+  const carId = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) throw new Error('Hozzáférés megtagadva')
+
   const docId = formData.get('doc_id') as string
   const filePath = formData.get('file_path') as string
-  const carId = formData.get('car_id') as string
 
   const { error: storageError } = await supabase.storage
     .from('car-documents')
@@ -619,8 +691,11 @@ export async function checkAndSendReminders() {
 }
 export async function updateDealerInfo(formData: FormData) {
   const supabase = await createClient()
+  const id = String(formData.get('id'))
   
-  const id = formData.get('id') as string
+  const carAccess = await verifyCarAccess(supabase, id, true)
+  if (!carAccess) return { error: 'Hozzáférés megtagadva' }
+  
   const price = formData.get('price') ? parseInt(formData.get('price') as string) : null
   const engine_details = formData.get('engine_details') as string
   const performance_hp = formData.get('performance_hp') ? parseInt(formData.get('performance_hp') as string) : null
@@ -649,10 +724,14 @@ export async function updateDealerInfo(formData: FormData) {
   revalidatePath(`/verify/${id}`) // A publikus oldalt is frissítjük
   return { success: true }
 }
+
 export async function addVignette(formData: FormData) {
   const supabase = await createClient()
-  
   const car_id = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, car_id, true)
+  if (!carAccess) return redirect('/login')
+  
   const type = String(formData.get('type'))
   const region = formData.get('region') ? String(formData.get('region')) : null
   const valid_from = String(formData.get('valid_from'))
@@ -670,7 +749,6 @@ export async function addVignette(formData: FormData) {
 
   if (error) {
     console.error('Hiba a matrica mentésekor:', error)
-    // Itt kezelheted a hibát (pl. throw)
   }
 
   revalidatePath(`/cars/${car_id}`)
@@ -679,9 +757,12 @@ export async function addVignette(formData: FormData) {
 // Matrica törlése
 export async function deleteVignette(formData: FormData) {
   const supabase = await createClient()
-  const id = String(formData.get('id'))
   const car_id = String(formData.get('car_id'))
+  
+  const carAccess = await verifyCarAccess(supabase, car_id, true)
+  if (!carAccess) return redirect('/login')
 
+  const id = String(formData.get('id'))
   await supabase.from('vignettes').delete().eq('id', id)
   
   revalidatePath(`/cars/${car_id}`)
@@ -689,14 +770,13 @@ export async function deleteVignette(formData: FormData) {
 
 export async function toggleSaleMode(formData: FormData) {
   const supabase = await createClient()
-  
-  // Biztonsági ellenőrzés: csak bejelentkezett user módosíthat
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-      return { success: false, error: 'Nincs bejelentkezve' }
-  }
-
   const carId = formData.get('car_id') as string
+  
+  const carAccess = await verifyCarAccess(supabase, carId, true)
+  if (!carAccess) {
+      return { success: false, error: 'Hozzáférés megtagadva' }
+  }
+  const { user } = carAccess
   
   // Boolean konverziók
   const enable = formData.get('enable') === 'true'

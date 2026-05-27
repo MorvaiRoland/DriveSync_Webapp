@@ -214,10 +214,10 @@ export default function ServiceMap() {
   }
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] bg-zinc-50 dark:bg-zinc-950 overflow-hidden font-sans selection:bg-indigo-500/30 touch-none">
+    <div className="relative w-full h-full bg-[#F5F5F7] dark:bg-[#000000] overflow-hidden font-sans selection:bg-indigo-500/30 touch-none">
       
       {/* 1. TÉRKÉP */}
-      <div className="absolute inset-0 z-0 pb-[140px] lg:pb-0">
+      <div className="absolute inset-0 z-0 pb-[140px] md:pb-0">
         <MapContainer center={[47.4979, 19.0402]} zoom={13} zoomControl={false} className="w-full h-full outline-none">
           <TileLayer attribution='&copy; Google' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
           <MapController onMapClick={handleMapClick} isAdding={mode === 'add'} />
@@ -302,19 +302,19 @@ export default function ServiceMap() {
              
              {/* Bal oldali gombok */}
              <div className="flex flex-col gap-3 pointer-events-auto">
-                <button onClick={() => router.push('/')} className="w-12 h-12 bg-white dark:bg-zinc-900 shadow-xl shadow-zinc-900/10 rounded-2xl flex items-center justify-center text-zinc-700 dark:text-zinc-200 border border-zinc-100 dark:border-zinc-700 active:scale-95 transition-transform">
+                <button onClick={() => router.push('/')} className="w-12 h-12 bg-white/70 dark:bg-black/60 shadow-xl rounded-2xl flex items-center justify-center text-slate-700 dark:text-slate-200 border border-white/50 dark:border-white/10 active:scale-95 transition-transform backdrop-blur-md">
                     <Home size={22} />
                 </button>
              </div>
 
              {/* Jobb oldali gombok */}
              <div className="flex flex-col gap-3 pointer-events-auto items-end">
-                <button onClick={toggleSosMode} className={cn("h-14 px-5 shadow-xl rounded-2xl flex items-center justify-center gap-2 font-black text-white active:scale-95 transition-all border-2 border-white/20", isSosActive ? "bg-red-600 shadow-red-600/40 animate-pulse w-auto" : "w-14 bg-red-500 shadow-red-500/20")}>
+                <button onClick={toggleSosMode} className={cn("h-14 px-5 shadow-xl rounded-2xl flex items-center justify-center gap-2 font-black text-white active:scale-95 transition-all border border-white/20", isSosActive ? "bg-red-600 shadow-red-600/40 animate-pulse w-auto" : "w-14 bg-red-500/80 shadow-red-500/20 backdrop-blur-md")}>
                     <Siren size={24} className={cn(isSosActive && "animate-bounce")} />
                     {isSosActive && <span>SOS AKTÍV</span>}
                 </button>
                 
-                <button onClick={handleLocateMe} className="w-12 h-12 bg-indigo-600 shadow-xl shadow-indigo-500/20 rounded-2xl flex items-center justify-center text-white active:scale-95 transition-transform">
+                <button onClick={handleLocateMe} className="w-12 h-12 bg-indigo-600/80 shadow-xl shadow-indigo-500/20 rounded-2xl flex items-center justify-center text-white border border-white/10 active:scale-95 transition-transform backdrop-blur-md">
                     <Locate size={22} />
                 </button>
              </div>
@@ -333,24 +333,24 @@ export default function ServiceMap() {
         dragElastic={0.05}
         onDragEnd={handleDragEnd}
         className={cn(
-          "z-30 flex flex-col absolute bg-white dark:bg-zinc-950 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]",
+          "z-30 flex flex-col absolute bg-white/75 dark:bg-black/60 border-t lg:border border-white/60 dark:border-white/[0.08] backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)]",
           "w-full h-[85dvh] bottom-0 left-0 rounded-t-[32px]",
-          "lg:top-6 lg:left-6 lg:bottom-6 lg:w-[420px] lg:h-auto lg:rounded-[32px] lg:border border-zinc-200 dark:border-zinc-800 lg:shadow-2xl"
+          "lg:top-6 lg:left-6 lg:bottom-6 lg:w-[420px] lg:h-auto lg:rounded-[32px] lg:shadow-2xl"
         )}
       >
         {/* HEADER */}
         <div 
-            className={cn("w-full pt-3 pb-4 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none shrink-0 rounded-t-[32px] transition-colors", isSosActive ? "bg-red-50 dark:bg-red-900/20" : "bg-white dark:bg-zinc-950")}
+            className={cn("w-full pt-3 pb-4 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none shrink-0 rounded-t-[32px] transition-colors border-b border-slate-100/60 dark:border-white/[0.04]", isSosActive ? "bg-red-500/10 dark:bg-red-950/20" : "bg-white/40 dark:bg-white/[0.02]")}
             onPointerDown={(e) => dragControls.start(e)}
             onClick={() => isMobile && setSheetOpen(!sheetOpen)}
         >
           <div className="w-12 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full mb-2 lg:hidden" />
           <div className="flex items-center justify-between w-full px-6">
               <div>
-                  <h2 className={cn("text-xl font-black tracking-tight", isSosActive ? "text-red-600" : "text-zinc-900 dark:text-white")}>
+                  <h2 className={cn("text-lg font-black tracking-tight", isSosActive ? "text-red-600" : "text-zinc-900 dark:text-white")}>
                       {isSosActive ? 'SOS Autómentés' : (mode === 'add' ? 'Új hely felvétele' : 'Közeli Szervizek')}
                   </h2>
-                  {loading && <p className="text-xs text-zinc-500 animate-pulse">Adatok betöltése...</p>}
+                  {loading && <p className="text-[10px] text-zinc-500 animate-pulse font-bold mt-0.5">Adatok betöltése...</p>}
               </div>
               <div className="lg:hidden text-zinc-400">
                   {sheetOpen ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
@@ -359,20 +359,20 @@ export default function ServiceMap() {
         </div>
 
         {/* TARTALOM */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar touch-pan-y bg-white dark:bg-zinc-950">
+        <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar touch-pan-y bg-transparent">
           <AnimatePresence mode="wait">
             
             {mode === 'view' ? (
-              <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-6">
+              <motion.div key="view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-6 pt-4">
                 
                 {/* Kereső */}
                 {!isSosActive && (
                     <div className="relative group">
-                        <Search className="absolute left-4 top-3.5 h-5 w-5 text-zinc-400" />
+                        <Search className="absolute left-4 top-3.5 h-4 w-4 text-zinc-400" />
                         <input 
                             type="text" 
                             placeholder="Keresés név szerint..."
-                            className="w-full pl-12 pr-4 py-3.5 bg-zinc-100 dark:bg-zinc-900 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            className="w-full pl-12 pr-4 py-3.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-xs font-bold outline-none focus:border-indigo-500 transition-all text-slate-900 dark:text-white placeholder-slate-400"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             onFocus={() => isMobile && setSheetOpen(true)}
@@ -395,10 +395,10 @@ export default function ServiceMap() {
                             if (cat.id !== 'towing') handleCategoryChange(cat.id);
                         }}
                         className={cn(
-                            "flex flex-col items-center gap-2 p-3 min-w-[72px] rounded-2xl border transition-all shrink-0",
+                            "flex flex-col items-center gap-2 p-3 min-w-[72px] rounded-2xl border transition-all shrink-0 backdrop-blur-md",
                             activeCategory === cat.id || (isSosActive && cat.id === 'towing')
-                            ? (cat.id === 'towing' ? "bg-red-600 text-white border-red-600 scale-105" : "bg-zinc-900 text-white border-zinc-900 scale-105")
-                            : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800"
+                            ? (cat.id === 'towing' ? "bg-red-600 text-white border-red-600 scale-105" : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent scale-105")
+                            : "bg-white/60 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:text-slate-900 dark:hover:text-white"
                         )}
                         >
                             <cat.icon size={20} />
@@ -415,7 +415,7 @@ export default function ServiceMap() {
                           <p className="text-zinc-400 text-sm">Keresés...</p>
                       </div>
                   ) : filteredPartners.length === 0 ? (
-                    <div className="text-center py-10 text-zinc-400 text-sm">
+                    <div className="text-center py-10 text-zinc-400 text-sm font-medium">
                         {userLocation ? "Nincs találat a közelben." : "Engedélyezd a helyzetmeghatározást a térkép betöltéséhez!"}
                     </div>
                   ) : (
@@ -429,11 +429,13 @@ export default function ServiceMap() {
                           if(isMobile) setSheetOpen(false);
                         }}
                         className={cn(
-                            "flex items-center gap-4 p-4 border rounded-2xl active:bg-zinc-100 transition-colors cursor-pointer",
-                            isSosActive ? "bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30" : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-100 dark:border-zinc-800"
+                            "flex items-center gap-4 p-4 border rounded-2xl hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer backdrop-blur-md shadow-sm",
+                            isSosActive 
+                              ? "bg-red-500/10 border-red-500/20 text-red-950 dark:text-red-200" 
+                              : "bg-white/60 dark:bg-white/[0.04] border-white/80 dark:border-white/[0.06] hover:border-slate-300 dark:hover:border-white/20"
                         )}
                       >
-                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0", CATEGORIES.find(c=>c.id===p.category)?.color)}>
+                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-inner", CATEGORIES.find(c=>c.id===p.category)?.color)}>
                            {(() => {
                                const Icon = CATEGORIES.find(c=>c.id===p.category)?.icon || MapPin;
                                return <Icon size={18} />;
@@ -452,12 +454,12 @@ export default function ServiceMap() {
                         {p.phone_number ? (
                             <button 
                                 onClick={(e) => handleCall(e, p.phone_number, p.name)}
-                                className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white", isSosActive ? "bg-red-600" : "bg-zinc-900")}
+                                className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm shrink-0", isSosActive ? "bg-red-600" : "bg-slate-900 dark:bg-white dark:text-slate-900")}
                             >
                                 <Phone size={14} />
                             </button>
                         ) : (
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-zinc-200 text-zinc-400">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-zinc-200/50 dark:bg-white/5 text-zinc-400 shrink-0">
                                 <Phone size={14} />
                             </div>
                         )}

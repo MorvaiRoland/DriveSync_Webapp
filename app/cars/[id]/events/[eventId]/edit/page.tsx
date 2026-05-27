@@ -1,6 +1,7 @@
 import { createClient } from 'supabase/server'
 import { updateEvent } from '../../../actions' // Ellenőrizd, hogy az útvonal helyes-e a te mappaszerkezetedben!
 import Link from 'next/link'
+import { notFound, redirect } from 'next/navigation'
 
 export default async function EditEventPage(props: { params: Promise<{ id: string, eventId: string }> }) {
   const params = await props.params
@@ -10,6 +11,22 @@ export default async function EditEventPage(props: { params: Promise<{ id: strin
   if (!params.id || !params.eventId) {
     return <div className="p-10 text-center text-red-600 dark:text-red-400">Hiba: Hiányzó URL paraméterek.</div>
   }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return redirect('/login')
+
+  // Check access to the car
+  const { data: carData, error: carError } = await supabase
+    .from('cars')
+    .select('*, car_shares(email)')
+    .eq('id', params.id)
+    .single()
+
+  if (carError || !carData) return notFound()
+
+  const isOwner = carData.user_id === user.id
+  const isShared = carData.car_shares?.some((share: any) => share.email === user.email)
+  if (!isOwner && !isShared) return notFound()
 
   // 1. Lekérjük a szerkesztendő eseményt az adatbázisból
   const { data: event, error } = await supabase

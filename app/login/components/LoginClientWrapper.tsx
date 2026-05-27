@@ -17,13 +17,15 @@ export const LoginClientWrapper = ({ children }: { children: React.ReactNode }) 
   }, []);
 
   return (
-    <div className="relative w-full h-[100dvh] bg-slate-950 overflow-hidden select-none">
+    <div className="relative w-full h-[100dvh] bg-[#F5F5F7] dark:bg-[#000000] overflow-hidden select-none transition-colors duration-700">
       
-      {/* GLOBÁLIS RENDSZER-EFFEKTEK (Scanlines & Noise) */}
-      <div className="fixed inset-0 pointer-events-none z-[60] opacity-[0.03] mix-blend-overlay">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      {/* Aurora Background (Shared across loader and login page) */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-10%] right-[-5%] w-[min(400px,80vw)] md:w-[800px] h-[min(400px,80vw)] md:h-[800px] bg-indigo-400/20 dark:bg-indigo-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[min(400px,80vw)] md:w-[800px] h-[min(400px,80vw)] md:h-[800px] bg-purple-400/20 dark:bg-purple-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute top-[30%] left-[10%] w-[min(300px,70vw)] md:w-[600px] h-[min(300px,70vw)] md:h-[600px] bg-cyan-300/20 dark:bg-cyan-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] dark:opacity-[0.06] mix-blend-overlay"></div>
       </div>
-      <div className="fixed inset-0 pointer-events-none z-[60] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[length:100%_4px,4px_100%]" />
 
       <AnimatePresence mode="wait">
         {isLoading ? (
@@ -60,21 +62,12 @@ export const LoginClientWrapper = ({ children }: { children: React.ReactNode }) 
             }}
             className="w-full h-full relative z-50 touch-none"
           >
-            <main className="w-full h-full overscroll-none touch-none">
+            <main className="w-full h-full overscroll-none touch-auto">
               {children}
             </main>
-
-            {/* FINOM VIGNETTE EFFEKT A TARTALOM FÖLÖTT */}
-            <div className="absolute inset-0 pointer-events-none z-10 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(2,6,23,0.4)_100%)]" />
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* RENDSZER-SZINTŰ HÁTTÉR (Mindig ott van a háttérben) */}
-      <div className="fixed inset-0 z-0 bg-slate-950">
-        <div className="absolute top-0 left-1/4 w-[50vw] h-[50vw] bg-primary/5 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-[40vw] h-[40vw] bg-blue-600/5 rounded-full blur-[100px]" />
-      </div>
     </div>
   );
 };

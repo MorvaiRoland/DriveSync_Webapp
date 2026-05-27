@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { motion, Variants, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import {
@@ -15,7 +16,7 @@ import {
 const translations = {
   hu: {
     nav: { features: "Funkciók", testimonials: "Vélemények", pricing: "Árazás", login: "Bejelentkezés", startFree: "Kezdés ingyen" },
-    hero: { badge: "VISIONOS DESIGN EDITION", title1: "A jövő garázsa", title2: "a te kezedben", desc: "Minden adat, szervizmúlt és AI szerelő asszisztens egyetlen lélegzetelállító platformon. Kereskedőknek és magánszemélyeknek.", ctaPrimary: "Kezdj el most ingyen", ctaSecondary: "Alvázszám kereső", users: "Boldog felhasználó csatlakozott" },
+    hero: { badge: "INTELLIGENS DIGITÁLIS GARÁZS", title1: "A jövő garázsa", title2: "a te kezedben", desc: "Minden adat, szervizmúlt és AI szerelő asszisztens egyetlen lélegzetelállító platformon. Kereskedőknek és magánszemélyeknek.", ctaPrimary: "Kezdj el most ingyen", ctaSecondary: "Alvázszám kereső", users: "Boldog felhasználó csatlakozott" },
     features: { title: "Minden, amire az autódnak szüksége van.", f1_title: "AI Szerelő Asszisztens", f1_desc: "Készíts egy fotót a műszerfal hibakódjáról, és a mesterséges intelligencia azonnal elemzi a problémát, valamint megoldási javaslatokat ad valós időben.", f2_title: "Hiteles Szervizkönyv", f2_desc: "Rögzíts minden beavatkozást, csatolj számlákat és fotókat. Egy megbízható, felhő alapú digitális szervizkönyv, ami növeli az autód értékét eladáskor.", f3_title: "Precíziós Költségkövetés", f3_desc: "Tankolások, biztosítások, súlyadók egy helyen. Lásd másodpercre pontosan, mennyibe kerül a flottád vagy autód fenntartása havonta, vizuális grafikonokkal." },
     testimonials: { title: "Mit mondanak a felhasználóink?" },
     footer: { desc: "A legfejlettebb digitális garázs platform autótulajdonosok és flottakezelők számára.", links: "Linkek", legal: "Jogi", privacy: "Adatvédelem", terms: "ÁSZF", rights: "Minden jog fenntartva." },
@@ -32,7 +33,7 @@ const translations = {
   },
   en: {
     nav: { features: "Features", testimonials: "Reviews", pricing: "Pricing", login: "Log in", startFree: "Start for free" },
-    hero: { badge: "VISIONOS DESIGN EDITION", title1: "The future garage", title2: "in your hands", desc: "All data, service history, and an AI mechanic assistant on a single breathtaking platform. For dealers and individuals.", ctaPrimary: "Start for free now", ctaSecondary: "VIN Search", users: "Happy users joined" },
+    hero: { badge: "INTELLIGENT DIGITAL GARAGE", title1: "The future garage", title2: "in your hands", desc: "All data, service history, and an AI mechanic assistant on a single breathtaking platform. For dealers and individuals.", ctaPrimary: "Start for free now", ctaSecondary: "VIN Search", users: "Happy users joined" },
     features: { title: "Everything your car needs.", f1_title: "AI Mechanic Assistant", f1_desc: "Take a photo of the dashboard error code, and our AI instantly analyzes the problem and provides real-time solution suggestions.", f2_title: "Verified Service History", f2_desc: "Log every maintenance, attach invoices and photos. A reliable cloud-based digital service book that increases your car's resale value.", f3_title: "Precision Cost Tracking", f3_desc: "Refueling, insurance, taxes in one place. See exactly how much it costs to maintain your fleet or car monthly with visual charts." },
     testimonials: { title: "What our users say." },
     footer: { desc: "The most advanced digital garage platform for car owners and fleet managers.", links: "Links", legal: "Legal", privacy: "Privacy Policy", terms: "Terms of Service", rights: "All rights reserved." },
@@ -145,7 +146,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
   const t = translations[lang];
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] selection:bg-indigo-500/30 font-sans overflow-hidden transition-colors duration-700">
+    <div className="min-h-screen w-full max-w-[100vw] bg-[#F5F5F7] dark:bg-[#000000] selection:bg-indigo-500/30 font-sans overflow-x-hidden transition-colors duration-700">
       
       {/* --- SCROLL PROGRESS BAR --- */}
       <motion.div
@@ -154,12 +155,10 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
       />
 
       {/* --- APPLE GLASS BACKGROUND AURORA --- */}
-      <div className="fixed inset-0 pointer-events-none z-0 flex justify-center items-center overflow-hidden">
-        {/* Soft colorful blobs that create the glassmorphism base */}
-        <div className="absolute top-[-10%] right-[-5%] w-[400px] md:w-[800px] h-[400px] md:h-[800px] bg-indigo-400/20 dark:bg-indigo-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen animate-pulse-slow"></div>
-        <div className="absolute bottom-[-10%] left-[-10%] w-[400px] md:w-[800px] h-[400px] md:h-[800px] bg-purple-400/20 dark:bg-purple-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
-        <div className="absolute top-[30%] left-[20%] w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-cyan-300/20 dark:bg-cyan-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
-        {/* Subtle noise texture */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-10%] right-[-5%] w-[min(400px,80vw)] md:w-[800px] h-[min(400px,80vw)] md:h-[800px] bg-indigo-400/20 dark:bg-indigo-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[min(400px,80vw)] md:w-[800px] h-[min(400px,80vw)] md:h-[800px] bg-purple-400/20 dark:bg-purple-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute top-[30%] left-[10%] w-[min(300px,70vw)] md:w-[600px] h-[min(300px,70vw)] md:h-[600px] bg-cyan-300/20 dark:bg-cyan-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] dark:opacity-[0.06] mix-blend-overlay"></div>
       </div>
 
@@ -168,13 +167,12 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed top-4 inset-x-0 z-50 transition-all duration-500 px-4`}
+        className="fixed top-0 inset-x-0 z-50 px-4"
+        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
       >
         <div className={`max-w-5xl mx-auto h-16 flex items-center justify-between px-6 rounded-full transition-all duration-500 ${scrolled ? 'bg-white/60 dark:bg-black/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(255,255,255,0.02)]' : 'bg-transparent'}`}>
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
-              <Zap className="w-4 h-4 fill-white" />
-            </div>
+            <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" width={200} height={50} className="h-8 w-auto object-contain group-hover:scale-105 transition-transform" priority />
             <span className="font-semibold text-lg tracking-tight text-slate-900 dark:text-white">Dynamic<span className="text-slate-500 dark:text-slate-400">Sense</span></span>
           </Link>
 
@@ -230,9 +228,9 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </AnimatePresence>
       </motion.nav>
 
-      <main className="relative z-10 pt-32 pb-20 md:pt-40 lg:pt-56 lg:pb-32 px-4">
+      <main className="relative z-10 w-full overflow-x-hidden" style={{ paddingTop: 'calc(max(1rem, env(safe-area-inset-top)) + 5rem)' }}>
         {/* --- APPLE GLASS HERO --- */}
-        <section className="max-w-6xl mx-auto flex flex-col items-center text-center">
+        <section className="max-w-6xl mx-auto px-4 flex flex-col items-center text-center">
           <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-6 md:space-y-8 flex flex-col items-center w-full">
             
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-slate-800 dark:text-slate-300 text-xs font-semibold tracking-widest backdrop-blur-md shadow-sm uppercase">
@@ -240,7 +238,7 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
               {t.hero.badge}
             </motion.div>
 
-            <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl lg:text-[6.5rem] font-semibold tracking-tighter leading-[1.05] max-w-5xl">
+            <motion.h1 variants={fadeUp} className="text-4xl sm:text-5xl md:text-7xl lg:text-[6.5rem] font-semibold tracking-tighter leading-[1.05] max-w-5xl px-2">
               <span className="text-slate-900 dark:text-white block">{t.hero.title1}</span>
               <span className="text-slate-500 dark:text-slate-400 block pb-2">
                 {t.hero.title2}
@@ -265,67 +263,59 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
             </motion.div>
           </motion.div>
 
-          {/* VisionOS Glass Mockup */}
-          <motion.div 
-            initial={{ opacity: 0, y: 50 }}
+          {/* VisionOS Glass Mockup - Responsive */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1.2, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full mt-16 md:mt-24 relative perspective-[2000px] px-2 md:px-0"
+            className="w-full mt-12 md:mt-20 px-0"
           >
-            <div className="relative rounded-[2rem] md:rounded-[2.5rem] bg-white/30 dark:bg-white/5 border border-white/50 dark:border-white/10 p-2 md:p-4 shadow-[0_30px_60px_rgba(0,0,0,0.1)] dark:shadow-[0_30px_60px_rgba(0,0,0,0.4)] backdrop-blur-3xl transform md:rotate-x-12 md:hover:rotate-x-0 transition-transform duration-1000 ease-out">
-              <div className="rounded-[1.5rem] md:rounded-[2rem] bg-white/70 dark:bg-black/60 border border-white/50 dark:border-white/5 overflow-hidden w-full aspect-auto md:aspect-[21/9] flex flex-col relative backdrop-blur-md min-h-[300px] md:min-h-0">
-                
-                {/* Header */}
-                <div className="h-10 md:h-14 border-b border-white/20 dark:border-white/5 flex items-center px-4 md:px-6 gap-3">
-                  <div className="flex gap-2">
-                    <div className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-slate-300/80 dark:bg-slate-700/80"></div>
-                    <div className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-slate-300/80 dark:bg-slate-700/80"></div>
-                    <div className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-slate-300/80 dark:bg-slate-700/80"></div>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 p-4 md:p-8 flex flex-col md:grid md:grid-cols-12 gap-6 md:gap-8 relative overflow-hidden">
-                  
-                  {/* Floating AI Glass Card - Hidden on very small mobile, visible otherwise */}
-                  <motion.div 
-                    animate={{ y: [0, -15, 0] }}
-                    transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-                    className="hidden sm:block absolute right-0 md:-right-6 top-4 md:top-10 w-64 md:w-72 bg-white/70 dark:bg-white/10 backdrop-blur-3xl rounded-3xl border border-white/60 dark:border-white/10 shadow-2xl p-4 md:p-5 z-30"
+            <div className="relative rounded-[2rem] md:rounded-[2.5rem] bg-white/30 dark:bg-white/5 border border-white/50 dark:border-white/10 p-2 md:p-4 shadow-2xl backdrop-blur-3xl overflow-hidden">
+              {/* Mac-style header */}
+              <div className="flex items-center gap-2 px-4 py-3 md:py-4 border-b border-white/20 dark:border-white/5">
+                <div className="w-3 h-3 rounded-full bg-red-400/70"></div>
+                <div className="w-3 h-3 rounded-full bg-amber-400/70"></div>
+                <div className="w-3 h-3 rounded-full bg-emerald-400/70"></div>
+              </div>
+              {/* App content grid */}
+              <div className="p-4 md:p-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                {/* Stat cards */}
+                {[
+                  { color: 'bg-indigo-500/10', icon: <Cpu className="w-5 h-5 text-indigo-500" />, label: 'AI Diagnózis' },
+                  { color: 'bg-emerald-500/10', icon: <Activity className="w-5 h-5 text-emerald-500" />, label: 'Szerviz' },
+                  { color: 'bg-amber-500/10', icon: <BarChart3 className="w-5 h-5 text-amber-500" />, label: 'Költségek' },
+                  { color: 'bg-cyan-500/10', icon: <CarFront className="w-5 h-5 text-cyan-500" />, label: 'Flotta' },
+                ].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                    className={`rounded-2xl md:rounded-3xl p-4 md:p-6 flex flex-col gap-3 md:gap-4 ${item.color} border border-white/40 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-md shadow-sm`}
                   >
-                    <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-                        <Cpu className="w-5 h-5 md:w-6 md:h-6 text-indigo-500 dark:text-indigo-400" />
-                      </div>
-                      <div>
-                        <div className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400">AI Assistant</div>
-                        <div className="text-sm md:text-base font-semibold text-slate-900 dark:text-white">Analysis Complete</div>
-                      </div>
+                    <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white/70 dark:bg-black/30 flex items-center justify-center shadow-sm">
+                      {item.icon}
                     </div>
-                    <div className="space-y-2 md:space-y-2.5">
-                      <div className="h-1.5 md:h-2 w-full bg-black/10 dark:bg-white/10 rounded-full"></div>
-                      <div className="h-1.5 md:h-2 w-3/4 bg-black/10 dark:bg-white/10 rounded-full"></div>
+                    <div>
+                      <div className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1">{item.label}</div>
+                      <div className="h-2.5 w-2/3 bg-black/5 dark:bg-white/10 rounded-full"></div>
                     </div>
                   </motion.div>
-
-                  <div className="col-span-12 md:col-span-4 space-y-4 md:space-y-6">
-                    <div className="h-8 md:h-10 w-3/4 md:w-2/3 bg-black/5 dark:bg-white/5 rounded-xl"></div>
-                    <div className="space-y-2.5 md:space-y-3">
-                      <div className="h-3 md:h-4 w-full bg-black/5 dark:bg-white/5 rounded-lg"></div>
-                      <div className="h-3 md:h-4 w-5/6 bg-black/5 dark:bg-white/5 rounded-lg"></div>
-                      <div className="h-3 md:h-4 w-full bg-black/5 dark:bg-white/5 rounded-lg"></div>
-                    </div>
-                  </div>
-                  <div className="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mt-4 md:mt-0">
-                     <div className="h-28 md:h-40 bg-white/40 dark:bg-white/5 border border-white/40 dark:border-white/5 rounded-[1.5rem] md:rounded-3xl p-4 md:p-6 flex flex-col justify-between shadow-sm hover:bg-white/50 transition-colors">
-                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-emerald-500/10 flex items-center justify-center"><Activity className="w-4 h-4 md:w-5 md:h-5 text-emerald-500" /></div>
-                        <div className="h-6 md:h-8 w-1/2 bg-black/5 dark:bg-white/5 rounded-lg md:rounded-xl"></div>
-                     </div>
-                     <div className="h-28 md:h-40 bg-white/40 dark:bg-white/5 border border-white/40 dark:border-white/5 rounded-[1.5rem] md:rounded-3xl p-4 md:p-6 flex flex-col justify-between shadow-sm hover:bg-white/50 transition-colors">
-                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-amber-500/10 flex items-center justify-center"><BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-amber-500" /></div>
-                        <div className="h-6 md:h-8 w-1/3 bg-black/5 dark:bg-white/5 rounded-lg md:rounded-xl"></div>
-                     </div>
-                     <div className="col-span-1 sm:col-span-2 h-32 md:h-48 bg-white/40 dark:bg-white/5 border border-white/40 dark:border-white/5 rounded-[1.5rem] md:rounded-3xl shadow-sm"></div>
+                ))}
+                {/* Wide chart card */}
+                <div className="col-span-2 md:col-span-4 rounded-2xl md:rounded-3xl p-4 md:p-6 bg-white/40 dark:bg-white/5 border border-white/40 dark:border-white/5 backdrop-blur-md shadow-sm">
+                  <div className="h-3 w-1/4 bg-black/5 dark:bg-white/10 rounded-full mb-4"></div>
+                  <div className="flex items-end gap-2 h-16 md:h-24">
+                    {[40, 65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 88].map((h, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ scaleY: 0 }}
+                        animate={{ scaleY: 1 }}
+                        transition={{ delay: 0.8 + i * 0.05, duration: 0.4 }}
+                        style={{ height: `${h}%` }}
+                        className="flex-1 rounded-t-lg bg-gradient-to-t from-indigo-500/30 to-indigo-500/60 dark:from-indigo-400/20 dark:to-indigo-400/50 origin-bottom"
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -334,48 +324,48 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </section>
 
         {/* --- GLASS FEATURES SECTION --- */}
-        <section id="features" className="max-w-6xl mx-auto py-24 md:py-40 space-y-24 md:space-y-40">
-          <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20 px-4">
+        <section id="features" className="max-w-6xl mx-auto py-16 md:py-32 space-y-16 md:space-y-32 px-4">
+          <div className="text-center max-w-3xl mx-auto mb-10 md:mb-20">
             <h2 className="text-3xl md:text-5xl lg:text-6xl font-semibold text-slate-900 dark:text-white tracking-tighter">{t.features.title}</h2>
           </div>
 
           {/* Feature 1 */}
-          <div className="grid lg:grid-cols-2 gap-12 md:gap-20 items-center">
-            <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-1 lg:order-1 relative w-full aspect-video lg:aspect-square rounded-[2rem] lg:rounded-[3rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex items-center justify-center overflow-hidden group">
+          <div className="grid lg:grid-cols-2 gap-8 md:gap-20 items-center">
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.8 }} className="order-1 lg:order-1 relative w-full aspect-video lg:aspect-square rounded-[2rem] lg:rounded-[3rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex items-center justify-center overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent group-hover:opacity-70 transition-opacity"></div>
-              <div className="relative z-10 w-24 h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-3xl bg-white/80 dark:bg-black/50 shadow-xl flex items-center justify-center border border-white/50 dark:border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform duration-500">
-                <Cpu className="w-10 h-10 lg:w-12 lg:h-12 text-indigo-500" />
+              <div className="relative z-10 w-20 h-20 md:w-24 md:h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-3xl bg-white/80 dark:bg-black/50 shadow-xl flex items-center justify-center border border-white/50 dark:border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform duration-500">
+                <Cpu className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-indigo-500" />
               </div>
             </motion.div>
-            <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-2 lg:order-2 space-y-4 md:space-y-6 px-2">
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.8, delay: 0.1 }} className="order-2 lg:order-2 space-y-4 md:space-y-6">
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-slate-900 dark:text-white">{t.features.f1_title}</h3>
               <p className="text-base sm:text-lg md:text-xl text-slate-500 dark:text-slate-400 leading-relaxed tracking-tight">{t.features.f1_desc}</p>
             </motion.div>
           </div>
 
           {/* Feature 2 */}
-          <div className="grid lg:grid-cols-2 gap-12 md:gap-20 items-center">
-            <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-2 lg:order-1 space-y-4 md:space-y-6 px-2">
+          <div className="grid lg:grid-cols-2 gap-8 md:gap-20 items-center">
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.8, delay: 0.1 }} className="order-2 lg:order-1 space-y-4 md:space-y-6">
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-slate-900 dark:text-white">{t.features.f2_title}</h3>
               <p className="text-base sm:text-lg md:text-xl text-slate-500 dark:text-slate-400 leading-relaxed tracking-tight">{t.features.f2_desc}</p>
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-1 lg:order-2 relative w-full aspect-video lg:aspect-square rounded-[2rem] lg:rounded-[3rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex items-center justify-center overflow-hidden group">
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.8 }} className="order-1 lg:order-2 relative w-full aspect-video lg:aspect-square rounded-[2rem] lg:rounded-[3rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex items-center justify-center overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent group-hover:opacity-70 transition-opacity"></div>
-              <div className="relative z-10 w-24 h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-3xl bg-white/80 dark:bg-black/50 shadow-xl flex items-center justify-center border border-white/50 dark:border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform duration-500">
-                <ShieldCheck className="w-10 h-10 lg:w-12 lg:h-12 text-emerald-500" />
+              <div className="relative z-10 w-20 h-20 md:w-24 md:h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-3xl bg-white/80 dark:bg-black/50 shadow-xl flex items-center justify-center border border-white/50 dark:border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform duration-500">
+                <ShieldCheck className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-emerald-500" />
               </div>
             </motion.div>
           </div>
 
           {/* Feature 3 */}
-          <div className="grid lg:grid-cols-2 gap-12 md:gap-20 items-center">
-            <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-1 lg:order-1 relative w-full aspect-video lg:aspect-square rounded-[2rem] lg:rounded-[3rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex items-center justify-center overflow-hidden group">
+          <div className="grid lg:grid-cols-2 gap-8 md:gap-20 items-center">
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.8 }} className="order-1 lg:order-1 relative w-full aspect-video lg:aspect-square rounded-[2rem] lg:rounded-[3rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex items-center justify-center overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent group-hover:opacity-70 transition-opacity"></div>
-              <div className="relative z-10 w-24 h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-3xl bg-white/80 dark:bg-black/50 shadow-xl flex items-center justify-center border border-white/50 dark:border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform duration-500">
-                <BarChart3 className="w-10 h-10 lg:w-12 lg:h-12 text-amber-500" />
+              <div className="relative z-10 w-20 h-20 md:w-24 md:h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-3xl bg-white/80 dark:bg-black/50 shadow-xl flex items-center justify-center border border-white/50 dark:border-white/10 backdrop-blur-md group-hover:scale-110 transition-transform duration-500">
+                <BarChart3 className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 text-amber-500" />
               </div>
             </motion.div>
-            <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8 }} className="order-2 lg:order-2 space-y-4 md:space-y-6 px-2">
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.8, delay: 0.1 }} className="order-2 lg:order-2 space-y-4 md:space-y-6">
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-slate-900 dark:text-white">{t.features.f3_title}</h3>
               <p className="text-base sm:text-lg md:text-xl text-slate-500 dark:text-slate-400 leading-relaxed tracking-tight">{t.features.f3_desc}</p>
             </motion.div>
@@ -383,12 +373,12 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         </section>
 
         {/* --- GLASS MARQUEE TESTIMONIALS --- */}
-        <section id="testimonials" className="py-24 md:py-32 overflow-hidden">
-          <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20 px-4">
+        <section id="testimonials" className="py-16 md:py-32 overflow-hidden w-full">
+          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-20 px-4">
             <h2 className="text-3xl md:text-5xl font-semibold text-slate-900 dark:text-white tracking-tighter">{t.testimonials.title}</h2>
           </div>
           
-          <div className="relative flex overflow-x-hidden group">
+          <div className="relative overflow-hidden group w-full">
             <div className="absolute inset-y-0 left-0 w-20 md:w-40 bg-gradient-to-r from-[#F5F5F7] dark:from-[#000000] to-transparent z-10"></div>
             <div className="absolute inset-y-0 right-0 w-20 md:w-40 bg-gradient-to-l from-[#F5F5F7] dark:from-[#000000] to-transparent z-10"></div>
 
@@ -425,8 +415,8 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 mb-16 md:mb-20">
             <div className="col-span-1 sm:col-span-2 lg:col-span-2 space-y-6">
-              <Link href="/" className="inline-block font-semibold text-2xl tracking-tight text-slate-900 dark:text-white">
-                Dynamic<span className="text-slate-400">Sense</span>
+              <Link href="/" className="inline-block">
+                <Image src="/DynamicSense-logo.png" alt="DynamicSense Logo" width={200} height={50} className="h-8 w-auto object-contain" />
               </Link>
               <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed tracking-tight font-medium text-sm md:text-base">
                 {t.footer.desc}
