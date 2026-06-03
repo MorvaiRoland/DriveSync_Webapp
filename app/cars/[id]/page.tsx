@@ -23,8 +23,6 @@ type Car = {
 
 type Props = { params: Promise<{ id: string }> }
 
-export const runtime = 'edge';
-
 export async function generateMetadata(props: Props) {
   const params = await props.params
   const supabase = await createClient()
