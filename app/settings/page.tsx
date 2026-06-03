@@ -16,6 +16,8 @@ export const metadata = {
   description: 'Fiók és adatkezelés'
 }
 
+export const runtime = 'edge';
+
 export default async function SettingsPage({ searchParams }: PageProps) {
   const sParams = await searchParams
   const supabase = await createClient()

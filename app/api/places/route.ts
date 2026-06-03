@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const lat = searchParams.get('lat');
@@ -65,7 +67,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const searchRes = await fetch(searchUrl);
+    // 30 perces cache (1800 sec)
+    const searchRes = await fetch(searchUrl, {
+      next: { revalidate: 1800 }
+    });
     const searchData = await searchRes.json();
 
     if (searchData.status !== 'OK' && searchData.status !== 'ZERO_RESULTS') {
@@ -85,7 +90,9 @@ export async function GET(request: Request) {
         try {
             // Itt kérjük le a telefonszámot (formatted_phone_number) és a nyitvatartást
             const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=formatted_phone_number,opening_hours&language=hu&key=${apiKey}`;
-            const detailRes = await fetch(detailUrl);
+            const detailRes = await fetch(detailUrl, {
+                next: { revalidate: 1800 }
+            });
             const detailData = await detailRes.json();
 
             if (detailData.result) {

@@ -12,6 +12,8 @@ export const metadata = {
   description: 'Flotta szintű költségelemzés, trendek és előrejelzések.'
 }
 
+export const runtime = 'edge';
+
 // Format currency helper
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('hu-HU', { style: 'currency', currency: 'HUF', maximumFractionDigits: 0 }).format(amount)
@@ -38,8 +40,8 @@ export default async function CostAnalyticsPage() {
 
   // Get data
   const [carsRes, eventsRes, subscriptionResult] = await Promise.all([
-    supabase.from('cars').select('*').eq('user_id', user.id).eq('status', 'active'),
-    supabase.from('events').select('*').eq('user_id', user.id).order('event_date', { ascending: false }),
+    supabase.from('cars').select('id, make, model, plate, mileage, status, fuel_type').eq('user_id', user.id).eq('status', 'active'),
+    supabase.from('events').select('id, type, cost, event_date, mileage, car_id, title').eq('user_id', user.id).order('event_date', { ascending: false }),
     getSubscriptionStatus(supabase, user.id)
   ])
 

@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     // Használat lekérése ADMIN klienssel
     const { data: usage } = await supabaseAdmin
       .from('user_daily_usage')
-      .select('*')
+      .select('user_id, message_count, last_reset_date')
       .eq('user_id', user.id)
       .single();
 
@@ -92,10 +92,10 @@ export async function POST(req: Request) {
 
   // --- 4. ADATGYŰJTÉS KONTEXTUSHOZ (Standard klienssel, hogy csak a sajátját lássa) ---
   const [carsRes, eventsRes] = await Promise.all([
-    supabase.from('cars').select('*').eq('user_id', user.id),
+    supabase.from('cars').select('id, make, model, year, plate, mileage, fuel_type, vin, engine_size, power_hp').eq('user_id', user.id),
     supabase
       .from('events')
-      .select('*, cars(make, model)')
+      .select('id, type, title, description, event_date, mileage, cost, car_id, cars(make, model)')
       .eq('user_id', user.id)
       .order('event_date', { ascending: false })
       .limit(30)

@@ -23,6 +23,8 @@ type Car = {
 
 type Props = { params: Promise<{ id: string }> }
 
+export const runtime = 'edge';
+
 export async function generateMetadata(props: Props) {
   const params = await props.params
   const supabase = await createClient()
@@ -61,12 +63,12 @@ export default async function CarDetailsPage(props: Props) {
 
   // DATA FETCHING
   const [eventsRes, remindersRes, tiresRes, docsRes, vignettesRes, parkingRes, subscriptionResult] = await Promise.all([
-    supabase.from('events').select('*').eq('car_id', params.id).order('event_date', { ascending: false }),
-    supabase.from('service_reminders').select('*').eq('car_id', params.id).order('due_date', { ascending: true }),
-    supabase.from('tires').select('*').eq('car_id', params.id).order('is_mounted', { ascending: false }),
-    supabase.from('car_documents').select('*').eq('car_id', params.id).order('created_at', { ascending: false }),
-    supabase.from('vignettes').select('*').eq('car_id', params.id),
-    supabase.from('parking_sessions').select('*').eq('car_id', params.id).maybeSingle(),
+    supabase.from('events').select('id, type, title, description, event_date, mileage, cost, car_id, liters').eq('car_id', params.id).order('event_date', { ascending: false }),
+    supabase.from('service_reminders').select('id, service_type, due_date, due_mileage, notify_email, notification_sent, note').eq('car_id', params.id).order('due_date', { ascending: true }),
+    supabase.from('tires').select('id, brand, size, type, is_mounted, season, tread_depth, purchase_date').eq('car_id', params.id).order('is_mounted', { ascending: false }),
+    supabase.from('car_documents').select('id, name, file_url, file_type, created_at, car_id').eq('car_id', params.id).order('created_at', { ascending: false }),
+    supabase.from('vignettes').select('id, country, expiry_date, sticker_number').eq('car_id', params.id),
+    supabase.from('parking_sessions').select('id, started_at, location, fee_paid').eq('car_id', params.id).maybeSingle(),
     getSubscriptionStatus(supabase, user.id)
   ])
 
