@@ -372,6 +372,219 @@ export default function LandingPage({ promo, updates }: { promo?: any, updates: 
           </div>
         </section>
 
+        {/* --- PDF EXPORT SZEKCIÓ --- */}
+        <section id="pdf-export" className="max-w-6xl mx-auto py-16 md:py-32 px-4">
+          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-20">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 text-slate-800 dark:text-slate-300 text-xs font-semibold tracking-widest backdrop-blur-md shadow-sm uppercase mb-6"
+            >
+              <svg className="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {lang === 'hu' ? 'Profi PDF Exportálás' : 'Professional PDF Export'}
+            </motion.div>
+            <motion.h2
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="text-3xl md:text-5xl lg:text-6xl font-semibold text-slate-900 dark:text-white tracking-tighter mb-6"
+            >
+              {lang === 'hu' ? 'Nyomtatható riportok, azonnal.' : 'Printable reports, instantly.'}
+            </motion.h2>
+            <motion.p
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeUp}
+              className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed font-medium"
+            >
+              {lang === 'hu'
+                ? 'Generálj professzionális PDF dokumentumokat egy kattintással – logóval, adatokkal és QR-kóddal.'
+                : 'Generate professional PDF documents in one click — with logo, data and QR code.'}
+            </motion.p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+
+            {/* Személyes Riport kártya */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+              className="group relative overflow-hidden rounded-[2rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-xl hover:-translate-y-1 transition-all duration-500"
+            >
+              {/* Header mockup */}
+              <div className="bg-[#0F172A] px-7 py-5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#1E293B]/60" />
+                <div className="relative z-10 flex items-start justify-between">
+                  <div>
+                    <div className="text-white/40 text-[9px] font-bold uppercase tracking-widest mb-1">DynamicSense</div>
+                    <div className="text-white/60 text-[8px] uppercase tracking-wider">Szerviztörténeti Jelentés</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[#F59E0B] font-bold text-base leading-tight">SZEMÉLYES</div>
+                    <div className="text-[#F59E0B] font-bold text-base leading-tight">RIPORT</div>
+                    <div className="text-white/40 text-[7px] mt-1">{new Date().toLocaleDateString('hu-HU')}</div>
+                  </div>
+                </div>
+                <div className="h-0.5 mt-3 bg-gradient-to-r from-[#6366F1] via-[#F59E0B] to-[#F59E0B]" />
+              </div>
+
+              {/* Content mockup */}
+              <div className="p-7">
+                {/* Car title */}
+                <div className="h-5 w-2/3 bg-slate-200/80 dark:bg-slate-700/60 rounded-md mb-2 animate-pulse" />
+                <div className="h-3 w-1/2 bg-slate-100/80 dark:bg-slate-800/60 rounded mb-5" />
+
+                {/* Stat cards */}
+                <div className="grid grid-cols-3 gap-3 mb-5">
+                  {[
+                    { color: 'bg-indigo-500/20', label: 'Összes Kiadás' },
+                    { color: 'bg-emerald-500/20', label: 'Elvégzett Szerviz' },
+                    { color: 'bg-amber-500/20', label: 'Dok. Futás' },
+                  ].map((c, i) => (
+                    <div key={i} className={`${c.color} rounded-xl p-3`}>
+                      <div className="h-1.5 w-full bg-white/20 dark:bg-white/10 rounded mb-2" />
+                      <div className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{c.label}</div>
+                      <div className="h-3 w-4/5 bg-slate-300/60 dark:bg-slate-600/60 rounded" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Table */}
+                <div className="rounded-xl overflow-hidden border border-slate-200/60 dark:border-white/10">
+                  <div className="bg-[#0F172A] px-4 py-2 flex gap-4">
+                    {['Dátum', 'Leírás', 'Km', 'Költség'].map(h => (
+                      <div key={h} className="h-2 flex-1 bg-white/10 rounded" />
+                    ))}
+                  </div>
+                  {[1,2,3].map(i => (
+                    <div key={i} className={`px-4 py-2.5 flex gap-4 ${i % 2 === 0 ? 'bg-slate-50/80 dark:bg-white/[0.02]' : ''} border-b border-slate-100/60 dark:border-white/5`}>
+                      {[0.4,1,0.6,0.5].map((w, j) => (
+                        <div key={j} className="h-2 bg-slate-200/70 dark:bg-slate-700/50 rounded" style={{ flex: w }} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                      {lang === 'hu' ? 'Szerviz dokumentumok, grafikonok' : 'Service docs, charts'}
+                    </span>
+                  </div>
+                  <Link
+                    href="/login?mode=signup"
+                    className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:gap-2.5 transition-all"
+                  >
+                    {lang === 'hu' ? 'Próbáld ki' : 'Try it'} <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Kereskedői Adatlap kártya */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7, delay: 0.1 }}
+              className="group relative overflow-hidden rounded-[2rem] bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 backdrop-blur-3xl shadow-xl hover:-translate-y-1 transition-all duration-500"
+            >
+              {/* Header mockup */}
+              <div className="bg-[#0F172A] px-7 py-5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#1E293B]/80" />
+                <div className="relative z-10 flex items-start justify-between">
+                  <div>
+                    <div className="text-white/40 text-[9px] font-bold uppercase tracking-widest mb-1">DynamicSense</div>
+                    <div className="text-white/60 text-[8px] uppercase tracking-wider">Kereskedői Adatlap  •  Hivatalos</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[#F59E0B]/60 text-[7px] uppercase tracking-wider mb-0.5">Eladási ár</div>
+                    <div className="text-[#F59E0B] font-bold text-xl leading-tight">8 900 000 Ft</div>
+                    <div className="text-white/30 text-[7px]">Bruttó, ÁFA-val</div>
+                  </div>
+                </div>
+                <div className="h-0.5 mt-3 bg-[#F59E0B]" />
+              </div>
+
+              {/* Content mockup */}
+              <div className="p-7">
+                {/* Car title + image */}
+                <div className="flex gap-4 mb-5">
+                  <div className="flex-1">
+                    <div className="h-5 w-3/4 bg-slate-200/80 dark:bg-slate-700/60 rounded-md mb-2" />
+                    <div className="h-3 w-full bg-slate-100/80 dark:bg-slate-800/60 rounded" />
+                  </div>
+                  <div className="w-24 h-16 rounded-xl bg-gradient-to-br from-slate-200/80 to-slate-300/60 dark:from-slate-700/60 dark:to-slate-800/40 flex items-center justify-center border border-slate-200/60 dark:border-white/10 shrink-0">
+                    <CarFront className="w-7 h-7 text-slate-400 dark:text-slate-500" />
+                  </div>
+                </div>
+
+                {/* Spec bar */}
+                <div className="bg-slate-100/70 dark:bg-white/5 rounded-xl p-3 flex gap-3 mb-5 border border-slate-200/40 dark:border-white/5">
+                  {['Évjárat', 'Km-óra', 'Üzemanyag', 'Motor', 'Váltó'].map((s, i) => (
+                    <div key={i} className="flex-1 text-center">
+                      <div className="text-[7px] font-bold text-slate-400 uppercase tracking-wider mb-1">{s}</div>
+                      <div className="h-2.5 bg-slate-300/60 dark:bg-slate-600/60 rounded mx-auto w-4/5" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Features grid */}
+                <div className="grid grid-cols-3 gap-x-3 gap-y-1.5 mb-5">
+                  {['ABS', 'ESP', 'LED fényszóró', 'Automata klíma', 'Bőrülés', 'Android Auto', 'Tolatókamera', 'Napfénytető', 'Navigáció'].map((f, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                      <span className="text-[8px] text-slate-600 dark:text-slate-400 truncate">{f}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* QR footer mockup */}
+                <div className="bg-[#0F172A] rounded-xl p-3 flex items-center gap-4">
+                  <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shrink-0">
+                    <div className="grid grid-cols-3 gap-0.5 w-7 h-7">
+                      {Array(9).fill(0).map((_, i) => (
+                        <div key={i} className={`rounded-sm ${[0,1,2,3,6,7,8].includes(i) ? 'bg-slate-900' : 'bg-white'}`} />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white text-[8px] font-bold mb-0.5">Hitelesített Járműtörténet</div>
+                    <div className="text-white/40 text-[7px]">QR kóddal ellenőrizhető adatok</div>
+                  </div>
+                  <div className="text-amber-500 text-[7px] font-bold text-right shrink-0">
+                    Powered by<br />DynamicSense
+                  </div>
+                </div>
+
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                      {lang === 'hu' ? 'QR kóddal hitelesítve' : 'QR code verified'}
+                    </span>
+                  </div>
+                  <Link
+                    href="/login?mode=signup"
+                    className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 hover:gap-2.5 transition-all"
+                  >
+                    {lang === 'hu' ? 'Próbáld ki' : 'Try it'} <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
         {/* --- GLASS MARQUEE TESTIMONIALS --- */}
         <section id="testimonials" className="py-16 md:py-32 overflow-hidden w-full">
           <div className="text-center max-w-3xl mx-auto mb-12 md:mb-20 px-4">
