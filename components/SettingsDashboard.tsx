@@ -381,8 +381,8 @@ export default function SettingsDashboard({
               <SectionHeader icon={<Sun className="w-4 h-4 text-amber-500" />} title="Vizuális Megjelenés" />
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { key: 'light', label: 'Világos', icon: <Sun className="w-6 h-6 text-amber-500" />, desc: '☀️' },
-                  { key: 'dark', label: 'Sötét', icon: <Moon className="w-6 h-6 text-indigo-400" />, desc: '🌙' },
+                  { key: 'light', label: 'Világos', icon: <Sun className="w-8 h-8 text-amber-500" /> },
+                  { key: 'dark',  label: 'Sötét',   icon: <Moon className="w-8 h-8 text-indigo-400" /> },
                 ].map((t) => (
                   <button
                     key={t.key}
@@ -393,7 +393,6 @@ export default function SettingsDashboard({
                         : 'border-slate-200 dark:border-white/10 hover:border-indigo-300 dark:hover:border-indigo-500/40 bg-white/40 dark:bg-white/[0.02]'
                     }`}
                   >
-                    <span className="text-2xl">{t.desc}</span>
                     {t.icon}
                     <span className={`text-[10px] font-bold uppercase tracking-widest ${theme === t.key ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}>
                       {t.label}

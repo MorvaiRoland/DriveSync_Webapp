@@ -154,10 +154,7 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.setFont('Roboto')
 
         // ── KÉPEK ──────────────────────────────────────────────────────────────
-        const [logoObj, carImgObj] = await Promise.all([
-            loadImgB64(window.location.origin + '/DynamicSense-logo.png'),
-            car.image_url ? loadImgB64(car.image_url) : Promise.resolve(null),
-        ])
+        const logoObj = await loadImgB64(window.location.origin + '/DynamicSense-logo.png')
 
         // ══════════════════════════════════════════════════════════════════════
         // 1. FEJLÉC – sötét gradiens + amber ár
@@ -176,9 +173,19 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.setFillColor(...COLORS.ACCENT)
         doc.rect(0, headerH - 3, PW, 3, 'F')
 
-        // Logó
+        // Logó – természetes arányban (PNG: kb. 3.8:1 szélesség/magasság)
         if (logoObj) {
-            try { doc.addImage(logoObj.data, logoObj.fmt, M, 12, 52, 13) } catch {}
+            try {
+                // A logó természetes arányát megőrizve: 60mm széles → ~16mm magas
+                const logoW = 60
+                const logoH = 16
+                doc.addImage(logoObj.data, logoObj.fmt, M, 10, logoW, logoH, undefined, 'NONE')
+            } catch {
+                doc.setFont('Roboto', 'bold')
+                doc.setFontSize(14)
+                doc.setTextColor(...COLORS.WHITE)
+                doc.text('DynamicSense', M, 22)
+            }
         } else {
             doc.setFont('Roboto', 'bold')
             doc.setFontSize(14)
@@ -237,21 +244,6 @@ export default function DealerModal({ car, onClose }: { car: any, onClose: () =>
         doc.setFontSize(9)
         doc.setTextColor(...COLORS.TEXT_LIGHT)
         doc.text(`${car.plate}   •   ${car.year}   •   ${car.fuel_type}   •   DynamicSense Verified ✓`, M, y + 7)
-
-        // Autó kép (ha van)
-        if (carImgObj) {
-            const imgW = 68
-            const imgH = 46
-            const imgX = PW - M - imgW
-            const imgY = y - 8
-            try {
-                doc.addImage(carImgObj.data, carImgObj.fmt, imgX, imgY, imgW, imgH)
-                // Keret
-                doc.setDrawColor(226, 232, 240)
-                doc.setLineWidth(0.3)
-                doc.roundedRect(imgX, imgY, imgW, imgH, 2, 2, 'S')
-            } catch {}
-        }
 
         y += 16
 
