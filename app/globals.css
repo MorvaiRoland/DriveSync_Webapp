@@ -2,47 +2,35 @@
 @import "tw-animate-css";
 /* mapbox-gl/dist/mapbox-gl.css – eltávolítva globálisból, csak a TripMap/ServiceMap komponensekben töltődik be */
 
-
 @custom-variant dark (&:is(.dark *));
+
+/* ═══════════════════════════════════════════════════════════════
+   CARBON NOIR DESIGN SYSTEM
+   Deep void black + electric orange/amber accents
+   Automotive-grade premium UI
+═══════════════════════════════════════════════════════════════ */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
 
-  /* UI Colors mapped to CSS variables */
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: var(--font-geist-sans), 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -54,6 +42,16 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
   /* Radius */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -61,109 +59,104 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* THEME: MIDNIGHT OCEAN & ELECTRIC TEAL
-   Hűvös, modern, futurisztikus tech dizájn.
-*/
+/* ─── LIGHT MODE: Clean Platinum ─── */
 :root {
-  --radius: 0.75rem;
+  --radius: 0.875rem;
 
-  /* Light Mode: "Glacier" - Jéghideg fehér és tiszta kék */
-  --background: oklch(0.99 0.01 240); /* Nagyon halvány, hűvös fehér */
-  --foreground: oklch(0.20 0.05 260); /* Mély tengerészkék szöveg */
+  --background: oklch(0.97 0.005 240);
+  --foreground: oklch(0.12 0.02 260);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.20 0.05 260);
+  --card-foreground: oklch(0.12 0.02 260);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.20 0.05 260);
+  --popover-foreground: oklch(0.12 0.02 260);
 
-  /* BRAND COLOR: Electric Teal (Ragyogó Türkiz) */
-  --primary: oklch(0.55 0.18 230); /* Élénk kék/türkiz */
-  --primary-foreground: oklch(1 0 0); /* Tiszta fehér */
+  /* Electric Orange – PRIMARY */
+  --primary: oklch(0.65 0.20 45);        /* #FF6B00 electric orange */
+  --primary-foreground: oklch(1 0 0);
 
-  --secondary: oklch(0.96 0.02 240); /* Hűvös szürke */
-  --secondary-foreground: oklch(0.25 0.05 260);
+  --secondary: oklch(0.94 0.01 240);
+  --secondary-foreground: oklch(0.25 0.03 260);
 
-  --muted: oklch(0.96 0.02 240);
-  --muted-foreground: oklch(0.50 0.05 240);
+  --muted: oklch(0.95 0.01 240);
+  --muted-foreground: oklch(0.52 0.04 240);
 
-  --accent: oklch(0.94 0.03 230); /* Halvány kék kiemelés */
-  --accent-foreground: oklch(0.25 0.05 260);
+  --accent: oklch(0.96 0.02 45);         /* soft orange tint */
+  --accent-foreground: oklch(0.55 0.18 45);
 
-  --destructive: oklch(0.60 0.18 20); /* Korall vörös */
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(1 0 0);
 
-  --border: oklch(0.92 0.02 240);
-  --input: oklch(0.92 0.02 240);
-  --ring: oklch(0.55 0.18 230);
+  --border: oklch(0.90 0.01 240);
+  --input: oklch(0.92 0.01 240);
+  --ring: oklch(0.65 0.20 45);
 
-  /* Charts - Cool Spectrum */
-  --chart-1: oklch(0.55 0.18 230); /* Primary Teal */
-  --chart-2: oklch(0.45 0.15 260); /* Deep Blue */
-  --chart-3: oklch(0.70 0.15 190); /* Cyan */
-  --chart-4: oklch(0.60 0.15 290); /* Purple */
-  --chart-5: oklch(0.85 0.10 230); /* Light Blue */
+  --chart-1: oklch(0.65 0.20 45);
+  --chart-2: oklch(0.72 0.18 60);
+  --chart-3: oklch(0.55 0.18 200);
+  --chart-4: oklch(0.68 0.16 130);
+  --chart-5: oklch(0.60 0.18 320);
 
-  --sidebar: oklch(0.99 0.01 240);
-  --sidebar-foreground: oklch(0.20 0.05 260);
-  --sidebar-primary: oklch(0.55 0.18 230);
+  --sidebar: oklch(0.97 0.005 240);
+  --sidebar-foreground: oklch(0.12 0.02 260);
+  --sidebar-primary: oklch(0.65 0.20 45);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.96 0.02 240);
-  --sidebar-accent-foreground: oklch(0.25 0.05 260);
-  --sidebar-border: oklch(0.92 0.02 240);
-  --sidebar-ring: oklch(0.55 0.18 230);
+  --sidebar-accent: oklch(0.94 0.01 240);
+  --sidebar-accent-foreground: oklch(0.25 0.03 260);
+  --sidebar-border: oklch(0.90 0.01 240);
+  --sidebar-ring: oklch(0.65 0.20 45);
 }
 
-/* Dark Mode: "Deep Dive" - Mélytengeri sötétség és neon fények */
+/* ─── DARK MODE: Carbon Noir ─── */
 .dark {
-  /* Nagyon sötét, enyhén kékes árnyalat (nem sima fekete) */
-  --background: oklch(0.12 0.04 260); 
-  --foreground: oklch(0.96 0.01 240); /* Jeges fehér */
+  /* Deep void black with very slight warm tint */
+  --background: oklch(0.08 0.008 260);   /* #0A0A0F deep void */
+  --foreground: oklch(0.95 0.01 60);     /* warm white */
 
-  --card: oklch(0.15 0.04 260); /* Kicsit világosabb mélykék */
-  --card-foreground: oklch(0.96 0.01 240);
+  --card: oklch(0.11 0.008 260);
+  --card-foreground: oklch(0.95 0.01 60);
 
-  --popover: oklch(0.15 0.04 260);
-  --popover-foreground: oklch(0.96 0.01 240);
+  --popover: oklch(0.12 0.008 260);
+  --popover-foreground: oklch(0.95 0.01 60);
 
-  /* BRAND COLOR: Neon Cyan a sötétben */
-  --primary: oklch(0.65 0.16 200); /* Világító Cián */
-  --primary-foreground: oklch(0.12 0.04 260); /* Sötét kék szöveg rajta */
+  /* Electric Orange stays vivid in dark */
+  --primary: oklch(0.70 0.22 45);        /* vivid electric orange */
+  --primary-foreground: oklch(0.06 0.005 260);
 
-  --secondary: oklch(0.20 0.04 260);
-  --secondary-foreground: oklch(0.96 0.01 240);
+  --secondary: oklch(0.15 0.008 260);
+  --secondary-foreground: oklch(0.85 0.01 60);
 
-  --muted: oklch(0.20 0.04 260);
-  --muted-foreground: oklch(0.70 0.02 240);
+  --muted: oklch(0.14 0.008 260);
+  --muted-foreground: oklch(0.55 0.02 240);
 
-  --accent: oklch(0.20 0.06 250); /* Sötét indigó kiemelés */
-  --accent-foreground: oklch(0.96 0.01 240);
+  --accent: oklch(0.18 0.02 50);         /* dark orange tint */
+  --accent-foreground: oklch(0.75 0.22 45);
 
-  --destructive: oklch(0.40 0.15 20);
-  --destructive-foreground: oklch(0.96 0 0);
+  --destructive: oklch(0.45 0.20 25);
+  --destructive-foreground: oklch(0.95 0 0);
 
-  --border: oklch(0.22 0.04 260); /* Sötétkék keretek */
-  --input: oklch(0.22 0.04 260);
-  --ring: oklch(0.65 0.16 200);
+  --border: oklch(0.20 0.008 260);
+  --input: oklch(0.16 0.008 260);
+  --ring: oklch(0.70 0.22 45);
 
-  /* Charts */
-  --chart-1: oklch(0.65 0.16 200); /* Neon Cyan */
-  --chart-2: oklch(0.40 0.10 260); /* Navy */
-  --chart-3: oklch(0.60 0.18 280); /* Violet */
-  --chart-4: oklch(0.80 0.12 180); /* Aqua */
-  --chart-5: oklch(0.50 0.15 320); /* Magenta accent */
+  --chart-1: oklch(0.70 0.22 45);        /* orange */
+  --chart-2: oklch(0.75 0.18 60);        /* amber */
+  --chart-3: oklch(0.55 0.18 200);       /* teal */
+  --chart-4: oklch(0.65 0.16 130);       /* green */
+  --chart-5: oklch(0.60 0.20 310);       /* violet */
 
-  --sidebar: oklch(0.15 0.04 260);
-  --sidebar-foreground: oklch(0.96 0.01 240);
-  --sidebar-primary: oklch(0.65 0.16 200);
-  --sidebar-primary-foreground: oklch(0.12 0.04 260);
-  --sidebar-accent: oklch(0.20 0.04 260);
-  --sidebar-accent-foreground: oklch(0.96 0.01 240);
-  --sidebar-border: oklch(0.22 0.04 260);
-  --sidebar-ring: oklch(0.65 0.16 200);
+  --sidebar: oklch(0.10 0.008 260);
+  --sidebar-foreground: oklch(0.90 0.01 60);
+  --sidebar-primary: oklch(0.70 0.22 45);
+  --sidebar-primary-foreground: oklch(0.06 0.005 260);
+  --sidebar-accent: oklch(0.15 0.008 260);
+  --sidebar-accent-foreground: oklch(0.85 0.01 60);
+  --sidebar-border: oklch(0.20 0.008 260);
+  --sidebar-ring: oklch(0.70 0.22 45);
 }
 
-/* --- PWA FIX KEZDETE --- */
+/* ─── PWA FIX ─── */
 :root {
   touch-action: pan-x pan-y;
 }
@@ -181,7 +174,6 @@ body {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  
   @apply bg-background text-foreground antialiased;
   font-feature-settings: "rlig" 1, "calt" 1;
 }
@@ -190,126 +182,194 @@ body {
   -webkit-user-select: text;
   user-select: text;
 }
-/* --- PWA FIX VÉGE --- */
 
+/* ─── SCROLLBARS ─── */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
 
-  /* --- ASZTALI NÉZET: TECH SCROLLBAR (Cián/Szürke) --- */
   @media (min-width: 768px) {
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
-      /* Sötétkék/Szürke alap */
-      @apply bg-stone-300 dark:bg-slate-700 rounded-full;
+      @apply bg-slate-300 dark:bg-white/10 rounded-full;
     }
-
     ::-webkit-scrollbar-thumb:hover {
-      /* Türkiz hover */
-      @apply bg-primary/80; 
+      @apply bg-orange-500/60;
     }
   }
 
-  /* --- MOBIL NÉZET: GÖRGETŐSÁV ELREJTÉSE --- */
   @media (max-width: 767.9px) {
-    ::-webkit-scrollbar {
-      display: none;
-    }
-    
-    html, body, * {
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
+    ::-webkit-scrollbar { display: none; }
+    html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
   }
 
-  /* Kijelölés színe (Türkiz) */
   ::selection {
-    @apply bg-primary/20 text-primary;
+    background: oklch(0.70 0.22 45 / 0.25);
+    color: oklch(0.70 0.22 45);
   }
 }
 
+/* ═══════════════════════════════════════════════════
+   CARBON NOIR UTILITY CLASSES
+═══════════════════════════════════════════════════ */
 @layer utilities {
-  /* --- 1. GLASSMORPHISM (Jeges Hatás) --- */
+
+  /* Glass card – Carbon variant */
   .glass {
-    /* Kékesebb árnyalatú üveg, hűvösebb érzet */
-    @apply bg-white/70 dark:bg-[#111827]/70 backdrop-blur-xl border border-white/20 dark:border-primary/20;
+    @apply bg-white/60 dark:bg-white/[0.04]
+           border border-white/50 dark:border-white/[0.07]
+           backdrop-blur-xl shadow-sm;
   }
 
-  /* --- 2. ÓCEÁN GRADIENS SZÖVEG (Tech/Future) --- */
-  .text-gradient-ocean {
-    /* Kékből Ciánba, majd mentazöldbe */
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-400 dark:from-blue-400 dark:via-cyan-300 dark:to-emerald-200;
+  /* Orange glow shadow */
+  .glow-orange {
+    box-shadow: 0 0 20px -5px oklch(0.70 0.22 45 / 0.4),
+                0 4px 24px -4px oklch(0.70 0.22 45 / 0.15);
   }
 
-  /* --- 3. ELEKTROMOS HÁTTÉR (Gombokhoz) --- */
-  .bg-ocean-electric {
-    @apply bg-gradient-to-br from-blue-600 to-cyan-500 text-white;
-  }
-  
-  .bg-ocean-electric:hover {
-    @apply bg-gradient-to-br from-blue-500 to-cyan-400 shadow-lg shadow-cyan-500/25;
+  .glow-orange-sm {
+    box-shadow: 0 0 10px -3px oklch(0.70 0.22 45 / 0.3);
   }
 
-  /* --- 4. NEON KERET (Kártyákhoz) --- */
-  .border-neon-glow {
-    /* Finom kék ragyogás */
-    @apply border border-primary/40 shadow-[0_0_15px_-3px_rgba(6,182,212,0.15)] dark:shadow-[0_0_20px_-5px_rgba(6,182,212,0.3)];
+  /* Orange gradient text */
+  .text-gradient-fire {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #FF6B00, #FF9500, #FFB800);
   }
 
-  /* --- 5. GÖRGETŐSÁV SEGÉD --- */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  /* Amber/Orange accent gradient backgrounds */
+  .bg-carbon-card {
+    @apply bg-slate-50 dark:bg-[#111114]
+           border border-slate-200/60 dark:border-white/[0.06];
   }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+
+  .bg-orange-electric {
+    background: linear-gradient(135deg, #FF6B00, #FF9500);
+    @apply text-white shadow-lg;
+  }
+  .bg-orange-electric:hover {
+    background: linear-gradient(135deg, #FF5500, #FF8800);
+    box-shadow: 0 8px 30px -4px oklch(0.70 0.22 45 / 0.45);
+  }
+
+  /* Scrollbar hiding */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Orange neon border */
+  .border-orange-glow {
+    @apply border border-orange-500/30;
+    box-shadow: 0 0 0 1px oklch(0.70 0.22 45 / 0.15),
+                inset 0 0 20px oklch(0.70 0.22 45 / 0.03);
+  }
+
+  /* Carbon stat card */
+  .stat-card {
+    @apply bg-white/70 dark:bg-white/[0.04]
+           border border-white/60 dark:border-white/[0.07]
+           backdrop-blur-xl rounded-2xl
+           shadow-[0_2px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)];
+  }
+
+  /* Orange dot pulse */
+  .dot-orange {
+    @apply w-2 h-2 rounded-full bg-orange-500;
+    box-shadow: 0 0 6px 2px oklch(0.70 0.22 45 / 0.5);
   }
 }
+
+/* ─── COMPONENT CLASSES ─── */
 @layer components {
   .form-input, .form-select {
-    @apply block w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm 
-    focus:border-amber-500 focus:ring-amber-500 sm:text-sm py-3 px-4 
-    bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white 
-    placeholder-slate-400 dark:placeholder-slate-500 transition-all appearance-none;
+    @apply block w-full rounded-xl
+    border border-slate-200 dark:border-white/10
+    bg-white/80 dark:bg-black/20
+    text-slate-900 dark:text-white
+    placeholder:text-slate-400 dark:placeholder:text-white/30
+    focus:border-orange-500 dark:focus:border-orange-500
+    focus:ring-2 focus:ring-orange-500/20
+    outline-none transition-all
+    py-3 px-4 text-sm
+    shadow-sm appearance-none;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+    px-5 py-2.5 rounded-xl font-bold text-sm uppercase tracking-wider
+    text-white transition-all duration-200 active:scale-95;
+    background: linear-gradient(135deg, #FF6B00, #FF9500);
+    box-shadow: 0 4px 15px -3px oklch(0.70 0.22 45 / 0.4);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #FF5500, #FF8800);
+    box-shadow: 0 8px 25px -3px oklch(0.70 0.22 45 / 0.5);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+    px-4 py-2 rounded-xl font-semibold text-sm
+    text-slate-600 dark:text-slate-300
+    hover:text-slate-900 dark:hover:text-white
+    hover:bg-black/5 dark:hover:bg-white/10
+    transition-all duration-150;
   }
 }
 
-/* driver.js popover testreszabás */
-.driver-popover.driverjs-theme {
-  background-color: #ffffff;
-  color: #1f2937;
-  border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  padding: 16px;
+/* ─── KEYFRAME ANIMATIONS ─── */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-12px) rotate(1deg); }
+  66% { transform: translateY(-6px) rotate(-1deg); }
 }
 
+@keyframes pulse-orange {
+  0%, 100% { box-shadow: 0 0 15px -3px oklch(0.70 0.22 45 / 0.4); }
+  50% { box-shadow: 0 0 30px -3px oklch(0.70 0.22 45 / 0.7); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes aurora-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  50% { transform: translate(30px, -20px) scale(1.05); opacity: 0.8; }
+}
+
+.animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+.animate-pulse-orange { animation: pulse-orange 2s ease-in-out infinite; }
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(255,107,0,0.08) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+.animate-aurora { animation: aurora-drift 12s ease-in-out infinite; }
+
+/* ─── Driver.js styles ─── */
+.driver-popover.driverjs-theme {
+  background-color: #111114;
+  color: #f0f0f0;
+  border-radius: 16px;
+  border: 1px solid rgba(255,107,0,0.2);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 30px rgba(255,107,0,0.1);
+  padding: 20px;
+}
 .driver-popover.driverjs-theme .driver-popover-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   margin-bottom: 8px;
+  color: #FF9500;
 }
-
 .driver-popover.driverjs-theme .driver-popover-description {
-  font-size: 14px;
-  line-height: 1.5;
-  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #aaa;
 }
-
-/* Sötét mód támogatás (ha az oldalad class="dark"-ot használ) */
 .dark .driver-popover.driverjs-theme {
-  background-color: #1e293b; /* Slate-800 */
-  color: #f8fafc;
-}
-
-.dark .driver-popover.driverjs-theme .driver-popover-description {
-  color: #cbd5e1;
+  background-color: #111114;
+  color: #f0f0f0;
 }

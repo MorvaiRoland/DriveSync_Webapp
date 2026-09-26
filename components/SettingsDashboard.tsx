@@ -34,9 +34,9 @@ interface SettingsDashboardProps {
 function Glass({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={`
-      bg-white/60 dark:bg-white/[0.04]
-      border border-white/70 dark:border-white/[0.08]
-      backdrop-blur-xl shadow-sm
+      bg-white/60 dark:bg-[#111114]
+      border border-white/50 dark:border-white/[0.06]
+      backdrop-blur-xl shadow-sm dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)]
       ${className}
     `}>
       {children}
@@ -54,10 +54,7 @@ function SubmitButton({ label = 'Mentés', disabled }: { label?: string; disable
     <button
       type="submit"
       disabled={busy}
-      className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-        bg-slate-900 dark:bg-white text-white dark:text-slate-900
-        hover:bg-slate-800 dark:hover:bg-slate-100
-        shadow-sm"
+      className="btn-primary"
     >
       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
       {busy ? 'Feldolgozás...' : label}
@@ -79,7 +76,7 @@ function Toggle({ name, checked, onChange }: { name: string; checked: boolean; o
         onChange={onChange}
       />
       <div className="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer
-        peer-checked:bg-indigo-500 dark:peer-checked:bg-indigo-500
+        peer-checked:bg-orange-500 dark:peer-checked:bg-orange-500
         after:content-[''] after:absolute after:top-[2px] after:left-[2px]
         after:bg-white after:rounded-full after:h-5 after:w-5
         after:transition-all peer-checked:after:translate-x-full
@@ -96,8 +93,8 @@ function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }
   return (
     <div className="flex items-center gap-3 mb-5">
       <div className="w-8 h-8 rounded-xl flex items-center justify-center
-        bg-slate-100 dark:bg-white/10
-        border border-slate-200 dark:border-white/10">
+        bg-orange-500/10 text-orange-400
+        border border-orange-500/20">
         {icon}
       </div>
       <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">{title}</h2>
@@ -172,9 +169,9 @@ export default function SettingsDashboard({
   if (dbPlan === 'lifetime') {
     planLabel = 'Founder Edition (Örökös)'; planColor = 'text-amber-500'; planBg = 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900/40'; planIcon = <Crown className="w-6 h-6 fill-current text-amber-500" />
   } else if (dbPlan === 'pro') {
-    planLabel = 'Pro Előfizetés'; planColor = 'text-indigo-500'; planBg = 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-900/40'; planIcon = <Zap className="w-6 h-6 fill-current text-indigo-500" />
+    planLabel = 'Pro Előfizetés'; planColor = 'text-orange-500'; planBg = 'bg-orange-500/10 border-orange-500/30'; planIcon = <Zap className="w-6 h-6 fill-current text-orange-500" />
   } else if (earlyAccessConfig?.early_access_pro) {
-    planLabel = 'Early Access Pro'; planColor = 'text-emerald-500'; planBg = 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/40'; planIcon = <Sparkles className="w-6 h-6 fill-current text-emerald-500" />
+    planLabel = 'Early Access Pro'; planColor = 'text-orange-500'; planBg = 'bg-orange-500/10 border-orange-500/30'; planIcon = <Sparkles className="w-6 h-6 fill-current text-orange-500" />
   }
 
   if (!mounted) return null
@@ -404,12 +401,12 @@ export default function SettingsDashboard({
 
             {/* Notifications */}
             <Glass className="rounded-2xl p-6">
-              <SectionHeader icon={<Bell className="w-4 h-4 text-indigo-500" />} title="Értesítések" />
+              <SectionHeader icon={<Bell className="w-4 h-4 text-orange-500" />} title="Értesítések" />
               <form action={updatePreferences} className="space-y-3">
                 <input type="hidden" name="theme" value={theme || 'light'} />
                 {[
-                  { name: 'notify_email', label: 'Email értesítések', desc: 'Szerviz és emlékeztető emailek', icon: <Bell className="w-4 h-4 text-indigo-500" />, checked: settings?.notify_email ?? true },
-                  { name: 'notify_push', label: 'Push üzenetek', desc: 'Böngésző értesítések', icon: <Smartphone className="w-4 h-4 text-indigo-500" />, checked: settings?.notify_push ?? false },
+                  { name: 'notify_email', label: 'Email értesítések', desc: 'Szerviz és emlékeztető emailek', icon: <Bell className="w-4 h-4 text-orange-500" />, checked: settings?.notify_email ?? true },
+                  { name: 'notify_push', label: 'Push üzenetek', desc: 'Böngésző értesítések', icon: <Smartphone className="w-4 h-4 text-orange-500" />, checked: settings?.notify_push ?? false },
                 ].map((item) => (
                   <label key={item.name}
                     className="flex items-center justify-between p-4 rounded-xl cursor-pointer
@@ -419,7 +416,7 @@ export default function SettingsDashboard({
                       transition-colors group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center justify-center">
                         {item.icon}
                       </div>
                       <div>
@@ -461,10 +458,7 @@ export default function SettingsDashboard({
               <button
                 onClick={manageSubscription}
                 disabled={loadingPortal}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50
-                  bg-slate-900 dark:bg-white text-white dark:text-slate-900
-                  hover:bg-slate-800 dark:hover:bg-slate-100
-                  shadow-sm"
+                className="btn-primary w-full py-3 disabled:opacity-50"
               >
                 {loadingPortal ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
                 Számlázási adatok kezelése
@@ -477,11 +471,11 @@ export default function SettingsDashboard({
             {/* Upgrade CTA (only on free) */}
             {!dbPlan && (
               <Glass className="rounded-2xl p-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
                 <div className="relative z-10">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center">
-                      <Zap className="w-5 h-5 text-indigo-500 fill-current" />
+                    <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                      <Zap className="w-5 h-5 text-orange-400 fill-current" />
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white">Váltás Pro-ra</h3>
@@ -490,8 +484,7 @@ export default function SettingsDashboard({
                   </div>
                   <Link
                     href="/pricing"
-                    className="block w-full text-center py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:scale-[1.01]
-                      bg-indigo-600 dark:bg-indigo-500 text-white hover:bg-indigo-500 dark:hover:bg-indigo-400 shadow-md shadow-indigo-500/20"
+                    className="btn-primary block w-full text-center py-3"
                   >
                     Csomagok megtekintése
                   </Link>

@@ -22,4 +22,4 @@ export const FuelWidget = dynamic(
   { loading: LoadingWidget, ssr: false }
 );
 
-export const QuickCostOverview = dynamic(() => import('@/components/QuickCostOverview'), { loading: LoadingWidget });
+

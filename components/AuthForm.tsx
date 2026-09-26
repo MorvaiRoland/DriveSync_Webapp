@@ -77,14 +77,14 @@ export default function AuthForm({ isLogin, message, lang = 'hu' }: AuthFormProp
     'border border-slate-200 dark:border-white/10',
     'text-slate-900 dark:text-white',
     'placeholder:text-slate-400 dark:placeholder:text-slate-500',
-    'focus:border-indigo-500 dark:focus:border-indigo-400',
-    'focus:ring-1 focus:ring-indigo-500/50 dark:focus:ring-indigo-400/30',
+    'focus:border-orange-500 dark:focus:border-orange-500',
+    'focus:ring-2 focus:ring-orange-500/20 dark:focus:ring-orange-500/20',
     'backdrop-blur-sm',
   ].join(' ')
 
   const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
-    <div className={`flex items-center gap-2 text-[10px] transition-colors duration-300 ${met ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
-      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${met ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-slate-300 dark:bg-slate-600'}`} />
+    <div className={`flex items-center gap-2 text-[10px] transition-colors duration-300 ${met ? 'text-orange-500 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500'}`}>
+      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${met ? 'bg-orange-500 dark:bg-orange-400 dot-orange' : 'bg-slate-300 dark:bg-slate-600'}`} />
       <span>{text}</span>
     </div>
   )
@@ -120,7 +120,7 @@ export default function AuthForm({ isLogin, message, lang = 'hu' }: AuthFormProp
           <button
             type="submit"
             disabled={loading || !!showResetMessage}
-            className="w-full rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 py-3 text-sm font-bold text-white dark:text-slate-900 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? t.sending : t.sendLink}
           </button>
@@ -229,7 +229,7 @@ export default function AuthForm({ isLogin, message, lang = 'hu' }: AuthFormProp
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 dark:text-slate-500 hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -260,7 +260,7 @@ export default function AuthForm({ isLogin, message, lang = 'hu' }: AuthFormProp
             <button
               type="button"
               onClick={() => setResetMode(true)}
-              className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors uppercase tracking-wide"
+              className="text-[11px] font-bold text-orange-500 dark:text-orange-400 hover:text-orange-400 dark:hover:text-orange-300 transition-colors uppercase tracking-wide"
             >
               {t.forgotPwd}
             </button>
@@ -274,13 +274,13 @@ export default function AuthForm({ isLogin, message, lang = 'hu' }: AuthFormProp
               name="terms"
               type="checkbox"
               required
-              className="mt-1 w-3.5 h-3.5 rounded border-slate-300 dark:border-white/20 bg-white dark:bg-white/10 text-indigo-500 focus:ring-indigo-500 accent-indigo-500"
+              className="mt-1 w-3.5 h-3.5 rounded border-slate-300 dark:border-white/20 bg-white dark:bg-white/10 text-orange-500 focus:ring-orange-500 accent-orange-500"
             />
             <label htmlFor="terms" className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
               {t.acceptTermsPrefix}{' '}
-              <Link href="/terms" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t.terms}</Link>
+              <Link href="/terms" className="text-orange-500 dark:text-orange-400 hover:underline">{t.terms}</Link>
               {t.and}
-              <Link href="/privacy" className="text-indigo-600 dark:text-indigo-400 hover:underline">{t.privacy}</Link>.
+              <Link href="/privacy" className="text-orange-500 dark:text-orange-400 hover:underline">{t.privacy}</Link>.
             </label>
           </div>
         )}
@@ -298,10 +298,7 @@ export default function AuthForm({ isLogin, message, lang = 'hu' }: AuthFormProp
         <button
           type="submit"
           disabled={loading || (!isLogin && !isPasswordValid)}
-          className="w-full rounded-xl py-3.5 text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed
-            bg-slate-900 dark:bg-white
-            hover:bg-slate-800 dark:hover:bg-slate-100
-            text-white dark:text-slate-900"
+          className="btn-primary w-full py-3.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? t.processing : (isLogin ? t.loginBtn : t.registerBtn)}
         </button>
@@ -313,7 +310,7 @@ export default function AuthForm({ isLogin, message, lang = 'hu' }: AuthFormProp
           <Link
             href={isLogin ? '/login?mode=signup' : '/login?mode=signin'}
             onClick={() => setLoading(false)}
-            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"
+            className="text-orange-500 dark:text-orange-400 hover:text-orange-400 dark:hover:text-orange-300 transition-colors"
           >
             {isLogin ? t.registerLink : t.loginLink}
           </Link>

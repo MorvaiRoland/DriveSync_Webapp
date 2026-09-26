@@ -20,9 +20,9 @@ interface PricingClientProps {
 function Glass({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={`
-      bg-white/60 dark:bg-white/[0.04]
-      border border-white/70 dark:border-white/[0.08]
-      backdrop-blur-xl shadow-sm transition-all duration-300
+      bg-white/60 dark:bg-[#111114]
+      border border-white/50 dark:border-white/[0.06]
+      backdrop-blur-xl shadow-sm dark:shadow-[0_2px_12px_rgba(0,0,0,0.4)] transition-all duration-300
       ${className}
     `}>
       {children}
@@ -50,7 +50,7 @@ export default function PricingClient({
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-slate-900 dark:text-slate-200 font-sans selection:bg-indigo-500/30 selection:text-amber-600 relative overflow-x-hidden flex flex-col transition-colors duration-700">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#09090C] text-slate-900 dark:text-slate-200 font-sans selection:bg-orange-500/30 selection:text-amber-600 relative overflow-x-hidden flex flex-col transition-colors duration-700">
       <AuroraBackground />
 
       {/* NAVBAR */}
@@ -85,10 +85,10 @@ export default function PricingClient({
         
         {/* LAUNCH BANNER */}
         <div className="w-full max-w-4xl mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 p-[1px] shadow-xl shadow-indigo-500/10">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 p-[1px] shadow-xl shadow-orange-500/10">
             <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/20 rounded-full blur-2xl"></div>
-            <div className="relative bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-md rounded-[23px] p-5 md:p-6 text-center">
-              <div className="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-[9px] uppercase tracking-widest mb-1.5 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/50">
+            <div className="relative bg-white/90 dark:bg-[#09090C]/90 backdrop-blur-md rounded-[23px] p-5 md:p-6 text-center">
+              <div className="inline-flex items-center gap-2 text-orange-500 dark:text-orange-400 font-bold text-[9px] uppercase tracking-widest mb-1.5 bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full border border-orange-100 dark:border-orange-900/50">
                 <Rocket className="w-3.5 h-3.5" />
                 Indulási Ajánlat
               </div>
@@ -96,7 +96,7 @@ export default function PricingClient({
                 Új év, új korszak a járműkezelésben!
               </h2>
               <p className="text-slate-500 dark:text-slate-400 text-xs md:text-sm max-w-2xl mx-auto leading-relaxed">
-                Az első hónapban minden prémium funkció <span className="text-indigo-600 dark:text-indigo-400 font-bold underline decoration-indigo-500/50 decoration-2">teljesen ingyenes</span> mindenki számára. Nincs elköteleződés, sem rejtett bankkártyás adatkérés.
+                Az első hónapban minden prémium funkció <span className="text-orange-500 dark:text-orange-400 font-bold underline decoration-orange-500/50 decoration-2">teljesen ingyenes</span> mindenki számára. Nincs elköteleződés, sem rejtett bankkártyás adatkérés.
               </p>
             </div>
           </div>
@@ -147,13 +147,13 @@ export default function PricingClient({
           </Glass>
 
           {/* 2. PRO PLAN (ACTIVE TRIAL) */}
-          <div className="relative p-[1px] rounded-[25px] bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500 shadow-xl shadow-indigo-500/10 md:-translate-y-4 hover:scale-[1.01] transition-transform duration-300">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest shadow-md flex items-center gap-1.5 whitespace-nowrap border border-white/20 animate-pulse">
+          <div className="relative p-[1px] rounded-[25px] bg-gradient-to-b from-orange-500 via-amber-500 to-red-500 shadow-xl shadow-orange-500/10 md:-translate-y-4 hover:scale-[1.01] transition-transform duration-300">
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest shadow-md flex items-center gap-1.5 whitespace-nowrap border border-white/20 animate-pulse">
               <Zap className="w-3.5 h-3.5 fill-white" /> Jelenleg Aktív
             </div>
 
-            <div className="bg-white/95 dark:bg-[#0c0c0e]/95 rounded-[24px] p-6 h-full relative overflow-hidden flex flex-col">
-              <h3 className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mb-1">Pro</h3>
+            <div className="bg-white/95 dark:bg-[#111114]/95 rounded-[24px] p-6 h-full relative overflow-hidden flex flex-col">
+              <h3 className="text-lg font-bold text-orange-500 dark:text-orange-400 mb-1">Pro</h3>
               <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
                   0 Ft
@@ -179,7 +179,7 @@ export default function PricingClient({
               <button 
                 onClick={handleEnterDashboard}
                 disabled={loadingDashboard}
-                className="w-full py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-md bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-indigo-500/20"
+                className="w-full py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-md bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-orange-500/20"
               >
                 {loadingDashboard ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -255,7 +255,7 @@ function FeatureItem({ text, active, dull }: { text: string, active?: boolean, d
     <li className={`flex items-start gap-2.5 ${dull ? 'opacity-40' : ''}`}>
       <div className={`mt-0.5 rounded-full p-0.5 flex-shrink-0 ${
         active 
-          ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30' 
+          ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-500 dark:text-orange-400 border border-orange-100 dark:border-orange-900/30' 
           : 'bg-slate-100 dark:bg-white/5 text-slate-500 border border-slate-200/50 dark:border-white/5'
       }`}>
         <Check className="w-3 h-3" strokeWidth={3} />

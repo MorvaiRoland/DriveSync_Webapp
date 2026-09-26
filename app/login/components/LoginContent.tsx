@@ -52,13 +52,13 @@ export default function LoginContent({ isLogin, message }: { isLogin: boolean; m
       {/* Card container */}
       <div className="w-full max-w-md relative group mt-12 md:mt-0">
         {/* Outer glow */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-[2.5rem] blur-2xl opacity-60 group-hover:opacity-100 transition duration-1000 pointer-events-none" />
+        <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/20 to-amber-500/20 rounded-[2.5rem] blur-2xl opacity-60 group-hover:opacity-100 transition duration-1000 pointer-events-none" />
 
         {/* Glass Card */}
         <div className="relative bg-white/40 dark:bg-white/5 border border-white/60 dark:border-white/10 rounded-3xl shadow-2xl backdrop-blur-3xl p-8 sm:p-10 overflow-hidden">
 
           {/* Subtle top gradient line */}
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent" />
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
 
           {/* Logo */}
           <div className="flex justify-center mb-8">
@@ -75,11 +75,11 @@ export default function LoginContent({ isLogin, message }: { isLogin: boolean; m
 
           {/* Header */}
           <div className="mb-8 text-center space-y-2">
-            <div className="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-[10px] uppercase tracking-[0.2em] bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-500/20">
+            <div className="inline-flex items-center gap-2 text-orange-500 dark:text-orange-400 font-black text-[10px] uppercase tracking-[0.2em] bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
               <Lock size={10} className="fill-current" /> {t.secureLogin}
             </div>
             <h2 className="text-2xl sm:text-3xl font-light tracking-tight text-slate-900 dark:text-white uppercase">
-              <span className="font-bold">{isLogin ? t.welcomeBack : t.createAccount}</span>
+              <span className="font-black text-gradient-fire">{isLogin ? t.welcomeBack : t.createAccount}</span>
             </h2>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
               {t.subtitle}

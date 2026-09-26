@@ -189,9 +189,9 @@ export default function CarDetailsClient({
             <svg className="w-[80%] max-w-md opacity-85 select-none" viewBox="0 0 800 300" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="neonGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#6366f1" />
-                  <stop offset="50%" stopColor="#d946ef" />
-                  <stop offset="100%" stopColor="#3b82f6" />
+                  <stop offset="0%" stopColor="#ea580c" />
+                  <stop offset="50%" stopColor="#f59e0b" />
+                  <stop offset="100%" stopColor="#dc2626" />
                 </linearGradient>
                 <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
                   <feGaussianBlur stdDeviation="7" result="blur" />
@@ -202,24 +202,24 @@ export default function CarDetailsClient({
                 </filter>
               </defs>
               <g opacity="0.25">
-                <line x1="0" y1="260" x2="800" y2="260" stroke="#6366f1" strokeWidth="1.5" />
-                <line x1="0" y1="280" x2="800" y2="280" stroke="#6366f1" strokeWidth="1" />
-                <line x1="100" y1="260" x2="0" y2="300" stroke="#6366f1" strokeWidth="1" />
-                <line x1="250" y1="260" x2="150" y2="300" stroke="#6366f1" strokeWidth="1" />
-                <line x1="400" y1="260" x2="400" y2="300" stroke="#6366f1" strokeWidth="1" />
-                <line x1="550" y1="260" x2="650" y2="300" stroke="#6366f1" strokeWidth="1" />
-                <line x1="700" y1="260" x2="800" y2="300" stroke="#6366f1" strokeWidth="1" />
+                <line x1="0" y1="260" x2="800" y2="260" stroke="#ea580c" strokeWidth="1.5" />
+                <line x1="0" y1="280" x2="800" y2="280" stroke="#ea580c" strokeWidth="1" />
+                <line x1="100" y1="260" x2="0" y2="300" stroke="#ea580c" strokeWidth="1" />
+                <line x1="250" y1="260" x2="150" y2="300" stroke="#ea580c" strokeWidth="1" />
+                <line x1="400" y1="260" x2="400" y2="300" stroke="#ea580c" strokeWidth="1" />
+                <line x1="550" y1="260" x2="650" y2="300" stroke="#ea580c" strokeWidth="1" />
+                <line x1="700" y1="260" x2="800" y2="300" stroke="#ea580c" strokeWidth="1" />
               </g>
               <path d="M 120,240 L 180,240 C 195,240 205,210 220,210 C 235,210 245,240 260,240 L 540,240 C 555,240 565,210 580,210 C 595,210 605,240 620,240 L 680,240 C 710,240 730,220 740,200 C 745,190 745,175 735,165 C 720,150 680,140 640,135 C 610,130 550,110 510,95 C 470,80 380,75 320,80 C 250,85 190,115 160,135 C 130,155 100,180 90,195 C 80,210 90,240 120,240 Z" stroke="url(#neonGlow)" strokeWidth="3" filter="url(#glow)" strokeLinecap="round" strokeLinejoin="round" />
               <circle cx="220" cy="210" r="32" stroke="url(#neonGlow)" strokeWidth="3" filter="url(#glow)" />
               <circle cx="220" cy="210" r="16" stroke="url(#neonGlow)" strokeWidth="1.5" />
               <circle cx="580" cy="210" r="32" stroke="url(#neonGlow)" strokeWidth="3" filter="url(#glow)" />
               <circle cx="580" cy="210" r="16" stroke="url(#neonGlow)" strokeWidth="1.5" />
-              <path d="M 50,150 L 110,150" stroke="#6366f1" strokeWidth="1.5" opacity="0.5" strokeDasharray="10 5" />
-              <path d="M 30,170 L 80,170" stroke="#d946ef" strokeWidth="1.5" opacity="0.4" strokeDasharray="5 5" />
-              <path d="M 680,105 L 730,115" stroke="#3b82f6" strokeWidth="1.5" opacity="0.6" />
+              <path d="M 50,150 L 110,150" stroke="#ea580c" strokeWidth="1.5" opacity="0.5" strokeDasharray="10 5" />
+              <path d="M 30,170 L 80,170" stroke="#f59e0b" strokeWidth="1.5" opacity="0.4" strokeDasharray="5 5" />
+              <path d="M 680,105 L 730,115" stroke="#dc2626" strokeWidth="1.5" opacity="0.6" />
             </svg>
-            <div className="text-[9px] font-mono tracking-[0.25em] text-indigo-400/40 uppercase select-none animate-pulse mb-6">DYNAMIC ENGINE SPECIFICATIONS</div>
+            <div className="text-[9px] font-mono tracking-[0.25em] text-orange-400/40 uppercase select-none animate-pulse mb-6">DYNAMIC ENGINE SPECIFICATIONS</div>
           </div>
         )}
 
@@ -282,16 +282,16 @@ export default function CarDetailsClient({
             {isElectric ? <Zap className="w-4 h-4" /> : <Fuel className="w-4 h-4" />}
             <span>{isElectric ? 'Töltés' : 'Tankolás'}</span>
           </Link>
-          <Link href={`/cars/${carIdString}/events/new?type=service`} className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:scale-105 active:scale-95">
+          <Link href={`/cars/${carIdString}/events/new?type=service`} className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 hover:scale-105 active:scale-95">
             <Wrench className="w-4 h-4" />
             <span>Szerviz</span>
           </Link>
-          <Link href={`/cars/${carIdString}/reminders/new`} className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:scale-105 active:scale-95">
+          <Link href={`/cars/${carIdString}/reminders/new`} className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 hover:scale-105 active:scale-95">
             <Bell className="w-4 h-4" />
             <span>Teendő</span>
           </Link>
           {limits.mileageLog ? (
-            <Link href={`/cars/${carIdString}/trips`} className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:scale-105 active:scale-95">
+            <Link href={`/cars/${carIdString}/trips`} className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 hover:scale-105 active:scale-95">
               <Map className="w-4 h-4" />
               <span>Utak</span>
             </Link>
@@ -301,12 +301,12 @@ export default function CarDetailsClient({
               <span>Utak</span>
             </Link>
           )}
-          <Link href={`/cars/${carIdString}/parts`} className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:scale-105 active:scale-95">
+          <Link href={`/cars/${carIdString}/parts`} className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 hover:scale-105 active:scale-95">
             <Package className="w-4 h-4" />
             <span>Alkatrészek</span>
           </Link>
           {limits.serviceMap ? (
-            <Link href="/services" className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:scale-105 active:scale-95">
+            <Link href="/services" className="flex items-center justify-center gap-2 h-11 text-xs font-bold uppercase tracking-widest rounded-xl transition-all border bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 hover:scale-105 active:scale-95">
               <MapPin className="w-4 h-4" />
               <span>Térkép</span>
             </Link>
@@ -491,7 +491,7 @@ export default function CarDetailsClient({
                 onClick={() => setLogFilter(f.id as any)}
                 className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
                   logFilter === f.id
-                    ? 'bg-white dark:bg-white/10 text-indigo-600 dark:text-white shadow-sm'
+                    ? 'bg-white dark:bg-white/10 text-orange-500 dark:text-white shadow-sm'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -506,12 +506,12 @@ export default function CarDetailsClient({
             <div className="relative border-l-2 border-slate-100 dark:border-white/5 ml-3 space-y-6">
               {filteredEventsList.map((event: any) => (
                 <div key={event.id} className="relative pl-6 group">
-                  <div className={`absolute -left-[9px] top-3.5 w-4 h-4 rounded-full border-4 border-[#F5F5F7] dark:border-[#000000] ${
+                  <div className={`absolute -left-[9px] top-3.5 w-4 h-4 rounded-full border-4 border-[#F5F5F7] dark:border-[#111114] ${
                     event.type === 'fuel' ? 'bg-amber-500' :
-                    event.type === 'service' ? 'bg-indigo-500' : 'bg-slate-400'
+                    event.type === 'service' ? 'bg-orange-500' : 'bg-slate-400'
                   } shadow-sm`} />
 
-                  <Glass className="rounded-2xl hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors relative overflow-hidden">
+                  <Glass className="rounded-2xl hover:border-orange-400 dark:hover:border-orange-500 transition-colors relative overflow-hidden">
                     <Link href={hasEditAccess ? `/cars/${carIdString}/events/${event.id}/edit` : '#'} className={`block p-4 ${!hasEditAccess && 'cursor-default'}`}>
                       <div className="flex justify-between items-start mb-2 pr-8">
                         <div>
@@ -631,7 +631,7 @@ function CostItem({ label, value, icon }: any) {
 
 function SmartTipsCard({ tips }: { tips: string[] }) {
   return (
-    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden group">
+    <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl p-5 shadow-sm text-white relative overflow-hidden group">
       <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
       <div className="flex items-center gap-2 mb-3 relative z-10">
         <div className="p-1 rounded-lg bg-yellow-400/20"><Lightbulb className="w-4 h-4 text-yellow-300" /></div>
@@ -639,7 +639,7 @@ function SmartTipsCard({ tips }: { tips: string[] }) {
       </div>
       <div className="space-y-2 relative z-10">
         {tips.map((tip, i) => (
-          <div key={i} className="flex gap-2.5 items-start text-xs text-indigo-100/90 bg-black/10 p-2 rounded-xl border border-white/5">
+          <div key={i} className="flex gap-2.5 items-start text-xs text-orange-100/90 bg-black/10 p-2 rounded-xl border border-white/5">
             <span className="mt-1.5 w-1.5 h-1.5 bg-yellow-400 rounded-full flex-shrink-0" />
             <p className="leading-snug">{tip}</p>
           </div>
@@ -666,7 +666,7 @@ function RemindersList({ reminders, carId }: any) {
         {reminders.length > 0 ? (
           reminders.map((rem: any) => (
             <div key={rem.id} className="p-3.5 flex items-center gap-3 hover:bg-black/5 dark:hover:bg-white/[0.01] transition-colors group">
-              <div className="w-11 h-11 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex flex-col items-center justify-center border border-indigo-100 dark:border-indigo-900/30 flex-shrink-0">
+              <div className="w-11 h-11 bg-orange-500/10 text-orange-400 rounded-xl flex flex-col items-center justify-center border border-orange-500/20 flex-shrink-0">
                 <span className="text-[8px] font-bold uppercase leading-none mb-0.5">{new Date(rem.due_date).toLocaleString('hu-HU', { month: 'short' }).replace('.', '')}</span>
                 <span className="text-base font-black leading-none">{new Date(rem.due_date).getDate()}</span>
               </div>
@@ -702,7 +702,7 @@ function TechnicalSpecs({ car, avgConsumption, canVinSearch, hasEditAccess }: an
           <Gauge className="w-4 h-4 text-slate-400" /> Specifikációk
         </h3>
         {canVinSearch && car.vin && hasEditAccess ? (
-          <a href={`https://vincheck.com/${car.vin}`} target="_blank" rel="noopener noreferrer" className="text-[9px] font-bold uppercase tracking-widest bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2.5 py-1 rounded border border-indigo-100 dark:border-indigo-900/50 hover:bg-indigo-100 transition-colors flex items-center gap-1 shadow-sm">
+          <a href={`https://vincheck.com/${car.vin}`} target="_blank" rel="noopener noreferrer" className="text-[9px] font-bold uppercase tracking-widest bg-orange-500/10 text-orange-400 px-2.5 py-1 rounded border border-orange-500/20 hover:bg-orange-500/20 transition-colors flex items-center gap-1 shadow-sm">
             <Search className="w-3 h-3" /> Vizsgálat
           </a>
         ) : hasEditAccess ? (
@@ -746,7 +746,7 @@ function DataPoint({ label, value, mono, capitalize, highlight, className = '' }
   return (
     <div className={`flex flex-col ${className}`}>
       <span className="text-[8px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mb-0.5">{label}</span>
-      <span className={`text-xs font-bold ${mono ? 'font-mono text-[10px]' : ''} ${capitalize ? 'capitalize' : ''} ${highlight ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-200'}`}>{value}</span>
+      <span className={`text-xs font-bold ${mono ? 'font-mono text-[10px]' : ''} ${capitalize ? 'capitalize' : ''} ${highlight ? 'text-orange-500 dark:text-orange-400' : 'text-slate-800 dark:text-slate-200'}`}>{value}</span>
     </div>
   )
 }
@@ -766,7 +766,7 @@ function TireHotelCard({ tires, carMileage, carId }: any) {
             let currentDistance = tire.total_distance
             if (tire.is_mounted) currentDistance += (carMileage - (tire.mounted_at_mileage || carMileage))
             return (
-              <div key={tire.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${tire.is_mounted ? 'bg-indigo-50 dark:bg-indigo-950/20 border-indigo-100 dark:border-indigo-900/30' : 'bg-slate-900/5 dark:bg-white/5 border-slate-200/40 dark:border-white/5'}`}>
+              <div key={tire.id} className={`flex items-center justify-between p-2.5 rounded-xl border ${tire.is_mounted ? 'bg-orange-500/10 border-orange-500/20' : 'bg-slate-900/5 dark:bg-white/5 border-slate-200/40 dark:border-white/5'}`}>
                 <div className="flex items-center gap-3">
                   {tire.type === 'winter' ? <Snowflake className="w-4 h-4 text-blue-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
                   <div>
@@ -774,7 +774,7 @@ function TireHotelCard({ tires, carMileage, carId }: any) {
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">{currentDistance.toLocaleString()} km</p>
                   </div>
                 </div>
-                {tire.is_mounted && <span className="text-[8px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-white dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-900/30 px-2 py-0.5 rounded shadow-sm">Aktív</span>}
+                {tire.is_mounted && <span className="text-[8px] font-bold uppercase tracking-widest text-orange-400 bg-white dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20 px-2 py-0.5 rounded shadow-sm">Aktív</span>}
               </div>
             )
           })

@@ -4,16 +4,7 @@ import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
 import { Suspense } from 'react';
-import dynamic from 'next/dynamic';
-
-// ⚡ Valóban lazy loaded – nem blokkolják az initial render-t
-const CookieBanner = dynamic(() => import('@/components/CookieBanner'), { ssr: false });
-const InstallPrompt = dynamic(() => import('@/components/InstallPrompt'), { ssr: false });
-const PermissionChecker = dynamic(() => import('@/components/PermissionChecker'), { ssr: false });
-const OfflineIndicator = dynamic(() => import('@/components/OfflineIndicator'), { ssr: false });
-
-// Skeleton Loading
-const ComponentSkeleton = () => <div className="h-8 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />;
+import ClientBoot from "@/components/ClientBoot";
 
 
 export const viewport: Viewport = {
@@ -103,10 +94,7 @@ export default function RootLayout({
           
           {/* 🚀 LAZY LOADED - SUSPENSE FALLBACK */}
           <Suspense fallback={null}>
-            <CookieBanner />
-            <InstallPrompt />
-            <PermissionChecker />
-            <OfflineIndicator />
+            <ClientBoot />
           </Suspense>
           <RegisterSW />
         </ThemeProvider>

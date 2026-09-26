@@ -60,13 +60,13 @@ export const IntroLoader = ({ onComplete }: { onComplete: () => void }) => {
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 1.05, filter: "blur(20px)" }}
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#F5F5F7] dark:bg-[#000000] overflow-hidden selection:bg-none cursor-wait font-sans"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#F5F5F7] dark:bg-[#09090C] overflow-hidden selection:bg-none cursor-wait font-sans"
     >
       {/* Aurora Background */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] right-[-5%] w-[min(400px,80vw)] md:w-[800px] h-[min(400px,80vw)] md:h-[800px] bg-indigo-400/20 dark:bg-indigo-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen animate-pulse-slow"></div>
-        <div className="absolute bottom-[-10%] left-[-10%] w-[min(400px,80vw)] md:w-[800px] h-[min(400px,80vw)] md:h-[800px] bg-purple-400/20 dark:bg-purple-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
-        <div className="absolute top-[30%] left-[10%] w-[min(300px,70vw)] md:w-[600px] h-[min(300px,70vw)] md:h-[600px] bg-cyan-300/20 dark:bg-cyan-600/20 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute top-[-10%] right-[-5%] w-[min(400px,80vw)] md:w-[800px] h-[min(400px,80vw)] md:h-[800px] bg-orange-500/15 dark:bg-orange-600/15 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[min(400px,80vw)] md:w-[800px] h-[min(400px,80vw)] md:h-[800px] bg-amber-500/15 dark:bg-amber-600/15 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute top-[30%] left-[10%] w-[min(300px,70vw)] md:w-[600px] h-[min(300px,70vw)] md:h-[600px] bg-red-500/10 dark:bg-red-600/10 blur-[80px] md:blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen"></div>
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] dark:opacity-[0.06] mix-blend-overlay"></div>
       </div>
 
@@ -94,7 +94,7 @@ export const IntroLoader = ({ onComplete }: { onComplete: () => void }) => {
           <div className="w-full h-1.5 md:h-2 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden relative mb-6">
             <motion.div 
               style={{ width: lineWidth }}
-              className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-full"
+              className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-orange-500 to-amber-400 rounded-full"
             />
           </div>
 

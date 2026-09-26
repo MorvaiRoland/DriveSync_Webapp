@@ -57,7 +57,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
   const displayName = user.user_metadata?.full_name || user.user_metadata?.display_name || user.email?.split('@')[0]
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-700 relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#09090C] text-slate-900 dark:text-white font-sans transition-colors duration-700 relative overflow-x-hidden">
       <AuroraBackground />
 
       {/* Navigation */}
@@ -73,11 +73,11 @@ export default async function SettingsPage({ searchParams }: PageProps) {
         {/* Header section */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div>
-            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" /> Rendszerkonfiguráció
+            <p className="text-[10px] font-black text-orange-400/80 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
+              <span className="dot-orange inline-block" /> Rendszerkonfiguráció
             </p>
             <h1 className="text-2xl sm:text-3xl font-light text-slate-900 dark:text-white tracking-tight">
-              Beállítások <span className="font-bold">& Fiók</span>
+              Beállítások <span className="font-black text-gradient-fire">& Fiók</span>
             </h1>
           </div>
 
@@ -121,7 +121,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
               <Link 
                 key={link.label}
                 href={link.href}
-                className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+                className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-orange-400 transition-colors"
               >
                 {link.label}
               </Link>
@@ -129,7 +129,7 @@ export default async function SettingsPage({ searchParams }: PageProps) {
           </div>
 
           <div className="space-y-2">
-            <p className="text-[9px] font-mono text-slate-400 dark:text-slate-600 uppercase tracking-wider">
+            <p className="text-[9px] font-mono font-black text-slate-400 dark:text-white/20 uppercase tracking-wider">
               DynamicSense • Biztonságos Kapcsolat • 2026 © Minden jog fenntartva.
             </p>
           </div>
