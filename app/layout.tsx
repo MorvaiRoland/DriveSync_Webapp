@@ -3,17 +3,18 @@ import "./globals.css";
 import RegisterSW from "./RegisterSW";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
-import HeaderNav from '@/components/HeaderNav';
 import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 
-// 🚀 LAZY LOADED COMPONENTS - Csak betöltésükkor:
-import CookieBanner from '@/components/CookieBanner';
-import InstallPrompt from '@/components/InstallPrompt';
-import PermissionChecker from '@/components/PermissionChecker';
-import OfflineIndicator from '@/components/OfflineIndicator';
+// ⚡ Valóban lazy loaded – nem blokkolják az initial render-t
+const CookieBanner = dynamic(() => import('@/components/CookieBanner'), { ssr: false });
+const InstallPrompt = dynamic(() => import('@/components/InstallPrompt'), { ssr: false });
+const PermissionChecker = dynamic(() => import('@/components/PermissionChecker'), { ssr: false });
+const OfflineIndicator = dynamic(() => import('@/components/OfflineIndicator'), { ssr: false });
 
 // Skeleton Loading
 const ComponentSkeleton = () => <div className="h-8 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />;
+
 
 export const viewport: Viewport = {
   themeColor: [

@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "analyze": "ANALYZE=true next build"
   },
+
   "dependencies": {
     "@ai-sdk/google": "^2.0.47",
     "@ai-sdk/groq": "^2.0.33",

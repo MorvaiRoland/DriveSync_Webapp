@@ -41,20 +41,23 @@ export const PLAN_LIMITS = {
   }
 };
 
+// ⚡ OPTIMALIZÁCIÓ: Párhuzamos lekérdezések Promise.all-al (waterfall megszüntetve)
 export async function getSubscriptionStatus(supabase: SupabaseClient, userId: string) {
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
+  const [subRes, configRes] = await Promise.all([
+    supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .single(),
+    supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'early_access')
+      .single(),
+  ]);
 
-  const { data: config } = await supabase
-    .from('app_config')
-    .select('value')
-    .eq('key', 'early_access')
-    .single();
-
-  const earlyAccess = config?.value || { enabled: false };
+  const sub = subRes.data;
+  const earlyAccess = configRes.data?.value || { enabled: false };
 
   if (earlyAccess.enabled && sub?.plan_type !== 'lifetime') {
      return { 

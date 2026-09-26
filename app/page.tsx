@@ -360,12 +360,21 @@ function DealerDashboard({ user, cars }: { user: any; cars: any[] }) {
 // USER DASHBOARD
 // ──────────────────────────────────────────
 async function UserDashboard({ user, supabase }: any) {
-  const [subscriptionResult, carsResult] = await Promise.all([
+  // ⚡ OPTIMALIZÁCIÓ: Egyetlen hullámban fut az összes lekérdezés
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [subscriptionResult, carsResult, remRes, actRes, costRes] = await Promise.all([
     getSubscriptionStatus(supabase, user.id),
     supabase
       .from('cars')
       .select('id, make, model, year, plate, mileage, image_url, status, fuel_type, user_id, service_interval_km, last_service_mileage, created_at, events(type, mileage), car_shares(email)')
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false }),
+    // Emlékeztetők – user_id alapján szűrve közvetlenül (RLS-en keresztül)
+    supabase.from('service_reminders').select('*, cars!inner(make, model, user_id)').eq('cars.user_id', user.id).order('due_date', { ascending: true }).limit(3),
+    // Legutóbbi események
+    supabase.from('events').select('id, title, event_date, cost, car_id, cars!inner(make, model, user_id)').eq('cars.user_id', user.id).order('event_date', { ascending: false }).limit(5),
+    // Költségek az elmúlt 30 napban
+    supabase.from('events').select('cost, event_date, cars!inner(user_id)').eq('cars.user_id', user.id).gte('event_date', thirtyDaysAgo),
   ])
 
   const { plan, isTrial } = subscriptionResult
@@ -380,23 +389,10 @@ async function UserDashboard({ user, supabase }: any) {
 
   const isCarLimitReached = myCars.length >= limits.maxCars
   const latestCarId = myCars[0]?.id ?? carsData[0]?.id ?? null
-  const relevantCarIds = carsData.map((c: any) => c.id)
 
-  let upcomingReminders: any[] = []
-  let recentActivity: any[] = []
-  let spentLast30Days = 0
-
-  if (relevantCarIds.length > 0) {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-    const [remRes, actRes, costRes] = await Promise.all([
-      supabase.from('service_reminders').select('*, cars(make,model)').in('car_id', relevantCarIds).order('due_date', { ascending: true }).limit(3),
-      supabase.from('events').select('id, title, event_date, cost, car_id, cars(make,model)').in('car_id', relevantCarIds).order('event_date', { ascending: false }).limit(5),
-      supabase.from('events').select('cost, event_date').in('car_id', relevantCarIds).gte('event_date', thirtyDaysAgo)
-    ])
-    upcomingReminders = remRes.data || []
-    recentActivity = actRes.data || []
-    spentLast30Days = (costRes.data || []).reduce((s: number, e: any) => s + (e.cost || 0), 0)
-  }
+  const upcomingReminders = remRes.data || []
+  const recentActivity = actRes.data || []
+  const spentLast30Days = (costRes.data || []).reduce((s: number, e: any) => s + (e.cost || 0), 0)
 
   // Fleet health
   const hasServices = myCars.some((c: any) => c.events?.some((e: any) => e.type === 'service'))
@@ -580,8 +576,8 @@ export default async function Page({
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
-    const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single()
-    const role = userData?.role || 'user'
+    // ⚡ OPTIMALIZÁCIÓ: role kiolvasása user_metadata-ból – nincs DB round-trip!
+    const role = (user.user_metadata?.role as string) || 'user'
 
     if (role === 'dealer') {
       const { data: dealerCars } = await supabase.from('cars').select('*').eq('user_id', user.id).order('created_at', { ascending: false })

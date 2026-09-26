@@ -134,13 +134,18 @@ const nextConfig = {
   },
 
   experimental: {
-    // 🔥 BUNDLE OPTIMALIZÁCIÓ
+    // 🔥 BUNDLE OPTIMALIZÁCIÓ – tree-shaking a nagy csomagokhoz
     optimizePackageImports: [
       'lucide-react',
       'date-fns',
       'framer-motion',
       '@radix-ui/react-slot',
       'recharts',
+      '@supabase/supabase-js',
+      '@supabase/ssr',
+      'sonner',
+      'clsx',
+      'tailwind-merge',
     ],
     
     serverActions: {

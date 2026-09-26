@@ -42,12 +42,37 @@ export function WeatherWidget() {
       if (isMounted) { fetchWeather(47.4979, 19.0402); setCity('Budapest') }
     }
 
+    // ⚡ OPTIMALIZÁCIÓ: sessionStorage cache – csak egyszer kérjük be a pozíciót
+    try {
+      const cached = sessionStorage.getItem('ds_geo')
+      if (cached) {
+        const { lat, lon, ts } = JSON.parse(cached)
+        // 30 percig érvényes a cache
+        if (Date.now() - ts < 30 * 60 * 1000) {
+          fetchWeather(lat, lon)
+          return () => { isMounted = false }
+        }
+      }
+    } catch {
+      // sessionStorage nem elérhető (pl. private mode) – továbblépünk
+    }
+
     if ('geolocation' in navigator) {
-      timeoutId = setTimeout(fallback, 5000)
+      // ⚡ OPTIMALIZÁCIÓ: 5000ms → 2000ms timeout
+      timeoutId = setTimeout(fallback, 2000)
       navigator.geolocation.getCurrentPosition(
-        (pos) => { clearTimeout(timeoutId); fetchWeather(pos.coords.latitude, pos.coords.longitude) },
+        (pos) => {
+          clearTimeout(timeoutId)
+          const lat = pos.coords.latitude
+          const lon = pos.coords.longitude
+          // Cache-eljük a pozíciót 30 percre
+          try {
+            sessionStorage.setItem('ds_geo', JSON.stringify({ lat, lon, ts: Date.now() }))
+          } catch { /* ignore */ }
+          fetchWeather(lat, lon)
+        },
         () => { clearTimeout(timeoutId); fallback() },
-        { timeout: 5000 }
+        { timeout: 2000, maximumAge: 1800000 } // maximumAge: 30 perc
       )
     } else {
       fallback()
@@ -55,6 +80,7 @@ export function WeatherWidget() {
 
     return () => { isMounted = false; clearTimeout(timeoutId) }
   }, [])
+
 
   // Weather emoji + description
   const getWeatherInfo = (code: number, isDay: number) => {
@@ -159,16 +185,34 @@ export function FuelWidget() {
 
   useEffect(() => {
     const fetchFuelPrices = async () => {
+      // ⚡ OPTIMALIZÁCIÓ: localStorage cache – 4 óráig érvényes
+      try {
+        const cached = localStorage.getItem('ds_fuel')
+        if (cached) {
+          const { data, ts } = JSON.parse(cached)
+          if (Date.now() - ts < 4 * 60 * 60 * 1000) {
+            setPrices(data)
+            setLoading(false)
+            return
+          }
+        }
+      } catch { /* ignore */ }
+
       try {
         const res = await fetch('/api/fuel')
         if (res.ok) {
           const data = await res.json()
           if (Array.isArray(data) && data.length >= 2) {
-            setPrices({
+            const prices = {
               petrol95: data[0]?.price || 568,
               diesel: data[1]?.price || 579,
               petrol100: data[2]?.price || 623,
-            })
+            }
+            setPrices(prices)
+            // Cache-eljük 4 órára
+            try {
+              localStorage.setItem('ds_fuel', JSON.stringify({ data: prices, ts: Date.now() }))
+            } catch { /* ignore */ }
             return
           }
         }
@@ -181,6 +225,7 @@ export function FuelWidget() {
     }
     fetchFuelPrices()
   }, [])
+
 
   const fuels = [
     { key: '95', label: 'Benzin 95', price: prices.petrol95, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/30' },

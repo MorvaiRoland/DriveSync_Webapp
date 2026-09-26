@@ -45,7 +45,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
           response = NextResponse.next({
@@ -59,14 +59,17 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // --- 4. FELHASZNÁLÓ LEKÉRÉSE ---
-  // Fontos: a getUser biztonságosabb middleware-ben mint a getSession
-  const { data: { user }, error } = await supabase.auth.getUser()
+  // --- 4. ⚡ GYORS SESSION CHECK – csak cookie-t olvas, nincs hálózati kérés! ---
+  // getSession() a JWT-t a cookie-ból dekódolja – nulla latencia.
+  // getUser() hálózati kérést indít Supabase felé (lassabb, de megbízhatóbb).
+  // Middleware-ben a getSession() elegendő az auth ellenőrzéshez.
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   // --- 5. LOGIKA ÉS ÁTIRÁNYÍTÁSOK ---
 
   // A. Ha a felhasználó BE VAN JELENTKEZVE
-  if (user && !error) {
+  if (user) {
     // Ha bejelentkezve a login/register oldalra téved, visszaküldjük a főoldalra
     if (path.startsWith('/login') || path.startsWith('/register')) {
       const url = request.nextUrl.clone()
@@ -78,7 +81,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // B. Ha a felhasználó NINCS BEJELENTKEZVE
-  if (!user || error) {
+  if (!user) {
     // Itt soroljuk fel azokat az útvonalakat, amik PUBLIKUSAK (bejelentkezés nélkül elérhetők).
     // Minden más útvonal átirányít a /login-ra.
     const isPublicRoute = 
@@ -90,13 +93,13 @@ export async function updateSession(request: NextRequest) {
         path.startsWith('/changelog') || 
         path.startsWith('/auth') ||
         path.startsWith('/impressum') ||
-         path.startsWith('/support') ||
+        path.startsWith('/support') ||
         path.startsWith('/privacy') ||
         path.startsWith('/terms') ||
         path.startsWith('/admin?key=Xy7v9M_DriveSync_Secure_2025_Admin_Token_h4L9qBzR') ||  
         path.startsWith('/update-password') || 
         path.startsWith('/hirdetes') ||
-        path.startsWith('/szolgaltatasok'); // Ha van ilyen, add hozzá!
+        path.startsWith('/szolgaltatasok');
 
     if (!isPublicRoute) {
         const url = request.nextUrl.clone()
